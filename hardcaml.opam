@@ -1,0 +1,30 @@
+opam-version: "1.2"
+maintainer: "opensource@janestreet.com"
+authors: ["Jane Street Group, LLC <opensource@janestreet.com>"]
+homepage: "https://github.com/janestreet/hardcaml"
+bug-reports: "https://github.com/janestreet/hardcaml/issues"
+dev-repo: "git+https://github.com/janestreet/hardcaml.git"
+license: "MIT"
+build: [
+  ["jbuilder" "build" "-p" name "-j" jobs]
+]
+depends: [
+  "base"
+  "ppx_jane"
+  "stdio"
+  "topological_sort"
+  "jbuilder"                {build & >= "1.0+beta18.1"}
+  "num"
+  "ocaml-migrate-parsetree" {>= "1.0"}
+  "ppxlib"                  {>= "0.1.0"}
+]
+available: [ ocaml-version >= "4.06.1" ]
+descr: "
+RTL Hardware Design in OCaml.
+
+Hardcaml is an embedded DSL for designing and simulating hardware in OCaml.
+Generic hardware designs are easily expressed using features such as higher
+order functions, lists, maps etc.  A built in simulator allows designs to
+be simulated within Hardcaml.  Designs are converted to either Verilog or
+VHDL to interact with standard back end tooling.
+"

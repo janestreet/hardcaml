@@ -1,0 +1,10 @@
+(executables
+ ((names (test_comb_bits_primitives))
+  (libraries (base
+              core
+              hardcaml_test
+              stdio))
+  (preprocess (pps (ppx_jane ppxlib.runner)))))
+
+
+(jbuild_version 1)

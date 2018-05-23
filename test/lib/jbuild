@@ -1,0 +1,9 @@
+(library
+ ((name hardcaml_test)
+  (libraries (core
+              expect_test_helpers
+              hardcaml
+              hardcaml_waveterm_jane))
+  (preprocess (pps (ppx_deriving_hardcaml ppx_jane ppxlib.runner)))))
+
+(jbuild_version 1)

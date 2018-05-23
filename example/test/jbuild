@@ -1,0 +1,12 @@
+(library
+ ((name hardcaml_examples_tests)
+  (libraries (base
+              expect_test_helpers_kernel
+              hardcaml
+              hardcaml_examples
+              hardcaml_step_testbench
+              hardcaml_waveterm_jane
+              stdio))
+  (preprocess (pps (ppx_jane ppxlib.runner)))))
+
+(jbuild_version 1)
