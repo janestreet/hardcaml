@@ -73,6 +73,8 @@ let ok_exn  = Or_error.ok_exn
 let printf  = Out_channel.printf
 let sprintf = Printf.sprintf
 
+let print_s sexp = Stdio.print_endline (sexp |> Sexp.to_string_hum)
+
 module type Unstable = sig
   type t
   [@@deriving compare, sexp]
