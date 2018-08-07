@@ -8,7 +8,7 @@ let%expect_test "rtl name legalization" =
         ~vhdl:   (Rtl.Language.legalize_identifier Vhdl    name : string)]
     |> print_s
   in
-  require_does_not_raise ~cr:CR_soon [%here] (fun () -> show "");
+  require_does_not_raise ~cr:CR_someday [%here] (fun () -> show "");
   [%expect {|
     ("unexpectedly raised" (Invalid_argument "index out of bounds")) |}];
   (* underscore really is a valid verilog name... *)

@@ -272,7 +272,7 @@ let%expect_test "reverse" =
 (* It doesn't make sense if the limit is [>= (1 lsl width)] and an exception should be
    raised. *)
 let%expect_test "mod_counter should raise" =
-  require_does_raise ~cr:CR_soon [%here] (fun () ->
+  require_does_raise ~cr:CR_someday [%here] (fun () ->
     mod_counter 8 (const "101"));
   [%expect {|
     "did not raise" |}]

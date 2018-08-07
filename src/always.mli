@@ -94,7 +94,7 @@ module Variable : sig
   type t = private
     { value    : Signal.t
     ; internal : internal }
-  [@@deriving sexp_of]
+  [@@deriving fields, sexp_of]
 
   (** create a wire *)
   val wire : default:Signal.t -> t
