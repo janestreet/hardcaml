@@ -271,11 +271,12 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
   module Coerce = Cyclesim.With_interface (I) (O)
 
   let create =
-    Circuit.with_create_options (fun create_options ?(vcd_file_name = "dump.vcd") create_fn ->
-      let circuit =
-        Circuit.call_with_create_options
-          C.create_exn create_options ~name:"cosim" create_fn
-      in
-      let sim = make ~dump_file:vcd_file_name circuit in
-      Coerce.coerce sim)
+    Circuit.with_create_options
+      (fun create_options ?(vcd_file_name = "dump.vcd") ?port_checks create_fn ->
+         let circuit =
+           Circuit.call_with_create_options
+             C.create_exn create_options ?port_checks ~name:"cosim" create_fn
+         in
+         let sim = make ~dump_file:vcd_file_name circuit in
+         Coerce.coerce sim)
 end

@@ -452,10 +452,10 @@ module Make (SIM : Simulator) = struct
 
     let create =
       Circuit.with_create_options
-        (fun create_options ?(vcd_file_name = "dump.vcd") create_fn ->
+        (fun create_options ?(vcd_file_name = "dump.vcd") ?port_checks create_fn ->
            let circuit =
              Circuit.call_with_create_options
-               C.create_exn create_options ~name:"cosim2" create_fn
+               C.create_exn create_options ?port_checks ~name:"cosim2" create_fn
            in
            let sim = make ~dump_file:vcd_file_name circuit in
            Coerce.coerce sim)

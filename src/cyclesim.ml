@@ -887,10 +887,10 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
         create_options
         ?is_internal_port
         ?combinational_ops_database
-        ~(kind : Kind.t) create_fn ->
+        ~(kind : Kind.t) ?port_checks create_fn ->
         let circuit =
           Circuit.call_with_create_options
-            C.create_exn create_options
+            C.create_exn create_options ?port_checks
             ~name:(match kind with
               | Immutable -> "immutable_simulator"
               | Mutable   -> "mutable_simulator")

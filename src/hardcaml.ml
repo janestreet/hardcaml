@@ -24,6 +24,7 @@ module Recipe                     = Recipe
 module Reg_spec                   = Reg_spec
 module Reserved_words             = Reserved_words
 module Rtl                        = Rtl
+module Scope                      = Scope
 module Side                       = Side
 module Signal                     = Signal
 module Signal_graph               = Signal_graph

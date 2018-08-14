@@ -114,7 +114,7 @@ module type Cyclesim = sig
     (** Create a simulator using the provided [Create_fn].  The returned simulator ports
         are coerced to the input and output interface types. *)
     val create
-      : (Circuit.With_interface(I)(O).create -> t)
+      : (?port_checks : Circuit.Port_checks.t -> Circuit.With_interface(I)(O).create -> t)
           with_create_options
           Circuit.with_create_options
 

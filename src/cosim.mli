@@ -99,6 +99,7 @@ module With_interface (I : Interface.S) (O : Interface.S) : sig
       are coerced to the input and output interface types. *)
   val create
     : (?vcd_file_name : string
+       -> ?port_checks : Circuit.Port_checks.t
        -> Circuit.With_interface(I)(O).create
        -> Cyclesim.With_interface(I)(O).t) Circuit.with_create_options
 end

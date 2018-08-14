@@ -114,16 +114,78 @@ let structural_compare ?check_names c0 c1 =
   with Not_found_s _ | Caml.Not_found ->
     false
 
+module Port_checks = struct
+  type t =
+    | Relaxed
+    | Port_sets
+    | Port_sets_and_widths
+end
+
 module With_interface (I : Interface.S) (O : Interface.S) = struct
   type create = Signal.t Interface.Create_fn(I)(O).t
 
+  let check_io_port_sets_match circuit =
+    let actual_ports ports =
+      List.map ports ~f:Signal.names
+      |> List.concat
+      |> Set.of_list (module String)
+    in
+    let actual_input_ports = inputs circuit |> actual_ports in
+    let actual_output_ports = outputs circuit |> actual_ports in
+    let expected_input_ports = I.port_names |> I.to_list |> Set.of_list (module String) in
+    let expected_output_ports = O.port_names |> O.to_list |> Set.of_list (module String) in
+
+    let check direction actual_ports expected_ports =
+      let expected_but_not_in_circuit = Set.diff expected_ports actual_ports in
+      let in_circuit_but_not_expected = Set.diff actual_ports expected_ports in
+      if not (Set.is_empty expected_but_not_in_circuit)
+      || not (Set.is_empty in_circuit_but_not_expected)
+      then raise_s [%message "Port sets do not match"
+                               (direction : string)
+                               (expected_ports : Set.M(String).t)
+                               (actual_ports : Set.M(String).t)
+                               (expected_but_not_in_circuit : Set.M(String).t)
+                               (in_circuit_but_not_expected : Set.M(String).t)]
+    in
+    check "input" actual_input_ports expected_input_ports;
+    check "output" actual_output_ports expected_output_ports
+
+  let check_widths_match circuit =
+    let port s =
+      match Signal.names s with
+      | [name] -> name, Signal.width s
+      | _ ->
+        raise_s
+          [%message
+            "[Circuit.With_interface.check_widths_match] Unexpected error - invalid port name(s)"
+              (circuit : t)]
+    in
+    let inputs = inputs circuit |> List.map ~f:port |> I.of_alist in
+    let outputs = outputs circuit |> List.map ~f:port |> O.of_alist in
+    if not (I.equal Int.equal inputs I.port_widths)
+    then raise_s [%message "Input port widths do not match"
+                             ~expected:(I.port_widths : int I.t)
+                             ~got:(inputs : int I.t)];
+    if not (O.equal Int.equal outputs O.port_widths)
+    then raise_s [%message "Output port widths do not match"
+                             ~expected:(O.port_widths : int O.t)
+                             ~got:(outputs : int O.t)]
+
+  let check_io_port_sets_and_widths_match circuit =
+    check_io_port_sets_match circuit;
+    check_widths_match circuit
+
   let create_exn =
-    with_create_options (fun create_options ~name logic ->
+    with_create_options (fun create_options ?(port_checks=Port_checks.Relaxed) ~name logic ->
       let outputs = logic (I.map I.t ~f:(fun (n, b) -> Signal.input n b)) in
       let circuit =
         call_with_create_options
           create_exn create_options ~name
           (O.to_list (O.map2 O.t outputs ~f:(fun (n, _) s -> Signal.output n s)))
       in
+      (match port_checks with
+       | Relaxed -> ()
+       | Port_sets -> check_io_port_sets_match circuit
+       | Port_sets_and_widths -> check_io_port_sets_and_widths_match circuit);
       circuit)
 end
