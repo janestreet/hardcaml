@@ -24,6 +24,7 @@ type t =
   ; signal_by_uid : Signal_map.t
   ; inputs        : Signal.t list
   ; outputs       : Signal.t list
+  ; phantom_inputs : (string * int) list
   ; signal_graph  : Signal_graph.t
   (* [fan_in] and [fan_out] are lazily computed.  One might worry that this would interact
      poorly with signals, which have some mutable components (e.g. wires).  But those have
@@ -72,13 +73,42 @@ let create_exn
   if detect_combinational_loops
   then ok_exn (Signal_graph.detect_combinational_loops signal_graph);
   (* construct the circuit *)
-  { name          = name
-  ; signal_by_uid = Signal_map.create signal_graph
+  { name           = name
+  ; signal_by_uid  = Signal_map.create signal_graph
   ; inputs
   ; outputs
+  ; phantom_inputs = []
   ; signal_graph
-  ; fan_out       = lazy (Signal_graph.fan_out_map signal_graph)
-  ; fan_in        = lazy (Signal_graph.fan_in_map  signal_graph) }
+  ; fan_out        = lazy (Signal_graph.fan_out_map signal_graph)
+  ; fan_in         = lazy (Signal_graph.fan_in_map  signal_graph) }
+
+let set_phantom_inputs circuit phantom_inputs =
+  (* Remove phantom inputs that are already inputs, and disallow phantom inputs
+     that have the same name as an output. *)
+  let module Port = struct
+    module T = struct
+      type t = string * int[@@deriving sexp_of]
+      let compare (n0,_) (n1,_) = String.compare n0 n1
+    end
+    include T
+    include Comparable.Make(T)
+    let of_signal port =
+      let name =
+        match Signal.names port with
+        | name :: [] -> name
+        | _ -> raise_s [%message "Ports should have one name" (port : Signal.t)]
+      in
+      name, Signal.width port
+  end in
+  let inputs = List.map circuit.inputs ~f:Port.of_signal |> Set.of_list (module Port) in
+  let outputs = List.map circuit.outputs ~f:Port.of_signal |> Set.of_list (module Port) in
+  let phantom = Set.of_list (module Port) phantom_inputs in
+  let phantom_inputs = Set.diff phantom inputs in
+  if not (Set.is_empty (Set.inter phantom_inputs outputs))
+  then raise_s [%message "Phantom input is also a circuit output"
+                           (phantom_inputs : Set.M(Port).t)
+                           (outputs : Set.M(Port).t)];
+  { circuit with phantom_inputs = phantom_inputs |> Set.to_list }
 
 let with_name t ~name = { t with name }
 
@@ -131,6 +161,10 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
       |> Set.of_list (module String)
     in
     let actual_input_ports = inputs circuit |> actual_ports in
+    let actual_input_ports =
+      phantom_inputs circuit |> List.map ~f:fst |> Set.of_list (module String)
+      |> Set.union actual_input_ports
+    in
     let actual_output_ports = outputs circuit |> actual_ports in
     let expected_input_ports = I.port_names |> I.to_list |> Set.of_list (module String) in
     let expected_output_ports = O.port_names |> O.to_list |> Set.of_list (module String) in
@@ -176,16 +210,22 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
     check_widths_match circuit
 
   let create_exn =
-    with_create_options (fun create_options ?(port_checks=Port_checks.Relaxed) ~name logic ->
-      let outputs = logic (I.map I.t ~f:(fun (n, b) -> Signal.input n b)) in
-      let circuit =
-        call_with_create_options
-          create_exn create_options ~name
-          (O.to_list (O.map2 O.t outputs ~f:(fun (n, _) s -> Signal.output n s)))
-      in
-      (match port_checks with
-       | Relaxed -> ()
-       | Port_sets -> check_io_port_sets_match circuit
-       | Port_sets_and_widths -> check_io_port_sets_and_widths_match circuit);
-      circuit)
+    with_create_options
+      (fun create_options ?(port_checks=Port_checks.Relaxed) ?(add_phantom_inputs=true)
+        ~name logic ->
+        let outputs = logic (I.map I.t ~f:(fun (n, b) -> Signal.input n b)) in
+        let circuit =
+          call_with_create_options
+            create_exn create_options ~name
+            (O.to_list (O.map2 O.t outputs ~f:(fun (n, _) s -> Signal.output n s)))
+        in
+        let circuit =
+          if add_phantom_inputs
+          then set_phantom_inputs circuit (I.to_list I.t)
+          else circuit
+        in
+        (match port_checks with
+         | Relaxed -> ()
+         | Port_sets -> check_io_port_sets_match circuit
+         | Port_sets_and_widths -> check_io_port_sets_and_widths_match circuit); circuit)
 end

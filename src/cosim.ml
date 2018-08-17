@@ -116,8 +116,11 @@ let derive_clocks_and_resets circuit =
   let clocks_and_resets =
     List.map seq_elts
       ~f:(function
-        | Reg (_, r) -> r.reg_clock, r.reg_reset
-        | Mem (_, _, r, _) -> r.reg_clock, r.reg_reset
+        | Reg (_, r) -> [r.reg_clock], r.reg_reset
+        | Mem (_, _, r, _) -> [r.reg_clock], r.reg_reset
+        | Multiport_mem (_, _, write_ports) ->
+          Array.map write_ports ~f:(fun wr -> wr.write_clock) |> Array.to_list,
+          Signal.empty
         | _ -> failwith "unexpected")
   in
   let unique_names l =
@@ -126,7 +129,7 @@ let derive_clocks_and_resets circuit =
          try Set.add set (List.hd_exn (Signal.names s))
          with _ -> set))
   in
-  unique_names (List.map clocks_and_resets ~f:fst),
+  unique_names (List.map clocks_and_resets ~f:fst |> List.concat),
   unique_names (List.map clocks_and_resets ~f:snd)
 
 let load_sim vvp_file =
@@ -272,10 +275,10 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
 
   let create =
     Circuit.with_create_options
-      (fun create_options ?(vcd_file_name = "dump.vcd") ?port_checks create_fn ->
+      (fun create_options ?(vcd_file_name = "dump.vcd") ?port_checks ?add_phantom_inputs create_fn ->
          let circuit =
            Circuit.call_with_create_options
-             C.create_exn create_options ?port_checks ~name:"cosim" create_fn
+             C.create_exn create_options ?port_checks ?add_phantom_inputs ~name:"cosim" create_fn
          in
          let sim = make ~dump_file:vcd_file_name circuit in
          Coerce.coerce sim)

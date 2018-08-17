@@ -6,6 +6,7 @@ module With_interface (I : Interface.S) (O : Interface.S) : sig
       instantiation. *)
   val create
     : (?port_checks : Circuit.Port_checks.t
+       -> ?add_phantom_inputs : bool
        -> ?instance : string
        -> Circuit_database.t
        -> name : string
@@ -39,6 +40,7 @@ module In_scope (I : Interface.S) (O : Interface.S) : sig
       derived automatically. *)
   val hierarchical
     : (?port_checks : Circuit.Port_checks.t
+       -> ?add_phantom_inputs : bool
        -> ?instance:string
        -> scope : Scope.t
        -> name : string

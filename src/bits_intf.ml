@@ -23,6 +23,7 @@ module type Bits = sig
     val to_int : t -> int
     val to_bstr : t -> string
 
+    (** Create a [t] of given width, initially set to [0]. *)
     val create : int -> t
 
     val copy      : src:t    -> dst:t -> unit

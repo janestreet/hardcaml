@@ -68,7 +68,15 @@ and t =
   | Select of signal_id * int * int
   | Reg of signal_id * register
   | Mem of signal_id * Uid.t * register * memory
+  | Multiport_mem of signal_id * int * write_port array
+  | Mem_read_port of signal_id * t * t
   | Inst of signal_id * Uid.t * instantiation
+
+and write_port =
+  { write_clock : t
+  ; write_address : t
+  ; write_enable : t
+  ; write_data : t }
 
 (* These types are used to define a particular type of register as per the following
    template, where each part is optional:
@@ -113,6 +121,8 @@ let uid s =
   | Select (s, _, _)
   | Reg (s, _)
   | Mem (s, _, _, _)
+  | Multiport_mem (s, _, _)
+  | Mem_read_port (s, _, _)
   | Wire (s, _)
   | Inst (s, _, _)
   | Op (s, _) -> s.s_id
@@ -123,6 +133,8 @@ let deps s =
   | Select (s, _, _)
   | Reg (s, _)
   | Mem (s, _, _, _)
+  | Multiport_mem (s, _, _)
+  | Mem_read_port (s, _, _)
   | Inst (s, _, _)
   | Op (s, _) -> s.s_deps
   | Wire (_, s) -> [ !s ]
@@ -134,6 +146,8 @@ let names s =
   | Select (s, _, _)
   | Reg (s, _)
   | Mem (s, _, _, _)
+  | Multiport_mem (s, _, _)
+  | Mem_read_port (s, _, _)
   | Wire (s, _)
   | Inst (s, _, _)
   | Op (s, _) -> s.s_names
@@ -147,6 +161,8 @@ let width s =
   | Select (s, _, _)
   | Reg (s, _)
   | Mem (s, _, _, _)
+  | Multiport_mem (s, _, _)
+  | Mem_read_port (s, _, _)
   | Wire (s, _)
   | Inst (s, _, _)
   | Op (s, _) -> s.s_width
@@ -156,7 +172,7 @@ let is_const = function Const _ -> true | _ -> false
 let is_select = function Select _ -> true | _ -> false
 let is_wire = function Wire _ -> true | _ -> false
 let is_op op = function Op (_, o) -> Signal_op.equal o op | _ -> false
-let is_mem = function Mem _ -> true | _ -> false
+let is_mem = function Mem _ | Multiport_mem _ -> true | _ -> false
 let is_inst = function Inst _ -> true | _ -> false
 
 let new_id, reset_id =
@@ -213,6 +229,8 @@ let to_string signal =
     "Select[" ^ sid signal ^ "] " ^ Int.to_string h ^ ".." ^ Int.to_string l
   | Reg _ -> "Reg[" ^ sid signal ^ "]"
   | Mem _ -> "Mem[" ^ sid signal ^ "]"
+  | Multiport_mem _ -> "Multiport_mem[" ^ sid signal ^ "]"
+  | Mem_read_port _ -> "Mem_read_port[" ^ sid signal ^ "]"
   | Inst _ -> "Inst" ^ sid signal ^ "]"
 
 let structural_compare
@@ -235,7 +253,11 @@ let structural_compare
         | Reg (_, _), Reg (_, _) ->
           true
         | Mem (_, _, _, m0), Mem (_, _, _, m1) ->
-          m0.mem_size=m1.mem_size
+          m0.mem_size = m1.mem_size
+        | Multiport_mem (_, mem_size0, _), Multiport_mem (_, mem_size1, _) ->
+          mem_size0 = mem_size1
+        | Mem_read_port _, Mem_read_port _ ->
+          true
         (* XXX check if inputs have same names ? *)
         | Wire (_, _), Wire (_, _) ->
           true
@@ -330,6 +352,32 @@ and sexp_of_memory_recursive
       (read_address  : signal)
       (write_enable  : signal)]
 
+and sexp_of_multiport_memory_recursive
+      ?show_uids
+      ~depth
+      (size, write_ports) =
+  let sexp_of_signal s = sexp_of_signal_recursive ?show_uids ~depth:(depth-1) s in
+  let sexp_of_write_port (w : write_port) =
+    [%message
+      ""
+        ~write_enable:(w.write_enable : signal)
+        ~write_address:(w.write_address : signal)
+        ~write_data:(w.write_data : signal)] in
+  [%message
+    ""
+      (size : int)
+      (write_ports : write_port array)]
+
+and sexp_of_mem_read_port_recursive
+      ?show_uids
+      ~depth
+      (memory, read_addresses) =
+  let sexp_of_signal s = sexp_of_signal_recursive ?show_uids ~depth:(depth-1) s in
+  [%message
+    ""
+      (memory : signal)
+      (read_addresses : signal)]
+
 and sexp_of_signal_recursive ?(show_uids=false) ~depth signal =
   let display_const c =
     if String.length c <= 8
@@ -338,14 +386,16 @@ and sexp_of_signal_recursive ?(show_uids=false) ~depth signal =
   in
   let tag =
     match signal with
-    | Empty         -> "empty"
-    | Const  _      -> "const"
-    | Op    (_, op) -> string_of_op op
-    | Wire   _      -> "wire"
-    | Select _      -> "select"
-    | Inst   _      -> "instantiation"
-    | Reg    _      -> "register"
-    | Mem    _      -> "memory"
+    | Empty           -> "empty"
+    | Const  _        -> "const"
+    | Op    (_, op)   -> string_of_op op
+    | Wire   _        -> "wire"
+    | Select _        -> "select"
+    | Inst   _        -> "instantiation"
+    | Reg    _        -> "register"
+    | Mem    _        -> "memory"
+    | Multiport_mem _ -> "multiport_memory"
+    | Mem_read_port _ -> "memory_read_port"
   in
   if depth = 0 || is_empty signal
   then (
@@ -361,10 +411,12 @@ and sexp_of_signal_recursive ?(show_uids=false) ~depth signal =
       | [ name ] -> [%sexp (name : string)]
       | names -> [%sexp (names : string list)])
   else (
-    let sexp_of_next          = sexp_of_signal_recursive        ~show_uids ~depth:(depth-1) in
-    let sexp_of_instantiation = sexp_of_instantiation_recursive ~show_uids ~depth           in
-    let sexp_of_memory        = sexp_of_memory_recursive        ~show_uids ~depth           in
-    let sexp_of_register      = sexp_of_register_recursive      ~show_uids ~depth           in
+    let sexp_of_next             = sexp_of_signal_recursive           ~show_uids ~depth:(depth-1) in
+    let sexp_of_instantiation    = sexp_of_instantiation_recursive    ~show_uids ~depth           in
+    let sexp_of_memory           = sexp_of_memory_recursive           ~show_uids ~depth           in
+    let sexp_of_multiport_memory = sexp_of_multiport_memory_recursive ~show_uids ~depth           in
+    let sexp_of_mem_read_port    = sexp_of_mem_read_port_recursive    ~show_uids ~depth           in
+    let sexp_of_register         = sexp_of_register_recursive         ~show_uids ~depth           in
     let uid = if show_uids then Some (uid signal) else None in
     let names = match names signal with [] -> None | names -> Some names in
     let width = width signal in
@@ -377,22 +429,26 @@ and sexp_of_signal_recursive ?(show_uids=false) ~depth signal =
           ?instantiation
           ?register
           ?memory
+          ?multiport_memory
+          ?mem_read_port
           ?data_in
           constructor =
       [%message
         constructor
-          (uid              : Uid.t         sexp_option)
-          (names            : string list   sexp_option)
-          (width            : int)
-          (value            : string        sexp_option)
-          (range            : (int*int)     sexp_option)
-          (select           : next          sexp_option)
-          (data             : next list     sexp_option)
-          ~_:(instantiation : instantiation sexp_option)
-          ~_:(register      : register      sexp_option)
-          ~_:(memory        : memory        sexp_option)
-          (arguments        : next list     sexp_option)
-          (data_in          : next          sexp_option)]
+          (uid                 : Uid.t            sexp_option)
+          (names               : string list      sexp_option)
+          (width               : int)
+          (value               : string           sexp_option)
+          (range               : (int*int)        sexp_option)
+          (select              : next             sexp_option)
+          (data                : next list        sexp_option)
+          ~_:(instantiation    : instantiation    sexp_option)
+          ~_:(register         : register         sexp_option)
+          ~_:(memory           : memory           sexp_option)
+          ~_:(multiport_memory : multiport_memory sexp_option)
+          ~_:(mem_read_port    : mem_read_port    sexp_option)
+          (arguments           : next list        sexp_option)
+          (data_in             : next             sexp_option)]
     in
     match signal with
     | Empty -> create "empty"
@@ -417,7 +473,12 @@ and sexp_of_signal_recursive ?(show_uids=false) ~depth signal =
        | data :: write_address :: read_address :: write_enable :: _ ->
          create tag ~register ~data_in:data
            ~memory:(memory.mem_size, write_address, read_address, write_enable)
-       | deps -> create "MEMORY IS BADLY FORMED" ~arguments:deps))
+       | deps -> create "MEMORY IS BADLY FORMED" ~arguments:deps)
+    | Multiport_mem(_, mem_size, write_ports) ->
+      create tag ~multiport_memory:(mem_size, write_ports)
+    | Mem_read_port(_, memory, read_address) ->
+      create tag ~mem_read_port:(memory, read_address)
+  )
 
 let sexp_of_t s = sexp_of_signal_recursive ~show_uids:false ~depth:1 s
 
@@ -493,6 +554,8 @@ module Base = struct
     | Reg (s, _)
     | Select (s, _, _)
     | Mem (s, _, _, _)
+    | Multiport_mem (s, _, _)
+    | Mem_read_port (s, _, _)
     | Inst (s, _, _)
     | Wire (s, _) ->
       s.s_names <- name :: s.s_names;
@@ -535,6 +598,8 @@ module Comb_make = Comb.Make
 module Comb = Comb.Make (Base)
 
 include (Comb : (module type of struct include Comb end with type t := t))
+let is_vdd = function Const(_, "1") -> true | _ -> false
+let is_gnd = function Const(_, "0") -> true | _ -> false
 
 let (<==) a b =
   match a with
@@ -739,7 +804,11 @@ module Const_prop = struct
       else select d h l
   end
 
-  module Comb = Comb_make (Base)
+  module Comb = struct
+    include Comb_make (Base)
+    let is_vdd = function Const(_, "1") -> true | _ -> false
+    let is_gnd = function Const(_, "0") -> true | _ -> false
+  end
 end
 
 (* register with async reset *)
@@ -902,10 +971,18 @@ module Ram_spec_ = struct
 end
 
 let memory spec size ~we ~wa ~d ~ra =
-  assert (width we = 1);
-  assert (size <= (1 lsl width wa));
-  assert (size > 0);
-  assert (width wa = width ra);
+  if width we <> 1
+  then raise_s [%message "[Signal.memory] width of write enable must be 1"
+                           ~write_enable_width:(width we : int)];
+  if size <= 0
+  then raise_s [%message "[Signal.memory] size must be greater than 0" (size : int)];
+  if width ra <> width wa
+  then raise_s [%message "[Signal.memory] width of read and write addresses differ"
+                           ~write_address_width:(width wa : int)
+                           ~read_address_width:(width ra : int)];
+  if size > (1 lsl width wa)
+  then raise_s [%message "[Signal.memory] size greater than what can be addressed"
+                           (size : int) ~address_width:(width wa : int)];
   let spec = form_spec spec we d in
   let deps =
     [ d; wa; ra; we
@@ -926,3 +1003,82 @@ let ram_rbw spec size ~we ~wa ~d ~re ~ra =
 
 let ram_wbr spec size ~we ~wa ~d ~re ~ra =
   memory spec size ~we ~wa ~d ~ra:(reg spec ~e:re ra)
+
+let multiport_memory size ~write_ports ~read_addresses =
+  (* size > 0 *)
+  if size <= 0
+  then raise_s [%message "[Signal.multiport_memory] size must be greater than 0" (size : int)];
+  let write_expected =
+    if Array.is_empty write_ports
+    then raise_s [%message "[Signal.multiport_memory] requires at least one write port"]
+    else
+      let expected = write_ports.(0) in
+      (* cannot address all elements of the memory *)
+      if size > (1 lsl width expected.write_address)
+      then raise_s [%message
+             "[Signal.multiport_memory] size is greater than what can be addressed by write port"
+               (size : int)
+               ~address_width:(width expected.write_address : int)];
+      Array.iteri write_ports ~f:(fun port (write_port : write_port) ->
+        (* clocks must be 1 bit *)
+        if width write_port.write_clock <> 1
+        then raise_s [%message
+               "[Signal.multiport_memory] width of clock must be 1"
+                 (port : int)
+                 ~write_enable_width:(width write_port.write_enable : int)];
+        (* all write enables must be 1 bit *)
+        if width write_port.write_enable <> 1
+        then raise_s [%message
+               "[Signal.multiport_memory] width of write enable must be 1"
+                 (port : int)
+                 ~write_enable_width:(width write_port.write_enable : int)];
+        (* all write addresses must be the same width *)
+        if width write_port.write_address <> width expected.write_address
+        then raise_s [%message
+               "[Signal.multiport_memory] width of write address is inconsistent"
+                 (port : int)
+                 ~write_address_width:(width write_port.write_address : int)
+                 ~expected:(width expected.write_address : int)];
+        if width write_port.write_data <> width expected.write_data
+        then raise_s [%message
+               "[Signal.multiport_memory] width of write data is inconsistent"
+                 (port : int)
+                 ~write_data_width:(width write_port.write_data : int)
+                 ~expected:(width expected.write_data : int)]);
+      expected
+  in
+  let read_expected =
+    if Array.is_empty read_addresses
+    then raise_s [%message "[Signal.multiport_memory] requires at least one read port"]
+    else
+      let expected = read_addresses.(0) in
+      if size > (1 lsl width expected)
+      then raise_s [%message
+             "[Signal.multiport_memory] size is greater than what can be addressed by read port"
+               (size : int)
+               ~address_width:(width expected : int)];
+      Array.iteri read_addresses ~f:(fun port read_address ->
+        if width read_address <> width expected
+        then raise_s [%message
+               "[Signal.multiport_memory] width of read address is inconsistent"
+                 (port : int)
+                 ~read_address_width:(width read_address : int)
+                 ~expected:(width expected : int)]);
+      expected
+  in
+  if width write_expected.write_address <> width read_expected
+  then raise_s [%message
+         "[Signal.multiport_memory] width of read and write addresses differ"
+           ~write_address_width:(width write_expected.write_address : int)
+           ~read_address_width:(width read_expected : int)];
+  let data_width = width write_expected.write_data in
+  let deps =
+    (Array.to_list read_addresses) ::
+    List.map (Array.to_list write_ports) ~f:(fun (w : write_port) ->
+      let { write_clock; write_address; write_data; write_enable } = w in
+      [ write_clock; write_address; write_data; write_enable ])
+    |> List.concat
+  in
+  let mem = Multiport_mem(make_id data_width deps, size, write_ports) in
+  Array.map read_addresses ~f:(fun r ->
+    Mem_read_port(make_id data_width [r; mem], mem, r))

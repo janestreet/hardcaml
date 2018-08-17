@@ -154,6 +154,12 @@ let normalize_uids t =
     ; mem_read_address  = new_signal m.mem_read_address
     ; mem_write_address = new_signal m.mem_write_address }
   in
+  let new_write_port write_port =
+    { write_clock   = new_signal write_port.write_clock
+    ; write_address = new_signal write_port.write_address
+    ; write_enable  = new_signal write_port.write_enable
+    ; write_data    = new_signal write_port.write_data }
+  in
   let new_inst i =
     { i with
       inst_inputs = List.map i.inst_inputs
@@ -168,14 +174,22 @@ let normalize_uids t =
       let new_signal =
         match signal with
         | Empty              -> Empty
-        | Const (id, b)      -> Const  (update_id id, b)
-        | Op (id, op)        -> Op     (update_id id, op)
-        | Select (id, h, l)  -> Select (update_id id, h, l)
-        | Reg (id, r)        -> Reg    (update_id id, new_reg r)
-        | Mem (id, _, r , m) -> Mem    (update_id id, fresh_id (),
-                                        new_reg r, new_mem m)
-        | Inst (id, _, i)    -> Inst   (update_id id, fresh_id (),
-                                        new_inst i)
+        | Const (id, b)      -> Const         (update_id id, b)
+        | Op (id, op)        -> Op            (update_id id, op)
+        | Select (id, h, l)  -> Select        (update_id id, h, l)
+        | Reg (id, r)        -> Reg           (update_id id, new_reg r)
+        | Mem (id, _, r , m) -> Mem           (update_id id, fresh_id (),
+                                               new_reg r, new_mem m)
+        | Multiport_mem
+            (id, mem_size,
+             write_ports)    -> Multiport_mem (update_id id, mem_size,
+                                               Array.map write_ports ~f:new_write_port)
+        | Mem_read_port
+            (id, memory,
+             read_address)   -> Mem_read_port (update_id id, new_signal memory,
+                                               new_signal read_address)
+        | Inst (id, _, i)    -> Inst          (update_id id, fresh_id (),
+                                               new_inst i)
         | Wire (_, _)        -> not_expecting_a_wire signal
       in
       add_mapping ~old_signal:signal ~new_signal;

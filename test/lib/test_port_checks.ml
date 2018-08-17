@@ -36,7 +36,7 @@ let%expect_test "too few inputs" =
   let module Circuit = Circuit.With_interface (I) (O) in
   let create (i : _ I.t) = { O.x = i.a  } in
   let circuit (port_checks : Hardcaml.Circuit.Port_checks.t) =
-    Circuit.create_exn ~port_checks ~name:"foo" create |> ignore
+    Circuit.create_exn ~port_checks ~add_phantom_inputs:false ~name:"foo" create |> ignore
   in
   circuit Relaxed;
   [%expect {||}];

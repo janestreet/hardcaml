@@ -10,12 +10,13 @@ let%expect_test "[sexp_of_t]" =
   show (Circuit.create_exn ~name:"name" []);
   [%expect {|
     ((name name)
-     (signal_by_uid ())
-     (inputs        ())
-     (outputs       ())
-     (signal_graph  ())
-     (fan_out       ())
-     (fan_in        ())) |}]
+     (signal_by_uid  ())
+     (inputs         ())
+     (outputs        ())
+     (phantom_inputs ())
+     (signal_graph   ())
+     (fan_out        ())
+     (fan_in         ())) |}]
 ;;
 
 let%expect_test "[sexp_of_t] with an output" =
@@ -39,6 +40,7 @@ let%expect_test "[sexp_of_t] with an output" =
        (names (output))
        (width   1)
        (data_in 0b1))))
+     (phantom_inputs ())
      (signal_graph ((
        wire
        (names (output))
@@ -76,6 +78,7 @@ let%expect_test "[sexp_of_t] with an input" =
        (names (output))
        (width   1)
        (data_in input))))
+     (phantom_inputs ())
      (signal_graph ((
        wire
        (names (output))
@@ -119,6 +122,7 @@ let%expect_test "[sexp_of_t] with an operator" =
        (names (output))
        (width   1)
        (data_in not))))
+     (phantom_inputs ())
      (signal_graph ((
        wire
        (names (output))
@@ -210,3 +214,93 @@ let%expect_test "input with multiple names" =
        (names (b a))
        (width   1)
        (data_in empty)))) |}]
+
+let%expect_test "phantom inputs" =
+  let circuit = Circuit.create_exn ~name:"test" [ output "b" (input "a" 1)] in
+  (* Add a single phantom inputs *)
+  Circuit.set_phantom_inputs circuit [ "c", 1] |> show;
+  [%expect {|
+    ((name test)
+     (signal_by_uid (
+       (0 empty)
+       (1 (
+         wire
+         (names (a))
+         (width   1)
+         (data_in empty)))
+       (2 (
+         wire
+         (names (b))
+         (width   1)
+         (data_in a)))))
+     (inputs ((
+       wire
+       (names (a))
+       (width   1)
+       (data_in empty))))
+     (outputs ((
+       wire
+       (names (b))
+       (width   1)
+       (data_in a))))
+     (phantom_inputs ((c 1)))
+     (signal_graph ((
+       wire
+       (names (b))
+       (width   1)
+       (data_in a))))
+     (fan_out (
+       (0 (1))
+       (1 (2))))
+     (fan_in (
+       (0 ())
+       (1 (0))
+       (2 (1))))) |}];
+  (* Add 2, one of which is already an input (and will be removed) *)
+  Circuit.set_phantom_inputs circuit [ "a", 1; "c", 1] |> show;
+  [%expect {|
+    ((name test)
+     (signal_by_uid (
+       (0 empty)
+       (1 (
+         wire
+         (names (a))
+         (width   1)
+         (data_in empty)))
+       (2 (
+         wire
+         (names (b))
+         (width   1)
+         (data_in a)))))
+     (inputs ((
+       wire
+       (names (a))
+       (width   1)
+       (data_in empty))))
+     (outputs ((
+       wire
+       (names (b))
+       (width   1)
+       (data_in a))))
+     (phantom_inputs ((c 1)))
+     (signal_graph ((
+       wire
+       (names (b))
+       (width   1)
+       (data_in a))))
+     (fan_out (
+       (0 (1))
+       (1 (2))))
+     (fan_in (
+       (0 ())
+       (1 (0))
+       (2 (1))))) |}];
+  (* Add 2, one of which is already an output *)
+  require_does_raise [%here] (fun () -> Circuit.set_phantom_inputs circuit [ "b", 1; "c", 1] |> show);
+  [%expect {|
+    ("Phantom input is also a circuit output"
+      (phantom_inputs (
+        (b 1)
+        (c 1)))
+      (outputs ((b 1)))) |}]
+;;

@@ -162,6 +162,13 @@ let write_gdl ?(names=false) ?(widths=false) ?(consts=true) ?(clocks=false)
       [ List.hd_exn (deps s); r.reg_enable
       ; m.mem_read_address
       ; m.mem_write_address ]
+    | Multiport_mem (_, _, write_ports) ->
+      Array.map write_ports ~f:(fun wr ->
+        [ wr.write_clock
+        ; wr.write_enable
+        ; wr.write_address
+        ; wr.write_data ])
+      |> Array.to_list |> List.concat
     | _ -> []
   in
   let is_input s = Circuit.is_input circuit s in
@@ -210,6 +217,12 @@ let write_gdl ?(names=false) ?(widths=false) ?(consts=true) ?(clocks=false)
     | Mem (_, _, _, m) ->
       write_node ~bordercolour:"lightblue" ~textcolour:"white"
         ~colour:"black" ~border:"solid" ~label:(sprintf "mem%i" m.mem_size) s
+    | Multiport_mem (_, mem_size, _) ->
+      write_node ~bordercolour:"lightblue" ~textcolour:"white"
+        ~colour:"black" ~border:"solid" ~label:(sprintf "mem%i" mem_size) s
+    | Mem_read_port _ ->
+      write_node ~bordercolour:"lightblue" ~textcolour:"white"
+        ~colour:"black" ~border:"solid" ~label:"mem_rdp" s
     | Inst (_, _, i) ->
       write_node ~border:"solid" ~label:(sprintf "inst\n%s" i.inst_name) s
   in

@@ -141,12 +141,14 @@ module SignalNameManager (S : SignalNaming) () = struct
     ; typ : string
     ; t1  : string
     ; t2  : string }
+  [@@deriving sexp_of]
 
   type name_map =
     { mangler     : Mangler.t
     ; signals     : string SMap.t
     ; mem         : mem_names Uid_map.t
     ; inst_labels : string Uid_map.t }
+  [@@deriving sexp_of]
 
   (* mangle a name *)
   let mangle name nm =
@@ -245,7 +247,7 @@ module SignalNameManager (S : SignalNaming) () = struct
     (* special cases *)
     let nm =
       match signal with
-      | Mem _ -> add_mem signal nm
+      | Mem _ | Multiport_mem _ -> add_mem signal nm
       | Inst (_, _, i) -> add_inst i.inst_instance signal nm
       | _ -> nm
     in
@@ -293,19 +295,20 @@ let raise_expected ~generator ~while_ ~expected ~got_signal =
 module Process = struct
 
   (* helper for writing registers neatly *)
-  type level = Rising | Falling | High | Low
+  type level = Rising | Falling | High | Low [@@deriving sexp_of]
   type stat =
     | If of Signal.t * level * stat * stat
     | Assign of Signal.t * Signal.t
     | Empty
+  [@@deriving sexp_of]
 
   let stat_is_empty = function
     | Empty -> true
     | _ -> false
 
-  let make_reg ?(clock=true) r s =
+  let make_reg ?d ?(clock=true) r s =
     let q = s in
-    let d = List.hd_exn (deps s) in
+    let d = match d with None -> List.hd_exn (deps s) | Some(d) -> d in
     let lev s =
       if is_empty s || is_vdd s
       then High
@@ -356,14 +359,14 @@ module type Rtl_internal = sig
 
   val comment : string -> string
 
-  val header_and_ports : io -> string ->
-    (string*int) list -> (string*int) list -> unit
+  val header_and_ports : io:io -> name:string ->
+    i:(string*int) list -> o:(string*int) list -> unit
 
   val signal_decl : io -> string -> Signal.t -> unit
 
   val alias_decl : io -> string -> Signal.t -> unit
 
-  val mem_decl : io -> Names.mem_names -> Signal.t -> unit
+  val mem_decl : io -> name -> Names.mem_names -> Signal.t -> unit
 
   val start_logic : io -> unit
 
@@ -372,6 +375,8 @@ module type Rtl_internal = sig
 
   val logic_mem : io -> name -> Names.mem_names -> Signal.t ->
     register -> memory -> unit
+
+  val logic_mem2 : io -> name -> Names.mem_names -> Signal.t -> unit
 
   val logic_inst : io -> name -> string -> Signal.t -> instantiation -> unit
 
@@ -409,7 +414,7 @@ module VerilogCore : Rtl_internal = struct
     | _ ->
       decl (string_of_type t) n b
 
-  let header_and_ports io name i o =
+  let header_and_ports ~io ~name ~i ~o =
     let module_port _ last (s, _) =
       if last
       then t4 ^ s ^ "\n"
@@ -439,22 +444,29 @@ module VerilogCore : Rtl_internal = struct
       io (t4 ^ decl (Constant v) name (width s) ^ ";\n")
     | Mem _ ->
       io (t4 ^ decl Wire name (width s) ^ ";\n")
+    | Mem_read_port _ ->
+      io (t4 ^ decl Wire name (width s) ^ ";\n")
+    | Multiport_mem _ -> ()
 
   let alias_decl io name s =
     io (t4 ^ decl Wire name (width s) ^ ";\n")
 
-  let mem_decl io mem s =
+  let mem_decl io name mem s =
     let open Names in
     match s with
     | Mem (_, _, _, sp) ->
       let b = Int.to_string (width s - 1) in
       let s = Int.to_string (sp.mem_size - 1) in
       io (t4 ^ "reg [" ^ b ^ ":0] " ^ mem.arr ^ "[0:" ^ s ^ "];\n")
+    | Multiport_mem (_, mem_size, _) ->
+      let b = Int.to_string (width s - 1) in
+      let size = Int.to_string (mem_size - 1) in
+      io (t4 ^ "reg [" ^ b ^ ":0] " ^ name s ^ "[0:" ^ size ^ "];\n")
     | _ -> raise_expected ~while_:"declaring memories" ~expected:"memory" ~got_signal:s
 
   let start_logic _ = ()
 
-  let clocked io s r name assign =
+  let clocked ?d io s r name assign =
     let open Process in
     let level n = function
       | Rising | High -> "(" ^ n ^ ")"
@@ -484,7 +496,7 @@ module VerilogCore : Rtl_internal = struct
     in
     let edges = sep " or " edges in
     io (t4 ^ "always @(" ^ edges ^ ") begin\n");
-    write_reg t8 (make_reg ~clock:false r s);
+    write_reg t8 (make_reg ?d ~clock:false r s);
     io (t4 ^ "end\n")
 
   let logic io name s =
@@ -505,6 +517,7 @@ module VerilogCore : Rtl_internal = struct
     in
     match s with
     | Mem _
+    | Multiport_mem _
     | Inst _
     | Empty -> raise_unexpected ~while_:"writing logic assignments" ~got_signal:s
     | Op (_, op) ->
@@ -556,6 +569,8 @@ module VerilogCore : Rtl_internal = struct
           (name (dep 0)) ^ "[" ^
           (Int.to_string h) ^ ":" ^
           (Int.to_string l) ^ "];\n")
+    | Mem_read_port(_, mem, read_address) ->
+      io (t4 ^ "assign " ^ sn ^ " = " ^ name mem ^ "[" ^ name read_address ^ "];\n")
     | Const _ -> () (* already done *)
 
   let logic_mem io name mem s r sp =
@@ -582,6 +597,20 @@ module VerilogCore : Rtl_internal = struct
     (* read *)
     let a = name sp.mem_read_address in
     io (t4 ^ "assign " ^ sn ^ " = " ^ mem.arr ^ "[" ^ a ^ "];\n")
+
+  let logic_mem2 io name _mem signal =
+    let write_ports =
+      match signal with
+      | Multiport_mem(_, _, write_ports) -> write_ports
+      | _ -> raise_s [%message "Internal error - expecting Multiport_mem signal"] in
+    Array.iter write_ports ~f:(fun write_port ->
+      clocked ~d:(write_port.write_data) io signal
+        Reg_spec.(create () ~clk:write_port.write_clock
+                  |> override ~ge:write_port.write_enable)
+        name
+        (fun tab _ d ->
+           let wa = name write_port.write_address in
+           io (tab ^ name signal ^ "[" ^ wa ^ "] <= " ^ name d ^ ";\n")))
 
   let logic_inst io name inst_name s i =
     io (t4 ^ i.inst_name ^ "\n");
@@ -675,7 +704,7 @@ module VhdlCore : Rtl_internal = struct
     | Wire -> "signal " ^ n ^ " : " ^ decl_slv b
     | Reg -> "signal " ^ n ^ " : " ^ decl_slv b
 
-  let header_and_ports io name i o =
+  let header_and_ports ~io ~name ~i ~o =
     let entity_in_port _ _ (s, n) = t8 ^ decl Input s n ^ ";\n"  in
     let entity_out_port _ last (s, n) =
       t8 ^ decl Output s n ^ (if last then "\n" else ";\n")
@@ -704,13 +733,14 @@ module VhdlCore : Rtl_internal = struct
       io (t4 ^ decl Reg name (width s) ^ ";\n")
     | Const (_, v) ->
       io (t4 ^ decl (Constant v) name (width s) ^ ";\n")
-    | Mem _ ->
+    | Mem _ | Mem_read_port _ ->
       io (t4 ^ decl Reg name (width s) ^ ";\n")
+    | Multiport_mem _ -> ()
 
   let alias_decl io name s =
     io (t4 ^ decl Wire name (width s) ^ ";\n")
 
-  let mem_decl io mem s =
+  let mem_decl io name mem s =
     let open Names in
     match s with
     | Mem (_, _, _, sp) ->
@@ -723,11 +753,20 @@ module VhdlCore : Rtl_internal = struct
        then io ("std_logic;\n")
        else io ("std_logic_vector(" ^ b ^ " downto 0);\n"));
       io (t4 ^ "signal " ^ mem.arr ^ " : " ^ mem.typ ^ ";\n")
+    | Multiport_mem (_, mem_size, _) ->
+      let b = Int.to_string (width s - 1) in
+      let sz = Int.to_string (mem_size - 1) in
+      io (t4 ^ "type " ^ mem.typ ^
+          " is array (0 to " ^ sz ^ ") of ");
+      (if width s = 1
+       then io ("std_logic;\n")
+       else io ("std_logic_vector(" ^ b ^ " downto 0);\n"));
+      io (t4 ^ "signal " ^ name s ^ " : " ^ mem.typ ^ ";\n")
     | _ -> raise_expected ~while_:"declaring memories" ~expected:"memory" ~got_signal:s
 
   let start_logic io = io ("begin\n\n")
 
-  let clocked io s r name assign =
+  let clocked ?d io s r name assign =
     let open Process in
     let level n = function
       | High -> n ^ " = '1'"
@@ -756,7 +795,7 @@ module VhdlCore : Rtl_internal = struct
     in
     let edges = sep ", " (List.map edges ~f:(fun s -> name s)) in
     io (t4 ^ "process (" ^ edges ^ ") begin\n");
-    write_reg t8 (make_reg r s);
+    write_reg t8 (make_reg ?d r s);
     io (t4 ^ "end process;\n")
 
 
@@ -780,6 +819,7 @@ module VhdlCore : Rtl_internal = struct
 
     match s with
     | Mem _
+    | Multiport_mem _
     | Inst _
     | Empty -> raise_unexpected ~while_:"writing logic assignments" ~got_signal:s
     | Op (_, op) ->
@@ -824,6 +864,9 @@ module VhdlCore : Rtl_internal = struct
       in
       let sel = if width s = 1 then slv sel else sel in
       io (t4 ^ sn ^ " <= " ^ sel ^ ";\n")
+    | Mem_read_port(_, mem, read_address) ->
+      io (t4 ^ sn ^ " <= "
+          ^ name mem ^ "(to_integer(hc_uns(" ^ name read_address ^ ")));\n")
     | Const _ -> () (* already done *)
 
   let logic_mem io name mem s r sp =
@@ -850,6 +893,21 @@ module VhdlCore : Rtl_internal = struct
     (* read *)
     let a = name sp.mem_read_address in
     io (t4 ^ sn ^ " <= " ^ mem.arr ^ "(" ^ to_integer a ^ ");\n")
+
+  let logic_mem2 io name _mem signal =
+    let to_integer s = "to_integer(" ^ Names.prefix ^ "uns(" ^ s ^ "))" in
+    let write_ports =
+      match signal with
+      | Multiport_mem(_, _, write_ports) -> write_ports
+      | _ -> raise_s [%message "Internal error - expecting Multiport_mem signal"] in
+    Array.iter write_ports ~f:(fun write_port ->
+      clocked ~d:(write_port.write_data) io signal
+        Reg_spec.(create () ~clk:write_port.write_clock
+                  |> override ~ge:write_port.write_enable)
+        name
+        (fun tab _ d ->
+           let wa = name write_port.write_address in
+           io (tab ^ name signal ^ "(" ^ to_integer wa ^ ") <= " ^ name d ^ ";\n")))
 
   let logic_inst io name inst_name s i =
     io (t4 ^ inst_name ^ ": entity " ^
@@ -934,10 +992,11 @@ module Make (R : Rtl_internal) = struct
         Array.to_list n
     in
     let primary s = primary_name s, width s in
-    R.header_and_ports io
-      (Circuit.name circ)
-      (List.map inputs  ~f:primary)
-      (List.map outputs ~f:primary);
+    R.header_and_ports
+      ~io
+      ~name:(Circuit.name circ)
+      ~i:(List.map inputs  ~f:primary @ Circuit.phantom_inputs circ)
+      ~o:(List.map outputs ~f:primary);
     (* write internal declarations *)
     io (t4 ^ R.comment "signal declarations" ^ "\n");
     List.iter internal_signals ~f:(fun s ->
@@ -948,9 +1007,9 @@ module Make (R : Rtl_internal) = struct
         ~f:(fun name -> R.alias_decl io name s);
       (* special declarations *)
       (match s with
-       | Mem _ ->
+       | Mem _ | Multiport_mem _ ->
          let mem_names = R.Names.mem_names nm s in
-         R.mem_decl io mem_names s
+         R.mem_decl io primary_name mem_names s
        | _ -> ()));
     io ("\n");
     R.start_logic io;
@@ -961,6 +1020,9 @@ module Make (R : Rtl_internal) = struct
       | Mem (_, _, r, m) ->
         let mem = R.Names.mem_names nm signal in
         R.logic_mem io primary_name mem signal r m
+      | Multiport_mem _ ->
+        let mem = R.Names.mem_names nm signal in
+        R.logic_mem2 io primary_name mem signal
       | Inst (_, _, i) ->
         let inst_name = R.Names.inst_label nm signal in
         R.logic_inst io primary_name inst_name signal i

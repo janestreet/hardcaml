@@ -135,7 +135,9 @@ type signal_bundles =
 let scheduling_deps (s : Signal.t) =
   match s with
   | Mem (_, _, _, m) -> [ m.mem_read_address ]
+  | Mem_read_port (_, _, read_address) -> [ read_address ]
   | Reg _ -> [ ]
+  | Multiport_mem _ -> [ ]
   | Empty | Const _ | Op _ | Wire _ | Select _ | Inst _ -> Signal.deps s
 
 let get_schedule circuit internal_ports =
@@ -175,9 +177,10 @@ let get_maps ~ref ~const ~zero ~bundle =
   let reg_map = List.fold bundle.regs ~init:Signal.Uid_map.empty ~f:reg_add in
   let mem_add map (signal : Signal.t) =
     match signal with
-    | Mem (_, _, _, m) ->
+    | Mem (_, _, _, { mem_size; _ } )
+    | Multiport_mem (_, mem_size, _) ->
       let mem =
-        Array.init m.mem_size ~f:(fun _ -> zero (Signal.width signal))
+        Array.init mem_size ~f:(fun _ -> zero (Signal.width signal))
       in
       Map.set map ~key:(uid signal) ~data:mem
     | _ -> failwith "Expecting memory"
@@ -441,16 +444,26 @@ let create_immutable
           tgt := mem.(Bits.to_int !addr)
         with _ ->
           tgt := Bits.zero (Signal.width signal))
+    | Multiport_mem _ -> None
+    | Mem_read_port (_, mem, read_address) ->
+      let mem = Map.find_exn mem_map (uid mem) in
+      let addr = Map.find_exn data_map (uid read_address) in
+      Some (fun () ->
+        let data =
+          try mem.(Bits.to_int !addr)
+          with _ -> Bits.zero (Signal.width signal)
+        in
+        tgt := data)
     | Inst (_, _, i) ->
-      match Combinational_ops_database.find
-              combinational_ops_database ~name:i.inst_name with
+      (match Combinational_ops_database.find
+               combinational_ops_database ~name:i.inst_name with
       | None ->
         raise_s [%message
           "Instantiation not supported in simulation" ~name:(i.inst_name : string)]
       | Some op ->
         let f = Combinational_op.create_fn op in
         Some (fun () ->
-          tgt := Bits.concat (List.rev (f (List.map deps ~f:(!)))))
+          tgt := Bits.concat (List.rev (f (List.map deps ~f:(!))))))
   in
   let compile_reg_update (signal : Signal.t) =
     match signal with
@@ -475,6 +488,23 @@ let create_immutable
            if w >= m.mem_size
            then ()
            else mem.(w) <- !d))
+    | Multiport_mem (_, mem_size, write_ports) ->
+      let mem = Map.find_exn mem_map (uid signal) in
+      let f (write_port : Signal.write_port) =
+        let we = Map.find_exn data_map (uid write_port.write_enable) in
+        let w = Map.find_exn data_map (uid write_port.write_address) in
+        let d = Map.find_exn data_map (uid write_port.write_data) in
+        (fun () ->
+           (* XXX memories can have resets/clear etc as well *)
+           if Bits.to_int !we = 1
+           then (
+             let w = Bits.to_int !w in
+             if w >= mem_size
+             then ()
+             else mem.(w) <- !d))
+      in
+      let write_ports = Array.map write_ports ~f in
+      (fun () -> Array.iter write_ports ~f:(fun f -> f ()))
     | _ -> failwith "error while compiling mem update"
   in
   let compile_reset (signal : Signal.t) =
@@ -729,9 +759,20 @@ let create_mutable
           Bits.Mutable.copy ~dst:tgt ~src:mem.(Bits.Mutable.to_int addr)
         with _ ->
           Bits.Mutable.copy ~dst:tgt ~src:(zero (Signal.width signal)))
+    | Multiport_mem _ -> None
+    | Mem_read_port (_, mem, read_address) ->
+      let mem = Map.find_exn mem_map (uid mem) in
+      let addr = Map.find_exn data_map (uid read_address) in
+      let zero = Bits.Mutable.create (Signal.width signal) in
+      Some (fun () ->
+        let data =
+          try mem.(Bits.Mutable.to_int addr)
+          with _ -> zero
+        in
+        Bits.Mutable.copy ~dst:tgt ~src:data)
     | Inst (_, _, i) ->
-      match Combinational_ops_database.find
-              combinational_ops_database ~name:i.inst_name with
+      (match Combinational_ops_database.find
+               combinational_ops_database ~name:i.inst_name with
       | None ->
         raise_s [%message
           "Instantiation not supported in simulation" ~name:(i.inst_name : string)]
@@ -741,7 +782,7 @@ let create_mutable
           List.map i.inst_outputs ~f:(fun (_,(b,_)) -> Bits.Mutable.create b) in
         Some (fun () ->
           f deps outputs;
-          Bits.Mutable.concat tgt (List.rev outputs))
+          Bits.Mutable.concat tgt (List.rev outputs)))
   in
   let compile_reg_update (signal : Signal.t) =
     match signal with
@@ -769,6 +810,22 @@ let create_mutable
              ()
            else
              Bits.Mutable.copy ~dst:mem.(w) ~src:d))
+    | Multiport_mem(_, mem_size, write_ports) ->
+      let mem = Map.find_exn mem_map (uid signal) in
+      let f (write_port : Signal.write_port) =
+        let we = Map.find_exn data_map (uid write_port.write_enable) in
+        let w = Map.find_exn data_map (uid write_port.write_address) in
+        let d = Map.find_exn data_map (uid write_port.write_data) in
+        (fun () ->
+           if Bits.Mutable.to_int we = 1
+           then (
+             let w = Bits.Mutable.to_int w in
+             if w >= mem_size
+             then ()
+             else Bits.Mutable.copy ~dst:mem.(w) ~src:d))
+      in
+      let write_ports = Array.map write_ports ~f in
+      (fun () -> Array.iter write_ports ~f:(fun f -> f()))
     | _ -> failwith "error while compiling mem update"
   in
   let compile_reset (signal : Signal.t) =
@@ -887,10 +944,10 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
         create_options
         ?is_internal_port
         ?combinational_ops_database
-        ~(kind : Kind.t) ?port_checks create_fn ->
+        ~(kind : Kind.t) ?port_checks ?add_phantom_inputs create_fn ->
         let circuit =
           Circuit.call_with_create_options
-            C.create_exn create_options ?port_checks
+            C.create_exn create_options ?port_checks ?add_phantom_inputs
             ~name:(match kind with
               | Immutable -> "immutable_simulator"
               | Mutable   -> "mutable_simulator")

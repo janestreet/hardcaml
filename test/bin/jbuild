@@ -1,6 +1,7 @@
 (executables
  ((names (test_gtkwave
-          test_parameters))
+          test_parameters
+          test_multiport_memory))
   (libraries (base
               hardcaml
               hardcaml_test
@@ -17,6 +18,5 @@
  ((name runtest)
   (deps (test_instantiate_verilog.v
          test_instantiate_vhdl.vhd))))
-
 
 (jbuild_version 1)

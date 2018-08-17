@@ -19,6 +19,7 @@ module Instantiation              = Instantiation
 module Mangler                    = Mangler
 module Parameter                  = Parameter
 module Parameter_name             = Parameter_name
+module Ram                        = Ram
 module Ram_spec                   = Ram_spec
 module Recipe                     = Recipe
 module Reg_spec                   = Reg_spec

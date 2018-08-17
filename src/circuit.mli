@@ -46,6 +46,14 @@ val is_output : t -> Signal.t -> bool
 
 val find_signal_exn : t -> Signal.Uid.t -> Signal.t
 
+(** For internal use.  Add phantom input ports to the circuit when writing RTL.  This
+    can be necessary to ensure [Interface] based input specifications match those
+    discovered when traversing the hardware design from its outputs.  It is especially
+    important when working with hierarchical designs. *)
+val set_phantom_inputs : t -> (string * int) list -> t
+
+val phantom_inputs : t -> (string * int) list
+
 (** Map of [uid]s to [Signal.t]s. *)
 module Signal_map : sig
   type t = Signal.t Signal.Uid_map.t [@@deriving sexp_of]
@@ -105,7 +113,8 @@ module With_interface (I : Interface.S) (O : Interface.S) : sig
   (** Create a circuit with [inputs] and [outputs] automatically defined and labelled
       according to the input ([I]) and output ([O]) interfaces. *)
   val create_exn :
-    (?port_checks : Port_checks.t
+    (?port_checks : Port_checks.t (** Default is [Relaxed]. *)
+     -> ?add_phantom_inputs : bool (** Default is [true]. *)
      -> name : string
      -> create
      -> t) with_create_options

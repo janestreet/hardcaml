@@ -54,7 +54,15 @@ module type Signal = sig
     | Select of signal_id * int * int
     | Reg of signal_id * register
     | Mem of signal_id * Uid.t * register * memory
+    | Multiport_mem of signal_id * int * write_port array
+    | Mem_read_port of signal_id * t * t
     | Inst of signal_id * Uid.t * instantiation
+
+  and write_port =
+    { write_clock : t
+    ; write_address : t
+    ; write_enable : t
+    ; write_data : t }
 
   (** These types are used to define a particular type of register as per the following
       template, where each part is optional:
@@ -284,5 +292,11 @@ module type Signal = sig
     -> re:t
     -> ra:t
     -> t
+
+  val multiport_memory
+    :  int
+    -> write_ports : write_port array
+    -> read_addresses : t array
+    -> t array
 
 end

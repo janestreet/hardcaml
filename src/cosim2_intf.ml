@@ -124,6 +124,7 @@ module type Cosim2 = sig
       val create
         : (?vcd_file_name : string
            -> ?port_checks : Circuit.Port_checks.t
+           -> ?add_phantom_inputs : bool
            -> Circuit.With_interface(I)(O).create
            -> Cyclesim.With_interface(I)(O).t) Circuit.with_create_options
     end

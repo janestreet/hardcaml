@@ -55,6 +55,8 @@ module MakePureCombTransform (B : MakePureCombTransform_arg) = struct
       | Select (_, h, l) -> B.select (dep 0) h l
       | Reg (_, _) -> failwith "MakePureCombTransform: no registers"
       | Mem (_, _, _, _) -> failwith "MakePureCombTransform: no memories"
+      | Multiport_mem (_, _, _) -> failwith "MakePureCombTransform: no memories"
+      | Mem_read_port (_, _, _) -> failwith "MakePureCombTransform: no memories"
       | Inst _ -> failwith "MakePureCombTransform: no instantiations"
     in
     (* apply names *)
@@ -219,6 +221,10 @@ module MakeCombTransform (B : (Comb.Primitives with type t = Signal.t)) = struct
                   ~cv:(find (uid r.reg_clear_value)))
           ~we:we' ~wa:w' ~d:d' ~ra:r'
           m.mem_size
+      | Multiport_mem (_) ->
+        failwith "Transform Multiport_mem"
+      | Mem_read_port (_) ->
+        failwith "Transform Mem_read_port"
       | Inst (_, _, i) ->
         let inputs =
           List.map i.inst_inputs ~f:(fun (name, input) -> (name, find (uid input))) in
