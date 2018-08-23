@@ -202,8 +202,8 @@ let%expect_test "functional sim / bits" =
   let o3 = testbench ~create_circuit:create_circuit_mutable ~create_sim:sim_functional in
   let o4 = testbench ~create_circuit:create_circuit_mutable ~create_sim:sim_imperative in
   let equal o o' =
-    List.equal o o' ~equal:(fun (_, _, c1, c2) (_, _, c1', c2') ->
-      Bits.equal c1 c1' && Bits.equal c2 c2') in
+    List.equal (fun (_, _, c1, c2) (_, _, c1', c2') ->
+      Bits.equal c1 c1' && Bits.equal c2 c2') o o'  in
   require [%here] (equal o1 o2);
   require [%here] (equal o1 o3);
   require [%here] (equal o1 o4);

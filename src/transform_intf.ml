@@ -26,6 +26,7 @@ module type Transform = sig
   end
 
   module type MakePureCombTransform_arg = MakePureCombTransform_arg
+
   (** functor to build the function to map a signal to a new combinatorial signal
       representation *)
   module MakePureCombTransform (B : MakePureCombTransform_arg) : TransformFn' with type t = B.t

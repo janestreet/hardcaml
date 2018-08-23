@@ -38,12 +38,16 @@ end
 
 module type Config = sig
   val mode             : Mode.t
+
   (** Width of the assumulator. *)
   val accumulator_bits : int
+
   (** Width of input data. *)
   val data_bits        : int
+
   (** Number of coefficients. *)
   val num_coefs        : int
+
   (** Extra least significant bits added to the accumulator.  This can add extra
       precision without extending the rom size. *)
   val rom_shift        : int

@@ -83,8 +83,10 @@ module type Structural = sig
 
   (** start circuit *)
   val circuit : string -> unit
+
   (** complete circuit, add to database *)
   val end_circuit : unit -> unit
+
   (** find circuit in database *)
   val find_circuit : string -> circuit
 
