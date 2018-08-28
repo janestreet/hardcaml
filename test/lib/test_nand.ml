@@ -26,10 +26,11 @@ module Bits_nand =
 
 let%expect_test "3 bit adder, bits" =
   for a=0 to 7 do
-    print_s [%message ""
-                        ~_:(List.init 8
-                              ~f:(fun b -> Bits_nand.(consti 3 a +: consti 3 b))
-                            : Bits.t list)]
+    print_s [%message
+      ""
+        ~_:(List.init 8
+              ~f:(fun b -> Bits_nand.(consti ~width:3 a +: consti ~width:3 b))
+            : Bits.t list)]
   done;
   [%expect {|
     (000 001 010 011 100 101 110 111)

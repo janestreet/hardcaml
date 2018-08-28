@@ -414,7 +414,7 @@ let create_immutable
         if not (Signal.is_empty r.reg_clear)
         then Some (Map.find_exn data_map (uid r.reg_clear),
                    Map.find_exn data_map (uid r.reg_clear_value),
-                   Bits.to_int !(Map.find_exn data_map (uid r.reg_clear_level)))
+                   Level.to_int r.reg_clear_level)
         else None
       in
       let ena =
@@ -728,7 +728,7 @@ let create_mutable
         if not (Signal.is_empty r.reg_clear)
         then Some (Map.find_exn data_map (uid r.reg_clear),
                    Map.find_exn data_map (uid r.reg_clear_value),
-                   Bits.Mutable.to_int (Map.find_exn data_map (uid r.reg_clear_level)))
+                   Level.to_int r.reg_clear_level)
         else None
       in
       let ena =

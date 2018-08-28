@@ -23,7 +23,7 @@ let make_rom coefs =
   let last = ones n_coefs in
   let rec rom i =
     let sum =
-      reduce (+:)
+      reduce ~f:(+:)
         (List.map2_exn
            (List.rev (bits i))
            coefs
@@ -77,15 +77,15 @@ module Make (Config : Config) = struct
     (* parallel in, serial out register *)
     let piso xi =
       match mode with
-      | Fixed   -> lsb (reg_fb reg_spec ~e:en ~w:data_bits (fun d -> mux2 ld xi (srl d 1)))
-      | Integer -> msb (reg_fb reg_spec ~e:en ~w:data_bits (fun d -> mux2 ld xi (sll d 1)))
+      | Fixed   -> lsb (reg_fb reg_spec ~enable:en ~w:data_bits (fun d -> mux2 ld xi (srl d 1)))
+      | Integer -> msb (reg_fb reg_spec ~enable:en ~w:data_bits (fun d -> mux2 ld xi (sll d 1)))
     in
     (* rom address *)
     let addr = concat (List.rev (List.map x ~f:piso)) -- "piso_addr" in
     (* build and index rom *)
     let coef = mux addr romcoefs -- "rom_coef" in
     (* accumulator *)
-    reg_fb reg_spec ~e:en ~w:accumulator_bits
+    reg_fb reg_spec ~enable:en ~w:accumulator_bits
       (fun acc ->
          let acc = (match mode with Fixed -> sra | Integer -> sll) acc 1 in
          let coef = sll (sresize coef accumulator_bits) rom_shift in
@@ -97,7 +97,7 @@ module Make (Config : Config) = struct
     let romcoefs = make_rom (Array.to_list coefs) in
     let q =
       rac
-        (Reg_spec.create () ~clk:i.clk ~clr:i.clr)
+        (Reg_spec.create () ~clock:i.clk ~clear:i.clr)
         ~en:i.en
         ~ld:i.ld
         ~addsub:i.addsub

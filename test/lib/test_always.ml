@@ -15,7 +15,7 @@ let%expect_test "guarded assignment width mistmatch" =
        (width 2)
        (value 0b00)))) |}]
 
-let reg_spec = Reg_spec.create () ~clk:clock ~clr:clear
+let reg_spec = Reg_spec.create () ~clock:clock ~clear:clear
 
 module State = struct
   type t = int [@@deriving compare, sexp_of]

@@ -34,14 +34,14 @@ module Variable = struct
     ; internal = { assigns_to_wire = wire
                  ; default }}
 
-  let reg spec ~e:enable ~width =
+  let reg spec ~enable ~width =
     let wire = Signal.wire width in
-    let reg = Signal.reg spec ~e:enable wire in
+    let reg = Signal.reg spec ~enable:enable wire in
     { value    = reg
     ; internal = { assigns_to_wire = wire
                  ; default         = reg }}
 
-  let pipeline ~depth (spec : Reg_spec.t) ~e:enable ~width =
+  let pipeline ~depth (spec : Reg_spec.t) ~enable ~width =
     if depth = 0
     then (
       (* use a wire - need to derive the default value *)
@@ -49,10 +49,10 @@ module Variable = struct
       then wire ~default:(Signal.zero width)
       else wire ~default:spec.reg_reset_value)
     else (
-      let r = reg spec ~e:enable ~width in
+      let r = reg spec ~enable ~width in
       (* delay the output by the pipeline length, minus 1 *)
       { r with
-        value = Signal.pipeline ~n:(depth - 1) spec ~e:enable r.value })
+        value = Signal.pipeline ~n:(depth - 1) spec ~enable:enable r.value })
 end
 
 type t =
@@ -93,7 +93,7 @@ let ( <-- ) (a : Variable.t) b =
   Assign (a, b)
 
 let ( <--. ) (a : Variable.t) b =
-  a <-- Signal.consti (Signal.width a.value) b
+  a <-- Signal.consti ~width:(Signal.width a.value) b
 
 let list_of_set s =
   Set.fold s ~init:[] ~f:(fun l e -> e :: l)
@@ -142,7 +142,7 @@ let rec compile_mux statements ~default =
     let default =
       match statement with
       | If (s, t, f) ->
-        let s = Signal.reduce Signal.( |: ) (Signal.bits s) in
+        let s = Signal.reduce ~f:Signal.( |: ) (Signal.bits s) in
         let t = compile_mux t ~default in
         let f = compile_mux f ~default in
         Signal.mux s [ f; t ]
@@ -203,22 +203,22 @@ module State_machine = struct
     let ls = Int.ceil_log2 nstates in
     let state_bits i =
       match encoding with
-      | Binary -> Signal.consti ls i
-      | Gray -> Signal.constb (Bits.binary_to_gray (Bits.consti ls i) |> Bits.to_bstr)
+      | Binary -> Signal.consti ~width:ls i
+      | Gray -> Signal.constb (Bits.binary_to_gray (Bits.consti ~width:ls i) |> Bits.to_bstr)
       | Onehot ->
-        Signal.constb Bits.(select (binary_to_onehot (consti ls i)) (nstates-1) 0
+        Signal.constb Bits.(select (binary_to_onehot (consti ~width:ls i)) (nstates-1) 0
                             |> to_bstr)
     in
     let states = List.mapi State.all ~f:(fun i s -> s,  (i, state_bits i)) in
     let var =
       match encoding with
-      | Binary | Gray -> Variable.reg reg_spec ~e:enable ~width:ls
+      | Binary | Gray -> Variable.reg reg_spec ~enable ~width:ls
       | Onehot ->
         Variable.reg
           { reg_spec with (* must be reset to get into state 0 *)
             reg_clear_value = Signal.one nstates
           ; reg_reset_value = Signal.one nstates }
-          ~e:enable
+          ~enable
           ~width:nstates in
     let find_state name state =
       match List.Assoc.find states state ~equal:[%compare.equal: State.t] with

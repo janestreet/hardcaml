@@ -88,9 +88,9 @@ module Make (Fixnum_spec : Fixnum.Spec) = struct
       let k = wire (width iter + 2) -- "k" in
       let repeat = (k ==: ((zero 2) @: iterh)) -- "repeated_step" in
       let upd v ~init t f =
-        v <== reg reg_spec ~e:enable
+        v <== reg reg_spec ~enable
                 (mux2 ld
-                   (consti (width t) init)
+                   (consti ~width:(width t) init)
                    (mux2 repeat t f))
       in
       upd k     ~init:4 (k +: (sll k 1) +:. 1) k;
@@ -100,7 +100,7 @@ module Make (Fixnum_spec : Fixnum.Spec) = struct
     let cordic ~reg_spec ~enable ~ld ~system ~mode ~iterations ~c ~x ~y ~z =
       let wi = num_bits (iterations-1) in
       let iter =
-        reg_fb reg_spec ~e:enable ~w:wi (fun d -> mux2 ld (zero wi) (d +:. 1)) -- "iter" in
+        reg_fb reg_spec ~enable ~w:wi (fun d -> mux2 ld (zero wi) (d +:. 1)) -- "iter" in
       let table_lookup table =
         mux iter (Array.to_list
                     (Array.map table ~f:(fun c ->
@@ -116,9 +116,9 @@ module Make (Fixnum_spec : Fixnum.Spec) = struct
       let xsft = log_shift sra xw iter in
       let ysft = log_shift sra yw iter in
       let xs, ys, zs = C.step ~x:xw ~xsft ~y:yw ~ysft ~z:zw ~d ~m ~e in
-      xw <== reg reg_spec ~e:enable (mux2 ld x xs);
-      yw <== reg reg_spec ~e:enable (mux2 ld y ys);
-      zw <== reg reg_spec ~e:enable (mux2 ld z zs);
+      xw <== reg reg_spec ~enable (mux2 ld x xs);
+      yw <== reg reg_spec ~enable (mux2 ld y ys);
+      zw <== reg reg_spec ~enable (mux2 ld z zs);
       xw, yw, zw
   end
 
@@ -153,7 +153,7 @@ module Make (Fixnum_spec : Fixnum.Spec) = struct
   end
 
   let create (config : Config.t) (i : Signal.t I.t) =
-    let reg_spec = Reg_spec.create () ~clk:i.clk ~clr:i.clr in
+    let reg_spec = Reg_spec.create () ~clock:i.clk ~clear:i.clr in
     let iterations = config.iterations in
     let xo, yo, zo =
       let system, mode = i.system, i.mode in
@@ -162,7 +162,7 @@ module Make (Fixnum_spec : Fixnum.Spec) = struct
       | Combinational ->
         Unrolled.cordic ?pipe:None ~system ~mode ~iterations ~c ~x ~y ~z
       | Pipelined ->
-        Unrolled.cordic ~pipe:(Signal.reg reg_spec ~e:i.enable)
+        Unrolled.cordic ~pipe:(Signal.reg reg_spec ~enable:i.enable)
           ~system ~mode ~iterations ~c ~x ~y ~z
       | Iterative ->
         Iterative.cordic ~reg_spec ~enable:i.enable ~ld:i.ld ~system ~mode ~iterations ~c ~x ~y ~z

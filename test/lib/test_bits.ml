@@ -251,7 +251,7 @@ module Make (R : Require) = struct
   module Ops (B1 : Comb.S) (B2 : Comb.S) = struct
 
     let brand min max = min + Random.int (max-min+1)
-    let srand b = Bits.(srand b |> to_string)
+    let srand b = Bits.(random ~width:b |> to_string)
     let const1 s = B1.const s
     let const2 s = B2.const s
 

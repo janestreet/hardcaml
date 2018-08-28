@@ -78,10 +78,10 @@ let sim combinational_ops_database (op1:op1 list) (op2:op2 list) args =
   (* cycle simulator *)
   S.reset sim;
   let step (arg_a, arg_b) =
-    i.a32 := Bits.consti32 32 (Int32.bits_of_float arg_a);
-    i.a64 := Bits.consti64 64 (Int64.bits_of_float arg_a);
-    i.b32 := Bits.consti32 32 (Int32.bits_of_float arg_b);
-    i.b64 := Bits.consti64 64 (Int64.bits_of_float arg_b);
+    i.a32 := Bits.consti32 ~width:32 (Int32.bits_of_float arg_a);
+    i.a64 := Bits.consti64 ~width:64 (Int64.bits_of_float arg_a);
+    i.b32 := Bits.consti32 ~width:32 (Int32.bits_of_float arg_b);
+    i.b64 := Bits.consti64 ~width:64 (Int64.bits_of_float arg_b);
     S.cycle sim;
     (* collect results *)
     let result (({ o32; o64 } : Bits.t ref O.t), op) =

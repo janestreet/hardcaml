@@ -1,23 +1,23 @@
 open! Import
 
 let%expect_test "IntbitsList" =
-  print_s (IntbitsList.(consti 8 127 |> sexp_of_t));
+  print_s (IntbitsList.(consti ~width:8 127 |> sexp_of_t));
   [%expect {| 01111111 |}]
 
 let%expect_test "Bits" =
-  print_s (Bits.(consti 3 3 |> sexp_of_t));
+  print_s (Bits.(consti ~width:3 3 |> sexp_of_t));
   [%expect {| 011 |}]
 
 let%expect_test "Bits" =
-  print_s (Bits.(consti 67 (-2) |> sexp_of_t));
+  print_s (Bits.(consti ~width:67 (-2) |> sexp_of_t));
   [%expect {| 1111111111111111111111111111111111111111111111111111111111111111110 |}]
 
 let%expect_test "Mutable.ArraybitsInt" =
-  print_s (Bits.Mutable.Comb.(consti 13 294 |> sexp_of_t));
+  print_s (Bits.Mutable.Comb.(consti ~width:13 294 |> sexp_of_t));
   [%expect {| 0000100100110 |}]
 
 let%expect_test "Mutable.ArraybitsInt" =
-  print_s (Bits.Mutable.Comb.(consti 19 (-30) |> sexp_of_t));
+  print_s (Bits.Mutable.Comb.(consti ~width:19 (-30) |> sexp_of_t));
   [%expect {| 1111111111111100010 |}]
 
 open Signal
@@ -29,7 +29,7 @@ let%expect_test "empty" =
   [%expect {| empty |}]
 
 let%expect_test "simple constant" =
-  print_signal (consti 2 2);
+  print_signal (consti ~width:2 2);
   [%expect {|
     (const
       (width 2)
@@ -44,7 +44,7 @@ let%expect_test "named constant" =
       (value 0b1)) |}]
 
 let%expect_test "large constant" =
-  print_signal (consti 9 0x123);
+  print_signal (consti ~width:9 0x123);
   [%expect {|
     (const
       (width 9)
@@ -120,8 +120,13 @@ let%expect_test "printing at leaves" =
     ; wireof (mux2 vdd a b)
     ; wireof (bit a 1)
     ; wireof (concat [a;b])
-    ; wireof (reg (Reg_spec.create () ~clk:clock) ~e:empty a)
-    ; wireof (memory (Ram_spec.create () ~clk:clock) 4 ~wa:a ~ra:a ~we:(bit b 1) ~d:b)];
+    ; wireof (reg (Reg_spec.create () ~clock) ~enable:empty a)
+    ; wireof (memory 4
+                ~write_port:{ write_clock = clock
+                            ; write_address = a
+                            ; write_enable = bit b 1
+                            ; write_data = b }
+                ~read_address:a) ];
   [%expect {|
     (wire
       (width   2)
@@ -158,7 +163,7 @@ let%expect_test "printing at leaves - different types" =
   [%expect {| (cat (width 8) (arguments (cat cat (cat a)))) |}]
 
 let%expect_test "mux" =
-  print_signal (mux (input "sel" 2) (List.init 4 ~f:(consti 16)));
+  print_signal (mux (input "sel" 2) (List.init 4 ~f:(consti ~width:16)));
   [%expect {|
     (mux
       (width  16)
@@ -166,7 +171,7 @@ let%expect_test "mux" =
       (data (0x0000 0x0001 0x0002 0x0003))) |}]
 
 let%expect_test "big mux" =
-  print_signal (mux (input "sel" 4) (List.init 16 ~f:(consti 8)));
+  print_signal (mux (input "sel" 4) (List.init 16 ~f:(consti ~width:8)));
   [%expect {|
     (mux
       (width  8)
@@ -190,76 +195,79 @@ let%expect_test "big mux" =
         0b00001111))) |}]
 
 let%expect_test "select" =
-  print_signal (select (consti 4 2) 3 2);
+  print_signal (select (consti ~width:4 2) 3 2);
   [%expect {|
     (select (width 2) (range (3 2)) (data_in 0b0010)) |}]
 
 let%expect_test "reg r_none" =
-  print_signal (reg (Reg_spec.create () ~clk:clock) ~e:empty (input "a" 1));
+  print_signal (reg (Reg_spec.create () ~clock) ~enable:empty (input "a" 1));
   [%expect {|
     (register
       (width 1)
       ((clock      clock)
-       (clock_edge rising)
+       (clock_edge Rising)
        (enable     0b1))
       (data_in a)) |}]
 
 let%expect_test "reg r_async" =
-  print_signal (reg (Reg_spec.create () ~clk:clock ~rst:reset) ~e:empty (input "a" 1));
+  print_signal (reg (Reg_spec.create () ~clock ~reset) ~enable:empty (input "a" 1));
   [%expect {|
     (register
       (width 1)
-      ((clock       clock)
-       (clock_edge  rising)
-       (reset       reset)
-       (reset_edge  rising)
-       (reset_value 0b0)
-       (enable      0b1))
+      ((clock      clock)
+       (clock_edge Rising)
+       (reset      reset)
+       (reset_edge Rising)
+       (reset_to   0b0)
+       (enable     0b1))
       (data_in a)) |}]
 
 let%expect_test "reg r_sync" =
   print_signal (
     reg
-      (Reg_spec.override (Reg_spec.create () ~clk:clock ~clr:clear) ~clkl:gnd)
-      ~e:empty (input "a" 1));
+      (Reg_spec.override (Reg_spec.create () ~clock ~clear) ~clock_edge:Falling)
+      ~enable:empty (input "a" 1));
   [%expect {|
     (register
       (width 1)
       ((clock       clock)
-       (clock_edge  falling)
+       (clock_edge  Falling)
        (clear       clear)
-       (clear_edge  high)
-       (clear_value 0b0)
+       (clear_level High)
+       (clear_to    0b0)
        (enable      0b1))
       (data_in a)) |}]
 
 let%expect_test "reg r_full" =
   print_signal (
-    reg (Reg_spec.create () ~clk:clock ~clr:clear ~rst:reset) ~e:empty (input "a" 1));
+    reg (Reg_spec.create () ~clock ~clear ~reset) ~enable:empty (input "a" 1));
   [%expect {|
     (register
       (width 1)
       ((clock       clock)
-       (clock_edge  rising)
+       (clock_edge  Rising)
        (reset       reset)
-       (reset_edge  rising)
-       (reset_value 0b0)
+       (reset_edge  Rising)
+       (reset_to    0b0)
        (clear       clear)
-       (clear_edge  high)
-       (clear_value 0b0)
+       (clear_level High)
+       (clear_to    0b0)
        (enable      0b1))
       (data_in a)) |}]
 
 let%expect_test "memory" =
   print_signal (
-    memory (Ram_spec.create () ~clk:clock)
-      16
-      ~we:(input "we" 1) ~wa:(input "w" 4) ~d:(input "d" 32) ~ra:(input "r" 4));
+    memory 16
+      ~write_port:{ write_clock = clock
+                  ; write_enable = input "we" 1
+                  ; write_address = input "w" 4
+                  ; write_data = input "d" 32 }
+      ~read_address:(input "r" 4));
   [%expect {|
     (memory
       (width 32)
       ((clock      clock)
-       (clock_edge rising)
+       (clock_edge Rising)
        (enable     we))
       ((size          16)
        (write_address w)
@@ -331,7 +339,7 @@ module Structural_test (Base : Comb.Primitives with type t = Structural.signal) 
     let cat_o = mk_output "cat" 16 in
     let sel_o = mk_output "sel" 4 in
     let mux_o = mk_output "mux" 8 in
-    let const = consti 8 123 in
+    let const = consti ~width:8 123 in
     let sum = a +: b in
     let cat = a @: b in
     let sel = select a 3 0 in

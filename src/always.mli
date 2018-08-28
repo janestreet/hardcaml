@@ -100,10 +100,10 @@ module Variable : sig
   val wire : default:Signal.t -> t
 
   (** create a register *)
-  val reg : Reg_spec.t -> e:Signal.t -> width:int -> t
+  val reg : Reg_spec.t -> enable:Signal.t -> width:int -> t
 
   (** create a pipeline of registers *)
-  val pipeline : depth:int -> Reg_spec.t -> e:Signal.t -> width:int -> t
+  val pipeline : depth:int -> Reg_spec.t -> enable:Signal.t -> width:int -> t
 end
 
 type 'a case = 'a * t list

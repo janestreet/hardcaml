@@ -197,29 +197,26 @@ module MakeCombTransform (B : (Comb.Primitives with type t = Signal.t)) = struct
       | Select (_, h, l) -> B.select (dep 0) h l
       | Reg (_, r) ->
         reg (Reg_spec.override
-               (Reg_spec.create ~clk:(find (uid r.reg_clock)) ())
-               ~rl:r.reg_reset_level
-               ~cl:r.reg_clear_level
-               ~r: (find (uid r.reg_reset))
-               ~rv:(find (uid r.reg_reset_value))
-               ~c: (find (uid r.reg_clear))
-               ~cv:(find (uid r.reg_clear_value)))
-          ~e: (find (uid r.reg_enable))
+               (Reg_spec.create ~clock:(find (uid r.reg_clock)) ())
+               ~reset_edge:r.reg_reset_edge
+               ~clear_level:r.reg_clear_level
+               ~reset:(find (uid r.reg_reset))
+               ~reset_to:(find (uid r.reg_reset_value))
+               ~clear:(find (uid r.reg_clear))
+               ~clear_to:(find (uid r.reg_clear_value)))
+          ~enable: (find (uid r.reg_enable))
           (dep 0)
       | Mem (_, _, r, m) ->
         let d' = dep 0 in
         let w' = dep 1 in
         let r' = dep 2 in
         let we' = (find << uid) r.reg_enable in
-        memory (Ram_spec.override
-                  (Ram_spec.create ~clk:(find (uid r.reg_clock)) ())
-                  ~rl:r.reg_reset_level
-                  ~cl:r.reg_clear_level
-                  ~r: (find (uid r.reg_reset))
-                  ~rv:(find (uid r.reg_reset_value))
-                  ~c: (find (uid r.reg_clear))
-                  ~cv:(find (uid r.reg_clear_value)))
-          ~we:we' ~wa:w' ~d:d' ~ra:r'
+        memory
+          ~write_port:{ write_clock = find (uid r.reg_clock)
+                      ; write_enable = we'
+                      ; write_address = w'
+                      ; write_data = d' }
+          ~read_address:r'
           m.mem_size
       | Multiport_mem (_) ->
         failwith "Transform Multiport_mem"

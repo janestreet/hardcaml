@@ -10,7 +10,7 @@ let%expect_test "[is_pow2]" =
         "is_pow2"
           ~_:(i : int)
           "="
-          ~_:(Bits.is_pow2 (Bits.consti bits i) : Bits.t)];
+          ~_:(Bits.is_pow2 (Bits.consti ~width:bits i) : Bits.t)];
     done;
   done;
   [%expect {|
@@ -60,7 +60,7 @@ let test name (bits_f : Bits.t -> Bits.t With_valid.t) int_f =
   for bits = 1 to 4 do
     print_s [%message (bits : int)];
     for i = 0 to 1 lsl bits - 1 do
-      let result = bits_f (Bits.consti bits i) in
+      let result = bits_f (Bits.consti ~width:bits i) in
       (match int_f i with
        | exception _ -> require [%here] (Bits.is_gnd result.valid)
        | x -> require_equal [%here] (module Int) x (result.value |> Bits.to_int));

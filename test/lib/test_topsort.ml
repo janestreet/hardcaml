@@ -46,13 +46,12 @@ let%expect_test "input -> output" =
         (width   4)
         (data_in a))) |}]
 
-let reg_spec = Reg_spec.create () ~clk:Signal.clock ~clr:Signal.clear
-let ram_spec = Ram_spec.create () ~clk:Signal.clock
+let reg_spec = Reg_spec.create () ~clock ~clear
 
 (* You require custom [deps] to express the fact that you may loop through certain
    nodes. *)
 let%expect_test "reg loop (standard deps)" =
-  let b = Signal.reg_fb reg_spec ~e:Signal.vdd ~w:1 Signal.(fun d -> d +:. 1) in
+  let b = Signal.reg_fb reg_spec ~enable:Signal.vdd ~w:1 Signal.(fun d -> d +:. 1) in
   require_does_raise [%here] (fun () ->
     Signal_graph.topological_sort (Signal_graph.create [b]));
   [%expect {|
@@ -66,7 +65,7 @@ let deps (s : Signal.t) =
   | _ -> Signal.deps s
 
 let%expect_test "reg loop" =
-  let b = Signal.reg_fb reg_spec ~e:Signal.vdd ~w:1 Signal.(fun d -> d +:. 1) in
+  let b = Signal.reg_fb reg_spec ~enable:Signal.vdd ~w:1 Signal.(fun d -> d +:. 1) in
   let result = Signal_graph.topological_sort ~deps (Signal_graph.create [b]) in
   print_s [%sexp (result : Signal.t list)];
   [%expect {|
@@ -82,10 +81,10 @@ let%expect_test "reg loop" =
       (register
         (width 1)
         ((clock       clock)
-         (clock_edge  rising)
+         (clock_edge  Rising)
          (clear       clear)
-         (clear_edge  high)
-         (clear_value 0b0)
+         (clear_level High)
+         (clear_to    0b0)
          (enable      0b1))
         (data_in wire))
       (const
@@ -104,7 +103,12 @@ let%expect_test "reg loop" =
 
 let%expect_test "mem loop" =
   let w = Signal.wire 1 in
-  let q = Signal.memory ram_spec ~we:w ~wa:w ~d:w ~ra:Signal.vdd 2 in
+  let q = Signal.memory 2
+            ~write_port:{ write_clock = clock
+                        ; write_enable = w
+                        ; write_address = w
+                        ; write_data = w }
+            ~read_address:Signal.vdd in
   Signal.(w <== q);
   let result = Signal_graph.topological_sort ~deps (Signal_graph.create [q]) in
   print_s [%sexp (result : Signal.t list)];
@@ -121,7 +125,7 @@ let%expect_test "mem loop" =
       (memory
         (width 1)
         ((clock      clock)
-         (clock_edge rising)
+         (clock_edge Rising)
          (enable     wire))
         ((size          2)
          (write_address wire)
@@ -135,7 +139,12 @@ let%expect_test "mem loop" =
 (* This a combinational loop.  The read address is not synchronously read. *)
 let%expect_test "mem loop, including read address, which isn't allowed" =
   let w = Signal.wire 1 in
-  let q = Signal.memory ram_spec ~we:w ~wa:w ~d:w ~ra:w 2 in
+  let q = Signal.memory 2
+            ~write_port:{ write_clock = clock
+                        ; write_enable = w
+                        ; write_address = w
+                        ; write_data = w }
+            ~read_address:w in
   Signal.(w <== q);
   require_does_raise [%here] (fun () ->
     Signal_graph.topological_sort ~deps (Signal_graph.create [q]));

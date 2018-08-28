@@ -12,3 +12,8 @@ let print_endline = Stdio.print_endline
 let print_string  = Caml.print_string
 let printf        = Caml.Printf.printf
 let try_with      = Or_error.try_with
+
+let clock = Signal.input "clock" 1
+let reset = Signal.input "reset" 1
+let clear = Signal.input "clear" 1
+let enable = Signal.input "enable" 1

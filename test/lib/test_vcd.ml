@@ -6,9 +6,9 @@ let%expect_test "simple vcd file" =
   let module Sim = Cyclesim in
   let module S = Cyclesim in
   let open Signal in
-  let reg_spec = Reg_spec.create () ~clk:clock ~clr:clear in
+  let reg_spec = Reg_spec.create () ~clock ~clear in
   let a, b = input "a" 8, input "b" 8 in
-  let c, d = reg reg_spec ~e:vdd (a +: b), pipeline reg_spec ~e:vdd ~n:2 (a -: b) in
+  let c, d = reg reg_spec ~enable:vdd (a +: b), pipeline reg_spec ~enable:vdd ~n:2 (a -: b) in
   let c, d = output "c" c, output "d" d in
   let circ = Circuit.create_exn ~name:"test" [ c; d ] in
   let sim = Sim.create ~kind:Immutable circ in
@@ -16,8 +16,8 @@ let%expect_test "simple vcd file" =
   let a, b = S.in_port sim "a", S.in_port sim "b" in
   for i=0 to 2 do
     for j=0 to 2 do
-      a := Bits.consti 8 (i*10);
-      b := Bits.consti 8 (j*10);
+      a := Bits.consti ~width:8 (i*10);
+      b := Bits.consti ~width:8 (j*10);
       S.cycle sim;
     done;
   done;

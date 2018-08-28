@@ -101,9 +101,9 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
 
     let widths t = map t ~f:Comb.width
 
-    let const i = map port_widths ~f:(fun b -> Comb.consti b i)
+    let const i = map port_widths ~f:(fun b -> Comb.consti ~width:b i)
 
-    let consts i = map2 port_widths i ~f:Comb.consti
+    let consts i = map2 port_widths i ~f:(fun width -> Comb.consti ~width)
 
     let pack ?(rev=false) t =
       if rev

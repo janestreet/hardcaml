@@ -78,6 +78,11 @@ and write_port =
   ; write_enable : t
   ; write_data : t }
 
+and read_port =
+  { read_clock : t
+  ; read_address : t
+  ; read_enable : t }
+
 (* These types are used to define a particular type of register as per the following
    template, where each part is optional:
 
@@ -88,15 +93,15 @@ and write_port =
          else if (enable) d <= ...;
      v} *)
 and register =
-  { reg_clock       : t (* clock                    *)
-  ; reg_clock_level : t (* active clock edge        *)
-  ; reg_reset       : t (* asynchronous reset       *)
-  ; reg_reset_level : t (* asynchronous reset level *)
-  ; reg_reset_value : t (* asychhronous reset value *)
-  ; reg_clear       : t (* synchronous reset        *)
-  ; reg_clear_level : t (* synchronous reset level  *)
-  ; reg_clear_value : t (* sychhronous reset value  *)
-  ; reg_enable      : t (* global system enable     *) }
+  { reg_clock       : t
+  ; reg_clock_edge  : Edge.t
+  ; reg_reset       : t
+  ; reg_reset_edge  : Edge.t
+  ; reg_reset_value : t
+  ; reg_clear       : t
+  ; reg_clear_level : Level.t
+  ; reg_clear_value : t
+  ; reg_enable      : t }
 
 and memory =
   { mem_size          : int
@@ -318,26 +323,26 @@ and sexp_of_register_recursive ?show_uids ~depth reg =
     | Empty -> None
     | _ -> Some (sexp_of_next s)
   in
-  let sexp_of_edge ?(rising="rising") ?(falling="falling") g s =
+  let sexp_of_edge g s =
     match g with
     | Empty -> None
-    | _ ->
-      match s with
-      | Const (_, "1") -> Some [%sexp (rising : string)]
-      | Const (_, "0") -> Some [%sexp (falling : string)]
-      | _ -> Some (sexp_of_next s)
+    | _ -> Some (Edge.sexp_of_t s)
   in
-  let sexp_of_level = sexp_of_edge ~rising:"high" ~falling:"low" in
+  let sexp_of_level g s =
+    match g with
+    | Empty -> None
+    | _ -> Some (Level.sexp_of_t s)
+  in
   [%message
     ""
       ~clock:      (sexp_of_next  reg.reg_clock                           : Sexp.t)
-      ~clock_edge: (sexp_of_edge  reg.reg_clock_level reg.reg_clock_level : Sexp.t sexp_option)
+      ~clock_edge: (reg.reg_clock_edge                                    : Edge.t)
       ~reset:      (sexp_of_opt   reg.reg_reset       reg.reg_reset       : Sexp.t sexp_option)
-      ~reset_edge: (sexp_of_edge  reg.reg_reset       reg.reg_reset_level : Sexp.t sexp_option)
-      ~reset_value:(sexp_of_opt   reg.reg_reset       reg.reg_reset_value : Sexp.t sexp_option)
+      ~reset_edge: (sexp_of_edge  reg.reg_reset       reg.reg_reset_edge  : Sexp.t sexp_option)
+      ~reset_to:   (sexp_of_opt   reg.reg_reset       reg.reg_reset_value : Sexp.t sexp_option)
       ~clear:      (sexp_of_opt   reg.reg_clear       reg.reg_clear       : Sexp.t sexp_option)
-      ~clear_edge: (sexp_of_level reg.reg_clear       reg.reg_clear_level : Sexp.t sexp_option)
-      ~clear_value:(sexp_of_opt   reg.reg_clear       reg.reg_clear_value : Sexp.t sexp_option)
+      ~clear_level:(sexp_of_level reg.reg_clear       reg.reg_clear_level : Sexp.t sexp_option)
+      ~clear_to:   (sexp_of_opt   reg.reg_clear       reg.reg_clear_value : Sexp.t sexp_option)
       ~enable:     (sexp_of_opt   reg.reg_enable      reg.reg_enable      : Sexp.t sexp_option)]
 
 and sexp_of_memory_recursive
@@ -641,11 +646,6 @@ let output name s =
   w <== s;
   w
 
-let clock = (wire 1) -- "clock"
-let reset = (wire 1) -- "reset"
-let clear = (wire 1) -- "clear"
-let enable = (wire 1) -- "enable"
-
 module Const_prop = struct
 
   module Base = struct
@@ -654,7 +654,7 @@ module Const_prop = struct
 
     let cv s = Bits.const (const_value s)
     let eqs s n =
-      let d = Bits.(==:) (cv s) (Bits.consti (width s) n) in
+      let d = Bits.(==:) (cv s) (Bits.consti ~width:(width s) n) in
       Bits.to_int d = 1
     let cst b = const (Bits.to_string b)
 
@@ -811,49 +811,14 @@ module Const_prop = struct
   end
 end
 
-(* register with async reset *)
-let r_async =
-  { reg_clock       = clock
-  ; reg_clock_level = vdd
-  ; reg_reset       = reset
-  ; reg_reset_level = vdd
+let reg_empty =
+  { reg_clock       = empty
+  ; reg_clock_edge  = Rising
+  ; reg_reset       = empty
+  ; reg_reset_edge  = Rising
   ; reg_reset_value = empty
   ; reg_clear       = empty
-  ; reg_clear_level = empty
-  ; reg_clear_value = empty
-  ; reg_enable      = empty }
-
-(* register with sync clear *)
-let r_sync =
-  { reg_clock       = clock
-  ; reg_clock_level = vdd
-  ; reg_reset       = empty
-  ; reg_reset_level = empty
-  ; reg_reset_value = empty
-  ; reg_clear       = clear
-  ; reg_clear_level = vdd
-  ; reg_clear_value = empty
-  ; reg_enable      = empty }
-
-let r_full =
-  { reg_clock       = clock
-  ; reg_clock_level = vdd
-  ; reg_reset       = reset
-  ; reg_reset_level = vdd
-  ; reg_reset_value = empty
-  ; reg_clear       = clear
-  ; reg_clear_level = vdd
-  ; reg_clear_value = empty
-  ; reg_enable      = empty }
-
-let r_none =
-  { reg_clock       = clock
-  ; reg_clock_level = vdd
-  ; reg_reset       = empty
-  ; reg_reset_level = empty
-  ; reg_reset_value = empty
-  ; reg_clear       = empty
-  ; reg_clear_level = empty
+  ; reg_clear_level = High
   ; reg_clear_value = empty
   ; reg_enable      = empty }
 
@@ -876,29 +841,16 @@ let assert_width_or_empty signal w msg =
         ~expected_width:(w : int)
         (signal : t)]
 
-let assert_vdd_gnd_empty signal msg =
-  if not (is_gnd signal || is_vdd signal || is_empty signal)
-  then
-    raise_s [%message
-      msg
-        ~info:("signal should be [vdd], [gnd] or [empty]." : string)
-        (signal : t)]
-
 let form_spec spec enable d =
   assert_width          spec.reg_clock              1  "clock is invalid";
-  assert_vdd_gnd_empty  spec.reg_clock_level           "clock level is invalid";
   assert_width_or_empty spec.reg_reset              1  "reset is invalid";
-  assert_vdd_gnd_empty  spec.reg_reset_level           "reset level is invalid";
   assert_width_or_empty spec.reg_reset_value (width d) "reset value is invalid";
   assert_width_or_empty spec.reg_clear              1  "clear signal is invalid";
-  assert_vdd_gnd_empty  spec.reg_clear_level           "clear level is invalid";
   assert_width_or_empty spec.reg_clear_value (width d) "clear value is invalid";
   assert_width_or_empty spec.reg_enable             1  "enable is invalid";
   assert_width_or_empty enable                      1  "enable is invalid";
   { spec with
-    reg_clock_level = if is_empty spec.reg_clock_level then vdd else spec.reg_clock_level
-  ; reg_reset_level = if is_empty spec.reg_reset_level then vdd else spec.reg_reset_level
-  ; reg_reset_value =
+    reg_reset_value =
       if is_empty spec.reg_reset_value then zero (width d) else spec.reg_reset_value
   ; reg_clear_value =
       if is_empty spec.reg_clear_value then zero (width d) else spec.reg_clear_value
@@ -917,92 +869,93 @@ module Reg_spec_ = struct
   type t = register [@@deriving sexp_of]
 
   let override
-        ?clk ?clkl
-        ?r ?rl ?rv
-        ?c ?cl ?cv
-        ?ge spec =
-    { reg_clock       = Option.value clk  ~default:spec.reg_clock
-    ; reg_clock_level = Option.value clkl ~default:spec.reg_clock_level
-    ; reg_reset       = Option.value r    ~default:spec.reg_reset
-    ; reg_reset_level = Option.value rl   ~default:spec.reg_reset_level
-    ; reg_reset_value = Option.value rv   ~default:spec.reg_reset_value
-    ; reg_clear       = Option.value c    ~default:spec.reg_clear
-    ; reg_clear_level = Option.value cl   ~default:spec.reg_clear_level
-    ; reg_clear_value = Option.value cv   ~default:spec.reg_clear_value
-    ; reg_enable      = Option.value ge   ~default:spec.reg_enable }
+        ?clock ?clock_edge
+        ?reset ?reset_edge ?reset_to
+        ?clear ?clear_level ?clear_to
+        ?global_enable spec =
+    { reg_clock       = Option.value clock         ~default:spec.reg_clock
+    ; reg_clock_edge  = Option.value clock_edge    ~default:spec.reg_clock_edge
+    ; reg_reset       = Option.value reset         ~default:spec.reg_reset
+    ; reg_reset_edge  = Option.value reset_edge    ~default:spec.reg_reset_edge
+    ; reg_reset_value = Option.value reset_to      ~default:spec.reg_reset_value
+    ; reg_clear       = Option.value clear         ~default:spec.reg_clear
+    ; reg_clear_level = Option.value clear_level   ~default:spec.reg_clear_level
+    ; reg_clear_value = Option.value clear_to      ~default:spec.reg_clear_value
+    ; reg_enable      = Option.value global_enable ~default:spec.reg_enable }
 
-  let create ?clr ?rst () ~clk =
+  let create ?clear ?reset () ~clock =
     let spec =
-      match clr, rst with
-      | None     , None     -> r_none
-      | None     , Some rst -> { r_async with reg_reset = rst }
-      | Some clr , None     -> { r_sync with reg_clear = clr }
-      | Some clr , Some rst -> { r_full with reg_reset = rst; reg_clear = clr } in
-    { spec with reg_clock = clk }
+      match clear, reset with
+      | None       , None       -> reg_empty
+      | None       , Some reset -> { reg_empty with reg_reset = reset }
+      | Some clear , None       -> { reg_empty with reg_clear = clear }
+      | Some clear , Some reset -> { reg_empty with reg_reset = reset; reg_clear = clear } in
+    { spec with reg_clock = clock }
+
+  let clock spec = spec.reg_clock
 end
 
-let reg spec ~e:enable d =
+let reg spec ~enable d =
   let spec = form_spec spec enable d in
   let deps =
     [ spec.reg_clock
-    ; spec.reg_reset; spec.reg_reset_value; spec.reg_reset_level
-    ; spec.reg_clear; spec.reg_clear_value; spec.reg_clear_level
+    ; spec.reg_reset; spec.reg_reset_value
+    ; spec.reg_clear; spec.reg_clear_value
     ; spec.reg_enable ]
   in
   Reg (make_id (width d) (d :: deps), spec)
 
-let reg_fb spec ~e ~w:width f =
+let reg_fb spec ~enable ~w:width f =
   let d = wire width in
-  let q = reg spec ~e d in
+  let q = reg spec ~enable d in
   d <== (f q);
   q
 
-let rec pipeline spec ~n ~e d =
+let rec pipeline spec ~n ~enable d =
   if n=0
   then d
-  else reg spec ~e (pipeline ~n:(n-1) spec ~e d)
+  else reg spec ~enable (pipeline ~n:(n-1) spec ~enable d)
 
-module Ram_spec_ = struct
-  type t = register [@@deriving sexp_of]
-
-  let create () ~clk = { r_none with reg_clock = clk }
-
-  let override = Reg_spec_.override
-end
-
-let memory spec size ~we ~wa ~d ~ra =
+let memory size ~write_port ~read_address =
+  let we = write_port.write_enable in
+  let wa = write_port.write_address in
+  let d = write_port.write_data in
   if width we <> 1
   then raise_s [%message "[Signal.memory] width of write enable must be 1"
                            ~write_enable_width:(width we : int)];
   if size <= 0
   then raise_s [%message "[Signal.memory] size must be greater than 0" (size : int)];
-  if width ra <> width wa
+  if width read_address <> width wa
   then raise_s [%message "[Signal.memory] width of read and write addresses differ"
                            ~write_address_width:(width wa : int)
-                           ~read_address_width:(width ra : int)];
+                           ~read_address_width:(width read_address : int)];
   if size > (1 lsl width wa)
   then raise_s [%message "[Signal.memory] size greater than what can be addressed"
                            (size : int) ~address_width:(width wa : int)];
-  let spec = form_spec spec we d in
+  let spec =
+    form_spec { reg_empty with reg_clock = write_port.write_clock }
+      write_port.write_enable write_port.write_data in
   let deps =
-    [ d; wa; ra; we
+    [ d; wa; read_address; we
     ; spec.reg_clock
-    ; spec.reg_reset; spec.reg_reset_value; spec.reg_reset_level
-    ; spec.reg_clear; spec.reg_clear_value; spec.reg_clear_level
-    ; spec.reg_enable ]
-  in
+    ; spec.reg_reset; spec.reg_reset_value
+    ; spec.reg_clear; spec.reg_clear_value
+    ; spec.reg_enable ] in
   Mem (make_id (width d) deps,
-       new_id (),
-       spec,
+       new_id (), spec,
        { mem_size          = size
        ; mem_write_address = wa
-       ; mem_read_address  = ra })
+       ; mem_read_address  = read_address })
 
-let ram_rbw spec size ~we ~wa ~d ~re ~ra =
-  reg spec ~e:re (memory spec size ~we ~wa ~d ~ra)
+let ram_rbw size ~write_port ~read_port =
+  let spec = { reg_empty with reg_clock = read_port.read_clock } in
+  reg spec ~enable:read_port.read_enable
+    (memory size ~write_port ~read_address:read_port.read_address)
 
-let ram_wbr spec size ~we ~wa ~d ~re ~ra =
-  memory spec size ~we ~wa ~d ~ra:(reg spec ~e:re ra)
+let ram_wbr size ~write_port ~read_port =
+  let spec = { reg_empty with reg_clock = read_port.read_clock } in
+  memory size ~write_port
+    ~read_address:(reg spec ~enable:read_port.read_enable read_port.read_address)
 
 let multiport_memory size ~write_ports ~read_addresses =
   (* size > 0 *)

@@ -93,7 +93,7 @@ module Make (B : Comb.S) = struct
         else
           let dropped = select i (width i - 1) ib in
           let remaining = select i (ib - 1) 0 in
-          let overflow = reduce (|:) (bits dropped) in
+          let overflow = reduce ~f:(|:) (bits dropped) in
           let clipped = mux2 overflow
                           (ones (ib + fp))
                           (concat_e [ remaining; f ])
@@ -188,7 +188,7 @@ module Make (B : Comb.S) = struct
       let const ip fp f =
         let fp' = Float.of_int fp in
         let fp' = 2.0 ** fp' in
-        mk fp (B.consti (ip+fp) (Int.of_float (f *. fp')))
+        mk fp (B.consti ~width:(ip+fp) (Int.of_float (f *. fp')))
 
       (* basic arithmetic *)
 
@@ -414,7 +414,7 @@ module Make (B : Comb.S) = struct
       let const ip fp f =
         let fp' = Float.of_int fp in
         let fp' = 2.0 ** fp' in
-        mk fp (B.consti (ip+fp) (Int.of_float (f *. fp')))
+        mk fp (B.consti ~width:(ip+fp) (Int.of_float (f *. fp')))
 
       (* basic arithmetic *)
 

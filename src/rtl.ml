@@ -295,7 +295,9 @@ let raise_expected ~generator ~while_ ~expected ~got_signal =
 module Process = struct
 
   (* helper for writing registers neatly *)
-  type level = Rising | Falling | High | Low [@@deriving sexp_of]
+  type level =
+    | Edge of Edge.t
+    | Level of Level.t[@@deriving sexp_of]
   type stat =
     | If of Signal.t * level * stat * stat
     | Assign of Signal.t * Signal.t
@@ -309,42 +311,32 @@ module Process = struct
   let make_reg ?d ?(clock=true) r s =
     let q = s in
     let d = match d with None -> List.hd_exn (deps s) | Some(d) -> d in
-    let lev s =
-      if is_empty s || is_vdd s
-      then High
-      else Low
-    in
-    let edge s =
-      if is_empty s || is_vdd s
-      then Rising
-      else Falling
-    in
     (* main assignment *)
     let e = Assign (q, d) in
     (* enable *)
     let e =
       if is_empty r.reg_enable || is_vdd r.reg_enable
       then e
-      else If (r.reg_enable, High, e, Empty)
+      else If (r.reg_enable, Level High, e, Empty)
     in
     (* clear *)
     let e =
       if is_empty r.reg_clear
       then e
-      else If (r.reg_clear, lev r.reg_clear_level,
+      else If (r.reg_clear, Level r.reg_clear_level,
                Assign (q, r.reg_clear_value), e)
     in
     (* reset and clock *)
     let clock e =
       if clock
-      then If (r.reg_clock, edge r.reg_clock_level, e, Empty)
+      then If (r.reg_clock, Edge r.reg_clock_edge, e, Empty)
       else e
     in
     let e =
       if is_empty r.reg_reset
       then clock e
       else
-        If (r.reg_reset, lev r.reg_reset_level,
+        If (r.reg_reset, Edge r.reg_reset_edge,
             Assign (q, r.reg_reset_value),
             clock e)
     in
@@ -469,8 +461,8 @@ module VerilogCore : Rtl_internal = struct
   let clocked ?d io s r name assign =
     let open Process in
     let level n = function
-      | Rising | High -> "(" ^ n ^ ")"
-      | Falling | Low -> "(" ^ n ^ " == 0" ^ ")"
+      | Level High | Edge Rising -> "(" ^ n ^ ")"
+      | Level Low | Edge Falling -> "(" ^ n ^ " == 0" ^ ")"
     in
     let rec write_reg tab r =
       match r with
@@ -485,14 +477,14 @@ module VerilogCore : Rtl_internal = struct
       | Assign (q, d) ->
         assign tab q d
     in
-    let edge s l =
-      (if is_vdd l then "posedge " else "negedge ") ^ name s
+    let edge s (l : Edge.t) =
+      (match l with Rising -> "posedge " | Falling -> "negedge ") ^ name s
     in
     let edges =
       if is_empty r.reg_reset
-      then [ edge r.reg_clock r.reg_clock_level ]
-      else [ edge r.reg_clock r.reg_clock_level
-           ; edge r.reg_reset r.reg_reset_level ]
+      then [ edge r.reg_clock r.reg_clock_edge ]
+      else [ edge r.reg_clock r.reg_clock_edge
+           ; edge r.reg_reset r.reg_reset_edge ]
     in
     let edges = sep " or " edges in
     io (t4 ^ "always @(" ^ edges ^ ") begin\n");
@@ -605,8 +597,8 @@ module VerilogCore : Rtl_internal = struct
       | _ -> raise_s [%message "Internal error - expecting Multiport_mem signal"] in
     Array.iter write_ports ~f:(fun write_port ->
       clocked ~d:(write_port.write_data) io signal
-        Reg_spec.(create () ~clk:write_port.write_clock
-                  |> override ~ge:write_port.write_enable)
+        Reg_spec.(create () ~clock:write_port.write_clock
+                  |> override ~global_enable:write_port.write_enable)
         name
         (fun tab _ d ->
            let wa = name write_port.write_address in
@@ -769,10 +761,10 @@ module VhdlCore : Rtl_internal = struct
   let clocked ?d io s r name assign =
     let open Process in
     let level n = function
-      | High -> n ^ " = '1'"
-      | Low -> n ^ " = '0'"
-      | Rising -> "rising_edge(" ^ n ^ ")"
-      | Falling -> "falling_edge(" ^ n ^ ")"
+      | Level High -> n ^ " = '1'"
+      | Level Low -> n ^ " = '0'"
+      | Edge Rising -> "rising_edge(" ^ n ^ ")"
+      | Edge Falling -> "falling_edge(" ^ n ^ ")"
     in
     let rec write_reg tab r =
       match r with
@@ -902,8 +894,8 @@ module VhdlCore : Rtl_internal = struct
       | _ -> raise_s [%message "Internal error - expecting Multiport_mem signal"] in
     Array.iter write_ports ~f:(fun write_port ->
       clocked ~d:(write_port.write_data) io signal
-        Reg_spec.(create () ~clk:write_port.write_clock
-                  |> override ~ge:write_port.write_enable)
+        Reg_spec.(create () ~clock:write_port.write_clock
+                  |> override ~global_enable:write_port.write_enable)
         name
         (fun tab _ d ->
            let wa = name write_port.write_address in

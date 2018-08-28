@@ -140,12 +140,12 @@ let normalize_uids t =
   in
   let new_reg r =
     { reg_clock       = new_signal r.reg_clock
-    ; reg_clock_level = new_signal r.reg_clock_level
+    ; reg_clock_edge  = r.reg_clock_edge
     ; reg_reset       = new_signal r.reg_reset
-    ; reg_reset_level = new_signal r.reg_reset_level
+    ; reg_reset_edge  = r.reg_reset_edge
     ; reg_reset_value = new_signal r.reg_reset_value
     ; reg_clear       = new_signal r.reg_clear
-    ; reg_clear_level = new_signal r.reg_clear_level
+    ; reg_clear_level = r.reg_clear_level
     ; reg_clear_value = new_signal r.reg_clear_value
     ; reg_enable      = new_signal r.reg_enable }
   in

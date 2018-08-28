@@ -9,7 +9,8 @@ let%expect_test "test bits" =
         for y=1 to (1 lsl bits_y) - 1 do
           let expected = x * y in
           let mul config =
-            Mul.create ~config (module Bits) (consti bits_x x) (consti bits_y y) in
+            Mul.create ~config (module Bits)
+              (consti ~width:bits_x x) (consti ~width:bits_y y) in
           let wallace = mul Wallace in
           let dadda   = mul Dadda   in
           if expected <> to_int wallace || expected <> to_int dadda
@@ -27,7 +28,7 @@ let%expect_test "test bits" =
 let%expect_test "shift" =
   for shift = 0 to 10 do
     let times = (1 lsl shift) in
-    let mul config = Mul.create ~config (module Bits) vdd (consti (num_bits times) times) in
+    let mul config = Mul.create ~config (module Bits) vdd (consti ~width:(num_bits times) times) in
     let wallace = mul Wallace in
     let dadda   = mul Dadda   in
     require_equal [%here] (module Bits) wallace dadda;
@@ -71,7 +72,8 @@ let%expect_test "shift" =
 let%expect_test "max" =
   for x = 1 to 3 do
     for y = 1 to 3 do
-      let mul config = Mul.create ~config (module Bits) (consti x (-1)) (consti y (-1)) in
+      let mul config = Mul.create ~config (module Bits)
+                         (consti ~width:x (-1)) (consti ~width:y (-1)) in
       let wallace = mul Wallace in
       let dadda   = mul Dadda   in
       require_equal [%here] (module Bits) wallace dadda;

@@ -3,17 +3,10 @@ open! Import
 open Signal
 
 let%expect_test "[Reg_spec.sexp_of_t]" =
-  print_s [%sexp (Reg_spec.create () ~clk:clock : Reg_spec.t)];
+  print_s [%sexp (Reg_spec.create () ~clock : Reg_spec.t)];
   [%expect {|
     ((clock      clock)
-     (clock_edge rising)) |}];
-;;
-
-let%expect_test "[Ram_spec.sexp_of_t]" =
-  print_s [%sexp (Ram_spec.create () ~clk:clock : Ram_spec.t)];
-  [%expect {|
-    ((clock      clock)
-     (clock_edge rising)) |}];
+     (clock_edge Rising)) |}];
 ;;
 
 let%expect_test "name of empty" =
@@ -74,7 +67,7 @@ let%expect_test "multiple assignment to a wire" =
 let%expect_test "wire width mismatch" =
   require_does_raise [%here] (fun () ->
     let w = wire 29 in
-    w <== consti 17 3);
+    w <== consti ~width:17 3);
   [%expect {|
     ("attempt to assign expression to wire of different width"
      (wire_width       29)
@@ -99,16 +92,18 @@ let%expect_test "assignment to a non-wire" =
         (width 1)
         (value 0b0)))) |}]
 
-let reg_error ?clk ?clkl ?r ?rl ?rv ?c ?cl ?cv ?e here =
+let g_clock = clock
+let g_enable = enable
+let reg_error ?clock ?clock_edge ?reset ?reset_edge ?reset_to ?clear ?clear_level ?clear_to ?enable here =
   require_does_raise here (fun () ->
-    reg (Reg_spec.override (Reg_spec.create () ~clk:(Option.value clk ~default:clock))
-           ?clk ?clkl ?r ?rl ?rv ?c ?cl ?cv)
-      ~e:(Option.value e ~default:enable)
+    reg (Reg_spec.override (Reg_spec.create () ~clock:(Option.value clock ~default:g_clock))
+           ?clock ?clock_edge ?reset ?reset_edge ?reset_to ?clear ?clear_level ?clear_to)
+      ~enable:(Option.value enable ~default:g_enable)
       (input "d" 8));
 ;;
 
 let%expect_test "invalid clock" =
-  reg_error [%here] ~clk:(input "not_a_clock" 2);
+  reg_error [%here] ~clock:(input "not_a_clock" 2);
   [%expect {|
     ("clock is invalid"
       (info           "signal has unexpected width")
@@ -119,19 +114,8 @@ let%expect_test "invalid clock" =
         (width   2)
         (data_in empty)))) |}]
 
-let%expect_test "invalid clock_level" =
-  reg_error [%here] ~clkl:(input "not_a_clock_level" 2);
-  [%expect {|
-    ("clock level is invalid"
-      (info "signal should be [vdd], [gnd] or [empty].")
-      (signal (
-        wire
-        (names (not_a_clock_level))
-        (width   2)
-        (data_in empty)))) |}]
-
 let%expect_test "invalid reset" =
-  reg_error [%here] ~r:(input "not_a_reset" 2);
+  reg_error [%here] ~reset:(input "not_a_reset" 2);
   [%expect {|
     ("reset is invalid"
       (info "signal should have expected width or be empty")
@@ -142,19 +126,8 @@ let%expect_test "invalid reset" =
         (width   2)
         (data_in empty)))) |}]
 
-let%expect_test "invalid reset_level" =
-  reg_error [%here] ~rl:(input "not_a_reset_level" 2);
-  [%expect {|
-    ("reset level is invalid"
-      (info "signal should be [vdd], [gnd] or [empty].")
-      (signal (
-        wire
-        (names (not_a_reset_level))
-        (width   2)
-        (data_in empty)))) |}]
-
 let%expect_test "invalid reset_value" =
-  reg_error [%here] ~rv:(input "not_a_reset_value" 2);
+  reg_error [%here] ~reset_to:(input "not_a_reset_value" 2);
   [%expect {|
     ("reset value is invalid"
       (info "signal should have expected width or be empty")
@@ -166,7 +139,7 @@ let%expect_test "invalid reset_value" =
         (data_in empty)))) |}]
 
 let%expect_test "invalid clear" =
-  reg_error [%here] ~c:(input "not_a_clear" 2);
+  reg_error [%here] ~clear:(input "not_a_clear" 2);
   [%expect {|
     ("clear signal is invalid"
       (info "signal should have expected width or be empty")
@@ -177,19 +150,8 @@ let%expect_test "invalid clear" =
         (width   2)
         (data_in empty)))) |}]
 
-let%expect_test "invalid clear_level" =
-  reg_error [%here] ~cl:(input "not_a_clear_level" 2);
-  [%expect {|
-    ("clear level is invalid"
-      (info "signal should be [vdd], [gnd] or [empty].")
-      (signal (
-        wire
-        (names (not_a_clear_level))
-        (width   2)
-        (data_in empty)))) |}]
-
 let%expect_test "invalid clear_value" =
-  reg_error [%here] ~cv:(input "not_a_clear_value" 2);
+  reg_error [%here] ~clear_to:(input "not_a_clear_value" 2);
   [%expect {|
     ("clear value is invalid"
       (info "signal should have expected width or be empty")
@@ -201,7 +163,7 @@ let%expect_test "invalid clear_value" =
         (data_in empty)))) |}]
 
 let%expect_test "invalid enable" =
-  reg_error [%here] ~e:(input "not_an_enable" 2);
+  reg_error [%here] ~enable:(input "not_an_enable" 2);
   [%expect {|
     ("enable is invalid"
       (info "signal should have expected width or be empty")
@@ -213,18 +175,20 @@ let%expect_test "invalid enable" =
         (data_in empty)))) |}]
 
 let%expect_test "insertion" =
-  require_does_raise [%here] (fun () -> insert ~t:(constb "111") ~f:(constb "00") (-1));
+  require_does_raise [%here]
+    (fun () -> insert ~into:(constb "111") (constb "00") ~at_offset:(-1));
   [%expect {| ("[insert] below bit 0" -1) |}];
-  require_does_raise [%here] (fun () -> insert ~t:(constb "111") ~f:(constb "00") 2);
+  require_does_raise [%here]
+    (fun () -> insert ~into:(constb "111") (constb "00") ~at_offset:2);
   [%expect {|
     ("[insert] above msb of target"
       (width_from           2)
       (width_target         3)
-      (at_pos               2)
+      (at_offset            2)
       (highest_inserted_bit 4)) |}];
   require_does_not_raise [%here] (fun () ->
     print_s [%message "valid [insert]"
-                        ~_:(insert ~t:(constb "111") ~f:(constb "00") 1 : t)]);
+                        ~_:(insert ~into:(constb "111") (constb "00") ~at_offset:1 : t)]);
   [%expect {|
     ("valid [insert]" (cat (width 3) (arguments (0b00 select)))) |}]
 ;;
@@ -261,8 +225,8 @@ let%expect_test "shift errors" =
 ;;
 
 let%expect_test "tree errors" =
-  require_does_raise [%here] (fun () -> tree 2 (reduce (+:)) []);
+  require_does_raise [%here] (fun () -> tree ~arity:2 ~f:(reduce ~f:(+:)) []);
   [%expect {| "[tree] got empty list" |}];
-  require_does_raise [%here] (fun () -> tree 1 (reduce (+:)) []);
+  require_does_raise [%here] (fun () -> tree ~arity:1 ~f:(reduce ~f:(+:)) []);
   [%expect {| "[tree] got [arity <= 1]" |}]
 ;;

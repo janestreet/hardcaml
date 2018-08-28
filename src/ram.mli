@@ -18,10 +18,10 @@ module Write_port : sig
 end
 
 module Read_port : sig
-  type t =
+  type t = Signal.read_port =
     { read_clock : Signal.t
-    ; read_enable : Signal.t
-    ; read_address : Signal.t }
+    ; read_address : Signal.t
+    ; read_enable : Signal.t }
   [@@deriving sexp_of]
 end
 

@@ -7,7 +7,7 @@ type 'a signed_and_unsigned =
   ; signed   : 'a }
 [@@deriving sexp_of]
 
-let bits ~f bits = List.init (1 lsl bits) ~f:(fun i -> consti bits i |> f)
+let bits ~f bits = List.init (1 lsl bits) ~f:(fun i -> consti ~width:bits i |> f)
 
 let convert ~uint ~sint const =
   { signed   = sint const

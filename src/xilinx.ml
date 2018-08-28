@@ -88,14 +88,18 @@ module Hardcaml_api = struct
   let muxf7 f t s = mux2 s t f
   let muxf8 f t s = mux2 s t f
   let fdce c ce clr d =
-    reg (Reg_spec.override (Reg_spec.create () ~clk:c) ~r:clr ~rv:gnd) ~e:ce d
+    reg (Reg_spec.override (Reg_spec.create () ~clock:c) ~reset:clr ~reset_to:gnd) ~enable:ce d
   let fdpe c ce pre d =
-    reg (Reg_spec.override (Reg_spec.create () ~clk:c) ~r:pre ~rv:vdd) ~e:ce d
+    reg (Reg_spec.override (Reg_spec.create () ~clock:c) ~reset:pre ~reset_to:vdd) ~enable:ce d
   let mult_and a b = a &: b
   let ram1s a d clk we =
-    memory (Ram_spec.create () ~clk)
+    memory
       (1 lsl (width a))
-      ~we:a ~wa:we ~d ~ra:a
+      ~write_port:{ write_clock = clk
+                  ; write_enable = we
+                  ; write_address = a
+                  ; write_data = d }
+      ~read_address:a
 end
 
 (* unisim based implementation of Xilinx API *)
@@ -112,7 +116,7 @@ module Unisim = struct
     let w' = Int.to_string w in
     let init =
       (Int64.to_string v)
-      |> Bits.constd (1 lsl w)
+      |> Bits.constd ~width:(1 lsl w)
       |> Bits.reverse
       |> Bits.to_string in
     (Instantiation.create ()
@@ -572,18 +576,23 @@ module XSynthesize (X : S) (L : LutSize)  = struct
       let reset =
         if is_empty r.reg_reset
         then gnd
-        else if is_gnd r.reg_reset_level
-        then ~: (r.reg_reset)
-        else r.reg_reset
+        else
+          match r.reg_reset_edge with
+          | Falling -> ~: (r.reg_reset)
+          | Rising -> r.reg_reset
       in
       let clear =
         if is_empty r.reg_clear
         then gnd
-        else if is_gnd r.reg_clear_level
-        then ~: (r.reg_clear)
-        else r.reg_clear
+        else
+          match r.reg_clear_level with
+          | Low -> ~: (r.reg_clear)
+          | High -> r.reg_clear
       in
-      let clk = if is_gnd r.reg_clock_level then ~: (r.reg_clock) else r.reg_clock in
+      let clk =
+        match r.reg_clock_edge with
+        | Falling -> ~: (r.reg_clock)
+        | Rising -> r.reg_clock in
       let d = (find << Signal.uid) (List.nth_exn (Signal.deps signal) 0) in
       let ena, d =
         if is_empty r.reg_clear

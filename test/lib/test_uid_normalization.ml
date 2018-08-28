@@ -19,11 +19,16 @@ let design () =
             ~name:"blah"
             ~inputs:[ "a", a; "b", b ]
             ~outputs:[ "c", 3; "d", 3; "e", 3 ] in
-  let ram_spec = Ram_spec.create () ~clk:clock in
-  let m = memory (Ram_spec.override ram_spec ~c:clear) ~we:(bit a 1) ~wa:b ~d:a ~ra:a 4 in
+  let m = memory 4
+            ~write_port:
+              { write_clock = clock
+              ; write_enable = bit a 1
+              ; write_address = b
+              ; write_data = a }
+            ~read_address:a in
   let w = wireof a in
-  let reg_spec = Reg_spec.create () ~clk:clock ~clr:clear in
-  [ output "c" (reg reg_spec ~e:vdd (a +: b))
+  let reg_spec = Reg_spec.create () ~clock ~clear in
+  [ output "c" (reg reg_spec ~enable:vdd (a +: b))
   ; output "d" (mux2 vdd a b)
   ; output "e" (x#o "c" |: x#o "d" |: x#o "e")
   ; output "f" m
@@ -159,20 +164,20 @@ let%expect_test "verilog with normalization" =
 
         /* signal declarations */
         wire [1:0] _1;
-        wire [1:0] _15 = 2'b00;
+        wire [1:0] _14 = 2'b00;
         wire [1:0] _13 = 2'b00;
         wire _12;
-        wire [1:0] _17;
-        reg [1:0] _17_mem[0:3];
-        wire [2:0] _23;
-        wire [2:0] _21;
-        wire [8:0] _19;
-        wire [2:0] _20;
+        wire [1:0] _16;
+        reg [1:0] _16_mem[0:3];
         wire [2:0] _22;
-        wire [2:0] _24;
+        wire [2:0] _20;
+        wire [8:0] _18;
+        wire [2:0] _19;
+        wire [2:0] _21;
+        wire [2:0] _23;
         wire [1:0] _25;
-        wire [1:0] _28 = 2'b00;
         wire vdd = 1'b1;
+        wire [1:0] _28 = 2'b00;
         wire [1:0] _27 = 2'b00;
         wire [1:0] _26;
         reg [1:0] _29;
@@ -181,25 +186,18 @@ let%expect_test "verilog with normalization" =
         assign _1 = a;
         assign _12 = a[1:1];
         always @(posedge clock) begin
-            if (clear)
-                begin: _17_blk
-                    integer _17_idx;
-                    for (_17_idx=0; _17_idx<4; _17_idx=_17_idx+1)
-                        _17_mem[_17_idx] <= _15;
-                end
-            else
-                if (_12)
-                    _17_mem[b] <= a;
+            if (_12)
+                _16_mem[b] <= a;
         end
-        assign _17 = _17_mem[a];
-        assign _23 = _19[8:6];
-        assign _21 = _19[5:3];
+        assign _16 = _16_mem[a];
+        assign _22 = _18[8:6];
+        assign _20 = _18[5:3];
         blah
             the_blah
-            ( .a(a), .b(b), .e(_19[8:6]), .d(_19[5:3]), .c(_19[2:0]) );
-        assign _20 = _19[2:0];
-        assign _22 = _20 | _21;
-        assign _24 = _22 | _23;
+            ( .a(a), .b(b), .e(_18[8:6]), .d(_18[5:3]), .c(_18[2:0]) );
+        assign _19 = _18[2:0];
+        assign _21 = _19 | _20;
+        assign _23 = _21 | _22;
         assign _25 = vdd ? a : b;
         assign _26 = a + b;
         always @(posedge clock) begin
@@ -214,9 +212,9 @@ let%expect_test "verilog with normalization" =
         /* output assignments */
         assign c = _29;
         assign d = _25;
-        assign e = _24;
-        assign f = _17;
-        assign g = _17;
+        assign e = _23;
+        assign f = _16;
+        assign g = _16;
         assign h = _1;
 
     endmodule |}]

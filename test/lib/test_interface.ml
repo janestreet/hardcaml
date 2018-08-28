@@ -197,7 +197,8 @@ let%expect_test "[const], [consts]" =
 ;;
 
 let%expect_test "[pack], [unpack]" =
-  print_s [%sexp (I.Of_bits.pack (I.map2 I.port_widths { x = -1; y = 0 } ~f:Bits.consti)
+  print_s [%sexp (I.Of_bits.pack (I.map2 I.port_widths { x = -1; y = 0 }
+                                    ~f:(fun width -> Bits.consti ~width))
                   : Bits.t)];
   [%expect {| 000000001111 |}];
   print_s [%sexp (I.Of_bits.(unpack (Bits.const "000000001111"))
@@ -206,7 +207,7 @@ let%expect_test "[pack], [unpack]" =
     ((x 1111)
      (y 00000000)) |}];
   print_s [%sexp (I.Of_bits.(pack ~rev:true (I.map2 I.port_widths { x = -1; y = 0 }
-                                               ~f:Bits.consti))
+                                               ~f:(fun width -> Bits.consti ~width)))
                   : Bits.t)];
   [%expect {| 111100000000 |}];
   print_s [%sexp (I.Of_bits.(unpack ~rev:true (Bits.const "111100000000"))
@@ -244,7 +245,7 @@ let%expect_test "[of_interface_list], [to_interface_list]" =
 
 let%expect_test "[mux]" =
   let data = List.init 4 ~f:I.Of_bits.const in
-  let results = List.init 4 ~f:(fun sel -> I.Of_bits.mux (Bits.consti 2 sel) data) in
+  let results = List.init 4 ~f:(fun sel -> I.Of_bits.mux (Bits.consti ~width:2 sel) data) in
   print_s [%sexp (results : Bits.t I.t list)];
   [%expect {|
     (((x 0000) (y 00000000))

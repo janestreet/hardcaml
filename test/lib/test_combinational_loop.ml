@@ -55,7 +55,7 @@ let%expect_test "long combinational loop through logic" =
   let d = (w +: a) |: b &: c in
   let e = mux2 (lsbs a) (d +: c) (a |: b) in
   let f = d &: e in
-  let g = reduce (^:) [d;e;f] in
+  let g = reduce ~f:(^:) [d;e;f] in
   w <== g;
   (* loop occurs at all points in the logic *)
   test [ d ];
@@ -87,18 +87,18 @@ let%expect_test "combinational loop in 2nd arg" =
       "combinational loop" (through_signal (add (width 2) (arguments (a wire)))))) |}]
 
 let%expect_test "loop through register" =
-  let a = Signal.reg_fb (Reg_spec.create () ~clk:clock) ~e:vdd ~w:2 (fun d -> d +:. 1) in
+  let a = Signal.reg_fb (Reg_spec.create () ~clock) ~enable:vdd ~w:2 (fun d -> d +:. 1) in
   test [ a ];
   [%expect {|
     (Ok ()) |}]
 
 let%expect_test "loop through 2 registers" =
-  let reg_spec = Reg_spec.create () ~clk:clock in
+  let reg_spec = Reg_spec.create () ~clock in
   let a = input "a" 2 in
   let w = wire 2 in
   let d = a +: w in
-  let d = Signal.reg reg_spec ~e:vdd d in
-  let d = Signal.reg reg_spec ~e:vdd d in
+  let d = Signal.reg reg_spec ~enable:vdd d in
+  let d = Signal.reg reg_spec ~enable:vdd d in
   w <== d;
   test [ d ];
   [%expect {|
@@ -106,35 +106,35 @@ let%expect_test "loop through 2 registers" =
 
 (* same as above, but a different arrangement of the adder *)
 let%expect_test "loop through 2 registers" =
-  let reg_spec = Reg_spec.create () ~clk:clock in
+  let reg_spec = Reg_spec.create () ~clock in
   let a = input "a" 2 in
   let w = wire 2 in
-  let d = Signal.reg reg_spec ~e:vdd w in
-  let d = Signal.reg reg_spec ~e:vdd d in
+  let d = Signal.reg reg_spec ~enable:vdd w in
+  let d = Signal.reg reg_spec ~enable:vdd d in
   w <== a +: d;
   test [ d ];
   [%expect {|
     (Ok ()) |}]
 
 let%expect_test "combinational loop before a register" =
-  let reg_spec = Reg_spec.create () ~clk:clock in
+  let reg_spec = Reg_spec.create () ~clock in
   let a = input "a" 2 in
   let w = wire 2 in
   let b = a &: w in
   w <== b;
-  let c = reg reg_spec ~e:vdd b in
+  let c = reg reg_spec ~enable:vdd b in
   test [ c ];
   [%expect {|
     (Error (
       "combinational loop" (through_signal (and (width 2) (arguments (a wire)))))) |}]
 
 let%expect_test "combinational loop between registers" =
-  let reg_spec = Reg_spec.create () ~clk:clock in
-  let a = reg reg_spec ~e:vdd (input "a" 2) in
+  let reg_spec = Reg_spec.create () ~clock in
+  let a = reg reg_spec ~enable:vdd (input "a" 2) in
   let w = wire 2 in
   let b = a &: w in
   w <== b;
-  let c = reg reg_spec ~e:vdd b in
+  let c = reg reg_spec ~enable:vdd b in
   test [ c ];
   [%expect {|
     (Error (
@@ -142,8 +142,8 @@ let%expect_test "combinational loop between registers" =
         through_signal (and (width 2) (arguments (register wire)))))) |}]
 
 let%expect_test "combinational loop inside register loop" =
-  let reg_spec = Reg_spec.create () ~clk:clock in
-  let a = reg_fb reg_spec ~e:vdd ~w:2
+  let reg_spec = Reg_spec.create () ~clock in
+  let a = reg_fb reg_spec ~enable:vdd ~w:2
             (fun d ->
                let w = wire 2 -- "wire_in_loop" in
                let e = d +: w in
@@ -161,14 +161,14 @@ let%expect_test "combinational loop inside register loop" =
           (data_in wire_in_loop))))) |}]
 
 let%expect_test "looping memory" =
-  let ram_spec = Ram_spec.create () ~clk:clock in
   let w = wire 4 in
-  let a = memory ram_spec
+  let a = memory
             2
-            ~we:(bit w 0)
-            ~wa:(bit w 1)
-            ~ra:(bit w 2)
-            ~d: (uresize (bit w 3) 4)
+            ~write_port:{ write_clock = clock
+                        ; write_enable = bit w 0
+                        ; write_address = bit w 1
+                        ; write_data = uresize (bit w 3) 4 }
+            ~read_address:(bit w 2)
   in
   w <== a;
   test [ a ];

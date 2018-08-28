@@ -312,8 +312,8 @@ module Make (SIM : Simulator) = struct
   let of_i32l w x =
     let rec f w = function
       | [] -> failwith "of_i32l"
-      | h :: [] -> assert (w <= 32); [ Bits.consti32 w h ]
-      | h :: t -> assert (w > 32); (Bits.consti32 32 h :: f (w-32) t)
+      | h :: [] -> assert (w <= 32); [ Bits.consti32 ~width:w h ]
+      | h :: t -> assert (w > 32); (Bits.consti32 ~width:32 h :: f (w-32) t)
     in
     Bits.concat (f w x)
 

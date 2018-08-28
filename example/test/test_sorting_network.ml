@@ -31,7 +31,7 @@ let sort_ascending_unsigned : Bits.t compare_and_swap =
      { min = mux2 sel a b; max = mux2 sel b a })
 
 let%expect_test "bitonic, unsigned, ascending" =
-  let inputs = List.init 4 ~f:(fun _ -> Bits.srand 4) in
+  let inputs = List.init 4 ~f:(fun _ -> Bits.random ~width:4) in
   let sorted = create Bitonic_sort sort_ascending_unsigned inputs in
   print_s [%message "" (inputs : Bits.t list) (sorted : Bits.t list)];
   [%expect {|
@@ -45,7 +45,7 @@ let sort_descending_signed : Bits.t compare_and_swap =
      { min = mux2 sel b a; max = mux2 sel a b })
 
 let%expect_test "bitonic, signed, descending" =
-  let inputs = List.init 4 ~f:(fun _ -> Bits.srand 4) in
+  let inputs = List.init 4 ~f:(fun _ -> Bits.random ~width:4) in
   let sorted = create Bitonic_sort sort_descending_signed inputs in
   print_s [%message "" (inputs : Bits.t list) (sorted : Bits.t list)];
   [%expect {|
@@ -53,7 +53,7 @@ let%expect_test "bitonic, signed, descending" =
      (sorted (0100 0010 1110 1100))) |}]
 
 let%expect_test "odd_even_merge, unsigned, ascending" =
-  let inputs = List.init 4 ~f:(fun _ -> Bits.srand 4) in
+  let inputs = List.init 4 ~f:(fun _ -> Bits.random ~width:4) in
   let sorted = create Odd_even_merge_sort sort_ascending_unsigned inputs in
   print_s [%message "" (inputs : Bits.t list) (sorted : Bits.t list)];
   [%expect {|
@@ -61,7 +61,7 @@ let%expect_test "odd_even_merge, unsigned, ascending" =
      (sorted (0010 0100 1100 1110))) |}]
 
 let%expect_test "odd_even_merge, signed, descending" =
-  let inputs = List.init 4 ~f:(fun _ -> Bits.srand 4) in
+  let inputs = List.init 4 ~f:(fun _ -> Bits.random ~width:4) in
   let sorted = create Odd_even_merge_sort sort_descending_signed inputs in
   print_s [%message "" (inputs : Bits.t list) (sorted : Bits.t list)];
   [%expect {|
@@ -69,7 +69,7 @@ let%expect_test "odd_even_merge, signed, descending" =
      (sorted (0100 0010 1110 1100))) |}]
 
 let%expect_test "sort by bottom 2 bits" =
-  let inputs = List.init 8 ~f:(fun _ -> Bits.srand 4) in
+  let inputs = List.init 8 ~f:(fun _ -> Bits.random ~width:4) in
   let sorted =
     create Bitonic_sort
       (fun a b ->
@@ -87,7 +87,7 @@ let%expect_test "check all possible zero-one inputs" =
   List.iter Config.all ~f:(fun config ->
     List.iter [ 1; 2; 4; 8; 16 ] ~f:(fun num_inputs ->
       for i = 0 to Int.pow 2 num_inputs - 1 do
-        let inputs = Bits.bits (Bits.consti num_inputs i) in
+        let inputs = Bits.bits (Bits.consti ~width:num_inputs i) in
         let sorted = create config sort_ascending_unsigned inputs in
         require [%here]
           (List.is_sorted sorted

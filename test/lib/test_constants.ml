@@ -25,7 +25,7 @@ let sexp_of_const_function sexp_of_args (args, const_signal) =
   [%message "" ~_:(args : args) ~_:(const_signal : const_signal)]
 
 let app1 f a = a, f a
-let app2 f a b = (a, b), f a b
+let app2 f a b = (a, b), f ~width:a b
 let consti   = app2 consti
 let consti32 = app2 consti32
 let consti64 = app2 consti64
@@ -171,9 +171,9 @@ let%expect_test "consth{u,s}" =
           (104 876543210fedcba9876543210) 104'h0876543210fedcba9876543210)))) |}]
 
 let%expect_test "constd error" =
-  require_does_raise [%here] (fun () -> constd 10 "a");
+  require_does_raise [%here] (fun () -> constd ~width:10 "a");
   [%expect {| ("[constd] got invalid decimal char" a) |}];
-  require_does_raise [%here] (fun () -> constd 10 "");
+  require_does_raise [%here] (fun () -> constd ~width:10 "");
   [%expect {| "[constd] got empty string" |}]
 ;;
 

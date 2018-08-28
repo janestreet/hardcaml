@@ -133,11 +133,11 @@ module Make (Bits : Primitives) = struct
       | '0' | '1' -> ()
       | _ -> raise_s [%message "[constb] got invalid binary constant" ~_:(b : string)]);
     Bits.const b
-  let consti l v = constb (bstr_of_int l v)
-  let consti32 l v = constb (bstr_of_int32 l v)
-  let consti64 l v = constb (bstr_of_int64 l v)
-  let consthu l v = constb (bstr_of_hstr Unsigned l v)
-  let consths l v = constb (bstr_of_hstr Signed l v)
+  let consti ~width v = constb (bstr_of_int width v)
+  let consti32 ~width v = constb (bstr_of_int32 width v)
+  let consti64 ~width v = constb (bstr_of_int64 width v)
+  let consthu ~width v = constb (bstr_of_hstr Unsigned width v)
+  let consths ~width v = constb (bstr_of_hstr Signed width v)
   let constibl b = constb (Utils.bstr_of_intbitslist b)
 
   let concat s =
@@ -191,23 +191,23 @@ module Make (Bits : Primitives) = struct
   let sel_bottom  x n = select x (n-1)             0
   let sel_top     x n = select x (width x - 1)     (width x - n)
 
-  let insert ~t ~f n =
+  let insert ~into:t f ~at_offset =
     let wt, wf = width t, width f in
-    if n < 0
-    then raise_s [%message "[insert] below bit 0" ~_:(n : int)]
-    else if wt < (wf + n)
+    if at_offset < 0
+    then raise_s [%message "[insert] below bit 0" ~_:(at_offset : int)]
+    else if wt < (wf + at_offset)
     then raise_s [%message "[insert] above msb of target"
                              ~width_from:(wf : int)
                              ~width_target:(wt : int)
-                             ~at_pos:(n : int)
-                             ~highest_inserted_bit:(wf + n : int)]
-    else if wt = wf && n = 0
+                             (at_offset : int)
+                             ~highest_inserted_bit:(wf + at_offset : int)]
+    else if wt = wf && at_offset = 0
     then f
-    else if n=0
+    else if at_offset = 0
     then select t (wt - 1) wf @: f
-    else if wt = (wf + n)
+    else if wt = (wf + at_offset)
     then f @: select t (wt - wf - 1) 0
-    else select t (wt - 1) (wf + n) @: f @: select t (n-1) 0
+    else select t (wt - 1) (wf + at_offset) @: f @: select t (at_offset - 1) 0
 
   let sel x (h, l) = select x h l
 
@@ -231,7 +231,7 @@ module Make (Bits : Primitives) = struct
     if not (width t = 1)
     then raise_s [%message "" ~_:(msg : string)]
 
-  let op_int_right op a b = op a (consti (width a) b)
+  let op_int_right op a b = op a (consti ~width:(width a) b)
 
   (* mux *)
   let mux sel l =
@@ -249,7 +249,7 @@ module Make (Bits : Primitives) = struct
     assert_width_one sel "[mux] got select argument that is not one bit";
     mux sel [ b; a ]
 
-  let mux_init sel n f = mux sel (Array.to_list (Array.init n ~f))
+  let mux_init sel n ~f = mux sel (Array.to_list (Array.init n ~f))
 
   let cases sel default l =
     let max = 1 + List.fold l ~init:0 ~f:(fun acc (i, _) -> max i acc) in
@@ -536,33 +536,24 @@ module Make (Bits : Primitives) = struct
 
   let to_sint a = to_int (sresize a Int.num_bits)
 
-  let reduce op s =
+  let reduce ~f:op s =
     match List.length s with
     | 0 -> raise_s [%message "[reduce] got empty list"]
     | _ -> List.reduce_exn s ~f:(fun acc x -> op acc x)
 
-  let (||:) a b = (reduce (|:) (bits a)) |: (reduce (|:) (bits b))
-  let (&&:) a b = (reduce (|:) (bits a)) &: (reduce (|:) (bits b))
-
-
-  let pmux list last =
-    List.fold (List.rev list) ~init:last ~f:(fun ac (c, d) -> mux2 c d ac)
-
-  let pmuxl list = snd (reduce (fun (s0, d0) (s1, d1) -> (s0 |: s1), mux2 s0 d0 d1) list)
-
-  let pmux1h list =
-    reduce (|:) (List.map list ~f:(fun (s, d) -> sresize s (width d) &: d))
+  let (||:) a b = (reduce ~f:(|:) (bits a)) |: (reduce ~f:(|:) (bits b))
+  let (&&:) a b = (reduce ~f:(|:) (bits a)) &: (reduce ~f:(|:) (bits b))
 
   let reverse a = concat (List.rev (bits a))
 
-  let mod_counter max c =
+  let mod_counter ~max c =
     let w = width c in
     let lmax = 1 lsl w in
     if lmax = (max + 1)
     then c +: (one w)
-    else mux2 (c ==: (consti w max)) (zero w) (c +: (one w))
+    else mux2 (c ==: (consti ~width:w max)) (zero w) (c +: (one w))
 
-  let rec tree arity ops l =
+  let rec tree ~arity ~f l =
     if arity <= 1 then raise_s [%message "[tree] got [arity <= 1]"];
     let split l n =
       let (lh, ll, _) =
@@ -574,13 +565,13 @@ module Make (Bits : Primitives) = struct
     let rec t0 l =
       let l0, l1 = split l arity in
       if List.is_empty l1
-      then [ ops l0 ]
-      else (ops l0) :: (t0 l1)
+      then [ f l0 ]
+      else (f l0) :: (t0 l1)
     in
     match l with
     | [] -> raise_s [%message "[tree] got empty list"]
     | [ a ] -> a
-    | _ -> tree arity ops (t0 l)
+    | _ -> tree ~arity ~f (t0 l)
 
   let tree_or_reduce_binary_operator ?(branching_factor = 2) ~f data =
     if List.is_empty data
@@ -590,8 +581,8 @@ module Make (Bits : Primitives) = struct
            "[tree_or_reduce_binary_operator] got [branching_factor < 1]"
              (branching_factor : int) ];
     if branching_factor = 1
-    then reduce f data
-    else tree branching_factor (reduce f) data
+    then reduce ~f data
+    else tree ~arity:branching_factor ~f:(reduce ~f) data
 
   let priority_select ?branching_factor ts =
     tree_or_reduce_binary_operator ts ?branching_factor
@@ -617,9 +608,9 @@ module Make (Bits : Primitives) = struct
 
   let leading_zeros_of_bits_list ?branching_factor d =
     let result_width = Utils.nbits (List.length d) in
-    List.mapi d ~f:(fun i valid -> { With_valid. valid; value = consti result_width i })
+    List.mapi d ~f:(fun i valid -> { With_valid. valid; value = consti ~width:result_width i })
     |> priority_select_with_default ?branching_factor
-         ~default:(consti result_width (List.length d))
+         ~default:(consti ~width:result_width (List.length d))
 
   let leading_ones ?branching_factor t =
     if width t = 0 then raise_s [%message "[leading_ones] of [empty]"];
@@ -649,7 +640,7 @@ module Make (Bits : Primitives) = struct
     let leading_zeros = leading_zeros t ?branching_factor in
     let result_width = max 1 (Int.ceil_log2 width) in
     { valid = t <>:. 0
-    ; value = consti result_width (width - 1) -: uresize leading_zeros result_width}
+    ; value = consti ~width:result_width (width - 1) -: uresize leading_zeros result_width}
 
   let ceil_log2 ?branching_factor t =
     if width t = 0 then raise_s [%message "[ceil_log2] of [empty]"];
@@ -689,7 +680,7 @@ module Make (Bits : Primitives) = struct
         let g = g 0 x in
         match g with
         | [] -> gnd :: f (i+1)
-        | _ -> reduce (|:) g :: f (i+1)
+        | _ -> reduce ~f:(|:) g :: f (i+1)
     in
     concat List.(rev (f 0))
 
@@ -706,20 +697,20 @@ module Make (Bits : Primitives) = struct
     f b (msbs b)
 
   (* complex constant generators *)
-  let rec constd bits v =
+  let rec constd ~width:bits v =
     let l = String.length v in
     let decimal v =
       match v with
-      | '0' -> consti 4 0
-      | '1' -> consti 4 1
-      | '2' -> consti 4 2
-      | '3' -> consti 4 3
-      | '4' -> consti 4 4
-      | '5' -> consti 4 5
-      | '6' -> consti 4 6
-      | '7' -> consti 4 7
-      | '8' -> consti 4 8
-      | '9' -> consti 4 9
+      | '0' -> consti ~width:4 0
+      | '1' -> consti ~width:4 1
+      | '2' -> consti ~width:4 2
+      | '3' -> consti ~width:4 3
+      | '4' -> consti ~width:4 4
+      | '5' -> consti ~width:4 5
+      | '6' -> consti ~width:4 6
+      | '7' -> consti ~width:4 7
+      | '8' -> consti ~width:4 8
+      | '9' -> consti ~width:4 9
       | _ -> raise_s [%message "[constd] got invalid decimal char" ~_:(v : char)]
     in
     let (+:) a b =
@@ -727,12 +718,12 @@ module Make (Bits : Primitives) = struct
       let a, b = uresize a w, uresize b w in
       a +: b
     in
-    let ten = consti 4 10 in
+    let ten = consti ~width:4 10 in
     if l=0
     then raise_s [%message "[constd] got empty string"]
     else
     if Char.equal v.[0] '-'
-    then zero bits -: (constd bits (String.sub v ~pos:1 ~len:(l-1)))
+    then zero bits -: (constd ~width:bits (String.sub v ~pos:1 ~len:(l-1)))
     else
       (* convert *)
       let rec sum i mulfac prod =
@@ -743,7 +734,7 @@ module Make (Bits : Primitives) = struct
             (prod +: (decimal v.[i] *: mulfac))
       in
       uresize
-        (sum (l-1) (consti 1 1) (consti 1 0))
+        (sum (l-1) (consti ~width:1 1) (consti ~width:1 0))
         bits
 
   let constv s =
@@ -767,9 +758,9 @@ module Make (Bits : Primitives) = struct
     let ctrl = sval.[0] in
     let sval = String.sub sval ~pos:1 ~len:(String.length sval - 1) in
     match ctrl with
-    | 'd' -> constd len sval
-    | 'x' | 'h' -> consthu len sval
-    | 'X' | 'H' -> consths len sval
+    | 'd' -> constd ~width:len sval
+    | 'x' | 'h' -> consthu ~width:len sval
+    | 'X' | 'H' -> consths ~width:len sval
     | 'b' ->
       let slen = String.length sval in
       if slen < len
@@ -794,11 +785,11 @@ module Make (Bits : Primitives) = struct
     with _ ->
       raise_s [%message "[const] could not convert constant" ~const:(b : string)]
 
-  let rec srand bits =
-    if bits <= 16
-    then consti bits (Random.int (1 lsl bits))
+  let rec random ~width =
+    if width <= 16
+    then consti ~width (Random.int (1 lsl width))
     else
-      consti 16 (Random.int (1 lsl 16)) @: srand (bits-16)
+      consti ~width:16 (Random.int (1 lsl 16)) @: random ~width:(width-16)
 
   let to_int32' resize x =
     let x = resize x 32 in

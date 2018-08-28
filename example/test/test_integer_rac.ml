@@ -12,7 +12,7 @@ module Make (Config : Rac.Config) = struct
     let%bind _ = Step.cycle { i with clr = Bits.vdd } in
     let%bind _ = Step.cycle { i with en = Bits.vdd
                                    ; ld = Bits.vdd
-                                   ; x = Array.map ~f:(Bits.consti 8) data_in } in
+                                   ; x = Array.map ~f:(Bits.consti ~width:8) data_in } in
     (* This cycle's [addsub] setting is because in [Integer] mode, the first bit that we
        process is the (negative) high bit in the twos-complement integer, so we want the
        accumulator to subtract rather than add. *)
@@ -36,7 +36,7 @@ module Make (Config : Rac.Config) = struct
       ()
 
   let create_sim ~coefs =
-    let coefs = Array.map coefs ~f:(Bits.consti 8) in
+    let coefs = Array.map coefs ~f:(Bits.consti ~width:8) in
     Sim.create ~kind:Mutable (Rac.create ~coefs)
 
   let run_and_print_waves ~simulator ~testbench ~data_in =

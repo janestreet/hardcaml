@@ -142,18 +142,18 @@ module type S = sig
   val constb : string -> t
 
   (** convert integer to constant *)
-  val consti : int -> int -> t
-  val consti32 : int -> int32 -> t
-  val consti64 : int -> int64 -> t
+  val consti : width:int -> int -> t
+  val consti32 : width:int -> int32 -> t
+  val consti64 : width:int -> int64 -> t
 
   (** convert unsigned hex string to constant *)
-  val consthu : int -> string -> t
+  val consthu : width:int -> string -> t
 
   (** convert signed hex string to constant *)
-  val consths : int -> string -> t
+  val consths : width:int -> string -> t
 
   (** convert decimal string to constant*)
-  val constd : int -> string -> t
+  val constd : width:int -> string -> t
 
   (** convert verilog style string to constant *)
   val constv : string -> t
@@ -236,8 +236,8 @@ module type S = sig
   (** [sel_top s n] select top [n] bits of [s] *)
   val sel_top : t -> int -> t
 
-  (** [insert ~t ~f n] insert [f] into [t] as postion [n] *)
-  val insert : t:t -> f:t -> int -> t
+  (** [insert ~into:t x ~at_offset] insert [x] into [t] at given offet *)
+  val insert : into:t -> t -> at_offset:int -> t
 
   (** *)
   val sel : t -> (int * int) -> t
@@ -264,22 +264,13 @@ module type S = sig
       Equivalent to [mux c \[f; t\]] *)
   val mux2 : t -> t -> t -> t
 
-  val mux_init : t -> int -> (int -> t) -> t
+  val mux_init : t -> int -> f:(int -> t) -> t
 
   (** case mux *)
   val cases : t -> t -> (int * t) list -> t
 
   (** match mux *)
   val matches : ?resize:(t -> int -> t) -> ?default:t -> t -> (int * t) list -> t
-
-  (** priority mux (with default) *)
-  val pmux : (t * t) list -> t -> t
-
-  (** log depth priority mux (no default) *)
-  val pmuxl : (t * t) list -> t
-
-  (** onehot priority mux (default=0) *)
-  val pmux1h : (t * t) list -> t
 
   (** logical and *)
   val (&:) : t -> t -> t
@@ -449,7 +440,7 @@ module type S = sig
   val resize_op2 : resize:(t -> int -> t) -> (t -> t -> t) -> t -> t -> t
 
   (** fold 'op' though list *)
-  val reduce : ('a -> 'a -> 'a) -> 'a list -> 'a
+  val reduce : f:('a -> 'a -> 'a) -> 'a list -> 'a
 
   (** reverse bits *)
   val reverse : t -> t
@@ -457,11 +448,11 @@ module type S = sig
   (** [mod_counter max t] is [if t = max then 0 else (t + 1)], and can be used to count
       from 0 to (max-1) then from zero again.  If max == 1<<n, then a comparator is not
       generated and overflow arithmetic used instead.  If *)
-  val mod_counter : int -> t -> t
+  val mod_counter : max:int -> t -> t
 
-  (** [tree arity f input] creates a tree of operations.  The arity of the operator is
+  (** [tree ~arity ~f input] creates a tree of operations.  The arity of the operator is
       configurable.  [tree] raises if [input = []]. *)
-  val tree : int -> ('a list -> 'a) -> 'a list -> 'a
+  val tree : arity:int -> f:('a list -> 'a) -> 'a list -> 'a
 
   (** [priority_select cases] returns the value associated with the first case whose
       [valid] signal is high.  [valid] will be set low in the returned [With_valid.t] if
@@ -519,8 +510,8 @@ module type S = sig
   (** convert gray code to binary *)
   val gray_to_binary : t -> t
 
-  (** create random constant vector of given size *)
-  val srand : int -> t
+  (** create random constant vector of given width *)
+  val random : width:int -> t
 
   module type TypedMath = TypedMath with type t := t
 

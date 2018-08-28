@@ -37,15 +37,15 @@ val create
   :  ?nearly_empty    : int       (** default is [1] **)
   -> ?nearly_full     : int       (** default is [depth-1] **)
   -> ?overflow_check  : bool      (** default is [true] *)
-  -> ?rst             : Signal.t  (** default is [empty] **)
+  -> ?reset           : Signal.t  (** default is [empty] **)
   -> ?showahead       : bool      (** default is [false] **)
   -> ?underflow_check : bool      (** default is [true] *)
   -> unit
   -> capacity : int
-  -> clk : Signal.t
-  -> clr : Signal.t
-  -> wr  : Signal.t
-  -> d   : Signal.t
-  -> rd  : Signal.t
+  -> clock : Signal.t
+  -> clear : Signal.t
+  -> wr    : Signal.t
+  -> d     : Signal.t
+  -> rd    : Signal.t
   -> t
 

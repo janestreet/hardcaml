@@ -64,6 +64,11 @@ module type Signal = sig
     ; write_enable : t
     ; write_data : t }
 
+  and read_port =
+    { read_clock : t
+    ; read_address : t
+    ; read_enable : t }
+
   (** These types are used to define a particular type of register as per the following
       template, where each part is optional:
 
@@ -75,13 +80,13 @@ module type Signal = sig
      v} *)
   and register =
     { reg_clock       : t       (** clock *)
-    ; reg_clock_level : t       (** active clock edge *)
+    ; reg_clock_edge  : Edge.t  (** active clock edge *)
     ; reg_reset       : t       (** asynchronous reset *)
-    ; reg_reset_level : t       (** asynchronous reset level *)
+    ; reg_reset_edge  : Edge.t  (** asynchronous reset edge *)
     ; reg_reset_value : t       (** asychhronous reset value *)
-    ; reg_clear       : t       (** synchronous reset *)
-    ; reg_clear_level : t       (** synchronous reset level *)
-    ; reg_clear_value : t       (** sychhronous reset value *)
+    ; reg_clear       : t       (** synchronous clear *)
+    ; reg_clear_level : Level.t (** synchronous clear level *)
+    ; reg_clear_value : t       (** sychhronous clear value *)
     ;
       reg_enable      : t       (** global system enable *) }
 
@@ -186,18 +191,6 @@ module type Signal = sig
   (** creates an output *)
   val output : string -> t -> t
 
-  (** global clock *)
-  val clock : t
-
-  (** global asynchronous reset *)
-  val reset : t
-
-  (** global synchronous clear *)
-  val clear : t
-
-  (** global enable *)
-  val enable : t
-
   (** [Reg_spec_] is a register specification.  It is named [Reg_spec_] rather than
       [Reg_spec] so that people consistently use the name [Hardcaml.Reg_spec] rather
       than [Hardcaml.Signal.Reg_spec_]. *)
@@ -205,35 +198,37 @@ module type Signal = sig
     type t = register [@@deriving sexp_of]
 
     val create
-      :  ?clr : signal
-      -> ?rst : signal
+      :  ?clear : signal
+      -> ?reset : signal
       -> unit
-      -> clk : signal
+      -> clock : signal
       -> t
 
     val override
-      :  ?clk  : signal
-      -> ?clkl : signal
-      -> ?r    : signal
-      -> ?rl   : signal
-      -> ?rv   : signal
-      -> ?c    : signal
-      -> ?cl   : signal
-      -> ?cv   : signal
-      -> ?ge   : signal
+      :  ?clock         : signal
+      -> ?clock_edge    : Edge.t
+      -> ?reset         : signal
+      -> ?reset_edge    : Edge.t
+      -> ?reset_to      : signal
+      -> ?clear         : signal
+      -> ?clear_level   : Level.t
+      -> ?clear_to      : signal
+      -> ?global_enable : signal
       -> t
       -> t
+
+    val clock : t -> signal
   end
 
   val reg
     :  Reg_spec_.t
-    -> e:t
+    -> enable:t
     -> t
     -> t
 
   val reg_fb
     :  Reg_spec_.t
-    -> e:t
+    -> enable:t
     -> w:int
     -> (t -> t)
     -> t
@@ -241,56 +236,26 @@ module type Signal = sig
   val pipeline
     :  Reg_spec_.t
     -> n:int
-    -> e:t
+    -> enable:t
     -> t
     -> t
-
-  module Ram_spec_ : sig
-    type t = register [@@deriving sexp_of]
-
-    val create : unit -> clk : signal -> t
-
-    val override
-      :  ?clk  : signal
-      -> ?clkl : signal
-      -> ?r    : signal
-      -> ?rl   : signal
-      -> ?rv   : signal
-      -> ?c    : signal
-      -> ?cl   : signal
-      -> ?cv   : signal
-      -> ?ge   : signal
-      -> t
-      -> t
-  end
 
   val memory
-    :  Ram_spec_.t
-    -> int
-    -> we:t
-    -> wa:t
-    -> d:t
-    -> ra:t
+    :  int
+    -> write_port:write_port
+    -> read_address:t
     -> t
 
   val ram_wbr
-    :  Ram_spec_.t
-    -> int
-    -> we:t
-    -> wa:t
-    -> d:t
-    -> re:t
-    -> ra:t
+    :  int
+    -> write_port:write_port
+    -> read_port:read_port
     -> t
 
   val ram_rbw
-    :  Ram_spec_.t
-    -> int
-    -> we:t
-    -> wa:t
-    -> d:t
-    -> re:t
-    -> ra:t
+    :  int
+    -> write_port:write_port
+    -> read_port:read_port
     -> t
 
   val multiport_memory

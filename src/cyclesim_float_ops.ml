@@ -21,8 +21,8 @@ module Width = struct
 
   let bits_of_float t float =
     match t with
-    | W32 -> Bits.consti32 32 (Int32.bits_of_float float)
-    | W64 -> Bits.consti64 64 (Int64.bits_of_float float)
+    | W32 -> Bits.consti32 ~width:32 (Int32.bits_of_float float)
+    | W64 -> Bits.consti64 ~width:64 (Int64.bits_of_float float)
 end
 
 let op2 op name width =

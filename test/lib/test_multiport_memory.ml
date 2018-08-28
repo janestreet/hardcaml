@@ -3,51 +3,51 @@ open! Import
 let write_port address_width data_width =
   { Signal.
     write_clock = Signal.gnd
-  ; write_address = Signal.consti address_width 0
-  ; write_data = Signal.consti data_width 0
+  ; write_address = Signal.consti ~width:address_width 0
+  ; write_data = Signal.consti ~width:data_width 0
   ; write_enable = Signal.gnd }
 
 let%expect_test "exceptions" =
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory 16 ~write_ports:[|write_port 3 8|]
-      ~read_addresses:[|Signal.consti 3 0|]);
+      ~read_addresses:[|Signal.consti ~width:3 0|]);
   [%expect {|
     ("[Signal.multiport_memory] size is greater than what can be addressed by write port"
      (size          16)
      (address_width 3)) |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory 16 ~write_ports:[|write_port 4 8|]
-      ~read_addresses:[|Signal.consti 3 0|]);
+      ~read_addresses:[|Signal.consti ~width:3 0|]);
   [%expect {|
     ("[Signal.multiport_memory] size is greater than what can be addressed by read port"
      (size          16)
      (address_width 3)) |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory 16 ~write_ports:[|write_port 4 8|]
-      ~read_addresses:[|Signal.consti 5 0|]);
+      ~read_addresses:[|Signal.consti ~width:5 0|]);
   [%expect {|
     ("[Signal.multiport_memory] width of read and write addresses differ"
      (write_address_width 4)
      (read_address_width  5)) |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory 16 ~write_ports:[| { (write_port 4 8) with
-                                                 write_clock = Signal.consti 2 0 }|]
-      ~read_addresses:[|Signal.consti 4 0|]);
+                                                 write_clock = Signal.consti ~width:2 0 }|]
+      ~read_addresses:[|Signal.consti ~width:4 0|]);
   [%expect {|
     ("[Signal.multiport_memory] width of clock must be 1"
      (port               0)
      (write_enable_width 1)) |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory 16 ~write_ports:[| { (write_port 4 8) with
-                                                 write_enable = Signal.consti 2 0 }|]
-      ~read_addresses:[|Signal.consti 4 0|]);
+                                                 write_enable = Signal.consti ~width:2 0 }|]
+      ~read_addresses:[|Signal.consti ~width:4 0|]);
   [%expect {|
     ("[Signal.multiport_memory] width of write enable must be 1"
      (port               0)
      (write_enable_width 2)) |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory 16 ~write_ports:[||]
-      ~read_addresses:[|Signal.consti 4 0|]);
+      ~read_addresses:[|Signal.consti ~width:4 0|]);
   [%expect {| "[Signal.multiport_memory] requires at least one write port" |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory 16 ~write_ports:[|write_port 4 8|]
@@ -55,7 +55,7 @@ let%expect_test "exceptions" =
   [%expect {| "[Signal.multiport_memory] requires at least one read port" |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory 16 ~write_ports:[|write_port 4 8|]
-      ~read_addresses:[| Signal.consti 4 0; Signal.consti 5 0 |]);
+      ~read_addresses:[| Signal.consti ~width:4 0; Signal.consti ~width:5 0 |]);
   [%expect {|
     ("[Signal.multiport_memory] width of read address is inconsistent"
      (port               1)
@@ -63,7 +63,7 @@ let%expect_test "exceptions" =
      (expected           4)) |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory 16 ~write_ports:[|write_port 4 8; write_port 5 8|]
-      ~read_addresses:[| Signal.consti 4 0 |]);
+      ~read_addresses:[| Signal.consti ~width:4 0 |]);
   [%expect {|
     ("[Signal.multiport_memory] width of write address is inconsistent"
      (port                1)
@@ -71,7 +71,7 @@ let%expect_test "exceptions" =
      (expected            4)) |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory 16 ~write_ports:[|write_port 4 8; write_port 4 16|]
-      ~read_addresses:[| Signal.consti 4 0 |]);
+      ~read_addresses:[| Signal.consti ~width:4 0 |]);
   [%expect {|
     ("[Signal.multiport_memory] width of write data is inconsistent"
      (port             1)
@@ -83,7 +83,7 @@ let%expect_test "sexp" =
   let sexp_of_signal = Signal.sexp_of_signal_recursive ~depth:2 in
   let memory =
     Signal.multiport_memory 32 ~write_ports:[|write_port 5 12; write_port 5 12|]
-      ~read_addresses:[| Signal.consti 5 0; Signal.consti 5 0|]
+      ~read_addresses:[| Signal.consti ~width:5 0; Signal.consti ~width:5 0|]
   in
   print_s [%message (memory : signal array)];
   [%expect {|
@@ -119,7 +119,7 @@ let%expect_test "sexp" =
 let%expect_test "verilog, async memory, 1 port" =
   let read_data =
     Signal.multiport_memory 32
-      ~write_ports:[| { write_clock = Signal.clock
+      ~write_ports:[| { write_clock = clock
                       ; write_enable = Signal.input "write_enable" 1
                       ; write_address = Signal.input "write_address" 5
                       ; write_data = Signal.input "write_data" 15 } |]
@@ -168,7 +168,7 @@ let%expect_test "verilog, async memory, 1 port" =
 let%expect_test "verilog, async memory, 2 ports" =
   let read_data =
     Signal.multiport_memory 32
-      ~write_ports:[| { write_clock = Signal.clock
+      ~write_ports:[| { write_clock = clock
                       ; write_enable = Signal.input "write_enable" 1
                       ; write_address = Signal.input "write_address" 5
                       ; write_data = Signal.input "write_data" 15 }
@@ -304,22 +304,21 @@ let%expect_test "dual port Verilog" =
         output [14:0] q1;
 
         /* signal declarations */
-        wire [14:0] _21 = 15'b000000000000000;
+        wire [14:0] _20 = 15'b000000000000000;
         wire [14:0] _19 = 15'b000000000000000;
         wire [14:0] _18;
-        reg [14:0] _22;
-        wire [14:0] _25 = 15'b000000000000000;
-        wire vdd = 1'b1;
+        reg [14:0] _21;
         wire [14:0] _24 = 15'b000000000000000;
+        wire [14:0] _23 = 15'b000000000000000;
         reg [14:0] _17[0:31];
-        wire [14:0] _23;
-        reg [14:0] _26;
+        wire [14:0] _22;
+        reg [14:0] _25;
 
         /* logic */
         assign _18 = _17[read_address2];
         always @(posedge read_clock2) begin
             if (read_enable2)
-                _22 <= _18;
+                _21 <= _18;
         end
         always @(posedge write_clock1) begin
             if (write_enable1)
@@ -329,17 +328,17 @@ let%expect_test "dual port Verilog" =
             if (write_enable2)
                 _17[write_address2] <= write_data2;
         end
-        assign _23 = _17[read_address1];
+        assign _22 = _17[read_address1];
         always @(posedge read_clock1) begin
             if (read_enable1)
-                _26 <= _23;
+                _25 <= _22;
         end
 
         /* aliases */
 
         /* output assignments */
-        assign q0 = _26;
-        assign q1 = _22;
+        assign q0 = _25;
+        assign q1 = _21;
 
     endmodule |}]
 ;;
@@ -389,17 +388,16 @@ let%expect_test "dual port VHDL" =
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
 
         -- signal declarations
-        constant hc_21 : std_logic_vector (14 downto 0) := "000000000000000";
+        constant hc_20 : std_logic_vector (14 downto 0) := "000000000000000";
         constant hc_19 : std_logic_vector (14 downto 0) := "000000000000000";
         signal hc_18 : std_logic_vector (14 downto 0);
-        signal hc_22 : std_logic_vector (14 downto 0);
-        constant hc_25 : std_logic_vector (14 downto 0) := "000000000000000";
-        constant vdd : std_logic := '1';
+        signal hc_21 : std_logic_vector (14 downto 0);
         constant hc_24 : std_logic_vector (14 downto 0) := "000000000000000";
+        constant hc_23 : std_logic_vector (14 downto 0) := "000000000000000";
         type hc_17_type is array (0 to 31) of std_logic_vector(14 downto 0);
         signal hc_17 : hc_17_type;
-        signal hc_23 : std_logic_vector (14 downto 0);
-        signal hc_26 : std_logic_vector (14 downto 0);
+        signal hc_22 : std_logic_vector (14 downto 0);
+        signal hc_25 : std_logic_vector (14 downto 0);
 
     begin
 
@@ -408,7 +406,7 @@ let%expect_test "dual port VHDL" =
         process (read_clock2) begin
             if rising_edge(read_clock2) then
                 if read_enable2 = '1' then
-                    hc_22 <= hc_18;
+                    hc_21 <= hc_18;
                 end if;
             end if;
         end process;
@@ -426,11 +424,11 @@ let%expect_test "dual port VHDL" =
                 end if;
             end if;
         end process;
-        hc_23 <= hc_17(to_integer(hc_uns(read_address1)));
+        hc_22 <= hc_17(to_integer(hc_uns(read_address1)));
         process (read_clock1) begin
             if rising_edge(read_clock1) then
                 if read_enable1 = '1' then
-                    hc_26 <= hc_23;
+                    hc_25 <= hc_22;
                 end if;
             end if;
         end process;
@@ -438,8 +436,8 @@ let%expect_test "dual port VHDL" =
         -- aliases
 
         -- output assignments
-        q0 <= hc_26;
-        q1 <= hc_22;
+        q0 <= hc_25;
+        q1 <= hc_21;
 
     end architecture; |}]
 ;;
@@ -462,21 +460,21 @@ let%expect_test "simulation - write and read data on both ports" =
   Cyclesim.reset simulator;
   (* write on port 1 and 2 *)
   write_enable1 := Bits.vdd;
-  write_address1 := Bits.consti 5 3;
-  write_data1 := Bits.consti 15 100;
+  write_address1 := Bits.consti ~width:5 3;
+  write_data1 := Bits.consti ~width:15 100;
   Cyclesim.cycle simulator;
-  write_address1 := Bits.consti 5 4;
-  write_data1 := Bits.consti 15 640;
+  write_address1 := Bits.consti ~width:5 4;
+  write_data1 := Bits.consti ~width:15 640;
   Cyclesim.cycle simulator;
   write_enable1 := Bits.gnd;
   (* read on port 1 *)
   Cyclesim.cycle simulator;
-  read_address1 := Bits.consti 5 3;
+  read_address1 := Bits.consti ~width:5 3;
   read_enable1 := Bits.vdd;
   Cyclesim.cycle simulator;
   (* read on port 2 *)
   read_enable1 := Bits.gnd;
-  read_address2 := Bits.consti 5 3;
+  read_address2 := Bits.consti ~width:5 3;
   read_enable2 := Bits.vdd;
   Cyclesim.cycle simulator;
   read_enable2 := Bits.gnd;
@@ -484,8 +482,8 @@ let%expect_test "simulation - write and read data on both ports" =
   (* read on ports 1 and 2 *)
   read_enable1 := Bits.vdd;
   read_enable2 := Bits.vdd;
-  read_address1 := Bits.consti 5 4;
-  read_address2 := Bits.consti 5 4;
+  read_address1 := Bits.consti ~width:5 4;
+  read_address2 := Bits.consti ~width:5 4;
   Cyclesim.cycle simulator;
   read_enable1 := Bits.gnd;
   read_enable2 := Bits.gnd;
@@ -554,19 +552,19 @@ let%expect_test "simulation - write on both ports - highest indexed port wins" =
 
   Cyclesim.reset simulator;
   write_enable1 := Bits.vdd;
-  write_address1 := Bits.consti 5 9;
-  write_data1 := Bits.consti 15 100;
+  write_address1 := Bits.consti ~width:5 9;
+  write_data1 := Bits.consti ~width:15 100;
   write_enable2 := Bits.vdd;
-  write_address2 := Bits.consti 5 9;
-  write_data2 := Bits.consti 15 200;
+  write_address2 := Bits.consti ~width:5 9;
+  write_data2 := Bits.consti ~width:15 200;
   Cyclesim.cycle simulator;
   write_enable1 := Bits.gnd;
   write_enable2 := Bits.gnd;
   Cyclesim.cycle simulator;
   read_enable1 := Bits.vdd;
-  read_address1 := Bits.consti 5 9;
+  read_address1 := Bits.consti ~width:5 9;
   read_enable2 := Bits.vdd;
-  read_address2 := Bits.consti 5 9;
+  read_address2 := Bits.consti ~width:5 9;
   Cyclesim.cycle simulator;
   read_enable1 := Bits.gnd;
   read_enable2 := Bits.gnd;
@@ -630,14 +628,14 @@ let%expect_test "simulation - demonstrate collision modes" =
 
     Cyclesim.reset simulator;
     write_enable1 := Bits.vdd;
-    write_address1 := Bits.consti 5 13;
-    write_data1 := Bits.consti 15 10;
+    write_address1 := Bits.consti ~width:5 13;
+    write_data1 := Bits.consti ~width:15 10;
     Cyclesim.cycle simulator;
     write_enable1 := Bits.vdd;
-    write_address1 := Bits.consti 5 13;
-    write_data1 := Bits.consti 15 20;
+    write_address1 := Bits.consti ~width:5 13;
+    write_data1 := Bits.consti ~width:15 20;
     read_enable1 := Bits.vdd;
-    read_address1 := Bits.consti 5 13;
+    read_address1 := Bits.consti ~width:5 13;
     Cyclesim.cycle simulator;
     write_enable1 := Bits.gnd;
     read_enable1 := Bits.gnd;

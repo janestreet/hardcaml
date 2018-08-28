@@ -2,6 +2,9 @@ open! Import
 open Signal
 open! Recipe_intf
 
+let clock = input "clock" 1
+let enable = input "enable" 1
+
 type var = int
 type inp = Signal.t * Signal.t (* enable * value *)
 module VMap = Map.Make (Int)
@@ -11,17 +14,17 @@ type env =
   ; outs       : Signal.t VMap.t }
 type 'a recipe = Recipe of (Signal.t -> env -> (Signal.t * env * 'a))
 
-let delay cv d =
-  reg (Reg_spec.override (Reg_spec.create () ~clk:clock) ~cv) ~e:enable d
+let delay clear_to d =
+  reg (Reg_spec.override (Reg_spec.create () ~clock:clock) ~clear_to) ~enable d
 
-let delayEn cv enable d =
-  reg (Reg_spec.override (Reg_spec.create () ~clk:clock) ~cv) ~e:enable d
+let delayEn clear_to enable d =
+  reg (Reg_spec.override (Reg_spec.create () ~clock:clock) ~clear_to) ~enable d
 
-let delayFb cv f =
+let delayFb clear_to f =
   reg_fb
-    (Reg_spec.override (Reg_spec.create () ~clk:clock) ~cv)
-    ~e:enable
-    ~w:(width cv)
+    (Reg_spec.override (Reg_spec.create () ~clock:clock) ~clear_to)
+    ~enable
+    ~w:(width clear_to)
     f
 
 let setReset s r = delayFb gnd (fun q -> (s |: q) &: (~: r))
@@ -70,7 +73,7 @@ let par ?(comb_fin=true) r = Recipe (fun start env ->
       (fin :: finl, env, a :: al))
   in
   let fin = wire 1 -- "par_fin" in
-  fin <== reduce (&:) (List.map finl ~f:(fun fin' -> gen_par_fin comb_fin fin' fin));
+  fin <== reduce ~f:(&:) (List.map finl ~f:(fun fin' -> gen_par_fin comb_fin fin' fin));
   (fin, env, List.rev al))
 
 let cond c (Recipe p) (Recipe q) = Recipe (fun start env ->
@@ -99,9 +102,9 @@ let follow start (Recipe r) =
   Map.iteri env.outs ~f:(fun ~key:v ~data:o ->
     try
       let inps = Map.find_exn env.writerInps v in
-      let enable = reduce (|:) (List.map inps ~f:fst) in
+      let enable = reduce ~f:(|:) (List.map inps ~f:fst) in
       let value =
-        reduce (|:) (List.map inps ~f:(fun (e, v) -> mux2 e v (zero (width v)))) in
+        reduce ~f:(|:) (List.map inps ~f:(fun (e, v) -> mux2 e v (zero (width v)))) in
       o <== (delayEn (zero (width o)) enable value)
     with _ ->
       (* this can lead to combinatorial loops, so perhaps an exception would be better

@@ -29,8 +29,8 @@ let%expect_test "parallel prefix adder" =
         let nbits = num_bits (max input1 input2) |> Int.ceil_pow2 in
         let output =
           create (module Bits) ~config
-            ~input1:(Bits.consti nbits input1)
-            ~input2:(Bits.consti nbits input2)
+            ~input1:(Bits.consti ~width:nbits input1)
+            ~input2:(Bits.consti ~width:nbits input2)
             ~carry_in:(if carry = 1 then Bits.vdd else Bits.gnd)
           |> Bits.to_int
         in

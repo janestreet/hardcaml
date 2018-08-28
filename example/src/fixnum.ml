@@ -19,7 +19,7 @@ module Make (Spec : Spec) = struct
 
   let of_bits bits = bits |> Bits.to_sint
 
-  let to_bits t = Bits.consti width t
+  let to_bits t = Bits.consti ~width t
 
   let constb t = t |> to_bits |> Bits.to_bstr
 
@@ -30,5 +30,5 @@ module Make (Spec : Spec) = struct
   let signal_mul a b =
     Signal.(select (sra (a *+ b) Spec.fractional_width) (Spec.width-1) 0)
 
-  let signal_constf f = Signal.consti width (f |> of_float)
+  let signal_constf f = Signal.consti ~width (f |> of_float)
 end

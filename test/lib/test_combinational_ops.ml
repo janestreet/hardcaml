@@ -188,8 +188,8 @@ let testbench ~create_circuit ~create_sim =
   let c, d = Cyclesim.out_port sim "c", Cyclesim.out_port sim "d" in
   List.init 4 ~f:(fun i ->
     List.init 4 ~f:(fun j ->
-      a := Bits.consti num_bits i;
-      b := Bits.consti num_bits j;
+      a := Bits.consti ~width:num_bits i;
+      b := Bits.consti ~width:num_bits j;
       Cyclesim.cycle sim;
       !a, !b, !c, !d))
   |> List.concat
