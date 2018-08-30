@@ -1,13 +1,13 @@
 (library
  ((name hardcaml)
   (public_name hardcaml)
+  (preprocess (pps (ppx_jane -dont-check-doc-comments-attachment ppxlib.runner)))
   (libraries (base
               bigarray
               dynlink
               num
               stdio
               topological_sort
-              unix))
-  (preprocess (pps (ppx_jane ppxlib.runner)))))
+              unix))))
 
 (jbuild_version 1)
