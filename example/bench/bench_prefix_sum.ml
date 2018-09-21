@@ -1,6 +1,6 @@
 open! Import
 
-let create_sim ~config ~kind n_bits =
+let create_sim ~config n_bits =
   let open Signal in
   let circuit =
     Circuit.create_exn ~name:"lfsr"
@@ -10,21 +10,13 @@ let create_sim ~config ~kind n_bits =
              ~input2:(input "b" n_bits)
              ~carry_in:(input "carry" 1))]
   in
-  let sim = Cyclesim.create ~kind circuit in
+  let sim = Cyclesim.create circuit in
   (fun () -> for _=0 to 14 do Cyclesim.cycle sim done)
 
-let%bench_fun "prefix-sum 8 serial Immutable" =
-  let step = create_sim ~config:Serial ~kind:Immutable 8 in
+let%bench_fun "prefix-sum 8 serial" =
+  let step = create_sim ~config:Serial 8 in
   fun () -> step ()
 
-let%bench_fun "prefix-sum 8 serial Mutable" =
-  let step = create_sim ~config:Serial ~kind:Mutable 8 in
-  fun () -> step ()
-
-let%bench_fun "prefix-sum 8 kogge-stone Immutable" =
-  let step = create_sim ~config:Kogge_stone ~kind:Immutable 8 in
-  fun () -> step ()
-
-let%bench_fun "prefix-sum 8 kogge-stone Mutable" =
-  let step = create_sim ~config:Kogge_stone ~kind:Mutable 8 in
+let%bench_fun "prefix-sum 8 kogge-stone" =
+  let step = create_sim ~config:Kogge_stone 8 in
   fun () -> step ()

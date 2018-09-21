@@ -37,7 +37,7 @@ module Make (Config : Rac.Config) = struct
 
   let create_sim ~coefs =
     let coefs = Array.map coefs ~f:(Bits.consti ~width:8) in
-    Sim.create ~kind:Mutable (Rac.create ~coefs)
+    Sim.create (Rac.create ~coefs)
 
   let run_and_print_waves ~simulator ~testbench ~data_in =
     let waves, simulator = Hardcaml_waveterm_jane.Waveform.create simulator in

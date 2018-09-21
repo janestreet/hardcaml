@@ -5,31 +5,31 @@ open Signal
 let xor_sim () =
   let a, b = input "a" 1, input "b" 1 in
   let c = output "c" (a ^: b) in
-  Circuit.create_exn ~name:"xor" [c] |> Cyclesim.create ~kind:Immutable
+  Circuit.create_exn ~name:"xor" [c] |> Cyclesim.create
 
 (* Or gate *)
 let or_sim () =
   let a, b = input "a" 1, input "b" 1 in
   let c = output "c" (a |: b) in
-  Circuit.create_exn ~name:"or" [c] |> Cyclesim.create ~kind:Immutable
+  Circuit.create_exn ~name:"or" [c] |> Cyclesim.create
 
 (* Rename [b] input as [foo] *)
 let foo_in_sim () =
   let a, foo = input "a" 1, input "foo" 1 in
   let c = output "c" (a &: foo) in
-  Circuit.create_exn ~name:"foo_in" [c] |> Cyclesim.create ~kind:Immutable
+  Circuit.create_exn ~name:"foo_in" [c] |> Cyclesim.create
 
 (* Rename [c] output as [foo] *)
 let foo_out_sim () =
   let a, b = input "a" 1, input "b" 1 in
   let c = output "foo" (a |: b) in
-  Circuit.create_exn ~name:"foo_out" [c] |> Cyclesim.create ~kind:Immutable
+  Circuit.create_exn ~name:"foo_out" [c] |> Cyclesim.create
 
 (* Add an extra [foo] input *)
 let foo_in_superset_sim () =
   let a, b, foo = input "a" 1, input "b" 1, input "foo" 1 in
   let c = output "c" (a &: b &: foo) in
-  Circuit.create_exn ~name:"foo_super" [c] |> Cyclesim.create ~kind:Immutable
+  Circuit.create_exn ~name:"foo_super" [c] |> Cyclesim.create
 
 let%expect_test "Port sets differ - inputs" =
   require_does_raise [%here] (fun () ->
@@ -70,7 +70,8 @@ let%expect_test "Test comparison" =
   [%expect {|
     ("[Cyclesim.combine] output port values differ"
      (error (
-       (cycle_no  3)
-       (port_name c)
-       (value0    0)
-       (value1    1)))) |}]
+       (cycle_no   3)
+       (clock_edge Before)
+       (port_name  c)
+       (value0     0)
+       (value1     1)))) |}]

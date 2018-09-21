@@ -132,13 +132,7 @@ type signal_bundles =
   ; remaining      : Signal.t list
   ; ready          : Signal.t list }
 
-let scheduling_deps (s : Signal.t) =
-  match s with
-  | Mem (_, _, _, m) -> [ m.mem_read_address ]
-  | Mem_read_port (_, _, read_address) -> [ read_address ]
-  | Reg _ -> [ ]
-  | Multiport_mem _ -> [ ]
-  | Empty | Const _ | Op _ | Wire _ | Select _ | Inst _ -> Signal.deps s
+let scheduling_deps (s : Signal.t) = Signal_graph.scheduling_deps s
 
 let get_schedule circuit internal_ports =
   let regs, mems, consts, inputs, remaining = find_elements circuit in
@@ -342,14 +336,9 @@ let outputs ?(clock_edge = Side.After) t  =
 
 let empty_ops_database = Combinational_ops_database.create ()
 
-module Kind = struct
-  type t = Immutable | Mutable [@@deriving sexp_of]
-end
-
 type 'a with_create_options
   =  ?is_internal_port : (Signal.t -> bool)
   -> ?combinational_ops_database : Combinational_ops_database.t
-  -> kind : Kind.t
   -> 'a
 
 let create_immutable
@@ -579,6 +568,7 @@ let create_immutable
 module Combine_error = struct
   type t =
     { cycle_no  : int
+    ; clock_edge: Side.t
     ; port_name : string
     ; value0    : Bits.t
     ; value1    : Bits.t }
@@ -602,7 +592,7 @@ let combine
                    ~f:(fun s (n, _) -> Set.add s n)) in
   let try_find n s =
     try Some (List.Assoc.find_exn s ~equal:String.equal n) with _ -> None in
-  let in_ports, copy_in_ports =
+  let _, copy_in_ports =
     let l =
       List.map si ~f:(fun n ->
         match try_find n s0.in_ports, try_find n s1.in_ports with
@@ -614,22 +604,23 @@ let combine
     List.map l ~f:fst, List.map l ~f:snd
   in
   let cycle_no = ref 0 in
-  let check n x y =
+  let check edge n x y =
     if not (Bits.equal !x !y)
     then on_error { Combine_error.
                     cycle_no  = !cycle_no
+                  ; clock_edge= edge
                   ; port_name = n
                   ; value0    = !x
                   ; value1    = !y }
   in
-  let associate_and_check_out_ports out_ports =
+  let associate_and_check_out_ports edge out_ports =
     let l =
       List.map out_port_set ~f:(fun n ->
         match
           try_find n (out_ports s0)
         , try_find n (out_ports s1)
         with
-        | Some x, Some y -> (n, x), (fun () -> check n x y)
+        | Some x, Some y -> (n, x), (fun () -> check edge n x y)
         | Some x, None when port_sets_may_differ -> (n, x), (fun () -> ())
         | None, Some y when port_sets_may_differ -> (n, y), (fun () -> ())
         | _ -> raise_s [%message "Output port was not found" ~name:(n : string)])
@@ -637,14 +628,17 @@ let combine
     List.map l ~f:fst, List.map l ~f:snd
   in
 
-  let out_ports_after_clock_edge, _ =
-    associate_and_check_out_ports out_ports_after_clock_edge
-  and out_ports_before_clock_edge, check_out_ports =
-    associate_and_check_out_ports out_ports_before_clock_edge
+  let _, check_out_ports_after_clock_edge =
+    associate_and_check_out_ports After out_ports_after_clock_edge
+  and _, check_out_ports_before_clock_edge =
+    associate_and_check_out_ports Before out_ports_before_clock_edge
   in
 
   let copy_in_ports   () = List.iter copy_in_ports   ~f:(fun f -> f ()) in
-  let check_out_ports () = List.iter check_out_ports ~f:(fun f -> f ()) in
+  let check_out_ports () =
+    List.iter check_out_ports_before_clock_edge ~f:(fun f -> f ());
+    List.iter check_out_ports_after_clock_edge ~f:(fun f -> f ())
+  in
   let incr_cycle      () = Int.incr cycle_no in
   let cycle_check     () = s0.cycle_check (); copy_in_ports  (); s1.cycle_check () in
   let cycle_comb0     () = s0.cycle_comb0 (); s1.cycle_comb0 () in
@@ -654,11 +648,7 @@ let combine
     check_out_ports (); incr_cycle     () in
   let reset         () = s0.reset (); s1.reset () in
   { s0 with
-    in_ports
-  ; out_ports_after_clock_edge
-  ; out_ports_before_clock_edge
-  ; internal_ports              = []
-  ; reset
+    reset
   ; cycle_check
   ; cycle_comb0
   ; cycle_seq
@@ -855,12 +845,42 @@ let create_mutable
            (Printf.sprintf "'%s' has width %i but should be of width %i"
               name data_width signal_width))
   in
+  let compile_and_tag s = Option.map (compile s) ~f:(fun t -> uid s, t) in
   (* compile the task list *)
   let tasks_check = List.map bundle.inputs ~f:check_input in
-  let tasks_comb = filter_none (List.map bundle.schedule ~f:compile) in
+  let tasks_comb = filter_none (List.map bundle.schedule ~f:compile_and_tag) in
   let tasks_regs = filter_none (List.map bundle.regs ~f:compile) in
   let tasks_seq = (List.map bundle.mems ~f:compile_mem_update) @
                   (List.map bundle.regs ~f:compile_reg_update) in
+
+  let tasks_comb_last_layer () =
+    (* Find nodes between registers and outputs *)
+    let nodes =
+      Signal_graph.last_layer_of_nodes
+        ~is_input:(Circuit.is_input circuit) (Circuit.signal_graph circuit)
+      |> Set.of_list (module Signal.Uid)
+    in
+    (* Compile them *)
+    let tasks =
+      List.filter_map tasks_comb ~f:(fun (uid, t) ->
+        if Set.mem nodes uid
+        then Some(uid, t)
+        else None)
+    in
+    let nodes' = Set.of_list (module Signal.Uid) (List.map tasks ~f:fst) in
+    (* Check that all signals in the last layer could be compiled. *)
+    if Set.equal nodes nodes'
+    then List.map tasks ~f:snd
+    else
+      let diff = Set.diff nodes nodes' |> Set.to_list in
+      let diff = List.map diff
+                   ~f:(fun uid -> uid,
+                                  (try Some (Circuit.find_signal_exn circuit uid)
+                                   with _ -> None)) in
+      raise_s [%message "[Cyclesim.create] Last layer did not compile correctly."
+                          (diff : (Signal.Uid.t * Signal.t option) list)]
+  in
+
   (* reset *)
   let resets = filter_none (List.map bundle.regs ~f:compile_reset) in
   (* Note; in the functional simulator the out ports before/after the clock edge are the
@@ -895,6 +915,15 @@ let create_mutable
   let out_ports_after_clock_edge, out_ports_task =
     out_ports_ref out_ports in
   let internal_ports, internal_ports_task = out_ports_ref internal_ports in
+
+  let optimize_last_layer = true in
+  let tasks_comb0 = List.map tasks_comb ~f:snd in
+  let tasks_comb1 =
+    if optimize_last_layer
+    then tasks_comb_last_layer ()
+    else tasks_comb0
+  in
+
   { in_ports
   ; out_ports_after_clock_edge
   ; out_ports_before_clock_edge
@@ -904,24 +933,31 @@ let create_mutable
   ; outputs_before_clock_edge   = out_ports_before_clock_edge
   ; cycle_check                 = task tasks_check
   ; cycle_comb0                 = tasks [ [ in_ports_task ]
-                                        ; tasks_comb
+                                        ; tasks_comb0
                                         ; tasks_regs
                                         ; [ out_ports_before_clock_edge_task
                                           ; internal_ports_task]]
   ; cycle_seq                   = task tasks_seq
-  ; cycle_comb1                 = tasks [ tasks_comb; [ out_ports_task ]]
+  ; cycle_comb1                 = tasks [ tasks_comb1; [ out_ports_task ]]
   ; reset                       = task resets
   ; lookup_signal
   ; lookup_reg }
 
+let test_simulators_agree = ref false
+
 let create
       ?is_internal_port
       ?(combinational_ops_database=empty_ops_database)
-      ~(kind : Kind.t) circuit =
-  (match kind with
-   | Immutable -> create_immutable
-   | Mutable   -> create_mutable)
-    ~is_internal_port ~combinational_ops_database ~circuit
+      circuit =
+  if !test_simulators_agree
+  then
+    let imm = create_immutable ~is_internal_port ~combinational_ops_database ~circuit in
+    let mut = create_mutable ~is_internal_port ~combinational_ops_database ~circuit in
+    let on_error error = raise_s [%message "Simulation mismatch"
+                                             (error : Combine_error.t)] in
+    combine imm mut ~on_error
+  else
+    create_mutable ~is_internal_port ~combinational_ops_database ~circuit
 
 module With_interface (I : Interface.S) (O : Interface.S) = struct
 
@@ -944,15 +980,13 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
         create_options
         ?is_internal_port
         ?combinational_ops_database
-        ~(kind : Kind.t) ?port_checks ?add_phantom_inputs create_fn ->
+        ?port_checks ?add_phantom_inputs create_fn ->
         let circuit =
           Circuit.call_with_create_options
             C.create_exn create_options ?port_checks ?add_phantom_inputs
-            ~name:(match kind with
-              | Immutable -> "immutable_simulator"
-              | Mutable   -> "mutable_simulator")
+            ~name:"simulator"
             create_fn
         in
-        let sim = create ?is_internal_port ?combinational_ops_database ~kind circuit in
+        let sim = create ?is_internal_port ?combinational_ops_database circuit in
         coerce sim)
 end

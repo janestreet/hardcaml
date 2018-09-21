@@ -8,6 +8,7 @@ type t = Signal.t list [@@deriving sexp_of]
 let create t = t
 
 let depth_first_search
+      ?(deps = deps)
       ?(f_before = (fun a _ -> a))
       ?(f_after  = (fun a _ -> a))
       t ~init =
@@ -252,3 +253,54 @@ let topological_sort ?(deps = Signal.deps) (graph : t) =
       @ edges)
   in
   Topological_sort.sort (module Node) nodes edges |> Or_error.ok_exn
+
+let scheduling_deps (s : Signal.t) =
+  match s with
+  | Mem (_, _, _, m) -> [ m.mem_read_address ]
+  | Mem_read_port (_, _, read_address) -> [ read_address ]
+  | Reg _ -> [ ]
+  | Multiport_mem _ -> [ ]
+  | Empty | Const _ | Op _ | Wire _ | Select _ | Inst _ -> Signal.deps s
+
+let last_layer_of_nodes ~is_input graph =
+  let deps t = scheduling_deps t in
+  (* DFS signals starting from [graph] until a register (or memory) is reached.
+     While traversing, mark all signals that are encountered with a bool to
+     indicate whether the signal is in a path between a register (or memory)
+     and the output of the graph--the last layer.
+
+     Note that the same map that keeps track of the whether the signal is in the last
+     layer also doubles as a visited set for the DFS. *)
+  let rec visit_signal ((in_layer, _) : bool Map.M(Signal.Uid).t * bool) signal =
+    match Map.find in_layer (uid signal) with
+    | Some(is_in_layer) -> in_layer, is_in_layer
+    | None ->
+      (* These nodes are not scheduled, so need filtering. They are all terminal nodes
+         under scheduling deps. Put them in the map as not in the final layer. *)
+      if Signal.is_const signal
+      || Signal.is_empty signal
+      || Signal.is_multiport_mem signal
+      || is_input signal
+      then Map.set in_layer ~key:(uid signal) ~data:false, false
+      (* Regs are not in the final layer either, but we can't add them to the map as
+         [false].  We will have to recurse to them each time instead. *)
+      else if Signal.is_reg signal
+      then in_layer, true
+      else
+        (* recurse deeper *)
+        let in_layer, is_in_layer = fold_signals (in_layer, false) (deps signal) in
+        Map.set in_layer ~key:(uid signal) ~data:is_in_layer, is_in_layer
+  (* In final layer if any dependancy is also in the final layer. *)
+  and fold_signals layer signals =
+    List.fold signals ~init:layer
+      ~f:(fun (in_layer, is_in_layer) signal ->
+        let in_layer, is_in_layer' = visit_signal (in_layer, is_in_layer) signal in
+        in_layer, is_in_layer || is_in_layer')
+
+  in
+  let in_layer, _ = fold_signals (Map.empty (module Signal.Uid), false) graph in
+  (* Drop nodes not in the final layer. That will track back to an input or constant but
+     not be affected by a register or memory. *)
+  Map.to_alist in_layer
+  |> List.filter_map ~f:(fun (uid, is_in_layer) ->
+    if is_in_layer then Some uid else None)

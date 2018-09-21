@@ -36,7 +36,7 @@ let f coefs (i : Signal.t I.t) =
 let%expect_test "testbench"  =
   let module G = Cyclesim.With_interface (I) (O) in
   let module S = Cyclesim in
-  let sim = G.create ~kind:Immutable
+  let sim = G.create
               (f (List.map ~f:(Signal.consti ~width:16) [3; 5; 2; 1])) in
   let i, o = S.inputs sim, S.outputs sim in
   S.reset sim;

@@ -16,7 +16,7 @@ open Cordic
 let test_cos_sin architecture doit =
   let iterations = 16 in
   let sim =
-    Cos_sin.Sim.create ~kind:Immutable
+    Cos_sin.Sim.create
       (Cos_sin.create { architecture; iterations })
   in
   let angle = 0.4 in
@@ -56,7 +56,7 @@ module Test (Function : Cordic_special_functions.Function) = struct
   let test args =
     let iterations = 16 in
     let create_sim architecture =
-      Function.Sim.create ~kind:Immutable
+      Function.Sim.create
         (Function.create { architecture; iterations })
     in
     let sim = create_sim Combinational in

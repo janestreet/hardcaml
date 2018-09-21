@@ -22,9 +22,14 @@ val outputs
 
 (** Visit all signals in the graph, starting at the outputs, in a depth-first manner.
     Each signal is visited only once.  [f_before] is called before recursing on each
-    signal's fan-in.  Similiarly, [f_after] is called after recursing on the fan-in. *)
+    signal's fan-in.  Similiarly, [f_after] is called after recursing on the fan-in.
+
+    If [deps] is provided it will be used to compute signal dependencies rather
+    than the default definition. This is useful for terminating traversals
+    based on some condition on signals, e.g., if it's a register or a memory. *)
 val depth_first_search
-  :  ?f_before : ('a -> Signal.t -> 'a)
+  :  ?deps : (Signal.t -> Signal.t list)
+  -> ?f_before : ('a -> Signal.t -> 'a)
   -> ?f_after  : ('a -> Signal.t -> 'a)
   -> t
   -> init : 'a
@@ -75,3 +80,11 @@ val topological_sort
   :  ?deps : (Signal.t -> Signal.t list)
   -> t
   -> Signal.t list
+
+(** Signal dependencies used for scheduling. Breaks loops through sequential elements like
+    registers and memories. *)
+val scheduling_deps : Signal.t -> Signal.t list
+
+(** Final layer of combinational nodes which sit on the path between the outputs and any
+    driving register or memory. *)
+val last_layer_of_nodes : is_input : (Signal.t -> bool) -> t -> Signal.Uid.t List.t

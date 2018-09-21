@@ -1,6 +1,6 @@
 open! Import
 
-let create_sim ~kind n_bits =
+let create_sim n_bits =
   let open Signal in
   let circuit =
     Circuit.create_exn ~name:"lfsr"
@@ -9,7 +9,7 @@ let create_sim ~kind n_bits =
                       (input "a" n_bits)
                       (input "b" n_bits)) ]
   in
-  let sim = Cyclesim.create ~kind circuit in
+  let sim = Cyclesim.create circuit in
   let a = Cyclesim.in_port sim "a" in
   let b = Cyclesim.in_port sim "b" in
   (fun () ->
@@ -21,10 +21,6 @@ let create_sim ~kind n_bits =
        done
      done)
 
-let%bench_fun "mul 3 bit Immutable" =
-  let mul = create_sim ~kind:Immutable 3 in
-  fun () -> mul ()
-
-let%bench_fun "mul 3 bit Mutable" =
-  let mul = create_sim ~kind:Mutable 3 in
+let%bench_fun "mul 3 bit" =
+  let mul = create_sim 3 in
   fun () -> mul ()

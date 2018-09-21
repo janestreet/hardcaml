@@ -163,7 +163,7 @@ let%expect_test "test statemachine encodings" =
               ; ok ]
          else [ ok ])
     in
-    let sim = Cyclesim.create ~kind:Immutable circuit in
+    let sim = Cyclesim.create circuit in
     let waves, sim = Waves.Waveform.create sim in
     let port_nickel, port_dime =
       Cyclesim.in_port sim "nickel", Cyclesim.in_port sim "dime" in

@@ -641,3 +641,11 @@ module Mutable = struct
       let sexp_of_t s = [%sexp (to_bstr s : string)]
     end)
 end
+
+let pp fmt t = Caml.Format.fprintf fmt "%s" (to_bstr t)
+
+module PP = Pretty_printer.Register(struct
+    type nonrec t = t
+    let module_name = "Hardcaml.Bits"
+    let to_string = to_bstr
+  end)

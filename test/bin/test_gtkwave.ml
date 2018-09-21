@@ -4,7 +4,7 @@ let test_gtkwave () =
   let module G = Cyclesim.With_interface (Fir_filter.I) (Fir_filter.O) in
   let module S = Cyclesim in
   let module Gtkwave = Vcd.Gtkwave in
-  let sim = G.create ~kind:Immutable
+  let sim = G.create
               (Fir_filter.f (List.map ~f:(Signal.consti ~width:16) [3; 5; 2; 1])) in
   let i = S.inputs sim in
   let sim = Gtkwave.gtkwave sim in

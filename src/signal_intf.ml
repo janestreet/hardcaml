@@ -120,8 +120,11 @@ module type Signal = sig
   (** is the signal a register? *)
   val is_reg : t -> bool
 
-  (** is the signal a memory? *)
+  (** is the signal a memory, or multiport memory? *)
   val is_mem : t -> bool
+
+  (** is the signal a multiport memory? *)
+  val is_multiport_mem : t -> bool
 
   (** is the signal an instantiation? *)
   val is_inst : t -> bool
@@ -263,5 +266,8 @@ module type Signal = sig
     -> write_ports : write_port array
     -> read_addresses : t array
     -> t array
+
+  (** Pretty printer. *)
+  val pp : Formatter.t -> t -> unit
 
 end

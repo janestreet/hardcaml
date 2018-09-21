@@ -178,6 +178,7 @@ let is_select = function Select _ -> true | _ -> false
 let is_wire = function Wire _ -> true | _ -> false
 let is_op op = function Op (_, o) -> Signal_op.equal o op | _ -> false
 let is_mem = function Mem _ | Multiport_mem _ -> true | _ -> false
+let is_multiport_mem = function Multiport_mem _ -> true | _ -> false
 let is_inst = function Inst _ -> true | _ -> false
 
 let new_id, reset_id =
@@ -1035,3 +1036,12 @@ let multiport_memory size ~write_ports ~read_addresses =
   let mem = Multiport_mem(make_id data_width deps, size, write_ports) in
   Array.map read_addresses ~f:(fun r ->
     Mem_read_port(make_id data_width [r; mem], mem, r))
+
+(* Pretty printer *)
+let pp fmt t = Caml.Format.fprintf fmt "%s" ([%sexp (t : t)] |> Sexp.to_string_hum)
+
+module PP = Pretty_printer.Register(struct
+    type nonrec t = t
+    let module_name = "Hardcaml.Signal"
+    let to_string = to_bstr
+  end)

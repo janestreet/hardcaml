@@ -67,4 +67,7 @@ module type Bits = sig
 
     module Comb : Comb.S with type t = t
   end with type bits := t
+
+  (** Pretty printer. *)
+  val pp : Formatter.t -> t -> unit
 end

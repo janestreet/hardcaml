@@ -69,17 +69,9 @@ module type Cyclesim = sig
 
   val lookup_reg : _ t -> Signal.Uid.t -> Bits.t ref
 
-  (** There are two different simulator implementations, an [Immutable] one that uses
-      [Bits.t], and a [Mutable] one that uses [Bits.Mutable.t].  Functions that create a
-      simulator take a [~kind:Kind.t] argument that says which implementation to use. *)
-  module Kind : sig
-    type t = Immutable | Mutable [@@deriving sexp_of]
-  end
-
   type 'a with_create_options
     =  ?is_internal_port : (Signal.t -> bool)
     -> ?combinational_ops_database : Combinational_ops_database.t
-    -> kind : Kind.t
     -> 'a
 
   (** construct a simulator from a circuit *)
@@ -88,6 +80,7 @@ module type Cyclesim = sig
   module Combine_error : sig
     type t =
       { cycle_no  : int
+      ; clock_edge: Side.t
       ; port_name : string
       ; value0    : Bits.t
       ; value1    : Bits.t }
