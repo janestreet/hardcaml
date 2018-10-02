@@ -20,12 +20,11 @@ end
 
 module MakePureCombTransform (B : MakePureCombTransform_arg) = struct
 
-  open Utils
-
   type t = B.t
 
   let transform find signal =
     let dep n = find (uid (List.nth_exn (deps signal) n)) in
+    let find_uid x = uid x |> find in
     let new_signal =
       match signal with
       | Op (_, op) ->
@@ -41,17 +40,17 @@ module MakePureCombTransform (B : MakePureCombTransform_arg) = struct
          | Signal_eq -> op2 B.(==:)
          | Signal_not -> B.(~:) (dep 0)
          | Signal_lt -> op2 B.(<:)
-         | Signal_cat -> B.concat (deps signal |> List.map ~f:(find << uid))
+         | Signal_cat -> B.concat (deps signal |> List.map ~f:find_uid)
          | Signal_mux ->
-           let sel = List.hd_exn (deps signal) |> (find << uid) in
-           let cases = List.tl_exn (deps signal) |> List.map ~f:(find << uid) in
+           let sel = List.hd_exn (deps signal) |> (find_uid) in
+           let cases = List.tl_exn (deps signal) |> List.map ~f:find_uid in
            B.mux sel cases)
       | Empty -> B.empty
       | Wire (_, d) ->
         let w = B.wire (width signal) in
-        if not (is_empty !d) then B.(<==) w ((find << uid) !d);
+        if not (is_empty !d) then B.(<==) w (find_uid !d);
         w
-      | Const (_, b) -> B.const b
+      | Const (_, b) -> B.of_constant (Bits.to_constant b)
       | Select (_, h, l) -> B.select (dep 0) h l
       | Reg (_, _) -> failwith "MakePureCombTransform: no registers"
       | Mem (_, _, _, _) -> failwith "MakePureCombTransform: no memories"
@@ -85,7 +84,7 @@ module MakePureCombTransform (B : MakePureCombTransform_arg) = struct
     in
     let find uid = Map.find_exn id_to_sig uid in
     (*let partition_const = partition (find >> is_const) in*)
-    let partition_wire = partition (find >> is_wire) in
+    let partition_wire = partition (fun x -> find x |> is_wire) in
     let partition_ready ready remaining =
       let ready s =
         let s = find s in (* look up the signal *)
@@ -164,10 +163,9 @@ end
 
 module MakeCombTransform (B : (Comb.Primitives with type t = Signal.t)) = struct
 
-  open Utils
-
   let transform find signal =
     let dep n = find (uid (List.nth_exn (deps signal) n)) in
+    let find_uid x = uid x |> find in
     let new_signal =
       match signal with
       | Op (_, op) ->
@@ -183,17 +181,17 @@ module MakeCombTransform (B : (Comb.Primitives with type t = Signal.t)) = struct
          | Signal_eq -> op2 B.(==:)
          | Signal_not -> B.(~:) (dep 0)
          | Signal_lt -> op2 B.(<:)
-         | Signal_cat -> B.concat (deps signal |> List.map ~f:(find << uid))
+         | Signal_cat -> B.concat (deps signal |> List.map ~f:find_uid)
          | Signal_mux ->
-           let sel = List.hd_exn (deps signal) |> (find << uid) in
-           let cases = List.tl_exn (deps signal) |> List.map ~f:(find << uid) in
+           let sel = List.hd_exn (deps signal) |> find_uid in
+           let cases = List.tl_exn (deps signal) |> List.map ~f:find_uid in
            B.mux sel cases)
       | Empty -> B.empty
       | Wire (_, d) ->
         let w = Signal.wire (width signal) in
-        if not (is_empty !d) then Signal.(<==) w ((find << uid) !d);
+        if not (is_empty !d) then Signal.(<==) w (find_uid !d);
         w
-      | Const (_, b) -> B.const b
+      | Const (_, b) -> B.of_constant (Bits.to_constant b)
       | Select (_, h, l) -> B.select (dep 0) h l
       | Reg (_, r) ->
         reg (Reg_spec.override
@@ -210,7 +208,7 @@ module MakeCombTransform (B : (Comb.Primitives with type t = Signal.t)) = struct
         let d' = dep 0 in
         let w' = dep 1 in
         let r' = dep 2 in
-        let we' = (find << uid) r.reg_enable in
+        let we' = find_uid r.reg_enable in
         memory
           ~write_port:{ write_clock = find (uid r.reg_clock)
                       ; write_enable = we'
@@ -239,8 +237,6 @@ end
 
 module CopyTransform = MakeCombTransform (Signal)
 
-open Utils
-
 let copy_names s t =
   List.fold (names s) ~init:t ~f:(fun t n -> t -- n)
 
@@ -263,7 +259,7 @@ let rewrite fn id_to_sig outputs =
   in
   let find uid = Map.find_exn id_to_sig uid in
   (*let partition_const = partition (find >> is_const) in*)
-  let partition_wire = partition (find >> is_wire) in
+  let partition_wire = partition (fun x -> find x |> is_wire) in
   let partition_ready ready remaining =
     let ready s =
       let s = find s in (* look up the signal *)

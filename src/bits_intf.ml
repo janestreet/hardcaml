@@ -5,23 +5,19 @@ open! Import
 
 module type Bits = sig
 
-  type t [@@deriving compare]
-
+  type t [@@deriving compare, sexp_of]
   include Comb.S       with type t := t
   include Comparator.S with type t := t
 
   (** [Mutable] is a mutable bits used by [Cyclesim] for efficiency. *)
   module Mutable : sig
     type bits
-
     type t
 
     val empty : t
     val width : t -> int
 
     val to_string : t -> string
-    val to_int : t -> int
-    val to_bstr : t -> string
 
     (** Create a [t] of given width, initially set to [0]. *)
     val create : int -> t
@@ -29,15 +25,16 @@ module type Bits = sig
     val copy      : src:t    -> dst:t -> unit
     val copy_bits : src:bits -> dst:t -> unit
 
-    (** A [Bits.Mutable.t] contains an array of 62-bit words.  [num_words], [get_words],
-        and [set_words] are like Array [length], [get], and [set]. *)
+    (** A [Bits.Mutable.t] can be accessed as an array of 64 bit words. *)
     val num_words  : t -> int
-    val get_word : t -> int -> int
-    val set_word : t -> int -> int -> unit
+    val get_word : t -> int -> int64
+    val set_word : t -> int -> int64 -> unit
 
     val to_bits : t -> bits
 
-    val const : string -> t
+    val of_constant : Constant.t -> t
+    val to_constant : t -> Constant.t
+
     val vdd : t
     val gnd : t
 

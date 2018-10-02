@@ -6,9 +6,9 @@
 : 
 : === flags ===
 : 
-:   -bits MODULE            bits implementation to test: intbits, bits, raw-int,
-:                           bad
-:   [-bits-ref MODULE]      reference bits implementation (default is [int64])
+:   -bits MODULE            bits implementation to test: intbits, bits, bits-int,
+:                           raw-int, bad
+:   [-bits-ref MODULE]      reference bits implementation (default is [bits-int])
 :   [-first-error-only]     stop running a primitive test after first error
 :   [-iterations N]         number of test iterations (default is [10])
 :   [-log FILE]             results file (default is [stdout])

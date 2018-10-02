@@ -6,8 +6,8 @@ module Make_primitives (Gates : Gates) = struct
   include Gates
 
   (* utils *)
-  let vdd = const "1"
-  let gnd = const "0"
+  let vdd = of_constant (Constant.of_int ~width:1 1)
+  let gnd = of_constant (Constant.of_int ~width:1 0)
   let bits_lsb x =
     let w = width x in
     Array.to_list (Array.init w ~f:(fun i -> select x i i))
@@ -113,8 +113,6 @@ end
 
 module Make (Bits : Primitives) = struct
 
-  open Utils
-
   type t = Bits.t
 
   let equal = Bits.equal
@@ -127,24 +125,51 @@ module Make (Bits : Primitives) = struct
 
   let width = Bits.width
 
+
+  let address_bits_for x =
+    if x < 0 then raise_s [%message "arg to [address_btis_for] must be >= 0" ~got:(x : int)];
+    if x <= 1
+    then 1
+    else Int.ceil_log2 x
+
+  let rec num_bits_to_represent x =
+    if x < 0 then raise_s [%message "arg to [num_bits_to_represent] must be >= 0" ~got:(x : int)];
+    match x with
+    | 0 | 1 -> 1
+    | x -> 1 + (num_bits_to_represent (x / 2))
+
+  let of_constant = Bits.of_constant
+  let to_constant = Bits.to_constant
+
+  let[@inline never] raise_constb_bad_char b =
+    raise_s [%message "[constb] got invalid binary constant" ~_:(b : string)]
+
   (* constant generation *)
   let constb b =
     String.iter b ~f:(function
       | '0' | '1' -> ()
-      | _ -> raise_s [%message "[constb] got invalid binary constant" ~_:(b : string)]);
-    Bits.const b
-  let consti ~width v = constb (bstr_of_int width v)
-  let consti32 ~width v = constb (bstr_of_int32 width v)
-  let consti64 ~width v = constb (bstr_of_int64 width v)
-  let consthu ~width v = constb (bstr_of_hstr Unsigned width v)
-  let consths ~width v = constb (bstr_of_hstr Signed width v)
-  let constibl b = constb (Utils.bstr_of_intbitslist b)
+      | _ -> raise_constb_bad_char b);
+    Bits.of_constant (Constant.of_binary_string b)
+  let consti ~width v = of_constant (Constant.of_int ~width v)
+  let consti32 ~width v = of_constant (Constant.of_int32 ~width v)
+  let consti64 ~width v = of_constant (Constant.of_int64 ~width v)
+  let consthu ~width v = of_constant (Constant.of_hex_string ~signedness:Unsigned ~width v)
+  let consths ~width v = of_constant (Constant.of_hex_string ~signedness:Signed ~width v)
+  let constibl b = of_constant (Constant.of_bit_list b)
+
+  let[@inline never] raise_concat_empty s =
+    raise_s [%message "[concat] got [empty] input" ~_:(s : Bits.t list)]
+
+  let[@inline never] raise_concat_empty_list () =
+    raise_s [%message "[concat] got empty list"]
+
+  let concat_check_not_empty s x =
+    if is_empty x
+    then raise_concat_empty s
 
   let concat s =
-    List.iter s ~f:(fun x ->
-      if is_empty x
-      then raise_s [%message "[concat] got [empty] input" ~_:(s : Bits.t list)]);
-    if List.is_empty s then raise_s [%message "[concat] got empty list"];
+    List.iter s ~f:(concat_check_not_empty s);
+    if List.is_empty s then raise_concat_empty_list ();
     Bits.concat s
   let (@:) a b = concat [ a; b ]
   let concat_e s = Bits.concat (List.filter s ~f:(fun b -> not (Bits.is_empty b)))
@@ -163,15 +188,20 @@ module Make (Bits : Primitives) = struct
     | 1 -> vdd
     | _ -> (zero (w-1)) @: vdd
 
+  let[@inline never] raise_select_hi_lo hi lo =
+    raise_s [%message "[select] got [hi < lo]" (hi : int) (lo : int)]
+
+  let[@inline never] raise_select_out_of_bounds a hi lo =
+    raise_s [%message "[select] indices are out of bounds"
+                        ~input_width:(width a : int)
+                        (hi : int)
+                        (lo : int)]
+
   let select a hi lo =
     if hi < lo
-    then raise_s [%message "[select] got [hi < lo]" (hi : int) (lo : int)];
+    then raise_select_hi_lo hi lo;
     if hi >= width a || lo >= width a || hi < 0 || lo < 0
-    then
-      raise_s [%message "[select] indices are out of bounds"
-                          ~input_width:(width a : int)
-                          (hi : int)
-                          (lo : int)];
+    then raise_select_out_of_bounds a hi lo;
     if lo = 0 && hi = (width a-1)
     then a
     else Bits.select a hi lo
@@ -191,16 +221,22 @@ module Make (Bits : Primitives) = struct
   let sel_bottom  x n = select x (n-1)             0
   let sel_top     x n = select x (width x - 1)     (width x - n)
 
+  let[@inline never] raise_insert_below_0 at_offset =
+    raise_s [%message "[insert] below bit 0" ~_:(at_offset : int)]
+
+  let[@inline never] raise_insert_above_msb width_from width_target at_offset =
+    raise_s [%message "[insert] above msb of target"
+                        (width_from : int)
+                        (width_target : int)
+                        (at_offset : int)
+                        ~highest_inserted_bit:(width_from + at_offset : int)]
+
   let insert ~into:t f ~at_offset =
     let wt, wf = width t, width f in
     if at_offset < 0
-    then raise_s [%message "[insert] below bit 0" ~_:(at_offset : int)]
+    then raise_insert_below_0 at_offset
     else if wt < (wf + at_offset)
-    then raise_s [%message "[insert] above msb of target"
-                             ~width_from:(wf : int)
-                             ~width_target:(wt : int)
-                             (at_offset : int)
-                             ~highest_inserted_bit:(wf + at_offset : int)]
+    then raise_insert_above_msb wf wt at_offset
     else if wt = wf && at_offset = 0
     then f
     else if at_offset = 0
@@ -211,38 +247,65 @@ module Make (Bits : Primitives) = struct
 
   let sel x (h, l) = select x h l
 
+  let[@inline never] raise_assert_widths_same_not_empty function_ =
+    raise_s [%message
+      "" ~_:(String.concat [ "["; function_; "] got empty list" ] : string)]
+
+  let[@inline never] raise_widths_are_different function_ inputs =
+    raise_s [%message
+      ""
+        ~_:(String.concat ["["; function_; "] got inputs of different widths"]
+            : string)
+        ~_:(inputs : Bits.t list)]
+
+  let width_check function_ inputs w t =
+    if width t <> w
+    then raise_widths_are_different function_ inputs
+
   (* error checking *)
   let assert_widths_same function_ inputs =
     match inputs with
-    | [] ->
-      raise_s [%message
-        "" ~_:(String.concat [ "["; function_; "] got empty list" ] : string)]
+    | [] -> raise_assert_widths_same_not_empty function_
     | t :: ts ->
       let w = width t in
-      List.iter ts ~f:(fun t ->
-        if width t <> w
-        then raise_s [%message
-               ""
-                 ~_:(String.concat ["["; function_; "] got inputs of different widths"]
-                     : string)
-                 ~_:(inputs : Bits.t list)])
+      List.iter ts ~f:(width_check function_ inputs w)
+
+  let[@inline never] raise_operator_widths_are_different function_ arg1 arg2 =
+    let inputs = [ arg1; arg2 ] in
+    raise_s [%message
+      ""
+        ~_:(String.concat ["["; function_; "] got inputs of different widths"]
+            : string)
+        ~_:(inputs : Bits.t list)]
+
+  let assert_operator_widths_same function_ arg1 arg2 =
+    if width arg1 <> width arg2
+    then raise_operator_widths_are_different function_ arg1 arg2
+
+  let[@inline never] raise_width_not_one msg =
+    raise_s [%message "" ~_:(msg : string)]
 
   let assert_width_one t msg =
     if not (width t = 1)
-    then raise_s [%message "" ~_:(msg : string)]
+    then raise_width_not_one msg
 
   let op_int_right op a b = op a (consti ~width:(width a) b)
+
+  let[@inline never] raise_mux_too_many_inputs inputs_provided maximum_expected =
+    raise_s [%message "[mux] got too many inputs"
+                        (inputs_provided :int)
+                        (maximum_expected : int)]
+
+  let[@inline never] raise_mux_too_few_inputs inputs_provided =
+    raise_s [%message "[mux] got fewer than 2 inputs" (inputs_provided : int)]
 
   (* mux *)
   let mux sel l =
     let els = List.length l in
     let max_els = 1 lsl (width sel) in
     assert_widths_same "mux" l;
-    if els > max_els then raise_s [%message "[mux] got too many inputs"
-                                              ~inputs_provided:(els:int)
-                                              ~maximum_expected:(max_els : int)];
-    if els < 2 then raise_s [%message "[mux] got fewer than 2 inputs"
-                                        ~inputs_provided:(els:int)];
+    if els > max_els then raise_mux_too_many_inputs els max_els;
+    if els < 2 then raise_mux_too_few_inputs els;
     Bits.mux sel l
 
   let mux2 sel a b =
@@ -259,6 +322,9 @@ module Make (Bits : Primitives) = struct
     then mux sel (Array.to_list a)
     else mux sel (Array.to_list a @ [ default ])
 
+  let[@inline never] raise_matches_cases_not_unique () =
+    raise_s [%message "[matches] cases must be unique"]
+
   let matches
         ?(resize=(fun s _ -> s))
         ?default
@@ -271,7 +337,7 @@ module Make (Bits : Primitives) = struct
       let add s (i, _) = Set.add s i in
       let s = List.fold cases ~init:(Set.empty (module Int)) ~f:add in
       if Set.length s <> List.length cases
-      then raise_s [%message "[matches] cases must be unique"]
+      then raise_matches_cases_not_unique ()
     in
     check_unique_cases cases;
     (* resize cases and default *)
@@ -322,15 +388,15 @@ module Make (Bits : Primitives) = struct
 
   (* logical *)
   let (&:) a b =
-    assert_widths_same "&:" [ a; b ];
+    assert_operator_widths_same "&:" a b;
     Bits.(&:) a b
 
   let (|:) a b =
-    assert_widths_same "|:" [ a; b ];
+    assert_operator_widths_same "|:" a b;
     Bits.(|:) a b
 
   let (^:) a b =
-    assert_widths_same "^:" [ a; b ];
+    assert_operator_widths_same "^:" a b;
     Bits.(^:) a b
 
   let (~:) = Bits.(~:)
@@ -341,11 +407,11 @@ module Make (Bits : Primitives) = struct
 
   (* arithmetic *)
   let (+:) a b =
-    assert_widths_same "+:" [ a; b ];
+    assert_operator_widths_same "+:" a b;
     Bits.(+:) a b
 
   let (-:) a b =
-    assert_widths_same "-:" [ a; b ];
+    assert_operator_widths_same "-:" a b;
     Bits.(-:) a b
 
   let (+:.) a b = op_int_right (+:) a b
@@ -359,15 +425,15 @@ module Make (Bits : Primitives) = struct
 
   (* comparison *)
   let (==:) a b =
-    assert_widths_same "==:" [ a; b ];
+    assert_operator_widths_same "==:" a b;
     Bits.(==:) a b
 
   let (<>:) a b =
-    assert_widths_same "<>:" [ a; b ];
+    assert_operator_widths_same "<>:" a b;
     ~: (a ==: b)
 
   let (<:) a b =
-    assert_widths_same "<:" [ a; b ];
+    assert_operator_widths_same "<:" a b;
     Bits.(<:) a b
 
   let lt = (<:)
@@ -412,8 +478,8 @@ module Make (Bits : Primitives) = struct
   let (>=+.) a b = op_int_right (>=+) a b
 
   let to_string a = Bits.to_string a
-  let to_int a = Bits.to_int a
-  let to_bstr a = Bits.to_bstr a
+  let to_int a = to_constant a |> Constant.to_int
+  let to_bstr a = to_constant a |> Constant.to_binary_string
   let sexp_of_t = Bits.sexp_of_t
 
   let bits s =
@@ -451,27 +517,40 @@ module Make (Bits : Primitives) = struct
     let w = width s in
     select s (w-1) (w/2), select s ((w/2)-1) 0
 
+
+  let[@inline never] raise_split_empty_input () =
+    raise_s [%message "[split] got [empty] input"]
+
+  let[@inline never] raise_split_part_width part_width =
+    raise_s [%message "[split] got [part_width <= 0]" (part_width : int)]
+
+  let[@inline never] raise_split_inexact_split t_in part_width t =
+    raise_s [%message
+      "[split ~exact:true] unable to split exactly"
+        ~input_width:(width t_in : int)
+        (part_width : int)
+        ~width_of_last_part:(width t : int)]
+
   let split ?(exact = true) ~part_width t_in =
     if is_empty t_in
-    then raise_s [%message "[split] got [empty] input"];
+    then raise_split_empty_input ();
     if part_width <= 0
-    then raise_s [%message "[split] got [part_width <= 0]" (part_width : int)];
+    then raise_split_part_width part_width;
     let rec split t =
       if width t < part_width && exact
-      then raise_s [%message
-             "[split ~exact:true] unable to split exactly"
-               ~input_width:(width t_in : int)
-               (part_width : int)
-               ~width_of_last_part:(width t : int)];
+      then raise_split_inexact_split t_in part_width t;
       if width t <= part_width
       then [t]
       else sel_bottom t part_width :: split (drop_bottom t part_width)
     in
     split t_in
 
+  let[@inline never] raise_shift_negative op shift =
+    raise_s [%message (op ^ " got negative shift") ~_:(shift : int)]
+
   let sll a shift =
     if shift < 0
-    then raise_s [%message "[sll] got negative shift" ~_:(shift : int)];
+    then raise_shift_negative "[sll]" shift;
     if shift = 0
     then a
     else if shift >= (width a)
@@ -480,7 +559,7 @@ module Make (Bits : Primitives) = struct
 
   let srl a shift =
     if shift < 0
-    then raise_s [%message "[srl] got positive shift" ~_:(shift : int)];
+    then raise_shift_negative "[srl]" shift;
     if shift = 0
     then a
     else if shift >= (width a)
@@ -489,7 +568,7 @@ module Make (Bits : Primitives) = struct
 
   let sra a shift =
     if shift < 0
-    then raise_s [%message "[sra] got negative shift" ~_:(shift : int)];
+    then raise_shift_negative "[sra]" shift;
     if shift = 0
     then a
     else if shift >= (width a)
@@ -536,9 +615,12 @@ module Make (Bits : Primitives) = struct
 
   let to_sint a = to_int (sresize a Int.num_bits)
 
+  let[@inline never] raise_reduce_empty_list () =
+    raise_s [%message "[reduce] got empty list"]
+
   let reduce ~f:op s =
     match List.length s with
-    | 0 -> raise_s [%message "[reduce] got empty list"]
+    | 0 -> raise_reduce_empty_list ()
     | _ -> List.reduce_exn s ~f:(fun acc x -> op acc x)
 
   let (||:) a b = (reduce ~f:(|:) (bits a)) |: (reduce ~f:(|:) (bits b))
@@ -553,8 +635,14 @@ module Make (Bits : Primitives) = struct
     then c +: (one w)
     else mux2 (c ==: (consti ~width:w max)) (zero w) (c +: (one w))
 
+  let[@inline never] raise_tree_invalid_arity () =
+    raise_s [%message "[tree] got [arity <= 1]"]
+
+  let[@inline never] raise_tree_empty_list () =
+    raise_s [%message "[tree] got empty list"]
+
   let rec tree ~arity ~f l =
-    if arity <= 1 then raise_s [%message "[tree] got [arity <= 1]"];
+    if arity <= 1 then raise_tree_invalid_arity ();
     let split l n =
       let (lh, ll, _) =
         List.fold l ~init:([], [], 0) ~f:(fun (l0, l1, m) e ->
@@ -569,17 +657,23 @@ module Make (Bits : Primitives) = struct
       else (f l0) :: (t0 l1)
     in
     match l with
-    | [] -> raise_s [%message "[tree] got empty list"]
+    | [] -> raise_tree_empty_list ()
     | [ a ] -> a
     | _ -> tree ~arity ~f (t0 l)
 
+  let[@inline never] raise_tree_or_reduce_empty_list () =
+    raise_s [%message "[tree_or_reduce_binary_operator] got empty list"]
+
+  let[@inline never] raise_tree_or_reduce_branching_factor branching_factor =
+    raise_s [%message
+      "[tree_or_reduce_binary_operator] got [branching_factor < 1]"
+        (branching_factor : int) ]
+
   let tree_or_reduce_binary_operator ?(branching_factor = 2) ~f data =
     if List.is_empty data
-    then raise_s [%message "[tree_or_reduce_binary_operator] got empty list"];
+    then raise_tree_or_reduce_empty_list ();
     if branching_factor < 1
-    then raise_s [%message
-           "[tree_or_reduce_binary_operator] got [branching_factor < 1]"
-             (branching_factor : int) ];
+    then raise_tree_or_reduce_branching_factor branching_factor;
     if branching_factor = 1
     then reduce ~f data
     else tree ~arity:branching_factor ~f:(reduce ~f) data
@@ -599,51 +693,54 @@ module Make (Bits : Primitives) = struct
     List.map ts ~f:(fun d -> sresize d.valid (width d.value) &: d.value)
     |> tree_or_reduce_binary_operator ?branching_factor ~f:(|:)
 
+  let[@inline never] raise_of_empty function_ =
+    raise_s [%message "" ~_:(function_ ^ " of [empty]")]
+
   let popcount ?branching_factor t =
     let width = width t in
-    if width = 0 then raise_s [%message "[popcount] of [empty]"];
+    if width = 0 then raise_of_empty "[popcount]";
     let result_width = Int.ceil_log2 (width + 1) in
     tree_or_reduce_binary_operator ?branching_factor ~f:(+:)
       (List.map (bits t) ~f:(fun d -> uresize d result_width))
 
   let leading_zeros_of_bits_list ?branching_factor d =
-    let result_width = Utils.nbits (List.length d) in
+    let result_width = num_bits_to_represent (List.length d) in
     List.mapi d ~f:(fun i valid -> { With_valid. valid; value = consti ~width:result_width i })
     |> priority_select_with_default ?branching_factor
          ~default:(consti ~width:result_width (List.length d))
 
   let leading_ones ?branching_factor t =
-    if width t = 0 then raise_s [%message "[leading_ones] of [empty]"];
+    if width t = 0 then raise_of_empty "[leading_ones]";
     leading_zeros_of_bits_list (bits (~: t)) ?branching_factor
 
   let trailing_ones ?branching_factor t =
-    if width t = 0 then raise_s [%message "[trailing_ones] of [empty]"];
+    if width t = 0 then raise_of_empty "[trailing_ones]";
     leading_zeros_of_bits_list (bits (~: t) |> List.rev) ?branching_factor
 
   let leading_zeros ?branching_factor t =
-    if width t = 0 then raise_s [%message "[leading_zeros] of [empty]"];
+    if width t = 0 then raise_of_empty "[leading_zeros]";
     leading_zeros_of_bits_list (bits t) ?branching_factor
 
   let trailing_zeros ?branching_factor t =
-    if width t = 0 then raise_s [%message "[trailing_zeros] of [empty]"];
+    if width t = 0 then raise_of_empty "[trailing_zeros]";
     leading_zeros_of_bits_list (bits t |> List.rev) ?branching_factor
 
   let is_pow2 ?branching_factor t =
-    if width t = 0 then raise_s [%message "[is_pow2] of [empty]"];
+    if width t = 0 then raise_of_empty "[is_pow2]";
     if width t = 1
     then t
     else popcount ?branching_factor t ==:. 1
 
   let floor_log2 ?branching_factor t : t With_valid.t =
     let width = width t in
-    if width = 0 then raise_s [%message "[floor_log2] of [empty]"];
+    if width = 0 then raise_of_empty "[floor_log2]";
     let leading_zeros = leading_zeros t ?branching_factor in
     let result_width = max 1 (Int.ceil_log2 width) in
     { valid = t <>:. 0
     ; value = consti ~width:result_width (width - 1) -: uresize leading_zeros result_width}
 
   let ceil_log2 ?branching_factor t =
-    if width t = 0 then raise_s [%message "[ceil_log2] of [empty]"];
+    if width t = 0 then raise_of_empty "[ceil_log2]";
     let is_pow2 = is_pow2 ?branching_factor t in
     let floor_log2 = floor_log2 ?branching_factor t in
     let value = ue floor_log2.value in
@@ -663,7 +760,7 @@ module Make (Bits : Primitives) = struct
     concat (build (bits s))
 
   let onehot_to_binary x =
-    let n = Utils.nbits (width x - 1) in
+    let n = num_bits_to_represent (width x - 1) in
     let x = List.rev (bits x) in
     let rec f i =
       if i=n
@@ -696,6 +793,12 @@ module Make (Bits : Primitives) = struct
     in
     f b (msbs b)
 
+  let[@inline never] raise_constd_invalid_decimal_char v =
+    raise_s [%message "[constd] got invalid decimal char" ~_:(v : char)]
+
+  let[@inline never] raise_constd_empty_string () =
+    raise_s [%message "[constd] got empty string"]
+
   (* complex constant generators *)
   let rec constd ~width:bits v =
     let l = String.length v in
@@ -711,7 +814,7 @@ module Make (Bits : Primitives) = struct
       | '7' -> consti ~width:4 7
       | '8' -> consti ~width:4 8
       | '9' -> consti ~width:4 9
-      | _ -> raise_s [%message "[constd] got invalid decimal char" ~_:(v : char)]
+      | _ -> raise_constd_invalid_decimal_char v
     in
     let (+:) a b =
       let w = max (width a) (width b) + 1 in
@@ -720,7 +823,7 @@ module Make (Bits : Primitives) = struct
     in
     let ten = consti ~width:4 10 in
     if l=0
-    then raise_s [%message "[constd] got empty string"]
+    then raise_constd_empty_string ()
     else
     if Char.equal v.[0] '-'
     then zero bits -: (constd ~width:bits (String.sub v ~pos:1 ~len:(l-1)))
@@ -737,6 +840,18 @@ module Make (Bits : Primitives) = struct
         (sum (l-1) (consti ~width:1 1) (consti ~width:1 0))
         bits
 
+  let[@inline never] raise_constv_missing_tick s =
+    raise_s [%message "[constv] missing [']" ~_:(s : string) ]
+
+  let[@inline never] raise_constv_missing_count s =
+    raise_s [%message "[constv] missing bit count" ~_:(s : string)]
+
+  let[@inline never] raise_constv_too_short s =
+    raise_s [%message "[constv] value shorter than 2 characters" ~_:(s : string)]
+
+  let[@inline never] raise_constv_bad_control_char s =
+    raise_s [%message "[constv] bad control character" ~const:(s : string)]
+
   let constv s =
     let slen, sval =
       let rec split2 n c s t =
@@ -746,12 +861,12 @@ module Make (Bits : Primitives) = struct
       in
       let s0, s1 =
         try split2 0 '\'' "" s
-        with _ -> raise_s [%message "[constv] missing [']" ~_:(s : string) ]
+        with _ -> raise_constv_missing_tick s
       in
       if String.length s0 = 0
-      then raise_s [%message "[constv] missing bit count" ~_:(s : string)];
+      then raise_constv_missing_count s;
       if String.length s1 < 2
-      then raise_s [%message "[constv] value shorter than 2 characters" ~_:(s : string)];
+      then raise_constv_too_short s;
       s0, s1
     in
     let len = Int.of_string slen in
@@ -775,7 +890,10 @@ module Make (Bits : Primitives) = struct
       else if slen > len
       then constb (String.sub sval ~pos:(slen-len) ~len)
       else constb sval
-    | _ -> raise_s [%message "[constv] bad control character" ~const:(s : string)]
+    | _ -> raise_constv_bad_control_char s
+
+  let[@inline never] raise_const_convert_error const =
+    raise_s [%message "[const] could not convert constant" (const : string)]
 
   let const b =
     let b = String.filter b ~f:(function '_' -> false | _ -> true) in
@@ -783,7 +901,7 @@ module Make (Bits : Primitives) = struct
       try constv b
       with _ -> constb b
     with _ ->
-      raise_s [%message "[const] could not convert constant" ~const:(b : string)]
+      raise_const_convert_error b
 
   let rec random ~width =
     if width <= 16
@@ -791,28 +909,10 @@ module Make (Bits : Primitives) = struct
     else
       consti ~width:16 (Random.int (1 lsl 16)) @: random ~width:(width-16)
 
-  let to_int32' resize x =
-    let x = resize x 32 in
-    let a = Int32.of_int_exn (to_int (select x 15  0)) in
-    let b = Int32.of_int_exn (to_int (select x 31 16)) in
-    fst (
-      List.fold [a; b] ~init:(0l, 0) ~f:(fun (acc, n) a ->
-        Int32.(logor (shift_left a n) acc), n+16))
-
-  let to_int64' resize x =
-    let x = resize x 64 in
-    let a = Int64.of_int (to_int (select x 15  0)) in
-    let b = Int64.of_int (to_int (select x 31 16)) in
-    let c = Int64.of_int (to_int (select x 47 32)) in
-    let d = Int64.of_int (to_int (select x 63 48)) in
-    fst (
-      List.fold [ a; b; c; d ] ~init:(0L, 0) ~f:(fun (acc, n) a ->
-        Int64.(logor (shift_left a n) acc), n+16))
-
-  let to_int32 = to_int32' uresize
-  let to_sint32 = to_int32' sresize
-  let to_int64 = to_int64' uresize
-  let to_sint64 = to_int64' sresize
+  let to_int32 c = to_constant c |> Constant.to_int64 |> Int64.to_int32_trunc
+  let to_sint32 c = sresize c Int32.num_bits |> to_constant |> Constant.to_int32
+  let to_int64 c = to_constant c |> Constant.to_int64
+  let to_sint64 c = sresize c Int64.num_bits |> to_constant |> Constant.to_int64
 
   module type TypedMath = TypedMath with type t := t
 

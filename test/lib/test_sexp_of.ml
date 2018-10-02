@@ -32,6 +32,7 @@ let%expect_test "simple constant" =
   print_signal (consti ~width:2 2);
   [%expect {|
     (const
+      (loc   test_sexp_of.ml:LINE:COL)
       (width 2)
       (value 0b10)) |}]
 
@@ -47,6 +48,7 @@ let%expect_test "large constant" =
   print_signal (consti ~width:9 0x123);
   [%expect {|
     (const
+      (loc   test_sexp_of.ml:LINE:COL)
       (width 9)
       (value 0x123)) |}]
 
@@ -54,6 +56,7 @@ let%expect_test "unassigned wire" =
   print_signal (wire 1);
   [%expect {|
     (wire
+      (loc     test_sexp_of.ml:LINE:COL)
       (width   1)
       (data_in empty)) |}]
 
@@ -63,6 +66,7 @@ let%expect_test "assigned wire" =
   print_signal w;
   [%expect {|
     (wire
+      (loc     test_sexp_of.ml:LINE:COL)
       (width   1)
       (data_in 0b1)) |}]
 
@@ -71,6 +75,7 @@ let%expect_test "multiple names" =
   [%expect {|
     (wire
       (names (bar foo))
+      (loc     test_sexp_of.ml:LINE:COL)
       (width   1)
       (data_in empty)) |}]
 
@@ -79,7 +84,10 @@ let%expect_test "multiple names in arg" =
   w <== wire 1 -- "foo" -- "bar";
   print_signal w;
   [%expect {|
-    (wire (width 1) (data_in (bar foo))) |}]
+    (wire
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 1)
+      (data_in (bar foo))) |}]
 
 let%expect_test "binary ops" =
   let a, b = input "a" 4, const "1101" in
@@ -95,17 +103,50 @@ let%expect_test "binary ops" =
   print_signal (a ==: b);
   print_signal (concat [a;b;a]);
   [%expect {|
-    (add (width 4) (arguments (a 0b1101)))
-    (sub (width 4) (arguments (a 0b1101)))
-    (mulu (width 8) (arguments (a 0b1101)))
-    (muls (width 8) (arguments (a 0b1101)))
-    (and (width 4) (arguments (a 0b1101)))
-    (or (width 4) (arguments (a 0b1101)))
-    (xor (width 4) (arguments (a 0b1101)))
-    (not (width 4) (arguments (a)))
-    (lt (width 1) (arguments (a 0b1101)))
-    (eq (width 1) (arguments (a 0b1101)))
-    (cat (width 12) (arguments (a 0b1101 a))) |}]
+    (add
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 4)
+      (arguments (a 0b1101)))
+    (sub
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 4)
+      (arguments (a 0b1101)))
+    (mulu
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 8)
+      (arguments (a 0b1101)))
+    (muls
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 8)
+      (arguments (a 0b1101)))
+    (and
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 4)
+      (arguments (a 0b1101)))
+    (or
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 4)
+      (arguments (a 0b1101)))
+    (xor
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 4)
+      (arguments (a 0b1101)))
+    (not
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 4)
+      (arguments (a)))
+    (lt
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 1)
+      (arguments (a 0b1101)))
+    (eq
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 1)
+      (arguments (a 0b1101)))
+    (cat
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 12)
+      (arguments (a 0b1101 a))) |}]
 
 let%expect_test "printing at leaves" =
   let a, b = input "a" 2, input "b" 2 in
@@ -129,43 +170,68 @@ let%expect_test "printing at leaves" =
                 ~read_address:a) ];
   [%expect {|
     (wire
+      (loc     test_sexp_of.ml:LINE:COL)
       (width   2)
       (data_in add))
-    (add (width 2) (arguments (0b00 sub)))
-    (not (width 4) (arguments (mulu)))
-    (add (width 4) (arguments (c muls)))
-    (eq (width 1) (arguments (eq eq)))
+    (add
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 2)
+      (arguments (0b00 sub)))
+    (not
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 4)
+      (arguments (mulu)))
+    (add
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 4)
+      (arguments (c muls)))
+    (eq
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 1)
+      (arguments (eq eq)))
     (wire
+      (loc     test_sexp_of.ml:LINE:COL)
       (width   1)
       (data_in lt))
     (wire
+      (loc     test_sexp_of.ml:LINE:COL)
       (width   2)
       (data_in not))
     (wire
+      (loc     test_sexp_of.ml:LINE:COL)
       (width   2)
       (data_in mux))
     (wire
+      (loc     test_sexp_of.ml:LINE:COL)
       (width   1)
       (data_in select))
     (wire
+      (loc     test_sexp_of.ml:LINE:COL)
       (width   4)
       (data_in cat))
     (wire
+      (loc     test_sexp_of.ml:LINE:COL)
       (width   2)
       (data_in register))
     (wire
+      (loc     test_sexp_of.ml:LINE:COL)
       (width   2)
       (data_in memory)) |}]
 
 let%expect_test "printing at leaves - different types" =
   let a, b = input "a" 2, input "b" 2 in
   print_signal (concat [ concat [a;b]; wire 2 -- "cat"; a -- "cat" ]);
-  [%expect {| (cat (width 8) (arguments (cat cat (cat a)))) |}]
+  [%expect {|
+    (cat
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 8)
+      (arguments (cat cat (cat a)))) |}]
 
 let%expect_test "mux" =
   print_signal (mux (input "sel" 2) (List.init 4 ~f:(consti ~width:16)));
   [%expect {|
     (mux
+      (loc    test_sexp_of.ml:LINE:COL)
       (width  16)
       (select sel)
       (data (0x0000 0x0001 0x0002 0x0003))) |}]
@@ -174,6 +240,7 @@ let%expect_test "big mux" =
   print_signal (mux (input "sel" 4) (List.init 16 ~f:(consti ~width:8)));
   [%expect {|
     (mux
+      (loc    test_sexp_of.ml:LINE:COL)
       (width  8)
       (select sel)
       (data (
@@ -197,12 +264,17 @@ let%expect_test "big mux" =
 let%expect_test "select" =
   print_signal (select (consti ~width:4 2) 3 2);
   [%expect {|
-    (select (width 2) (range (3 2)) (data_in 0b0010)) |}]
+    (select
+      (loc   test_sexp_of.ml:LINE:COL)
+      (width 2)
+      (range (3 2))
+      (data_in 0b0010)) |}]
 
 let%expect_test "reg r_none" =
   print_signal (reg (Reg_spec.create () ~clock) ~enable:empty (input "a" 1));
   [%expect {|
     (register
+      (loc   test_sexp_of.ml:LINE:COL)
       (width 1)
       ((clock      clock)
        (clock_edge Rising)
@@ -213,6 +285,7 @@ let%expect_test "reg r_async" =
   print_signal (reg (Reg_spec.create () ~clock ~reset) ~enable:empty (input "a" 1));
   [%expect {|
     (register
+      (loc   test_sexp_of.ml:LINE:COL)
       (width 1)
       ((clock      clock)
        (clock_edge Rising)
@@ -229,6 +302,7 @@ let%expect_test "reg r_sync" =
       ~enable:empty (input "a" 1));
   [%expect {|
     (register
+      (loc   test_sexp_of.ml:LINE:COL)
       (width 1)
       ((clock       clock)
        (clock_edge  Falling)
@@ -243,6 +317,7 @@ let%expect_test "reg r_full" =
     reg (Reg_spec.create () ~clock ~clear ~reset) ~enable:empty (input "a" 1));
   [%expect {|
     (register
+      (loc   test_sexp_of.ml:LINE:COL)
       (width 1)
       ((clock       clock)
        (clock_edge  Rising)
@@ -265,6 +340,7 @@ let%expect_test "memory" =
       ~read_address:(input "r" 4));
   [%expect {|
     (memory
+      (loc   test_sexp_of.ml:LINE:COL)
       (width 32)
       ((clock      clock)
        (clock_edge Rising)
@@ -280,17 +356,21 @@ let%expect_test "test depth" =
   |> print_s;
   [%expect {|
     (not
+      (loc   test_sexp_of.ml:LINE:COL)
       (width 1)
       (arguments ((
         lt
+        (loc   test_sexp_of.ml:LINE:COL)
         (width 1)
         (arguments (
           (wire
             (names (b))
+            (loc     test_sexp_of.ml:LINE:COL)
             (width   1)
             (data_in empty))
           (wire
             (names (a))
+            (loc     test_sexp_of.ml:LINE:COL)
             (width   1)
             (data_in empty)))))))) |}]
 
@@ -310,10 +390,12 @@ let%expect_test "test instantiation" =
   |> print_s;
   [%expect {|
     (select
+      (loc   test_sexp_of.ml:LINE:COL)
       (width 3)
       (range (6 4))
       (data_in (
         instantiation
+        (loc   test_sexp_of.ml:LINE:COL)
         (width 7)
         ("work.module_name(rtl)"
           (parameters (

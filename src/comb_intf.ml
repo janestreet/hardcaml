@@ -47,7 +47,8 @@ module type Gates = sig
   val width : t -> int
 
   (** creates a constant *)
-  val const : string -> t
+  val of_constant : Constant.t -> t
+  val to_constant : t -> Constant.t
 
   (** concatenates a list of signals *)
   val concat : t list -> t
@@ -72,18 +73,6 @@ module type Gates = sig
 
   (** create string from signal *)
   val to_string : t -> string
-
-  (** [to_int t] treats [t] as unsigned and resizes it to fit exactly within an OCaml
-      [Int.t].
-
-      - If [width t > Int.num_bits] then the upper bits are truncated.
-      - If [width t >= Int.num_bits] and [bit t (Int.num_bits-1) = vdd] (i.e. the msb of
-        the resulting [Int.t] is set), then the result is negative.
-      - If [t] is [Signal.t] and not a constant value, an exception is raised. *)
-  val to_int : t -> int
-
-  (** create binary string from signal (if possible) *)
-  val to_bstr : t -> string
 end
 
 (** Type required to generate the full combinational API *)
@@ -137,6 +126,20 @@ module type S = sig
 
       [let w = width s in ...] *)
   val width : t -> int
+
+  (** [addess_bits_for num_elements] returns the address width required to index
+      [num_elements].
+
+      It is the same as [Int.ceil_log2], except it wll return a minimum value of 1 (since
+      you cannot have 0 width vectors). Raises if [num_elements] is [< 0]. *)
+  val address_bits_for : int -> int
+
+  (** [num_bits_to_represent x] returns the number of bits required to represent the number
+      [x], which should be [>= 0]. *)
+  val num_bits_to_represent : int -> int
+
+  val of_constant : Constant.t -> t
+  val to_constant : t -> Constant.t
 
   (** convert binary string to constant *)
   val constb : string -> t

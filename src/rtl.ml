@@ -433,7 +433,7 @@ module VerilogCore : Rtl_internal = struct
     | Reg _ ->
       io (t4 ^ decl Reg name (width s) ^ ";\n")
     | Const (_, v) ->
-      io (t4 ^ decl (Constant v) name (width s) ^ ";\n")
+      io (t4 ^ decl (Constant (Bits.to_bstr v)) name (width s) ^ ";\n")
     | Mem _ ->
       io (t4 ^ decl Wire name (width s) ^ ";\n")
     | Mem_read_port _ ->
@@ -724,7 +724,7 @@ module VhdlCore : Rtl_internal = struct
     | Reg _ ->
       io (t4 ^ decl Reg name (width s) ^ ";\n")
     | Const (_, v) ->
-      io (t4 ^ decl (Constant v) name (width s) ^ ";\n")
+      io (t4 ^ decl (Constant (Bits.to_bstr v)) name (width s) ^ ";\n")
     | Mem _ | Mem_read_port _ ->
       io (t4 ^ decl Reg name (width s) ^ ";\n")
     | Multiport_mem _ -> ()

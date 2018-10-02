@@ -1,6 +1,41 @@
 open! Import
 open! Signal_intf
 
+module Caller_id = struct
+  module Printexc = Caml.Printexc
+
+  (* Small helper to find out who is the caller of a function *)
+  type t = Printexc.location
+
+  let sexp_of_t (t : Printexc.location) =
+    let loc = sprintf "%s:%i:%i" t.filename t.line_number t.start_char in
+    [%sexp (loc : string)]
+
+  let get ~skip =
+    let skip = "comb.ml" :: "interface.ml" :: Caml.__FILE__ :: skip in
+    let stack = Printexc.get_callstack 16 in
+    let len = Printexc.raw_backtrace_length stack in
+    let rec loop pos =
+      if pos = len then
+        None
+      else
+        match
+          Printexc.get_raw_backtrace_slot stack pos
+          |> Printexc.convert_raw_backtrace_slot
+          |> Printexc.Slot.location
+        with
+        | None -> None
+        | Some loc ->
+          if List.mem ~equal:String.equal skip loc.filename then
+            loop (pos + 1)
+          else
+            Some loc
+    in
+    loop 0
+  ;;
+
+end
+
 module Signal_op = struct
   type t =
     | Signal_add
@@ -58,11 +93,12 @@ type signal_id =
   { s_id            : Uid.t
   ; mutable s_names : string list
   ; s_width         : int
-  ; mutable s_deps  : t list }
+  ; mutable s_deps  : t list
+  ; caller_id       : Caller_id.t option }
 
 and t =
   | Empty
-  | Const of signal_id * string
+  | Const of signal_id * Bits.t
   | Op of signal_id * signal_op
   | Wire of signal_id * t ref
   | Select of signal_id * int * int
@@ -172,6 +208,19 @@ let width s =
   | Inst (s, _, _)
   | Op (s, _) -> s.s_width
 
+let caller_id s =
+  match s with
+  | Empty -> None
+  | Const (s, _)
+  | Select (s, _, _)
+  | Reg (s, _)
+  | Mem (s, _, _, _)
+  | Multiport_mem (s, _, _)
+  | Mem_read_port (s, _, _)
+  | Wire (s, _)
+  | Inst (s, _, _)
+  | Op (s, _) -> s.caller_id
+
 let is_reg = function Reg _ -> true | _ -> false
 let is_const = function Const _ -> true | _ -> false
 let is_select = function Select _ -> true | _ -> false
@@ -197,7 +246,8 @@ let make_id w deps =
   { s_id    = new_id ()
   ; s_names = []
   ; s_width = w
-  ; s_deps  = deps }
+  ; s_deps  = deps
+  ; caller_id = Caller_id.get ~skip:[] }
 
 let string_of_op = function
   | Signal_add -> "add"
@@ -227,7 +277,7 @@ let to_string signal =
     " names:" ^ names s ^ " deps:" ^ deps s ^ "" in
   match signal with
   | Empty -> "Empty"
-  | Const (_, v) -> "Const[" ^ sid signal ^ "] = " ^ v
+  | Const (_, v) -> "Const[" ^ sid signal ^ "] = " ^ Bits.to_bstr v
   | Op (_, o) -> "Op[" ^ sid signal ^ "] = " ^ string_of_op o
   | Wire (_, d) ->
     "Wire[" ^ sid signal ^ "] -> " ^ Int64.to_string (uid !d)
@@ -253,7 +303,7 @@ let structural_compare
         | Empty, Empty ->
           true
         | Const (_, a), Const (_, b) ->
-          String.equal a b
+          Bits.equal a b
         | Select (_, h0, l0), Select (_, h1, l1) ->
           (h0=h1) && (l0=l1)
         | Reg (_, _), Reg (_, _) ->
@@ -386,9 +436,10 @@ and sexp_of_mem_read_port_recursive
 
 and sexp_of_signal_recursive ?(show_uids=false) ~depth signal =
   let display_const c =
-    if String.length c <= 8
-    then "0b" ^ c
-    else "0x" ^ Utils.hstr_of_bstr Unsigned c
+    if Bits.width c <= 8
+    then "0b" ^ Bits.to_bstr c
+    else "0x" ^ (Bits.to_constant c
+                 |> Constant.to_hex_string ~signedness:Unsigned)
   in
   let tag =
     match signal with
@@ -426,6 +477,7 @@ and sexp_of_signal_recursive ?(show_uids=false) ~depth signal =
     let uid = if show_uids then Some (uid signal) else None in
     let names = match names signal with [] -> None | names -> Some names in
     let width = width signal in
+    let loc = caller_id signal in
     let create
           ?value
           ?arguments
@@ -443,6 +495,7 @@ and sexp_of_signal_recursive ?(show_uids=false) ~depth signal =
         constructor
           (uid                 : Uid.t            sexp_option)
           (names               : string list      sexp_option)
+          (loc                 : Caller_id.t      sexp_option)
           (width               : int)
           (value               : string           sexp_option)
           (range               : (int*int)        sexp_option)
@@ -509,7 +562,7 @@ module Base = struct
   let equal (t1 : t) t2 =
     match t1, t2 with
     | Empty        , Empty         -> true
-    | Const (_, c1), Const (_, c2) -> String.equal c1 c2
+    | Const (_, c1), Const (_, c2) -> Bits.equal c1 c2
     | _ -> Uid.equal (uid t1) (uid t2)
 
   let width = width
@@ -518,37 +571,16 @@ module Base = struct
 
   let sexp_of_t = sexp_of_t
 
-  let to_int signal =
-    if is_const signal
-    then Utils.int_of_bstr (const_value signal)
-    else raise_s [%message "cannot use [to_int] on non-constant signal" ~_:(signal : t)]
-
-  let to_bstr signal =
-    if is_const signal
-    then const_value signal
-    else raise_s [%message "cannot use [to_bstr] on non-constant signal" ~_:(signal : t)]
-
   let empty = Empty
 
   let is_empty = function Empty -> true | _ -> false
 
-  (* XXX warning!!! internal state is kept here - reset_id will no longer work *)
-  let const =
-    let optimise = false in
-    if not optimise
-    then (fun b -> Const (make_id (String.length b) [], b))
-    else
-      let map = ref (Map.empty (module String)) in
-      let tryfind b _ = Map.find !map b in
-      let f b =
-        match tryfind b !map with
-        | None ->
-          let s = Const (make_id (String.length b) [], b) in
-          map := Map.set !map ~key:b ~data:s;
-          s
-        | Some x -> x
-      in
-      f
+  let of_bits b = Const (make_id (Bits.width b) [], b)
+  let of_constant data = of_bits (Bits.of_constant data)
+  let to_constant signal =
+    if is_const signal
+    then Bits.to_constant (const_value signal)
+    else raise_s [%message "cannot use [to_constant] on non-constant signal" ~_:(signal : t)]
 
   let (--) signal name =
     match signal with
@@ -575,7 +607,7 @@ module Base = struct
       | a :: [] -> [ a ]
       | a :: b :: tl ->
         if (is_const a) && (is_const b)
-        then optimise_consts ((const (const_value a ^ const_value b)) :: tl)
+        then optimise_consts ((of_bits Bits.(const_value a @: const_value b)) :: tl)
         else a :: optimise_consts (b :: tl)
     in
     let a = optimise_consts a in
@@ -604,8 +636,8 @@ module Comb_make = Comb.Make
 module Comb = Comb.Make (Base)
 
 include (Comb : (module type of struct include Comb end with type t := t))
-let is_vdd = function Const(_, "1") -> true | _ -> false
-let is_gnd = function Const(_, "0") -> true | _ -> false
+let is_vdd = function Const(_, b) when Bits.equal b Bits.vdd -> true | _ -> false
+let is_gnd = function Const(_, b) when Bits.equal b Bits.gnd -> true | _ -> false
 
 let (<==) a b =
   match a with
@@ -653,7 +685,7 @@ module Const_prop = struct
 
     include Comb
 
-    let cv s = Bits.const (const_value s)
+    let cv s = const_value s
     let eqs s n =
       let d = Bits.(==:) (cv s) (Bits.consti ~width:(width s) n) in
       Bits.to_int d = 1
@@ -807,8 +839,8 @@ module Const_prop = struct
 
   module Comb = struct
     include Comb_make (Base)
-    let is_vdd = function Const(_, "1") -> true | _ -> false
-    let is_gnd = function Const(_, "0") -> true | _ -> false
+    let is_vdd = function Const(_, b) when Bits.equal b Bits.vdd -> true | _ -> false
+    let is_gnd = function Const(_, b) when Bits.equal b Bits.gnd -> true | _ -> false
   end
 end
 

@@ -27,6 +27,7 @@ let%expect_test "[sexp_of_t] with an output" =
        (1 (
          wire
          (names (output))
+         (loc     test_circuit.ml:LINE:COL)
          (width   1)
          (data_in 0b1)))
        (2 (
@@ -38,12 +39,14 @@ let%expect_test "[sexp_of_t] with an output" =
      (outputs ((
        wire
        (names (output))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in 0b1))))
      (phantom_inputs ())
      (signal_graph ((
        wire
        (names (output))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in 0b1))))
      (fan_out ((2 (1))))
@@ -61,27 +64,32 @@ let%expect_test "[sexp_of_t] with an input" =
        (1 (
          wire
          (names (input))
+         (loc     test_circuit.ml:LINE:COL)
          (width   1)
          (data_in empty)))
        (2 (
          wire
          (names (output))
+         (loc     test_circuit.ml:LINE:COL)
          (width   1)
          (data_in input)))))
      (inputs ((
        wire
        (names (input))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in empty))))
      (outputs ((
        wire
        (names (output))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in input))))
      (phantom_inputs ())
      (signal_graph ((
        wire
        (names (output))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in input))))
      (fan_out (
@@ -104,28 +112,37 @@ let%expect_test "[sexp_of_t] with an operator" =
        (1 (
          wire
          (names (input))
+         (loc     test_circuit.ml:LINE:COL)
          (width   1)
          (data_in empty)))
        (2 (
          wire
          (names (output))
+         (loc     test_circuit.ml:LINE:COL)
          (width   1)
          (data_in not)))
-       (3 (not (width 1) (arguments (input))))))
+       (3 (
+         not
+         (loc   test_circuit.ml:LINE:COL)
+         (width 1)
+         (arguments (input))))))
      (inputs ((
        wire
        (names (input))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in empty))))
      (outputs ((
        wire
        (names (output))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in not))))
      (phantom_inputs ())
      (signal_graph ((
        wire
        (names (output))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in not))))
      (fan_out (
@@ -146,6 +163,7 @@ let%expect_test "Output signal not driven" =
     ("circuit output signal is not driven" (
       output_signal (
         wire
+        (loc     test_circuit.ml:LINE:COL)
         (width   1)
         (data_in empty)))) |}]
 
@@ -156,6 +174,7 @@ let%expect_test "Output signal with no name" =
     ("circuit output signal must have a port name"
      (output_signal (
        wire
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in 0b1)))) |}]
 
@@ -167,6 +186,7 @@ let%expect_test "Output signal with multiple names" =
      (output_signal (
        wire
        (names (b a))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in 0b1)))) |}]
 
@@ -201,6 +221,7 @@ let%expect_test "input with no name" =
     ("circuit input signal must have a port name (unassigned wire?)"
      (input_signal (
        wire
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in empty)))) |}]
 
@@ -212,6 +233,7 @@ let%expect_test "input with multiple names" =
      (input_signal (
        wire
        (names (b a))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in empty)))) |}]
 
@@ -226,27 +248,32 @@ let%expect_test "phantom inputs" =
        (1 (
          wire
          (names (a))
+         (loc     test_circuit.ml:LINE:COL)
          (width   1)
          (data_in empty)))
        (2 (
          wire
          (names (b))
+         (loc     test_circuit.ml:LINE:COL)
          (width   1)
          (data_in a)))))
      (inputs ((
        wire
        (names (a))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in empty))))
      (outputs ((
        wire
        (names (b))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in a))))
      (phantom_inputs ((c 1)))
      (signal_graph ((
        wire
        (names (b))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in a))))
      (fan_out (
@@ -265,27 +292,32 @@ let%expect_test "phantom inputs" =
        (1 (
          wire
          (names (a))
+         (loc     test_circuit.ml:LINE:COL)
          (width   1)
          (data_in empty)))
        (2 (
          wire
          (names (b))
+         (loc     test_circuit.ml:LINE:COL)
          (width   1)
          (data_in a)))))
      (inputs ((
        wire
        (names (a))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in empty))))
      (outputs ((
        wire
        (names (b))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in a))))
      (phantom_inputs ((c 1)))
      (signal_graph ((
        wire
        (names (b))
+       (loc     test_circuit.ml:LINE:COL)
        (width   1)
        (data_in a))))
      (fan_out (

@@ -18,6 +18,7 @@ let%expect_test "Port names must be unique" =
         (port (
           wire
           (names (a))
+          (loc     test_rtl.ml:LINE:COL)
           (width   1)
           (data_in a)))))) |}]
 ;;
@@ -38,6 +39,7 @@ let%expect_test "Port names must be legal" =
         (port (
           wire
           (names (1^7))
+          (loc     test_rtl.ml:LINE:COL)
           (width   1)
           (data_in empty)))))) |}]
 ;;
@@ -55,6 +57,7 @@ let%expect_test "Port name clashes with reserved name" =
         (port (
           wire
           (names (module))
+          (loc     test_rtl.ml:LINE:COL)
           (width   1)
           (data_in x)))))) |}]
 ;;

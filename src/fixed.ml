@@ -357,7 +357,7 @@ module Make (B : Comb.S) = struct
 
       let to_float s =
         let fp = 2. ** (Float.of_int s.fp) in
-        let s = B.sresize s.s Utils.platform_bits in
+        let s = B.sresize s.s Nativeint.num_bits in
         let i = Float.of_int (B.to_int s) in
         i /. fp
 

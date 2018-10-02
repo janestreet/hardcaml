@@ -35,6 +35,10 @@ module type Signal = sig
     val empty : t
   end
 
+  module Caller_id : sig
+    type t[@@deriving sexp_of]
+  end
+
   (** internal structure for tracking signals *)
   type signal_id =
     { s_id            : Uid.t
@@ -43,12 +47,13 @@ module type Signal = sig
     ; (** Making this mutable turns hardcaml from pretty functional to pretty imperative.
           however, if used carefully and only with the library, we can provide a
           potentially easier way of changing the graph structure in some cases *)
-      mutable s_deps  : t list }
+      mutable s_deps  : t list
+    ; caller_id       : Caller_id.t option }
 
   (** main signal data type *)
   and t =
     | Empty
-    | Const of signal_id * string
+    | Const of signal_id * Bits.t
     | Op of signal_id * signal_op
     | Wire of signal_id * t ref
     | Select of signal_id * int * int
@@ -142,7 +147,7 @@ module type Signal = sig
   val is_op : signal_op -> t -> bool
 
   (** return the (binary) string representing a constants value *)
-  val const_value : t -> string
+  val const_value : t -> Bits.t
 
   (** creates a new signal uid *)
   val new_id : unit -> Uid.t

@@ -242,6 +242,7 @@ let%expect_test "generate hierarchy exn" =
         (port (
           wire
           (names (a))
+          (loc     test_hierarchical_circuits.ml:LINE:COL)
           (width   1)
           (data_in a))))))) |}]
 

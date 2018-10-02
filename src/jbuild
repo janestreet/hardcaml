@@ -1,13 +1,14 @@
 (library
  ((name hardcaml)
   (public_name hardcaml)
+  (c_names (bits_stubs))
   (preprocess (pps (ppx_jane -dont-check-doc-comments-attachment ppxlib.runner)))
   (libraries (base
               bigarray
               dynlink
-              num
               stdio
               topological_sort
-              unix))))
+              unix
+              zarith))))
 
 (jbuild_version 1)

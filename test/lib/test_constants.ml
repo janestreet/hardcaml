@@ -10,9 +10,12 @@ let sexp_of_const_signal ?(depth = 1) signal =
     if is_const signal
     then (
       if width signal <= 8
-      then [%sexp (Int.to_string (width signal) ^ "'b" ^ const_value signal : string)]
+      then [%sexp (Int.to_string (width signal) ^ "'b" ^ Signal.to_bstr signal : string)]
       else [%sexp (Int.to_string (width signal)
-                   ^ "'h" ^ Utils.hstr_of_bstr Unsigned (const_value signal) : string)])
+                   ^ "'h"
+                   ^ (Signal.to_constant signal
+                      |> Constant.to_hex_string ~signedness:Unsigned)
+                   : string)])
     else
       match names signal with
       | []    ->
@@ -213,10 +216,20 @@ let%expect_test "constv" =
       (decimal_requires_constant_propagates (
         (16'd65535 (
           "Not a constant" (
-            signal (select (width 16) (range (15 0)) (data_in add)))))
+            signal (
+              select
+              (loc   test_constants.ml:LINE:COL)
+              (width 16)
+              (range (15 0))
+              (data_in add)))))
         (17'd65536 (
           "Not a constant" (
-            signal (select (width 17) (range (16 0)) (data_in add)))))))) |}];
+            signal (
+              select
+              (loc   test_constants.ml:LINE:COL)
+              (width 17)
+              (range (16 0))
+              (data_in add)))))))) |}];
   require_does_raise [%here] (fun () -> constv "2323");
   [%expect {| ("[constv] missing [']" 2323) |}];
   require_does_raise [%here] (fun () -> constv "'");

@@ -16,8 +16,8 @@ let command =
                ^ String.concat ~sep:", "
                    (List.map Bits_module.all ~f:Bits_module.short_name))
      and bits_ref =
-       flag "-bits-ref" (optional_with_default Bits_module.Bits Bits_module.arg_type)
-         ~doc:"MODULE reference bits implementation (default is [int64])"
+       flag "-bits-ref" (optional_with_default Bits_module.Bits_int_array Bits_module.arg_type)
+         ~doc:"MODULE reference bits implementation (default is [bits-int])"
      and first_error_only =
        flag "-first-error-only" no_arg
          ~doc:" stop running a primitive test after first error"

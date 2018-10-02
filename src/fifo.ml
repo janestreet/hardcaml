@@ -25,8 +25,8 @@ let create
          "[Fifo.create] requires either a synchronous clear or asynchronous reset"];
   let reg_spec = Reg_spec.create ~clock ~clear ~reset () in
   let reg ?clear_to ~enable d = reg (Reg_spec.override reg_spec ?clear_to) ~enable d in
-  let abits = Int.ceil_log2 capacity in
-  let ubits = Utils.nbits capacity in
+  let abits = address_bits_for capacity in
+  let ubits = num_bits_to_represent capacity in
   (* get nearly full/empty levels *)
   let nearly_full = match nearly_full with None -> capacity-1 | Some x -> x in
   let empty, full = wire 1, wire 1 in

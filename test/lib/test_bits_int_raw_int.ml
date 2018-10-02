@@ -5,7 +5,7 @@ let%expect_test "bits<->raw-int" =
   let config =
     { Config.
       bits1         = Bits
-    ; bits2         = Mutable_ArraybitsInt
+    ; bits2         = Mutable_Bits_int_array
     ; prims         = Primitive_op.all
     ; iterations    = 20
     ; min_bit_width = 900
@@ -19,7 +19,7 @@ let%expect_test "bits<->raw-int" =
         (short_name bits)
         (module_    <opaque>)))
       (bits2 (
-        (name       Mutable.ArraybitsInt)
+        (name       Mutable.Bits_int_array)
         (short_name raw-int)
         (module_    <opaque>)))
       (prims (Add Sub Mulu Muls And Or Xor Not Eq Lt Sel Mux Cat))
@@ -38,7 +38,7 @@ let%expect_test "bits<->raw-int" =
         (short_name bits)
         (module_    <opaque>)))
       (bits2 (
-        (name       Mutable.ArraybitsInt)
+        (name       Mutable.Bits_int_array)
         (short_name raw-int)
         (module_    <opaque>)))
       (prims (Add Sub Mulu Muls And Or Xor Not Eq Lt Sel Mux Cat))
@@ -57,7 +57,7 @@ let%expect_test "bits<->raw-int" =
         (short_name bits)
         (module_    <opaque>)))
       (bits2 (
-        (name       Mutable.ArraybitsInt)
+        (name       Mutable.Bits_int_array)
         (short_name raw-int)
         (module_    <opaque>)))
       (prims (Add Sub Mulu Muls And Or Xor Not Eq Lt Sel Mux Cat))

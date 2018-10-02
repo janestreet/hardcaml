@@ -1,6 +1,5 @@
 open! Import
 open Printf
-open Utils
 open Signal
 
 (* write a DOT file with rank information - looks absolutely terrible *)
@@ -179,7 +178,10 @@ let write_gdl ?(names=false) ?(widths=false) ?(consts=true) ?(clocks=false)
     | Empty ->
       write_node ~label:"empty" s
     | Const (_, c) ->
-      write_node ~label:(hstr_of_bstr Unsigned c) s
+      write_node
+        ~label:(Bits.to_constant c
+                |> Constant.to_hex_string ~signedness:Unsigned)
+        s
     | Wire _ ->
       if List.is_empty (Signal.names s)
       then write_node ~textcolour:"lightgrey" ~label:"wire" s

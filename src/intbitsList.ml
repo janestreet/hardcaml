@@ -15,17 +15,9 @@ module Gates = struct
   let is_empty = List.is_empty
 
   let width x = List.length x
-  let const v =
-    let to_int = function '0' -> 0 | '1' -> 1 | _ -> failwith "invalid constant" in
-    let len = String.length v in
-    let rec const b i =
-      if len = i
-      then b
-      else const (to_int v.[i] :: b) (i+1)
-    in
-    List.rev (const [] 0)
 
-  let to_int x = List.fold x ~init:0 ~f:(fun acc x -> (acc * 2) + x)
+  let of_constant = Constant.to_bit_list
+  let to_constant = Constant.of_bit_list
 
   let concat l = List.concat l
 
@@ -64,7 +56,7 @@ module Primitives = struct
   (* About 30% faster than the generic implementation, and common enough to care. *)
   let mux sel vals =
     let len = List.length vals in
-    let idx = to_int sel in
+    let idx = to_constant sel |> Constant.to_int64 |> Int64.to_int_trunc in
     List.nth_exn vals (if idx >= len then len-1 else idx)
 end
 

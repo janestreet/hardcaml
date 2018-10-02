@@ -13,6 +13,10 @@ let print_string  = Caml.print_string
 let printf        = Caml.Printf.printf
 let try_with      = Or_error.try_with
 
+let require_does_raise = require_does_raise ~hide_positions:true
+let print_s = print_s ~hide_positions:true
+let show_raise ?show_backtrace f = show_raise ~hide_positions:true ?show_backtrace f
+
 let clock = Signal.input "clock" 1
 let reset = Signal.input "reset" 1
 let clear = Signal.input "clear" 1

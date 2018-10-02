@@ -171,7 +171,8 @@ module Bits_module = struct
   type t =
     | IntbitsList
     | Bits
-    | Mutable_ArraybitsInt
+    | Bits_int_array
+    | Mutable_Bits_int_array
     | BadPrimitives
   [@@deriving enumerate]
 
@@ -189,10 +190,14 @@ module Bits_module = struct
     { name       = "Bits"
     ; short_name = "bits"
     ; module_    = (module Bits) }
+  let v_Bits_int_array =
+    { name       = "Bits_int_array"
+    ; short_name = "bits-int"
+    ; module_    = (module Bits_int_array) }
   let v_Mutable_ArraybitsInt =
-    { name       = "Mutable.ArraybitsInt"
+    { name       = "Mutable.Bits_int_array"
     ; short_name = "raw-int"
-    ; module_    = (module Bits.Mutable.Comb) }
+    ; module_    = (module Bits_int_array.Mutable.Comb) }
 
   let v_BadPrimitives =
     let module BadPrimitives = struct
@@ -208,10 +213,11 @@ module Bits_module = struct
     ; module_    = (module BadPrimitives) }
 
   let select = function
-    | IntbitsList      -> v_IntbitsList
-    | Bits             -> v_Bits
-    | Mutable_ArraybitsInt -> v_Mutable_ArraybitsInt
-    | BadPrimitives    -> v_BadPrimitives
+    | IntbitsList            -> v_IntbitsList
+    | Bits                   -> v_Bits
+    | Bits_int_array         -> v_Bits_int_array
+    | Mutable_Bits_int_array -> v_Mutable_ArraybitsInt
+    | BadPrimitives          -> v_BadPrimitives
 
   let module_    t = (select t).module_
   let name       t = (select t).name

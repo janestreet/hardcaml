@@ -113,7 +113,8 @@ let get_internal_ports circuit ~is_internal_port =
     Wire ({ s_id = !dangler_uid
           ; s_names = []
           ; s_width
-          ; s_deps = [] },
+          ; s_deps = []
+          ; caller_id = None },
           ref Empty)
   in
   List.map i ~f:(fun s ->
@@ -350,7 +351,9 @@ let create_immutable
   let bundle = get_schedule circuit internal_ports in
   (* build maps *)
   let data_map, reg_map, mem_map =
-    get_maps ~ref ~const:Bits.const ~zero:Bits.zero ~bundle in
+    get_maps ~ref
+      ~const:(fun c -> Bits.const @@ Bits.to_bstr c)
+      ~zero:Bits.zero ~bundle in
   (* compilation *)
   let compile signal =
     let tgt = Map.find_exn data_map (uid signal) in
@@ -662,10 +665,13 @@ let create_mutable
   let internal_ports = get_internal_ports circuit ~is_internal_port in
   let bundle = get_schedule circuit internal_ports in
   (* build maps *)
-  let zero n = Bits.Mutable.const (String.init n ~f:(fun _ -> '0')) in
+  let zero n = Bits.Mutable.of_constant (Constant.of_int ~width:n 0) in
   let data_map, reg_map, mem_map =
-    get_maps ~ref:(fun x -> x) ~const:Bits.Mutable.const ~zero:zero ~bundle
+    get_maps ~ref:(fun x -> x)
+      ~const:(fun c -> Bits.Mutable.of_constant (Bits.to_constant c))
+      ~zero:zero ~bundle
   in
+  let mutable_to_int x = Bits.Mutable.Comb.to_int x in
   (* compilation *)
   let compile signal =
     let tgt = Map.find_exn data_map (uid signal) in
@@ -702,7 +708,7 @@ let create_mutable
          let els = Array.of_list (List.tl_exn deps) in
          let max = Array.length els - 1 in
          Some (fun () ->
-           let sel = Bits.Mutable.to_int sel in
+           let sel = mutable_to_int sel in
            let sel = if sel > max then max else sel in
            Bits.Mutable.copy ~dst:tgt ~src:els.(sel)))
     | Wire _ ->
@@ -730,23 +736,23 @@ let create_mutable
        | None, None -> Some (fun () -> Bits.Mutable.copy ~dst:tgt ~src)
        | Some (c, v, l), None ->
          Some (fun () ->
-           if Bits.Mutable.to_int c = l
+           if mutable_to_int c = l
            then Bits.Mutable.copy ~dst:tgt ~src:v
            else Bits.Mutable.copy ~dst:tgt ~src)
        | None, Some e ->
-         Some (fun () -> if Bits.Mutable.to_int e  = 1 then Bits.Mutable.copy ~dst:tgt ~src)
+         Some (fun () -> if mutable_to_int e  = 1 then Bits.Mutable.copy ~dst:tgt ~src)
        | Some (c, v, l), Some e ->
          Some (fun () ->
-           if Bits.Mutable.to_int c = l
+           if mutable_to_int c = l
            then Bits.Mutable.copy ~dst:tgt ~src:v
-           else if Bits.Mutable.to_int e = 1
+           else if mutable_to_int e = 1
            then Bits.Mutable.copy ~dst:tgt ~src))
     | Mem (_, _, _, m) ->
       let mem = Map.find_exn mem_map (uid signal) in
       let addr = Map.find_exn data_map (uid m.mem_read_address) in
       Some (fun () ->
         try
-          Bits.Mutable.copy ~dst:tgt ~src:mem.(Bits.Mutable.to_int addr)
+          Bits.Mutable.copy ~dst:tgt ~src:mem.(mutable_to_int addr)
         with _ ->
           Bits.Mutable.copy ~dst:tgt ~src:(zero (Signal.width signal)))
     | Multiport_mem _ -> None
@@ -756,7 +762,7 @@ let create_mutable
       let zero = Bits.Mutable.create (Signal.width signal) in
       Some (fun () ->
         let data =
-          try mem.(Bits.Mutable.to_int addr)
+          try mem.(mutable_to_int addr)
           with _ -> zero
         in
         Bits.Mutable.copy ~dst:tgt ~src:data)
@@ -791,9 +797,9 @@ let create_mutable
       let d = Map.find_exn data_map (uid (List.hd_exn (Signal.deps signal))) in
       (fun () ->
          (* XXX memories can have resets/clear etc as well *)
-         if Bits.Mutable.to_int we = 1
+         if mutable_to_int we = 1
          then (
-           let w = Bits.Mutable.to_int w in
+           let w = mutable_to_int w in
            if w >= m.mem_size
            then
              (*Printf.printf "memory write out of bounds %i/%i\n" w m.mem_size*)
@@ -807,9 +813,9 @@ let create_mutable
         let w = Map.find_exn data_map (uid write_port.write_address) in
         let d = Map.find_exn data_map (uid write_port.write_data) in
         (fun () ->
-           if Bits.Mutable.to_int we = 1
+           if mutable_to_int we = 1
            then (
-             let w = Bits.Mutable.to_int w in
+             let w = mutable_to_int w in
              if w >= mem_size
              then ()
              else Bits.Mutable.copy ~dst:mem.(w) ~src:d))

@@ -34,6 +34,7 @@ let%expect_test "looping wire" =
       "combinational loop" (
         through_signal (
           wire
+          (loc     test_combinational_loop.ml:LINE:COL)
           (width   1)
           (data_in wire))))) |}]
 
@@ -45,7 +46,12 @@ let%expect_test "combinational loop" =
   test [ b ];
   [%expect {|
     (Error (
-      "combinational loop" (through_signal (add (width 2) (arguments (a wire)))))) |}]
+      "combinational loop" (
+        through_signal (
+          add
+          (loc   test_combinational_loop.ml:LINE:COL)
+          (width 2)
+          (arguments (a wire)))))) |}]
 
 let%expect_test "long combinational loop through logic" =
   let a = input "a" 2 in
@@ -61,19 +67,39 @@ let%expect_test "long combinational loop through logic" =
   test [ d ];
   [%expect {|
     (Error (
-      "combinational loop" (through_signal (and (width 2) (arguments (or c)))))) |}];
+      "combinational loop" (
+        through_signal (
+          and
+          (loc   test_combinational_loop.ml:LINE:COL)
+          (width 2)
+          (arguments (or c)))))) |}];
   test [ e ];
   [%expect {|
     (Error (
-      "combinational loop" (through_signal (and (width 2) (arguments (or c)))))) |}];
+      "combinational loop" (
+        through_signal (
+          and
+          (loc   test_combinational_loop.ml:LINE:COL)
+          (width 2)
+          (arguments (or c)))))) |}];
   test [ f ];
   [%expect {|
     (Error (
-      "combinational loop" (through_signal (and (width 2) (arguments (or c)))))) |}];
+      "combinational loop" (
+        through_signal (
+          and
+          (loc   test_combinational_loop.ml:LINE:COL)
+          (width 2)
+          (arguments (or c)))))) |}];
   test [ g ];
   [%expect {|
     (Error (
-      "combinational loop" (through_signal (xor (width 2) (arguments (xor and)))))) |}];
+      "combinational loop" (
+        through_signal (
+          xor
+          (loc   list.ml:LINE:COL)
+          (width 2)
+          (arguments (xor and)))))) |}];
 ;;
 
 let%expect_test "combinational loop in 2nd arg" =
@@ -84,7 +110,12 @@ let%expect_test "combinational loop in 2nd arg" =
   test [ a -:. 1; b ];
   [%expect {|
     (Error (
-      "combinational loop" (through_signal (add (width 2) (arguments (a wire)))))) |}]
+      "combinational loop" (
+        through_signal (
+          add
+          (loc   test_combinational_loop.ml:LINE:COL)
+          (width 2)
+          (arguments (a wire)))))) |}]
 
 let%expect_test "loop through register" =
   let a = Signal.reg_fb (Reg_spec.create () ~clock) ~enable:vdd ~w:2 (fun d -> d +:. 1) in
@@ -126,7 +157,12 @@ let%expect_test "combinational loop before a register" =
   test [ c ];
   [%expect {|
     (Error (
-      "combinational loop" (through_signal (and (width 2) (arguments (a wire)))))) |}]
+      "combinational loop" (
+        through_signal (
+          and
+          (loc   test_combinational_loop.ml:LINE:COL)
+          (width 2)
+          (arguments (a wire)))))) |}]
 
 let%expect_test "combinational loop between registers" =
   let reg_spec = Reg_spec.create () ~clock in
@@ -139,7 +175,11 @@ let%expect_test "combinational loop between registers" =
   [%expect {|
     (Error (
       "combinational loop" (
-        through_signal (and (width 2) (arguments (register wire)))))) |}]
+        through_signal (
+          and
+          (loc   test_combinational_loop.ml:LINE:COL)
+          (width 2)
+          (arguments (register wire)))))) |}]
 
 let%expect_test "combinational loop inside register loop" =
   let reg_spec = Reg_spec.create () ~clock in
@@ -157,6 +197,7 @@ let%expect_test "combinational loop inside register loop" =
         through_signal (
           wire
           (names (wire_in_loop))
+          (loc     test_combinational_loop.ml:LINE:COL)
           (width   2)
           (data_in wire_in_loop))))) |}]
 

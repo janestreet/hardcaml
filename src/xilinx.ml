@@ -105,7 +105,6 @@ end
 (* unisim based implementation of Xilinx API *)
 module Unisim = struct
 
-  open Utils
   open Signal
 
   let inv a =
@@ -187,7 +186,9 @@ module Unisim = struct
     in
     (Instantiation.create ()
        ~name:("RAM"^ Int.to_string size ^ "X1S")
-       ~parameters:[ Parameter.create ~name:"INIT" ~value:(String (bstr_of_int size 0)) ]
+       ~parameters:[ Parameter.create ~name:"INIT"
+                       ~value:(String (Constant.of_int ~width:size 0
+                                       |> Constant.to_binary_string)) ]
        ~inputs:([ "D", d; "WE", we; "WCLK", clk ] @ a)
        ~outputs:[ "Q", 1 ])#o "Q"
 end
@@ -203,7 +204,6 @@ module Lut6 = struct let max_lut = 6 end
 (* Build API of Xilinx primitives *)
 module XMake (X : S) (L : LutSize) = struct
 
-  open Utils
   module S = Signal
   open S
   open LutEqn
@@ -228,7 +228,7 @@ module XMake (X : S) (L : LutSize) = struct
   let x_xor a b = x_map (i0 ^: i1) [ a; b ]
   let x_not a = a |> bits |> List.map ~f:X.inv |> concat
 
-  let inputs n = lselect [ i0; i1; i2; i3; i4; i5 ] 0 (n-1)
+  let inputs n = List.take [ i0; i1; i2; i3; i4; i5 ] n
   let reduce_inputs op n =
     let args = inputs n in
     List.reduce_exn args ~f:(fun acc a -> op acc a)
@@ -547,9 +547,7 @@ module XSynthesizeComb (X : S) (L : LutSize) =
   Transform.MakeCombTransform ( XComb ( XMake (X) (L) ) )
 
 module XSynthesize (X : S) (L : LutSize)  = struct
-  open Utils
   module C = Comb.Make ( XComb ( XMake (X) (L) ) )
-
   open C
 
   module T = Transform.MakeCombTransform ( C )
@@ -557,20 +555,21 @@ module XSynthesize (X : S) (L : LutSize)  = struct
   let transform find (signal : Signal.t) =
     match signal with
     | Reg (_, r) ->
+      let find_uid x = Signal.uid x |> find in
       let r =
         { r with (* note; level constants are copied *)
-          reg_clock       = (find << Signal.uid) r.reg_clock
-        ; reg_reset       = (find << Signal.uid) r.reg_reset
-        ; reg_reset_value = (find << Signal.uid) r.reg_reset_value
-        ; reg_clear       = (find << Signal.uid) r.reg_clear
-        ; reg_clear_value = (find << Signal.uid) r.reg_clear_value
-        ; reg_enable      = (find << Signal.uid) r.reg_enable }
+          reg_clock       = find_uid r.reg_clock
+        ; reg_reset       = find_uid r.reg_reset
+        ; reg_reset_value = find_uid r.reg_reset_value
+        ; reg_clear       = find_uid r.reg_clear
+        ; reg_clear_value = find_uid r.reg_clear_value
+        ; reg_enable      = find_uid r.reg_enable }
       in
       let vreset i =
         if is_empty r.reg_reset_value
         then false
         else
-          let c = Signal.const_value r.reg_reset_value in
+          let c = Signal.const_value r.reg_reset_value |> Bits.to_bstr in
           Char.equal c.[i] '1' (* note; not [w-i-1] because we map backwards... *)
       in
       let reset =
@@ -593,7 +592,7 @@ module XSynthesize (X : S) (L : LutSize)  = struct
         match r.reg_clock_edge with
         | Falling -> ~: (r.reg_clock)
         | Rising -> r.reg_clock in
-      let d = (find << Signal.uid) (List.nth_exn (Signal.deps signal) 0) in
+      let d = find_uid (List.nth_exn (Signal.deps signal) 0) in
       let ena, d =
         if is_empty r.reg_clear
         then r.reg_enable, d

@@ -459,6 +459,9 @@ module Base (C : Config) = struct
     then s_const
     else const
 
+  let of_constant c =
+    Constant.to_binary_string c |> const
+
   let (+:) = binop1 "add"
   let (-:) = binop1 "sub"
 
@@ -481,8 +484,7 @@ module Base (C : Config) = struct
   let (<:) = binop0 "lt"
 
   let to_string s = name s
-  let to_int _ = failwith "Structural.Base.to_int"
-  let to_bstr _ = failwith "Structural.Base.to_bstr"
+  let to_constant _ = failwith "Structural.Base.to_constant not supported"
 
   let sexp_of_t t =
     let create ?id ?name ?width ?value ?range constructor =

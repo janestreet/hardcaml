@@ -14,9 +14,9 @@ depends: [
   "stdio"
   "topological_sort"
   "jbuilder"                {build & >= "1.0+beta18.1"}
-  "num"
   "ocaml-migrate-parsetree" {>= "1.0"}
   "ppxlib"                  {>= "0.1.0"}
+  "zarith"                  {>= "1.4"}
 ]
 available: [ ocaml-version >= "4.06.1" ]
 descr: "

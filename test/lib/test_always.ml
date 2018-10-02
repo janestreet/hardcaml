@@ -12,6 +12,7 @@ let%expect_test "guarded assignment width mistmatch" =
      (expression_width      2)
      (expression (
        const
+       (loc   test_always.ml:LINE:COL)
        (width 2)
        (value 0b00)))) |}]
 

@@ -9,12 +9,26 @@ let%expect_test "signed resize" =
     (empty
       (wire
         (names (a))
+        (loc     test_topsort.ml:LINE:COL)
         (width   4)
         (data_in empty))
-      (select (width 1) (range (3 3)) (data_in a))
-      (cat (width 2) (arguments (select select)))
-      (cat (width 4) (arguments (cat    cat)))
-      (cat (width 8) (arguments (cat    a)))) |}]
+      (select
+        (loc   test_topsort.ml:LINE:COL)
+        (width 1)
+        (range (3 3))
+        (data_in a))
+      (cat
+        (loc   test_topsort.ml:LINE:COL)
+        (width 2)
+        (arguments (select select)))
+      (cat
+        (loc   test_topsort.ml:LINE:COL)
+        (width 4)
+        (arguments (cat cat)))
+      (cat
+        (loc   test_topsort.ml:LINE:COL)
+        (width 8)
+        (arguments (cat a)))) |}]
 
 let%expect_test "a + a" =
   let a = Signal.input "a" 4 in
@@ -25,9 +39,13 @@ let%expect_test "a + a" =
     (empty
       (wire
         (names (a))
+        (loc     test_topsort.ml:LINE:COL)
         (width   4)
         (data_in empty))
-      (add (width 4) (arguments (a a)))) |}]
+      (add
+        (loc   test_topsort.ml:LINE:COL)
+        (width 4)
+        (arguments (a a)))) |}]
 
 (* Simplest possible circuit. *)
 let%expect_test "input -> output" =
@@ -39,10 +57,12 @@ let%expect_test "input -> output" =
     (empty
       (wire
         (names (a))
+        (loc     test_topsort.ml:LINE:COL)
         (width   4)
         (data_in empty))
       (wire
         (names (b))
+        (loc     test_topsort.ml:LINE:COL)
         (width   4)
         (data_in a))) |}]
 
@@ -72,13 +92,16 @@ let%expect_test "reg loop" =
     (empty
       (wire
         (names (clock))
+        (loc     import.ml:LINE:COL)
         (width   1)
         (data_in empty))
       (wire
         (names (clear))
+        (loc     import.ml:LINE:COL)
         (width   1)
         (data_in empty))
       (register
+        (loc   test_topsort.ml:LINE:COL)
         (width 1)
         ((clock       clock)
          (clock_edge  Rising)
@@ -88,18 +111,29 @@ let%expect_test "reg loop" =
          (enable      0b1))
         (data_in wire))
       (const
+        (loc   test_topsort.ml:LINE:COL)
         (width 1)
         (value 0b1))
-      (add (width 1) (arguments (register 0b1)))
+      (add
+        (loc   test_topsort.ml:LINE:COL)
+        (width 1)
+        (arguments (register 0b1)))
       (wire
+        (loc     test_topsort.ml:LINE:COL)
         (width   1)
         (data_in add))
       (const
         (names (vdd))
         (width 1)
         (value 0b1))
-      (const (width 1) (value 0b0))
-      (const (width 1) (value 0b0))) |}]
+      (const
+        (loc   test_topsort.ml:LINE:COL)
+        (width 1)
+        (value 0b0))
+      (const
+        (loc   test_topsort.ml:LINE:COL)
+        (width 1)
+        (value 0b0))) |}]
 
 let%expect_test "mem loop" =
   let w = Signal.wire 1 in
@@ -120,9 +154,11 @@ let%expect_test "mem loop" =
         (value 0b1))
       (wire
         (names (clock))
+        (loc     import.ml:LINE:COL)
         (width   1)
         (data_in empty))
       (memory
+        (loc   test_topsort.ml:LINE:COL)
         (width 1)
         ((clock      clock)
          (clock_edge Rising)
@@ -132,9 +168,18 @@ let%expect_test "mem loop" =
          (read_address  0b1)
          (write_enable  wire))
         (data_in wire))
-      (wire  (width 1) (data_in memory))
-      (const (width 1) (value   0b0))
-      (const (width 1) (value   0b0))) |}]
+      (wire
+        (loc     test_topsort.ml:LINE:COL)
+        (width   1)
+        (data_in memory))
+      (const
+        (loc   test_topsort.ml:LINE:COL)
+        (width 1)
+        (value 0b0))
+      (const
+        (loc   test_topsort.ml:LINE:COL)
+        (width 1)
+        (value 0b0))) |}]
 
 (* This a combinational loop.  The read address is not synchronously read. *)
 let%expect_test "mem loop, including read address, which isn't allowed" =

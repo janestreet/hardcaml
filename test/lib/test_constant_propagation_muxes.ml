@@ -21,16 +21,19 @@ let%expect_test "[mux]" =
     ((length 2)
      (Ok (
        const
+       (loc   list.ml:LINE:COL)
        (width 3)
        (value 0b001))))
     ((length 3)
      (Ok (
        const
+       (loc   list.ml:LINE:COL)
        (width 3)
        (value 0b010))))
     ((length 4)
      (Ok (
        const
+       (loc   list.ml:LINE:COL)
        (width 3)
        (value 0b010))))
     ((length 5)
