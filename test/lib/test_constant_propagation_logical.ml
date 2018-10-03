@@ -55,16 +55,13 @@ let%expect_test "[&:] with one constant" =
      ("Not a constant" (
        signal (
          and
-         (loc   test_constant_propagation.ml:LINE:COL)
          (width 2)
          (arguments (
            (const
-             (loc   test_constant_propagation.ml:LINE:COL)
              (width 2)
              (value 0b01))
            (wire
              (names (x))
-             (loc     test_constant_propagation.ml:LINE:COL)
              (width   2)
              (data_in empty))))))))
     (x
@@ -74,16 +71,13 @@ let%expect_test "[&:] with one constant" =
      ("Not a constant" (
        signal (
          and
-         (loc   test_constant_propagation.ml:LINE:COL)
          (width 2)
          (arguments (
            (wire
              (names (x))
-             (loc     test_constant_propagation.ml:LINE:COL)
              (width   2)
              (data_in empty))
            (const
-             (loc   test_constant_propagation.ml:LINE:COL)
              (width 2)
              (value 0b01))))))))
     (2'b10
@@ -93,16 +87,13 @@ let%expect_test "[&:] with one constant" =
      ("Not a constant" (
        signal (
          and
-         (loc   test_constant_propagation.ml:LINE:COL)
          (width 2)
          (arguments (
            (const
-             (loc   test_constant_propagation.ml:LINE:COL)
              (width 2)
              (value 0b10))
            (wire
              (names (x))
-             (loc     test_constant_propagation.ml:LINE:COL)
              (width   2)
              (data_in empty))))))))
     (x
@@ -112,16 +103,13 @@ let%expect_test "[&:] with one constant" =
      ("Not a constant" (
        signal (
          and
-         (loc   test_constant_propagation.ml:LINE:COL)
          (width 2)
          (arguments (
            (wire
              (names (x))
-             (loc     test_constant_propagation.ml:LINE:COL)
              (width   2)
              (data_in empty))
            (const
-             (loc   test_constant_propagation.ml:LINE:COL)
              (width 2)
              (value 0b10))))))))
     (2'b11 &: x = x)
@@ -181,16 +169,13 @@ let%expect_test "[|:] with one constant" =
      ("Not a constant" (
        signal (
          or
-         (loc   test_constant_propagation.ml:LINE:COL)
          (width 2)
          (arguments (
            (const
-             (loc   test_constant_propagation.ml:LINE:COL)
              (width 2)
              (value 0b01))
            (wire
              (names (x))
-             (loc     test_constant_propagation.ml:LINE:COL)
              (width   2)
              (data_in empty))))))))
     (x
@@ -200,16 +185,13 @@ let%expect_test "[|:] with one constant" =
      ("Not a constant" (
        signal (
          or
-         (loc   test_constant_propagation.ml:LINE:COL)
          (width 2)
          (arguments (
            (wire
              (names (x))
-             (loc     test_constant_propagation.ml:LINE:COL)
              (width   2)
              (data_in empty))
            (const
-             (loc   test_constant_propagation.ml:LINE:COL)
              (width 2)
              (value 0b01))))))))
     (2'b10
@@ -219,16 +201,13 @@ let%expect_test "[|:] with one constant" =
      ("Not a constant" (
        signal (
          or
-         (loc   test_constant_propagation.ml:LINE:COL)
          (width 2)
          (arguments (
            (const
-             (loc   test_constant_propagation.ml:LINE:COL)
              (width 2)
              (value 0b10))
            (wire
              (names (x))
-             (loc     test_constant_propagation.ml:LINE:COL)
              (width   2)
              (data_in empty))))))))
     (x
@@ -238,16 +217,13 @@ let%expect_test "[|:] with one constant" =
      ("Not a constant" (
        signal (
          or
-         (loc   test_constant_propagation.ml:LINE:COL)
          (width 2)
          (arguments (
            (wire
              (names (x))
-             (loc     test_constant_propagation.ml:LINE:COL)
              (width   2)
              (data_in empty))
            (const
-             (loc   test_constant_propagation.ml:LINE:COL)
              (width 2)
              (value 0b10))))))))
     (2'b11 |: x = 2'b11)

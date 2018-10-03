@@ -89,11 +89,9 @@ let%expect_test "sexp" =
   [%expect {|
     (memory (
       (memory_read_port
-        (loc   array.ml:LINE:COL)
         (width 12)
         ((memory (
            multiport_memory
-           (loc   test_multiport_memory.ml:LINE:COL)
            (width 12)
            ((size 32)
             (write_ports (
@@ -101,15 +99,12 @@ let%expect_test "sexp" =
               ((write_enable 0b0) (write_address 0b00000) (write_data 0x000)))))))
          (read_addresses (
            const
-           (loc   test_multiport_memory.ml:LINE:COL)
            (width 5)
            (value 0b00000)))))
       (memory_read_port
-        (loc   array.ml:LINE:COL)
         (width 12)
         ((memory (
            multiport_memory
-           (loc   test_multiport_memory.ml:LINE:COL)
            (width 12)
            ((size 32)
             (write_ports (
@@ -117,7 +112,6 @@ let%expect_test "sexp" =
               ((write_enable 0b0) (write_address 0b00000) (write_data 0x000)))))))
          (read_addresses (
            const
-           (loc   test_multiport_memory.ml:LINE:COL)
            (width 5)
            (value 0b00000))))))) |}]
 ;;

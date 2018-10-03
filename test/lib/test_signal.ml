@@ -20,7 +20,6 @@ let%expect_test "non-const signal" =
   [%expect {|
     ("cannot get the value of a non-constant signal"
      (wire
-       (loc     test_signal.ml:LINE:COL)
        (width   1)
        (data_in empty))) |}]
 
@@ -30,7 +29,6 @@ let%expect_test "non-const to_int" =
   [%expect {|
     ("cannot use [to_constant] on non-constant signal"
      (wire
-       (loc     test_signal.ml:LINE:COL)
        (width   1)
        (data_in empty))) |}]
 
@@ -40,7 +38,6 @@ let%expect_test "non-const to_bstr" =
   [%expect {|
     ("cannot use [to_constant] on non-constant signal"
      (wire
-       (loc     test_signal.ml:LINE:COL)
        (width   1)
        (data_in empty))) |}]
 
@@ -59,7 +56,6 @@ let%expect_test "multiple assignment to a wire" =
     ("attempt to assign wire multiple times"
       (already_assigned_wire (
         wire
-        (loc     test_signal.ml:LINE:COL)
         (width   1)
         (data_in 0b1)))
       (expression (
@@ -76,16 +72,8 @@ let%expect_test "wire width mismatch" =
     ("attempt to assign expression to wire of different width"
      (wire_width       29)
      (expression_width 17)
-     (wire (
-       wire
-       (loc     test_signal.ml:LINE:COL)
-       (width   29)
-       (data_in empty)))
-     (expression (
-       const
-       (loc   test_signal.ml:LINE:COL)
-       (width 17)
-       (value 0x00003)))) |}]
+     (wire       (wire  (width 29) (data_in empty)))
+     (expression (const (width 17) (value   0x00003)))) |}]
 
 let%expect_test "assignment to a non-wire" =
   require_does_raise [%here] (fun () ->
@@ -123,7 +111,6 @@ let%expect_test "invalid clock" =
       (signal (
         wire
         (names (not_a_clock))
-        (loc     test_signal.ml:LINE:COL)
         (width   2)
         (data_in empty)))) |}]
 
@@ -136,7 +123,6 @@ let%expect_test "invalid reset" =
       (signal (
         wire
         (names (not_a_reset))
-        (loc     test_signal.ml:LINE:COL)
         (width   2)
         (data_in empty)))) |}]
 
@@ -149,7 +135,6 @@ let%expect_test "invalid reset_value" =
       (signal (
         wire
         (names (not_a_reset_value))
-        (loc     test_signal.ml:LINE:COL)
         (width   2)
         (data_in empty)))) |}]
 
@@ -162,7 +147,6 @@ let%expect_test "invalid clear" =
       (signal (
         wire
         (names (not_a_clear))
-        (loc     test_signal.ml:LINE:COL)
         (width   2)
         (data_in empty)))) |}]
 
@@ -175,7 +159,6 @@ let%expect_test "invalid clear_value" =
       (signal (
         wire
         (names (not_a_clear_value))
-        (loc     test_signal.ml:LINE:COL)
         (width   2)
         (data_in empty)))) |}]
 
@@ -188,7 +171,6 @@ let%expect_test "invalid enable" =
       (signal (
         wire
         (names (not_an_enable))
-        (loc     test_signal.ml:LINE:COL)
         (width   2)
         (data_in empty)))) |}]
 
@@ -208,11 +190,7 @@ let%expect_test "insertion" =
     print_s [%message "valid [insert]"
                         ~_:(insert ~into:(constb "111") (constb "00") ~at_offset:1 : t)]);
   [%expect {|
-    ("valid [insert]" (
-      cat
-      (loc   test_signal.ml:LINE:COL)
-      (width 3)
-      (arguments (0b00 select)))) |}]
+    ("valid [insert]" (cat (width 3) (arguments (0b00 select)))) |}]
 ;;
 
 let%expect_test "mux errors" =
@@ -224,7 +202,6 @@ let%expect_test "mux errors" =
         (width 1)
         (value 0b0))
       (const
-        (loc   test_signal.ml:LINE:COL)
         (width 2)
         (value 0b10)))) |}];
   require_does_raise [%here] (fun () -> mux vdd [ gnd; vdd; gnd ]);

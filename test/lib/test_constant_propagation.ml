@@ -716,142 +716,76 @@ let%expect_test "shifting" =
 let%expect_test "add width exn" = require_does_raise [%here] (fun () -> consti ~width:3 22 +: consti ~width:8 33);
   [%expect {|
     ("[+:] got inputs of different widths" (
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 3)
-        (value 0b110))
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 8)
-        (value 0b00100001)))) |}]
+      (const (width 3) (value 0b110))
+      (const (width 8) (value 0b00100001)))) |}]
 
 let%expect_test "sub width exn" =
   require_does_raise [%here] (fun () -> consti ~width:3 22 -: consti ~width:8 33);
   [%expect {|
     ("[-:] got inputs of different widths" (
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 3)
-        (value 0b110))
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 8)
-        (value 0b00100001)))) |}]
+      (const (width 3) (value 0b110))
+      (const (width 8) (value 0b00100001)))) |}]
 
 let%expect_test "less than width exn" =
   require_does_raise [%here] (fun () -> const "01" <: const "001");
   [%expect {|
     ("[<:] got inputs of different widths" (
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 2)
-        (value 0b01))
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 3)
-        (value 0b001)))) |}]
+      (const (width 2) (value 0b01))
+      (const (width 3) (value 0b001)))) |}]
 
 let%expect_test "greater than width exn" =
   require_does_raise [%here] (fun () -> const "01" >: const "001");
   [%expect {|
     ("[<:] got inputs of different widths" (
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 3)
-        (value 0b001))
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 2)
-        (value 0b01)))) |}]
+      (const (width 3) (value 0b001))
+      (const (width 2) (value 0b01)))) |}]
 
 let%expect_test "less than or equal to width exn" =
   require_does_raise [%here] (fun () -> const "01" <=: const "001");
   [%expect {|
     ("[<:] got inputs of different widths" (
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 3)
-        (value 0b001))
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 2)
-        (value 0b01)))) |}]
+      (const (width 3) (value 0b001))
+      (const (width 2) (value 0b01)))) |}]
 
 let%expect_test "greater than or equal to width exn" =
   require_does_raise [%here] (fun () -> const "01" >=: const "001");
   [%expect {|
     ("[<:] got inputs of different widths" (
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 2)
-        (value 0b01))
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 3)
-        (value 0b001)))) |}]
+      (const (width 2) (value 0b01))
+      (const (width 3) (value 0b001)))) |}]
 
 let%expect_test "equals width exn" =
   require_does_raise [%here] (fun () -> const "01" ==: const "001");
   [%expect {|
     ("[==:] got inputs of different widths" (
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 2)
-        (value 0b01))
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 3)
-        (value 0b001)))) |}]
+      (const (width 2) (value 0b01))
+      (const (width 3) (value 0b001)))) |}]
 
 let%expect_test "not equals width exn" =
   require_does_raise [%here] (fun () -> const "01" <>: const "001");
   [%expect {|
     ("[<>:] got inputs of different widths" (
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 2)
-        (value 0b01))
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 3)
-        (value 0b001)))) |}]
+      (const (width 2) (value 0b01))
+      (const (width 3) (value 0b001)))) |}]
 
 let%expect_test "and width exn" =
   require_does_raise [%here] (fun () -> (const "1010") &: (const "100"));
   [%expect {|
     ("[&:] got inputs of different widths" (
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 4)
-        (value 0b1010))
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 3)
-        (value 0b100)))) |}]
+      (const (width 4) (value 0b1010))
+      (const (width 3) (value 0b100)))) |}]
 let%expect_test "or width exn"  =
   require_does_raise [%here] (fun () -> (const "1010") |: (const "100"));
   [%expect {|
     ("[|:] got inputs of different widths" (
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 4)
-        (value 0b1010))
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 3)
-        (value 0b100)))) |}]
+      (const (width 4) (value 0b1010))
+      (const (width 3) (value 0b100)))) |}]
 let%expect_test "xor width exn" =
   require_does_raise [%here] (fun () -> (const "1010") ^: (const "100"));
   [%expect {|
     ("[^:] got inputs of different widths" (
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 4)
-        (value 0b1010))
-      (const
-        (loc   test_constant_propagation.ml:LINE:COL)
-        (width 3)
-        (value 0b100)))) |}]
+      (const (width 4) (value 0b1010))
+      (const (width 3) (value 0b100)))) |}]
 
 let%expect_test "mux exn: idx too narrow" =
   let data4 = List.map ~f:(consti ~width:5) [ 0; 10; 20; 30 ] in

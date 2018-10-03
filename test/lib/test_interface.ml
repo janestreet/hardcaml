@@ -29,16 +29,8 @@ let%expect_test "bits and signals" =
      (y 00001010)) |}];
   test (module I.Of_signal);
   [%expect {|
-    ((x (
-       const
-       (loc   test_interface.ml:LINE:COL)
-       (width 4)
-       (value 0b1010)))
-     (y (
-       const
-       (loc   test_interface.ml:LINE:COL)
-       (width 8)
-       (value 0b00001010)))) |}]
+    ((x (const (width 4) (value 0b1010)))
+     (y (const (width 8) (value 0b00001010)))) |}]
 ;;
 
 let%expect_test "[port_names], [port_widths], [widths]" =
@@ -156,55 +148,35 @@ let%expect_test "assoc list" =
 let%expect_test "[wires]" =
   print_s [%sexp (I.Of_signal.wires () : Signal.t I.t)];
   [%expect {|
-    ((x (
-       wire
-       (loc     test_interface.ml:LINE:COL)
-       (width   4)
-       (data_in empty)))
-     (y (
-       wire
-       (loc     test_interface.ml:LINE:COL)
-       (width   8)
-       (data_in empty)))) |}];
+    ((x (wire (width 4) (data_in empty)))
+     (y (wire (width 8) (data_in empty)))) |}];
   print_s [%sexp (I.Of_signal.wires ~named:true () : Signal.t I.t)];
   [%expect {|
     ((x (
        wire
        (names (x))
-       (loc     test_interface.ml:LINE:COL)
        (width   4)
        (data_in empty)))
      (y (
        wire
        (names (y))
-       (loc     test_interface.ml:LINE:COL)
        (width   8)
        (data_in empty)))) |}];
   let from = { I.x = Signal.vdd; y = Signal.gnd } in
   print_s [%sexp (I.Of_signal.wires ~from () : Signal.t I.t)];
   [%expect {|
-    ((x (
-       wire
-       (loc     test_interface.ml:LINE:COL)
-       (width   1)
-       (data_in 0b1)))
-     (y (
-       wire
-       (loc     test_interface.ml:LINE:COL)
-       (width   1)
-       (data_in 0b0)))) |}];
+    ((x (wire (width 1) (data_in 0b1)))
+     (y (wire (width 1) (data_in 0b0)))) |}];
   print_s [%sexp (I.Of_signal.wires ~named:true ~from () : Signal.t I.t)];
   [%expect {|
     ((x (
        wire
        (names (x))
-       (loc     test_interface.ml:LINE:COL)
        (width   1)
        (data_in 0b1)))
      (y (
        wire
        (names (y))
-       (loc     test_interface.ml:LINE:COL)
        (width   1)
        (data_in 0b0)))) |}];
 ;;

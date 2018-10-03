@@ -21,3 +21,4 @@ let clock = Signal.input "clock" 1
 let reset = Signal.input "reset" 1
 let clear = Signal.input "clear" 1
 let enable = Signal.input "enable" 1
+

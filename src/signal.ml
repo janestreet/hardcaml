@@ -4,12 +4,33 @@ open! Signal_intf
 module Caller_id = struct
   module Printexc = Caml.Printexc
 
-  (* Small helper to find out who is the caller of a function *)
-  type t = Printexc.location
+  module Mode = struct
+    type t =
+      | Disabled
+      | Top_of_stack
+      (* | Full_trace *)
+  end
 
-  let sexp_of_t (t : Printexc.location) =
+  let mode =
+    ref (if Base.Exported_for_specific_uses.am_testing
+         then Mode.Disabled
+         else Top_of_stack)
+
+  let set_mode m = mode := m
+
+  (* Small helper to find out who is the caller of a function *)
+  type t =
+    | Top_of_stack of Printexc.location
+    (* | Full_trace of Printexc.location list *)
+
+  let sexp_of_location (t : Printexc.location) =
     let loc = sprintf "%s:%i:%i" t.filename t.line_number t.start_char in
     [%sexp (loc : string)]
+
+  let sexp_of_t (t : t) =
+    match t with
+    | Top_of_stack s -> [%sexp (s : location)]
+  (* | Full_trace s -> [%sexp (s : location list)] *)
 
   let get ~skip =
     let skip = "comb.ml" :: "interface.ml" :: Caml.__FILE__ :: skip in
@@ -31,7 +52,10 @@ module Caller_id = struct
           else
             Some loc
     in
-    loop 0
+    match !mode with
+    | Disabled -> None
+    | Top_of_stack -> loop 0 |> Option.map ~f:(fun s -> Top_of_stack s)
+    (* | Full_trace -> loop 0 |> Option.map ~f:(fun s -> Full_trace [s]) *)
   ;;
 
 end

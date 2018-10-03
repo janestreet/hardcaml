@@ -36,7 +36,14 @@ module type Signal = sig
   end
 
   module Caller_id : sig
+    module Mode : sig
+      type t =
+        | Disabled
+        | Top_of_stack
+        (* | Full_trace *)
+    end
     type t[@@deriving sexp_of]
+    val set_mode : Mode.t -> unit
   end
 
   (** internal structure for tracking signals *)

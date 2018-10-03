@@ -216,20 +216,10 @@ let%expect_test "constv" =
       (decimal_requires_constant_propagates (
         (16'd65535 (
           "Not a constant" (
-            signal (
-              select
-              (loc   test_constants.ml:LINE:COL)
-              (width 16)
-              (range (15 0))
-              (data_in add)))))
+            signal (select (width 16) (range (15 0)) (data_in add)))))
         (17'd65536 (
           "Not a constant" (
-            signal (
-              select
-              (loc   test_constants.ml:LINE:COL)
-              (width 17)
-              (range (16 0))
-              (data_in add)))))))) |}];
+            signal (select (width 17) (range (16 0)) (data_in add)))))))) |}];
   require_does_raise [%here] (fun () -> constv "2323");
   [%expect {| ("[constv] missing [']" 2323) |}];
   require_does_raise [%here] (fun () -> constv "'");

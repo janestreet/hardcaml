@@ -9,11 +9,7 @@ let%expect_test "combinational loop" =
   let signal_graph = Signal_graph.create [ b ] in
   print_s [%sexp (Signal_graph.normalize_uids signal_graph : Signal_graph.t)];
   [%expect {|
-    ((
-      add
-      (loc   test_uid_normalization.ml:LINE:COL)
-      (width 2)
-      (arguments (a wire)))) |}];
+    ((add (width 2) (arguments (a wire)))) |}];
 ;;
 
 let design () =
