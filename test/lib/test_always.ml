@@ -23,7 +23,7 @@ module State = struct
 end
 
 let%expect_test "[Reg.State_machine.create]" =
-  let sm () = State_machine.create (module State) reg_spec ~e:enable in
+  let sm () = State_machine.create (module State) reg_spec ~enable in
   let bad_case (state : _ State_machine.t) = state.switch [ 1, []; 2, []; 6, [] ] in
   let bad_next (state : _ State_machine.t) = state.switch [ 1, [ state.set_next 4] ] in
   let incomplete ?default (state : _ State_machine.t) =
@@ -45,7 +45,7 @@ let%expect_test "[Reg.State_machine.create]" =
     ("[Always.State_machine.switch] got repeated state" 1) |}]
 
 let%expect_test "Statemachine.statmachine ~encoding" =
-  let sm encoding = State_machine.create (module State) reg_spec ~encoding ~e:enable in
+  let sm encoding = State_machine.create (module State) reg_spec ~encoding ~enable in
   let bad_case (state : _ State_machine.t) = state.switch [ 1, []; 2, []; 6, [] ] in
   let bad_next (state : _ State_machine.t) = state.switch [ 1, [ state.set_next 4] ] in
   let bad_test (state : _ State_machine.t) = when_ (state.is 4) [] in
@@ -89,7 +89,7 @@ let%expect_test "test statemachine encodings" =
   end in
   let test ~encoding ~nickel ~dime =
     let state : State.t State_machine.t =
-      State_machine.create (module State) reg_spec ~encoding ~e:vdd
+      State_machine.create (module State) reg_spec ~encoding ~enable:vdd
     in
     let decoded =
       Array.init (List.length State.all) ~f:(fun _ -> Variable.wire ~default:gnd) in

@@ -3,7 +3,8 @@
   (libraries (core
               expect_test_helpers
               hardcaml
-              hardcaml_waveterm_jane))
+              hardcaml_waveterm
+              ))
   (preprocess (pps (ppx_deriving_hardcaml ppx_jane ppxlib.runner)))))
 
 (jbuild_version 1)

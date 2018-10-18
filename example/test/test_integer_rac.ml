@@ -40,9 +40,9 @@ module Make (Config : Rac.Config) = struct
     Sim.create (Rac.create ~coefs)
 
   let run_and_print_waves ~simulator ~testbench ~data_in =
-    let waves, simulator = Hardcaml_waveterm_jane.Waveform.create simulator in
+    let waves, simulator = Hardcaml_waveterm.Waveform.create simulator in
     let result = run ~simulator ~testbench:testbench ~data_in in
-    Hardcaml_waveterm_jane.Waveform.print
+    Hardcaml_waveterm.Waveform.print
       ~display_height:28
       ~display_width:120
       ~wave_width:2

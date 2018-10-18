@@ -3,7 +3,7 @@ include Expect_test_helpers_kernel
 include Hardcaml
 
 module Command = Core.Command
-module Waves   = Hardcaml_waveterm_jane
+module Waves   = Hardcaml_waveterm
 
 let error_s       = Or_error.error_s
 let force         = Lazy.force

@@ -194,7 +194,7 @@ module State_machine = struct
   end
 
   let create ?(encoding = Encoding.Binary)
-        (type a) (module State : State with type t = a) reg_spec ~e:enable =
+        (type a) (module State : State with type t = a) reg_spec ~enable =
     let module State = struct
       include State
       include Comparator.Make (State)

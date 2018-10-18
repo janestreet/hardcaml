@@ -160,7 +160,7 @@ module State_machine : sig
     :  ?encoding : Encoding.t  (** default is [Binary] *)
     -> (module State with type t = 'a)
     -> Reg_spec.t
-    -> e:Signal.t
+    -> enable:Signal.t
     -> 'a t
 end
 
