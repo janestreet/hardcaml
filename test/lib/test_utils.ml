@@ -1,4 +1,4 @@
-(* test various conversions in [Constant] *)
+(* test various conversions in [Constant], and some other misc operations *)
 open! Import
 
 let%expect_test "list_of_string" =
@@ -309,3 +309,17 @@ let%expect_test "abits_int64_of_bstr" =
      (255)
      (0 1)
      (-81985529216486896)) |}]
+
+let%expect_test "[Bits.address_bits_for]" =
+  require_does_raise [%here] (fun () -> Bits.address_bits_for (-1));
+  [%expect {| ("arg to [address_bits_for] must be >= 0" (got -1)) |}];
+  print_s [%message "" ~_:(List.init 10 ~f:Bits.address_bits_for : int list)];
+  [%expect {| (1 1 1 2 2 3 3 3 3 4) |}]
+;;
+
+let%expect_test "[Bits.num_bits_to_represent]" =
+  require_does_raise [%here] (fun () -> Bits.num_bits_to_represent (-1));
+  [%expect {| ("arg to [num_bits_to_represent] must be >= 0" (got -1)) |}];
+  print_s [%message "" ~_:(List.init 10 ~f:Bits.num_bits_to_represent : int list)];
+  [%expect {| (1 1 2 2 3 3 3 3 4 4) |}]
+;;

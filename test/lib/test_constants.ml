@@ -269,3 +269,39 @@ let%expect_test "simple constants" =
         (2 2'b00)
         (3 3'b000)
         (4 4'b0000)))) |}]
+
+let%expect_test "widths must be greater than zero" =
+  let open Signal in
+  require_does_raise [%here] (fun () -> constb "");
+  [%expect {|
+    ("Width of constant must be greater than zero"
+     (width 0)
+     (const "")) |}];
+  require_does_raise [%here] (fun () -> constibl []);
+  [%expect {| ("Width of constant must be greater than zero" (width 0)) |}];
+  require_does_raise [%here] (fun () -> consti ~width:0 0);
+  [%expect {|
+    ("Width of constant must be greater than zero"
+     (width 0)
+     (const 0)) |}];
+  require_does_raise [%here] (fun () -> consti32 ~width:0 0l);
+  [%expect {|
+    ("Width of constant must be greater than zero"
+     (width 0)
+     (const 0)) |}];
+  require_does_raise [%here] (fun () -> consti64 ~width:0 0L);
+  [%expect {|
+    ("Width of constant must be greater than zero"
+     (width 0)
+     (const 0)) |}];
+  require_does_raise [%here] (fun () -> consthu ~width:0 "0");
+  [%expect {|
+    ("Width of constant must be greater than zero"
+     (width 0)
+     (const 0)) |}];
+  require_does_raise [%here] (fun () -> consths ~width:0 "0");
+  [%expect {|
+    ("Width of constant must be greater than zero"
+     (width 0)
+     (const 0)) |}];
+;;
