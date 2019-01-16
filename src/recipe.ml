@@ -180,10 +180,10 @@ end
 module SVar = Same (struct
     type 'a t = 'a [@@deriving sexp_of]
     let t = "var", 0
-    let iter ~f a = f a
-    let iter2 ~f a b = f a b
-    let map ~f a = f a
-    let map2 ~f a b = f a b
+    let iter a ~f = f a
+    let iter2 a b ~f = f a b
+    let map a ~f = f a
+    let map2 a b ~f = f a b
     let to_list a = [ a ]
   end)
 
@@ -191,39 +191,39 @@ module SVar = Same (struct
 module SList = Same (struct
     type 'a t = 'a list [@@deriving sexp_of]
     let t = []
-    let iter ~f l = List.iter l ~f
-    let iter2 ~f l0 l1 = List.iter2_exn l0 l1 ~f
-    let map ~f l = List.map l ~f
-    let map2 ~f l0 l1 = List.map2_exn l0 l1 ~f
+    let iter l ~f = List.iter l ~f
+    let iter2 l0 l1 ~f = List.iter2_exn l0 l1 ~f
+    let map l ~f = List.map l ~f
+    let map2 l0 l1 ~f = List.map2_exn l0 l1 ~f
     let to_list a = a
   end)
 
 module SArray = Same (struct
     type 'a t = 'a array [@@deriving sexp_of]
     let t = [||]
-    let iter ~f t = Array.iter t ~f
-    let iter2 ~f t1 t2 = Array.iter2_exn t1 t2 ~f
-    let map ~f a = Array.map a ~f
-    let map2 ~f a b = Array.init (Array.length a) ~f:(fun i -> f a.(i) b.(i))
+    let iter t ~f = Array.iter t ~f
+    let iter2 t1 t2 ~f = Array.iter2_exn t1 t2 ~f
+    let map a ~f = Array.map a ~f
+    let map2 a b ~f = Array.init (Array.length a) ~f:(fun i -> f a.(i) b.(i))
     let to_list = Array.to_list
   end)
 
 module STuple2 = Same (struct
     type 'a t = 'a * 'a [@@deriving sexp_of]
     let t = ("a", 0), ("b", 0)
-    let iter ~f (a, b) = f a; f b
-    let iter2 ~f (a, b) (c, d) = f a c; f b d
-    let map ~f (a, b) = (f a, f b)
-    let map2 ~f (a, b) (c, d) = (f a c, f b d)
+    let iter (a, b) ~f = f a; f b
+    let iter2 (a, b) (c, d) ~f = f a c; f b d
+    let map (a, b) ~f = (f a, f b)
+    let map2 (a, b) (c, d) ~f = (f a c, f b d)
     let to_list (a, b) = [ a; b ]
   end)
 
 module STuple3 = Same (struct
     type 'a t = 'a * 'a * 'a [@@deriving sexp_of]
     let t = ("a", 0), ("b", 0), ("c", 0)
-    let iter ~f (a, b, c) = f a; f b; f c
-    let iter2 ~f:f' (a, b, c) (d, e, f) = f' a d; f' b e; f' c f
-    let map ~f (a, b, c) = (f a, f b, f c)
-    let map2 ~f:f' (a, b, c) (d, e, f) = (f' a d, f' b e, f' c f)
+    let iter (a, b, c) ~f = f a; f b; f c
+    let iter2 (a, b, c) (d, e, f) ~f:fn = fn a d; fn b e; fn c f
+    let map (a, b, c) ~f = (f a, f b, f c)
+    let map2 (a, b, c) (d, e, f) ~f:fn = (fn a d, fn b e, fn c f)
     let to_list (a, b, c) = [ a; b; c ]
   end)

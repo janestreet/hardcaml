@@ -1,8 +1,0 @@
-;; (library
-;;  ((name "HardcamlJS")
-;;   (libraries (hardcaml js_of_ocaml))
-;;   (flags (:standard -open Js_of_ocaml))
-;;   (preprocess (pps (js_of_ocaml-ppx)))))
-
-
-(jbuild_version 1)

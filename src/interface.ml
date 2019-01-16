@@ -12,6 +12,64 @@ module Create_fn (I : S) (O : S) = struct
         ~outputs:(O.t : (string * int) O.t)]
 end
 
+module Ast = struct
+  module rec Ast : sig
+    type t = Field.t list
+    [@@deriving sexp_of]
+  end = struct
+    type t = Field.t list
+    [@@deriving sexp_of]
+  end
+  and Field : sig
+    type t =
+      { name : string
+      ; type_ : Type.t
+      ; sequence : Sequence.t option
+      ; doc : string option }
+    [@@deriving sexp_of]
+  end = struct
+    type t =
+      { name : string
+      ; type_ : Type.t
+      ; sequence : Sequence.t option
+      ; doc : string option }
+    [@@deriving sexp_of]
+  end
+  and Type : sig
+    type t =
+      | Signal of { bits : int; rtlname : string }
+      | Module of { name : string; ast : Ast.t }
+    [@@deriving sexp_of]
+  end = struct
+    type t =
+      | Signal of { bits : int; rtlname : string }
+      | Module of { name : string; ast : Ast.t }
+    [@@deriving sexp_of]
+  end
+  and Sequence : sig
+    module Kind : sig
+      type t = Array | List
+      [@@deriving sexp_of]
+    end
+    type t =
+      { kind : Kind.t
+      ; length : int }
+    [@@deriving sexp_of]
+  end = struct
+    module Kind = struct
+      type t = Array | List
+      [@@deriving sexp_of]
+    end
+    type t =
+      { kind : Kind.t
+      ; length : int }
+    [@@deriving sexp_of]
+  end
+
+  type t = Ast.t
+  [@@deriving sexp_of]
+end
+
 module Make (X : Pre) : S with type 'a t := 'a X.t = struct
 
   include X
@@ -158,10 +216,15 @@ module Empty = struct
   include Make (struct
       type nonrec 'a t = 'a t [@@deriving sexp_of]
       let t = None
-      let iter ~f:_ _ = ()
-      let iter2 ~f:_ _ _ = ()
-      let map ~f:_ _ = None
-      let map2 ~f:_ _ _ = None
+      let iter _ ~f:_ = ()
+      let iter2 _ _ ~f:_ = ()
+      let map _ ~f:_ = None
+      let map2 _ _ ~f:_ = None
       let to_list _ = []
     end)
+end
+
+module type S_with_ast = sig
+  include S
+  val ast : Ast.t
 end

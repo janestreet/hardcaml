@@ -222,6 +222,8 @@ module type Signal = sig
       -> t
 
     val clock : t -> signal
+    val clear : t -> signal
+    val reset : t -> signal
   end
 
   val reg

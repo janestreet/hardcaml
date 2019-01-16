@@ -1,0 +1,2 @@
+(library (name hardcaml_bench) (libraries hardcaml)
+ (preprocess (pps ppx_jane)))

@@ -891,6 +891,8 @@ module Reg_spec_ = struct
     { spec with reg_clock = clock }
 
   let clock spec = spec.reg_clock
+  let clear spec = spec.reg_clear
+  let reset spec = spec.reg_reset
 end
 
 let reg spec ~enable d =

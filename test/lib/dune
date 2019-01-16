@@ -1,0 +1,3 @@
+(library (name hardcaml_test)
+ (libraries core expect_test_helpers hardcaml hardcaml_waveterm)
+ (preprocess (pps ppx_deriving_hardcaml ppx_jane)))
