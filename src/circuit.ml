@@ -213,7 +213,8 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
     with_create_options
       (fun create_options ?(port_checks=Port_checks.Relaxed) ?(add_phantom_inputs=true)
         ~name logic ->
-        let outputs = logic (I.map I.t ~f:(fun (n, b) -> Signal.input n b)) in
+        let inputs = I.map I.t ~f:(fun (n, b) -> Signal.input n b |> Signal.wireof) in
+        let outputs = logic inputs in
         let circuit =
           call_with_create_options
             create_exn create_options ~name
