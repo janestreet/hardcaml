@@ -351,8 +351,10 @@ module type Rtl_internal = sig
 
   val comment : string -> string
 
-  val header_and_ports : io:io -> name:string ->
-    i:(string*int) list -> o:(string*int) list -> unit
+  val header_and_ports
+    : io:io -> name:string
+    -> i:(string * int * Rtl_attribute.t list) list
+    -> o:(string * int * Rtl_attribute.t list) list -> unit
 
   val signal_decl : io -> string -> Signal.t -> unit
 
@@ -375,6 +377,8 @@ module type Rtl_internal = sig
   val assign : io -> string -> string -> unit
 
   val end_logic : io -> unit
+
+  val check_signal : Signal.t -> unit
 end
 
 
@@ -406,13 +410,39 @@ module VerilogCore : Rtl_internal = struct
     | _ ->
       decl (string_of_type t) n b
 
+  let print_attribute' attrs =
+    match attrs with
+    | [] -> ""
+    | attrs ->
+      let attribute_value_to_string (v : Rtl_attribute.Value.t) =
+        match v with
+        | String s -> "\"" ^ s ^ "\""
+        | Int i -> Int.to_string i
+        | Bool b -> if b then "true" else "false"
+      in
+      let attribute_to_string attr =
+        match Rtl_attribute.value attr with
+        | None -> Rtl_attribute.name attr
+        | Some value ->
+          sprintf "%s=%s"
+            (Rtl_attribute.name attr)
+            (attribute_value_to_string value)
+      in
+      let tag =
+        List.map attrs ~f:attribute_to_string
+        |> String.concat ~sep:","
+      in
+      t4 ^ sprintf "(* %s *)\n" tag
+
+  let print_attribute s = print_attribute' (attributes s)
+
   let header_and_ports ~io ~name ~i ~o =
-    let module_port _ last (s, _) =
+    let module_port _ last (s, _, _tag) =
       if last
       then t4 ^ s ^ "\n"
       else t4 ^ s ^ "," ^ "\n"
     in
-    let decl_port t _ _ (s, b) = t4 ^ decl t s b ^ ";\n" in
+    let decl_port t _ _ (s, b, tag) =  print_attribute' tag ^ t4 ^ decl t s b ^ ";\n" in
     io ("module " ^ name ^ " (\n");
     write_strings io module_port (i @ o);
     io (");\n\n");
@@ -421,39 +451,42 @@ module VerilogCore : Rtl_internal = struct
     io ("\n")
 
   let signal_decl io name s =
+    let tag = print_attribute s in
     match s with
     | Empty -> raise_unexpected ~while_:"declaring signals" ~got_signal:s
     | Op (_, Signal_mux) ->
       if List.length (deps s) = 3
-      then io (t4 ^ decl Wire name (width s) ^ ";\n")
-      else io (t4 ^ decl Reg name (width s) ^ ";\n")
+      then io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
+      else io (tag ^ t4 ^ decl Reg name (width s) ^ ";\n")
     | Op _ | Wire _
     | Select _ | Inst _ ->
-      io (t4 ^ decl Wire name (width s) ^ ";\n")
+      io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
     | Reg _ ->
-      io (t4 ^ decl Reg name (width s) ^ ";\n")
+      io (tag ^ t4 ^ decl Reg name (width s) ^ ";\n")
     | Const (_, v) ->
-      io (t4 ^ decl (Constant (Bits.to_bstr v)) name (width s) ^ ";\n")
+      io (tag ^ t4 ^ decl (Constant (Bits.to_bstr v)) name (width s) ^ ";\n")
     | Mem _ ->
-      io (t4 ^ decl Wire name (width s) ^ ";\n")
+      io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
     | Mem_read_port _ ->
-      io (t4 ^ decl Wire name (width s) ^ ";\n")
+      io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
     | Multiport_mem _ -> ()
 
   let alias_decl io name s =
-    io (t4 ^ decl Wire name (width s) ^ ";\n")
+    let tag = print_attribute s in
+    io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
 
   let mem_decl io name mem s =
+    let tag = print_attribute s in
     let open Names in
     match s with
     | Mem (_, _, _, sp) ->
       let b = Int.to_string (width s - 1) in
       let s = Int.to_string (sp.mem_size - 1) in
-      io (t4 ^ "reg [" ^ b ^ ":0] " ^ mem.arr ^ "[0:" ^ s ^ "];\n")
+      io (tag ^ t4 ^ "reg [" ^ b ^ ":0] " ^ mem.arr ^ "[0:" ^ s ^ "];\n")
     | Multiport_mem (_, mem_size, _) ->
       let b = Int.to_string (width s - 1) in
       let size = Int.to_string (mem_size - 1) in
-      io (t4 ^ "reg [" ^ b ^ ":0] " ^ name s ^ "[0:" ^ size ^ "];\n")
+      io (tag ^ t4 ^ "reg [" ^ b ^ ":0] " ^ name s ^ "[0:" ^ size ^ "];\n")
     | _ -> raise_expected ~while_:"declaring memories" ~expected:"memory" ~got_signal:s
 
   let start_logic _ = ()
@@ -653,6 +686,8 @@ module VerilogCore : Rtl_internal = struct
     io (t4 ^ "assign " ^ t ^ " = " ^ f ^ ";\n")
 
   let end_logic io = io ("endmodule\n")
+
+  let check_signal (_ : Signal.t) = ()
 end
 
 module VhdlCore : Rtl_internal = struct
@@ -697,8 +732,10 @@ module VhdlCore : Rtl_internal = struct
     | Reg -> "signal " ^ n ^ " : " ^ decl_slv b
 
   let header_and_ports ~io ~name ~i ~o =
-    let entity_in_port _ _ (s, n) = t8 ^ decl Input s n ^ ";\n"  in
-    let entity_out_port _ last (s, n) =
+    let entity_in_port _ _ (s, n, _attrs) =
+      t8 ^ decl Input s n ^ ";\n"
+    in
+    let entity_out_port _ last (s, n, _attrs) =
       t8 ^ decl Output s n ^ (if last then "\n" else ";\n")
     in
     io ("library ieee;\n");
@@ -716,7 +753,7 @@ module VhdlCore : Rtl_internal = struct
     io ("\n")
 
   let signal_decl io name s =
-    match s with
+    begin match s with
     | Empty -> raise_unexpected ~while_:"declaring signals" ~got_signal:s
     | Op _ | Wire _
     | Select _ | Inst _ ->
@@ -728,13 +765,14 @@ module VhdlCore : Rtl_internal = struct
     | Mem _ | Mem_read_port _ ->
       io (t4 ^ decl Reg name (width s) ^ ";\n")
     | Multiport_mem _ -> ()
+    end
 
   let alias_decl io name s =
     io (t4 ^ decl Wire name (width s) ^ ";\n")
 
   let mem_decl io name mem s =
     let open Names in
-    match s with
+    begin match s with
     | Mem (_, _, _, sp) ->
       let b = Int.to_string (width s - 1) in
       let sz = Int.to_string (sp.mem_size - 1) in
@@ -755,6 +793,7 @@ module VhdlCore : Rtl_internal = struct
        else io ("std_logic_vector(" ^ b ^ " downto 0);\n"));
       io (t4 ^ "signal " ^ name s ^ " : " ^ mem.typ ^ ";\n")
     | _ -> raise_expected ~while_:"declaring memories" ~expected:"memory" ~got_signal:s
+    end
 
   let start_logic io = io ("begin\n\n")
 
@@ -951,6 +990,11 @@ module VhdlCore : Rtl_internal = struct
 
   let end_logic io =
     io ("end architecture;\n")
+
+  let check_signal t =
+    match Signal.attributes t with
+    | [] -> ()
+    | _  -> raise_s [%message "Signal attributes are not supported in VHDL yet"]
 end
 
 (* RTL writer *)
@@ -983,11 +1027,15 @@ module Make (R : Rtl_internal) = struct
         in
         Array.to_list n
     in
-    let primary s = primary_name s, width s in
+    let primary s = primary_name s, width s, attributes s in
+    let phantom_inputs =
+      List.map ~f:(fun (a, b) -> (a, b, []))(Circuit.phantom_inputs circ)
+    in
+    List.iter internal_signals ~f:(fun s -> R.check_signal s);
     R.header_and_ports
       ~io
       ~name:(Circuit.name circ)
-      ~i:(List.map inputs  ~f:primary @ Circuit.phantom_inputs circ)
+      ~i:(List.map inputs  ~f:primary @ phantom_inputs)
       ~o:(List.map outputs ~f:primary);
     (* write internal declarations *)
     io (t4 ^ R.comment "signal declarations" ^ "\n");

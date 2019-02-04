@@ -55,11 +55,13 @@ module Uid_set = struct
 end
 
 type signal_id =
-  { s_id            : Uid.t
-  ; mutable s_names : string list
-  ; s_width         : int
-  ; mutable s_deps  : t list
-  ; caller_id       : Caller_id.t option }
+  { s_id                 : Uid.t
+  ; mutable s_names      : string list
+  ; s_width              : int
+  ; mutable s_attributes : Rtl_attribute.t list
+  ; mutable s_deps       : t list
+  ; caller_id            : Caller_id.t option
+  }
 
 and t =
   | Empty
@@ -120,9 +122,9 @@ and instantiation =
 
 let is_empty = function Empty -> true | _ -> false
 
-let uid s =
+let signal_id s =
   match s with
-  | Empty -> 0L
+  | Empty -> raise_s [%message "Cannot get [signal_id] from empty signal"]
   | Const (s, _)
   | Select (s, _, _)
   | Reg (s, _)
@@ -131,7 +133,12 @@ let uid s =
   | Mem_read_port (s, _, _)
   | Wire (s, _)
   | Inst (s, _, _)
-  | Op (s, _) -> s.s_id
+  | Op (s, _) -> s
+
+let uid s =
+  match s with
+  | Empty -> 0L
+  | _ -> (signal_id s).s_id
 
 let deps s =
   match s with
@@ -145,6 +152,23 @@ let deps s =
   | Op (s, _) -> s.s_deps
   | Wire (_, s) -> [ !s ]
 
+let add_attribute signal attribute =
+  match signal with
+  | Empty ->
+    raise_s [%message
+      "attempt to add attribute to an empty signal" ~to_:(attribute : Rtl_attribute.t)]
+  | Const (s, _)
+  | Op (s, _)
+  | Reg (s, _)
+  | Select (s, _, _)
+  | Mem (s, _, _, _)
+  | Multiport_mem (s, _, _)
+  | Mem_read_port (s, _, _)
+  | Inst (s, _, _)
+  | Wire (s, _) ->
+    s.s_attributes <- attribute :: s.s_attributes;
+    signal
+
 let names s =
   match s with
   | Empty -> raise_s [%message "cannot get [names] from the empty signal"]
@@ -157,6 +181,19 @@ let names s =
   | Wire (s, _)
   | Inst (s, _, _)
   | Op (s, _) -> s.s_names
+
+let attributes s =
+  match s with
+  | Empty -> raise_s [%message "cannot get [tag] from the empty signal"]
+  | Const (s, _)
+  | Select (s, _, _)
+  | Reg (s, _)
+  | Mem (s, _, _, _)
+  | Multiport_mem (s, _, _)
+  | Mem_read_port (s, _, _)
+  | Wire (s, _)
+  | Inst (s, _, _)
+  | Op (s, _) -> s.s_attributes
 
 let has_name t = not (List.is_empty (names t))
 
@@ -210,6 +247,7 @@ let new_id, reset_id =
 let make_id w deps =
   { s_id    = new_id ()
   ; s_names = []
+  ; s_attributes = []
   ; s_width = w
   ; s_deps  = deps
   ; caller_id = Caller_id.get () ~skip:[] }

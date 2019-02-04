@@ -112,6 +112,7 @@ let get_internal_ports circuit ~is_internal_port =
     Int64.incr dangler_uid;
     Wire ({ s_id = !dangler_uid
           ; s_names = []
+          ; s_attributes = []
           ; s_width
           ; s_deps = []
           ; caller_id = None },

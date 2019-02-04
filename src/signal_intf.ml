@@ -37,14 +37,15 @@ module type Signal = sig
 
   (** internal structure for tracking signals *)
   type signal_id =
-    { s_id            : Uid.t
-    ; mutable s_names : string list
-    ; s_width         : int
+    { s_id                  : Uid.t
+    ; mutable s_names       : string list
+    ; s_width               : int
+    ; mutable s_attributes  : Rtl_attribute.t list
     ; (** Making this mutable turns hardcaml from pretty functional to pretty imperative.
           however, if used carefully and only with the library, we can provide a
           potentially easier way of changing the graph structure in some cases *)
-      mutable s_deps  : t list
-    ; caller_id       : Caller_id.t option }
+      mutable s_deps        : t list
+    ; caller_id             : Caller_id.t option }
 
   (** main signal data type *)
   and t =
@@ -107,6 +108,9 @@ module type Signal = sig
 
   type signal = t
 
+  (** returns the (private) signal_id.  For internal use only. *)
+  val signal_id : t -> signal_id
+
   (** returns the unique id of the signal *)
   val uid : t -> Uid.t
 
@@ -115,6 +119,12 @@ module type Signal = sig
 
   (** returns the list of names assigned to the signal *)
   val names : t -> string list
+
+  (** Add an attribute to node. This is currently supported only in Verilog. *)
+  val add_attribute : t -> Rtl_attribute.t -> t
+
+  (** Returns attributes associated to the signal *)
+  val attributes : t -> Rtl_attribute.t list
 
   val has_name : t -> bool
 

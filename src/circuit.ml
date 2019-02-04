@@ -209,16 +209,28 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
     check_io_port_sets_match circuit;
     check_widths_match circuit
 
+  let move_port_attributes from_ to_ =
+    (* Wrap exceptions in case we have an empty signal. *)
+    try
+      let from_ = Signal.signal_id from_ in
+      let to_ = Signal.signal_id to_ in
+      to_.s_attributes <- from_.s_attributes;
+      from_.s_attributes <- [];
+    with _ -> ()
+
   let create_exn =
     with_create_options
       (fun create_options ?(port_checks=Port_checks.Relaxed) ?(add_phantom_inputs=true)
         ~name logic ->
-        let inputs = I.map I.t ~f:(fun (n, b) -> Signal.input n b |> Signal.wireof) in
+        let circuit_inputs = I.map I.t ~f:(fun (n, b) -> Signal.input n b) in
+        let inputs = I.map circuit_inputs ~f:Signal.wireof in
         let outputs = logic inputs in
+        let circuit_outputs = O.map2 O.t outputs ~f:(fun (n, _) s -> Signal.output n s) in
+        I.iter2 inputs circuit_inputs ~f:move_port_attributes;
+        O.iter2 outputs circuit_outputs ~f:move_port_attributes;
         let circuit =
           call_with_create_options
-            create_exn create_options ~name
-            (O.to_list (O.map2 O.t outputs ~f:(fun (n, _) s -> Signal.output n s)))
+            create_exn create_options ~name (O.to_list circuit_outputs)
         in
         let circuit =
           if add_phantom_inputs
