@@ -1,4 +1,5 @@
 opam-version: "2.0"
+version: "v0.12.0"
 maintainer: "opensource@janestreet.com"
 authors: ["Jane Street Group, LLC <opensource@janestreet.com>"]
 homepage: "https://github.com/janestreet/hardcaml"
@@ -10,11 +11,11 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "4.07.0"}
-  "base"
-  "ppx_jane"
-  "stdio"
-  "topological_sort"
+  "ocaml"            {>= "4.07.0"}
+  "base"             {>= "v0.12" & < "v0.13"}
+  "ppx_jane"         {>= "v0.12" & < "v0.13"}
+  "stdio"            {>= "v0.12" & < "v0.13"}
+  "topological_sort" {>= "v0.12" & < "v0.13"}
   "dune"             {build & >= "1.5.1"}
   "zarith"           {>= "1.5"}
 ]
