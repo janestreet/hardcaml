@@ -64,3 +64,57 @@ let%expect_test "parallel prefix adder" =
     (19 + 2 + 1 = 22)
     (28 + 12 + 0 = 40) |}];
 ;;
+
+let%expect_test "utilization" =
+  let utilization config width =
+    [ Signal.output "v" (create ~config (module Signal)
+                           ~input1:(Signal.input "a" width)
+                           ~input2:(Signal.input "b" width)
+                           ~carry_in:Signal.gnd) ]
+    |> Circuit.create_exn ~name:"mul"
+    |> Circuit_utilization.create
+  in
+  print_s[%message (utilization Serial 16 : Circuit_utilization.t)];
+  [%expect {|
+    ("utilization Serial 16" (
+      (name mul)
+      (and_gates     ((count 62) (total_bits 62)))
+      (or_gates      ((count 31) (total_bits 31)))
+      (xor_gates     ((count 33) (total_bits 33)))
+      (constants     ((count 1)  (total_bits 1)))
+      (wires         ((count 3)  (total_bits 49)))
+      (concatenation ((count 1)  (total_bits 17)))
+      (part_selects  ((count 32) (total_bits 32))))) |}];
+  print_s[%message (utilization Sklansky 16 : Circuit_utilization.t)];
+  [%expect {|
+    ("utilization Sklansky 16" (
+      (name mul)
+      (and_gates     ((count 96) (total_bits 96)))
+      (or_gates      ((count 48) (total_bits 48)))
+      (xor_gates     ((count 33) (total_bits 33)))
+      (constants     ((count 1)  (total_bits 1)))
+      (wires         ((count 3)  (total_bits 49)))
+      (concatenation ((count 1)  (total_bits 17)))
+      (part_selects  ((count 32) (total_bits 32))))) |}];
+  print_s[%message (utilization Brent_kung 16 : Circuit_utilization.t)];
+  [%expect {|
+    ("utilization Brent_kung 16" (
+      (name mul)
+      (and_gates     ((count 84) (total_bits 84)))
+      (or_gates      ((count 42) (total_bits 42)))
+      (xor_gates     ((count 33) (total_bits 33)))
+      (constants     ((count 1)  (total_bits 1)))
+      (wires         ((count 3)  (total_bits 49)))
+      (concatenation ((count 1)  (total_bits 17)))
+      (part_selects  ((count 32) (total_bits 32))))) |}];
+  print_s[%message (utilization Kogge_stone 16 : Circuit_utilization.t)];
+  [%expect {|
+    ("utilization Kogge_stone 16" (
+      (name mul)
+      (and_gates     ((count 130) (total_bits 130)))
+      (or_gates      ((count 65)  (total_bits 65)))
+      (xor_gates     ((count 33)  (total_bits 33)))
+      (constants     ((count 1)   (total_bits 1)))
+      (wires         ((count 3)   (total_bits 49)))
+      (concatenation ((count 1)   (total_bits 17)))
+      (part_selects  ((count 32)  (total_bits 32))))) |}]

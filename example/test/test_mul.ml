@@ -117,3 +117,43 @@ let%expect_test "max" =
      (y       3)
      (wallace 110001)
      (dadda   110001)) |}]
+
+let%expect_test "utilization" =
+  let utilization config width_a width_b =
+    [ Signal.output "v" (Mul.create ~config (module Signal)
+                           (Signal.input "a" width_a)
+                           (Signal.input "b" width_b)) ]
+    |> Circuit.create_exn ~name:"mul"
+    |> Circuit_utilization.create
+  in
+  print_s[%message (utilization Wallace 16 24 : Circuit_utilization.t)];
+  [%expect {|
+    ("utilization Wallace 16 24" (
+      (name mul)
+      (adders (
+        (count             1)
+        (total_bits        40)
+        (max_instance_bits 40)))
+      (and_gates     ((count 1403) (total_bits 1403)))
+      (or_gates      ((count 616)  (total_bits 616)))
+      (xor_gates     ((count 711)  (total_bits 711)))
+      (constants     ((count 3)    (total_bits 14)))
+      (wires         ((count 3)    (total_bits 80)))
+      (concatenation ((count 2)    (total_bits 90)))
+      (part_selects  ((count 770)  (total_bits 848))))) |}];
+  print_s[%message (utilization Dadda 16 24 : Circuit_utilization.t)];
+  [%expect {|
+    ("utilization Dadda 16 24" (
+      (name mul)
+      (adders (
+        (count             1)
+        (total_bits        40)
+        (max_instance_bits 40)))
+      (and_gates     ((count 1346) (total_bits 1346)))
+      (or_gates      ((count 628)  (total_bits 628)))
+      (xor_gates     ((count 648)  (total_bits 648)))
+      (constants     ((count 5)    (total_bits 16)))
+      (wires         ((count 3)    (total_bits 80)))
+      (concatenation ((count 2)    (total_bits 90)))
+      (part_selects  ((count 770)  (total_bits 848))))) |}]
+;;

@@ -3,6 +3,7 @@ module Bits                       = Bits
 module Caller_id                  = Caller_id
 module Circuit                    = Circuit
 module Circuit_database           = Circuit_database
+module Circuit_utilization        = Circuit_utilization
 module Comb                       = Comb
 module Combinational_op           = Combinational_op
 module Combinational_ops_database = Combinational_ops_database

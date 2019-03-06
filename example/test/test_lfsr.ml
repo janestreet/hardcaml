@@ -158,3 +158,27 @@ let%expect_test "all supported lengths work" =
       ignore (create (module Bits) (Bits.zero length) : Bits.t))
   done;
   [%expect {||}]
+
+let%expect_test "utilization" =
+  let utilization width =
+    [ Signal.output "q" (create (module Signal) (Signal.input "d" width)) ]
+    |> Circuit.create_exn ~name:"lfsr"
+    |> Circuit_utilization.create
+  in
+  print_s [%message (utilization 16 : Circuit_utilization.t)];
+  [%expect {|
+    ("utilization 16" (
+      (name lfsr)
+      (xor_gates     ((count 3) (total_bits 3)))
+      (wires         ((count 2) (total_bits 32)))
+      (concatenation ((count 2) (total_bits 31)))
+      (part_selects  ((count 7) (total_bits 16))))) |}];
+  print_s [%message (utilization 111 : Circuit_utilization.t)];
+  [%expect {|
+    ("utilization 111" (
+      (name lfsr)
+      (xor_gates     ((count 1) (total_bits 1)))
+      (wires         ((count 2) (total_bits 222)))
+      (concatenation ((count 2) (total_bits 221)))
+      (part_selects  ((count 4) (total_bits 111))))) |}]
+;;

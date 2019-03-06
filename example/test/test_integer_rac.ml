@@ -2,6 +2,7 @@ open! Import
 
 module Make (Config : Rac.Config) = struct
   module Rac  = Rac.Make(Config)
+  module Circuit = Circuit.With_interface(Rac.I)(Rac.O)
   module Step = Hardcaml_step_testbench.Make(Rac.I)(Rac.O)
   module Sim  = Cyclesim.With_interface(Rac.I)(Rac.O)
 

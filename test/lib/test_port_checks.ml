@@ -29,7 +29,8 @@ let%expect_test "too many inputs" =
       (expected_ports (a b))
       (actual_ports (a b c))
       (expected_but_not_in_circuit ())
-      (in_circuit_but_not_expected (c))) |}]
+      (in_circuit_but_not_expected (c))
+      (circuit ((name foo) (input_ports (c b a)) (output_ports (x))))) |}]
 ;;
 
 let%expect_test "too few inputs" =
@@ -47,7 +48,11 @@ let%expect_test "too few inputs" =
       (expected_ports (a b))
       (actual_ports                (a))
       (expected_but_not_in_circuit (b))
-      (in_circuit_but_not_expected ())) |}]
+      (in_circuit_but_not_expected ())
+      (circuit (
+        (name foo)
+        (input_ports  (a))
+        (output_ports (x))))) |}]
 ;;
 
 (* Check output port widths.
@@ -69,5 +74,6 @@ let%expect_test "output width does not match" =
   [%expect {|
     ("Output port widths do not match"
       (expected ((x 1)))
-      (got      ((x 2)))) |}]
+      (got      ((x 2)))
+      (circuit ((name foo) (input_ports (b a)) (output_ports (x))))) |}]
 ;;

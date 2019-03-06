@@ -97,3 +97,40 @@ let%expect_test "signed" =
      (result       -1417)
      (ref_result   -0.68304014856006923)
      (float_result -0.69189453125)) |}];
+;;
+
+let%expect_test "utilization" =
+  let utilization =
+    Circuit.create_exn ~name:"rac"
+      (Rac.create ~coefs:(Array.init 4 ~f:(Fn.const (Bits.one 8))))
+    |> Circuit_utilization.create in
+  print_s [%message (utilization : Circuit_utilization.t)];
+  [%expect {|
+    (utilization (
+      (name rac)
+      (adders (
+        (count             1)
+        (total_bits        20)
+        (max_instance_bits 20)))
+      (subtractors (
+        (count             1)
+        (total_bits        20)
+        (max_instance_bits 20)))
+      (multiplexers (
+        (count      7)
+        (total_bits 208)
+        (multiplexers (
+          ((number_of_data_elements 2)
+           (max_instance_bits       40)
+           (total_bits              144)
+           (count                   6))
+          ((number_of_data_elements 16)
+           (max_instance_bits       16)
+           (total_bits              64)
+           (count                   1))))))
+      (registers     ((count 5)  (total_bits 52)))
+      (constants     ((count 32) (total_bits 198)))
+      (wires         ((count 24) (total_bits 146)))
+      (concatenation ((count 12) (total_bits 126)))
+      (part_selects  ((count 12) (total_bits 67))))) |}];
+;;

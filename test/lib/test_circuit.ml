@@ -302,5 +302,9 @@ let%expect_test "phantom inputs" =
       (phantom_inputs (
         (b 1)
         (c 1)))
-      (outputs ((b 1)))) |}]
+      (outputs ((b 1)))
+      (circuit (
+        (name test)
+        (input_ports  (a))
+        (output_ports (b))))) |}]
 ;;

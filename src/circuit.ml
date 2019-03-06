@@ -33,6 +33,15 @@ type t =
   ; fan_in        : Signal.Uid_set.t Signal.Uid_map.t Lazy.t }
 [@@deriving fields, sexp_of]
 
+module Summary = struct
+  let sexp_of_signal signal = Signal.sexp_of_signal_recursive ~depth:0 signal
+  let sexp_of_t t =
+    [%message ""
+                ~name:(t.name : string)
+                ~input_ports:(t.inputs : signal list)
+                ~output_ports:(t.outputs : signal list)]
+end
+
 type 'a with_create_options
   =  ?detect_combinational_loops : bool
   -> ?normalize_uids : bool
@@ -96,7 +105,8 @@ let set_phantom_inputs circuit phantom_inputs =
       let name =
         match Signal.names port with
         | name :: [] -> name
-        | _ -> raise_s [%message "Ports should have one name" (port : Signal.t)]
+        | _ -> raise_s [%message "Ports should have one name"
+                                   (port : Signal.t) (circuit : Summary.t)]
       in
       name, Signal.width port
   end in
@@ -107,7 +117,8 @@ let set_phantom_inputs circuit phantom_inputs =
   if not (Set.is_empty (Set.inter phantom_inputs outputs))
   then raise_s [%message "Phantom input is also a circuit output"
                            (phantom_inputs : Set.M(Port).t)
-                           (outputs : Set.M(Port).t)];
+                           (outputs : Set.M(Port).t)
+                           (circuit : Summary.t)];
   { circuit with phantom_inputs = phantom_inputs |> Set.to_list }
 
 let with_name t ~name = { t with name }
@@ -179,7 +190,8 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
                                (expected_ports : Set.M(String).t)
                                (actual_ports : Set.M(String).t)
                                (expected_but_not_in_circuit : Set.M(String).t)
-                               (in_circuit_but_not_expected : Set.M(String).t)]
+                               (in_circuit_but_not_expected : Set.M(String).t)
+                               (circuit : Summary.t)]
     in
     check "input" actual_input_ports expected_input_ports;
     check "output" actual_output_ports expected_output_ports
@@ -192,18 +204,20 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
         raise_s
           [%message
             "[Circuit.With_interface.check_widths_match] Unexpected error - invalid port name(s)"
-              (circuit : t)]
+              (circuit : Summary.t)]
     in
     let inputs = inputs circuit |> List.map ~f:port |> I.of_alist in
     let outputs = outputs circuit |> List.map ~f:port |> O.of_alist in
     if not (I.equal Int.equal inputs I.port_widths)
     then raise_s [%message "Input port widths do not match"
                              ~expected:(I.port_widths : int I.t)
-                             ~got:(inputs : int I.t)];
+                             ~got:(inputs : int I.t)
+                             (circuit : Summary.t)];
     if not (O.equal Int.equal outputs O.port_widths)
     then raise_s [%message "Output port widths do not match"
                              ~expected:(O.port_widths : int O.t)
-                             ~got:(outputs : int O.t)]
+                             ~got:(outputs : int O.t)
+                             (circuit : Summary.t)]
 
   let check_io_port_sets_and_widths_match circuit =
     check_io_port_sets_match circuit;
