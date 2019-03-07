@@ -84,6 +84,9 @@ module type Comb = sig
   (** Actual bit widths of each field. *)
   val widths : t -> int interface
 
+  (** Raise if the widths of [t] do not match those specified in the interface. *)
+  val assert_widths : t -> unit
+
   (** Each field is set to the constant integer value provided. *)
   val const : int -> t
 
@@ -209,6 +212,14 @@ module type S = sig
 
     (** [outputs t] is [wires () ~from:t ~named:true]. *)
     val outputs : t -> t
+
+    (** Apply name to field of the interface. Add [prefix] and [suffix] if specified. *)
+    val apply_names
+      :  ?prefix : string (** Default is [""] *)
+      -> ?suffix : string (** Default is [""] *)
+      -> ?naming_op : (comb -> string -> comb) (** Default is [Signal.(--)] *)
+      -> t
+      -> t
   end
 end
 

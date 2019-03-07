@@ -159,6 +159,14 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
 
     let widths t = map t ~f:Comb.width
 
+    let assert_widths x =
+      iter2 (widths x) t ~f:(fun actual_width (port_name, expected_width) ->
+        if actual_width <> expected_width
+        then raise_s [%message "Port width mismatch in interface"
+                                 (port_name : string)
+                                 (expected_width : int)
+                                 (actual_width : int)])
+
     let const i = map port_widths ~f:(fun b -> Comb.consti ~width:b i)
 
     let consts i = map2 port_widths i ~f:(fun width -> Comb.consti ~width)
@@ -208,6 +216,9 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     let inputs () = wires () ~named:true
 
     let outputs t = wires () ~from:t ~named:true
+
+    let apply_names ?(prefix = "") ?(suffix = "") ?(naming_op = Signal.(--)) t =
+      map2 t port_names ~f:(fun s n -> naming_op s (prefix ^ n ^ suffix))
   end
 end
 

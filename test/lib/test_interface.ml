@@ -265,3 +265,56 @@ let%expect_test "concat" =
   require_does_raise [%here] (fun () -> I.Of_bits.concat []);
   [%expect {| "[concat] got empty list" |}];
 ;;
+
+let%expect_test "apply_names" =
+  print_s [%sexp (I.Of_signal.const 0 |> I.Of_signal.apply_names : Signal.t I.t)];
+  [%expect {|
+    ((x (
+       const
+       (names (x))
+       (width 4)
+       (value 0b0000)))
+     (y (
+       const
+       (names (y))
+       (width 8)
+       (value 0b00000000)))) |}];
+  print_s [%sexp (I.Of_signal.const 0 |> I.Of_signal.apply_names ~prefix:"_" : Signal.t I.t)];
+  [%expect {|
+    ((x (
+       const
+       (names (_x))
+       (width 4)
+       (value 0b0000)))
+     (y (
+       const
+       (names (_y))
+       (width 8)
+       (value 0b00000000)))) |}];
+  print_s [%sexp (I.Of_signal.const 0 |> I.Of_signal.apply_names ~suffix:"_" : Signal.t I.t)];
+  [%expect {|
+    ((x (
+       const
+       (names (x_))
+       (width 4)
+       (value 0b0000)))
+     (y (
+       const
+       (names (y_))
+       (width 8)
+       (value 0b00000000)))) |}]
+;;
+
+let%expect_test "assert_widths" =
+  require_does_not_raise [%here] (fun () -> I.Of_signal.const 0
+                                            |> I.Of_signal.assert_widths);
+  [%expect {||}];
+  require_does_raise [%here] (fun () -> I.Of_signal.const 0
+                                        |> I.map ~f:Signal.ue
+                                        |> I.Of_signal.assert_widths);
+  [%expect {|
+    ("Port width mismatch in interface"
+      (port_name      x)
+      (expected_width 4)
+      (actual_width   5)) |}]
+;;
