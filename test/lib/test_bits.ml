@@ -179,7 +179,7 @@ module Bits_module = struct
   type bits_module =
     { name       : string
     ; short_name : string
-    ; module_    : (module Comb.S) sexp_opaque }
+    ; module_    : ((module Comb.S) [@sexp.opaque]) }
   [@@deriving sexp_of]
 
   let v_IntbitsList =

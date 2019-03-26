@@ -1,11 +1,11 @@
 open! Import
 
-type create_fn = (Bits.t list -> Bits.t list) sexp_opaque [@@deriving sexp_of]
+type create_fn = ((Bits.t list -> Bits.t list) [@sexp.opaque]) [@@deriving sexp_of]
 
 type create_fn_mutable =
-  (Bits.Mutable.t list
-   -> Bits.Mutable.t list
-   -> unit) sexp_opaque
+  ((Bits.Mutable.t list
+    -> Bits.Mutable.t list
+    -> unit) [@sexp.opaque])
 [@@deriving sexp_of]
 
 module Native_or_derived = struct

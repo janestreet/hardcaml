@@ -490,11 +490,11 @@ module Base (C : Config) = struct
     let create ?id ?name ?width ?value ?range constructor =
       [%message
         constructor
-          (id    : int         sexp_option)
-          (name  : string      sexp_option)
-          (width : int         sexp_option)
-          (value : string      sexp_option)
-          (range : (int * int) sexp_option)]
+          (id    : int         option [@sexp.option])
+          (name  : string      option [@sexp.option])
+          (width : int         option [@sexp.option])
+          (value : string      option [@sexp.option])
+          (range : (int * int) option [@sexp.option])]
     in
     match t with
     | Module_input (id, name, width)       -> create "Module_input" ~id ~name ~width

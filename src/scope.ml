@@ -20,7 +20,7 @@ end
 type t =
   { path : Path.t
   ; name_path : Path.t
-  ; circuit_database : Circuit_database.t sexp_opaque
+  ; circuit_database : (Circuit_database.t [@sexp.opaque])
   ; flatten_design : bool
   ; naming_scheme : Naming_scheme.t
   } [@@deriving fields, sexp_of]

@@ -165,49 +165,49 @@ end
 and T : sig
   type t =
     { name : string
-    ; adders : Total_and_max_bits.t sexp_option
-    ; subtractors : Total_and_max_bits.t sexp_option
-    ; unsigned_multipliers : Total_and_max_bits.t sexp_option
-    ; signed_multipliers : Total_and_max_bits.t sexp_option
-    ; and_gates : Total_bits.t sexp_option
-    ; or_gates : Total_bits.t sexp_option
-    ; xor_gates : Total_bits.t sexp_option
-    ; not_gates : Total_bits.t sexp_option
-    ; equals : Total_and_max_bits.t sexp_option
-    ; comparators : Total_and_max_bits.t sexp_option
-    ; multiplexers : Multiplexers.t sexp_option
-    ; registers : Total_bits.t sexp_option
-    ; memories : Memories.t sexp_option
+    ; adders : Total_and_max_bits.t option
+    ; subtractors : Total_and_max_bits.t option
+    ; unsigned_multipliers : Total_and_max_bits.t option
+    ; signed_multipliers : Total_and_max_bits.t option
+    ; and_gates : Total_bits.t option
+    ; or_gates : Total_bits.t option
+    ; xor_gates : Total_bits.t option
+    ; not_gates : Total_bits.t option
+    ; equals : Total_and_max_bits.t option
+    ; comparators : Total_and_max_bits.t option
+    ; multiplexers : Multiplexers.t option
+    ; registers : Total_bits.t option
+    ; memories : Memories.t option
     (* the following do not generate gates. *)
-    ; constants : Total_bits.t sexp_option
-    ; wires : Total_bits.t sexp_option
-    ; concatenation : Total_bits.t sexp_option
-    ; part_selects : Total_bits.t sexp_option
+    ; constants : Total_bits.t option
+    ; wires : Total_bits.t option
+    ; concatenation : Total_bits.t option
+    ; part_selects : Total_bits.t option
     (* (recursive) sub modules. *)
-    ; instantiations : Instantiations.t sexp_option
+    ; instantiations : Instantiations.t option
     }
   [@@deriving sexp_of]
 end = struct
   type t =
     { name : string
-    ; adders : Total_and_max_bits.t sexp_option
-    ; subtractors : Total_and_max_bits.t sexp_option
-    ; unsigned_multipliers : Total_and_max_bits.t sexp_option
-    ; signed_multipliers : Total_and_max_bits.t sexp_option
-    ; and_gates : Total_bits.t sexp_option
-    ; or_gates : Total_bits.t sexp_option
-    ; xor_gates : Total_bits.t sexp_option
-    ; not_gates : Total_bits.t sexp_option
-    ; equals : Total_and_max_bits.t sexp_option
-    ; comparators : Total_and_max_bits.t sexp_option
-    ; multiplexers : Multiplexers.t sexp_option
-    ; registers : Total_bits.t sexp_option
-    ; memories : Memories.t sexp_option
-    ; constants : Total_bits.t sexp_option
-    ; wires : Total_bits.t sexp_option
-    ; concatenation : Total_bits.t sexp_option
-    ; part_selects : Total_bits.t sexp_option
-    ; instantiations : Instantiations.t sexp_option
+    ; adders : Total_and_max_bits.t option [@sexp.option]
+    ; subtractors : Total_and_max_bits.t option [@sexp.option]
+    ; unsigned_multipliers : Total_and_max_bits.t option [@sexp.option]
+    ; signed_multipliers : Total_and_max_bits.t option [@sexp.option]
+    ; and_gates : Total_bits.t option [@sexp.option]
+    ; or_gates : Total_bits.t option [@sexp.option]
+    ; xor_gates : Total_bits.t option [@sexp.option]
+    ; not_gates : Total_bits.t option [@sexp.option]
+    ; equals : Total_and_max_bits.t option [@sexp.option]
+    ; comparators : Total_and_max_bits.t option [@sexp.option]
+    ; multiplexers : Multiplexers.t option [@sexp.option]
+    ; registers : Total_bits.t option [@sexp.option]
+    ; memories : Memories.t option [@sexp.option]
+    ; constants : Total_bits.t option [@sexp.option]
+    ; wires : Total_bits.t option [@sexp.option]
+    ; concatenation : Total_bits.t option [@sexp.option]
+    ; part_selects : Total_bits.t option [@sexp.option]
+    ; instantiations : Instantiations.t option [@sexp.option]
     }
   [@@deriving sexp_of]
 end

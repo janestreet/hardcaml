@@ -391,13 +391,13 @@ and sexp_of_register_recursive ?show_uids ~depth reg =
     ""
       ~clock:      (sexp_of_next  reg.reg_clock                           : Sexp.t)
       ~clock_edge: (reg.reg_clock_edge                                    : Edge.t)
-      ~reset:      (sexp_of_opt   reg.reg_reset       reg.reg_reset       : Sexp.t sexp_option)
-      ~reset_edge: (sexp_of_edge  reg.reg_reset       reg.reg_reset_edge  : Sexp.t sexp_option)
-      ~reset_to:   (sexp_of_opt   reg.reg_reset       reg.reg_reset_value : Sexp.t sexp_option)
-      ~clear:      (sexp_of_opt   reg.reg_clear       reg.reg_clear       : Sexp.t sexp_option)
-      ~clear_level:(sexp_of_level reg.reg_clear       reg.reg_clear_level : Sexp.t sexp_option)
-      ~clear_to:   (sexp_of_opt   reg.reg_clear       reg.reg_clear_value : Sexp.t sexp_option)
-      ~enable:     (sexp_of_opt   reg.reg_enable      reg.reg_enable      : Sexp.t sexp_option)]
+      ~reset:      (sexp_of_opt   reg.reg_reset       reg.reg_reset       : Sexp.t option [@sexp.option])
+      ~reset_edge: (sexp_of_edge  reg.reg_reset       reg.reg_reset_edge  : Sexp.t option [@sexp.option])
+      ~reset_to:   (sexp_of_opt   reg.reg_reset       reg.reg_reset_value : Sexp.t option [@sexp.option])
+      ~clear:      (sexp_of_opt   reg.reg_clear       reg.reg_clear       : Sexp.t option [@sexp.option])
+      ~clear_level:(sexp_of_level reg.reg_clear       reg.reg_clear_level : Sexp.t option [@sexp.option])
+      ~clear_to:   (sexp_of_opt   reg.reg_clear       reg.reg_clear_value : Sexp.t option [@sexp.option])
+      ~enable:     (sexp_of_opt   reg.reg_enable      reg.reg_enable      : Sexp.t option [@sexp.option])]
 
 and sexp_of_memory_recursive
       ?show_uids
@@ -496,21 +496,21 @@ and sexp_of_signal_recursive ?(show_uids=false) ~depth signal =
           constructor =
       [%message
         constructor
-          (uid                 : Uid.t            sexp_option)
-          (names               : string list      sexp_option)
-          (loc                 : Caller_id.t      sexp_option)
+          (uid                 : Uid.t            option [@sexp.option])
+          (names               : string list      option [@sexp.option])
+          (loc                 : Caller_id.t      option [@sexp.option])
           (width               : int)
-          (value               : string           sexp_option)
-          (range               : (int*int)        sexp_option)
-          (select              : next             sexp_option)
-          (data                : next list        sexp_option)
-          ~_:(instantiation    : instantiation    sexp_option)
-          ~_:(register         : register         sexp_option)
-          ~_:(memory           : memory           sexp_option)
-          ~_:(multiport_memory : multiport_memory sexp_option)
-          ~_:(mem_read_port    : mem_read_port    sexp_option)
-          (arguments           : next list        sexp_option)
-          (data_in             : next             sexp_option)]
+          (value               : string           option [@sexp.option])
+          (range               : (int*int)        option [@sexp.option])
+          (select              : next             option [@sexp.option])
+          (data                : next list        option [@sexp.option])
+          ~_:(instantiation    : instantiation    option [@sexp.option])
+          ~_:(register         : register         option [@sexp.option])
+          ~_:(memory           : memory           option [@sexp.option])
+          ~_:(multiport_memory : multiport_memory option [@sexp.option])
+          ~_:(mem_read_port    : mem_read_port    option [@sexp.option])
+          (arguments           : next list        option [@sexp.option])
+          (data_in             : next             option [@sexp.option])]
     in
     match signal with
     | Empty -> create "empty"

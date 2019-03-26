@@ -256,7 +256,7 @@ module SignalNameManager (S : SignalNaming) () = struct
   let raise_internal_error ~while_ ?index ~for_signal () =
     raise_s [%message
       (String.concat [ "[Rtl.SignalNameManager] internal error while ";  while_ ])
-        (index      : int sexp_option)
+        (index      : int option [@sexp.option])
         (for_signal : Signal.t) ]
 
   let signal_name nm signal idx =
