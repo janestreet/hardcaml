@@ -1,5 +1,6 @@
 module Always                     = Always
 module Bits                       = Bits
+module Build_mode                 = Build_mode
 module Caller_id                  = Caller_id
 module Circuit                    = Circuit
 module Circuit_database           = Circuit_database
