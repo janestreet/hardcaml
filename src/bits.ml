@@ -2,6 +2,10 @@ open! Import
 
 type t = Bits0.t
 
+module Unsafe = struct
+  let data t = t.Bits0.data
+end
+
 module Mutable = struct
   include Bits0
 

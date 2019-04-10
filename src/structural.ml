@@ -661,7 +661,7 @@ let write_verilog os circuit =
           ; List.map o ~f:(fun (n, s) -> "    ." ^ n ^ "(" ^ name s ^ ")")
           ; List.map t ~f:(fun (n, s) -> "    ." ^ n ^ "(" ^ name s ^ ")")]));
       os "\n  );\n";
-    | _ -> raise Caml.Not_found
+    | _ ->  raise Caml.Not_found
   in
   List.iter inst ~f:write_inst;
   os ("endmodule\n")

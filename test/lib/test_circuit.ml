@@ -308,3 +308,89 @@ let%expect_test "phantom inputs" =
         (input_ports  (a))
         (output_ports (b))))) |}]
 ;;
+
+let%expect_test "verify_clock_pins" =
+  let circuit =
+    let foo = input "foo" 1 in
+    let clock = input "clock" 1 in
+    let bar = reg (Reg_spec.create ~clock ()) ~enable:vdd foo in
+    let bar = output "bar" bar in
+    Circuit.create_exn ~name:"the_foo_bar" [bar]
+  in
+  require_does_not_raise [%here] (fun () ->
+    Design_rule_checks.verify_clock_pins circuit ~expected_clock_pins:["clock"]);
+  require_does_raise [%here] (fun () ->
+    Design_rule_checks.verify_clock_pins circuit ~expected_clock_pins:["bar"]);
+  [%expect {|
+    ("The following sequential elements have unexpected clock pin connections"
+     (signal_uid 1)
+     (signals ((
+       register
+       (width 1)
+       ((clock      clock)
+        (clock_edge Rising)
+        (enable     0b1))
+       (data_in foo))))) |}];
+  let circuit_with_wired_clock =
+    let foo = input "foo" 1 in
+    let clock = wireof (input "clock" 1) -- "clock_wire" in
+    let bar = reg (Reg_spec.create ~clock ()) ~enable:vdd foo in
+    let bar = output "bar" bar in
+    Circuit.create_exn ~name:"the_foo_bar" [bar]
+  in
+  require_does_not_raise [%here] (fun () ->
+    Design_rule_checks.verify_clock_pins circuit_with_wired_clock
+      ~expected_clock_pins:["clock"]);
+  require_does_raise [%here] (fun () ->
+    Design_rule_checks.verify_clock_pins circuit_with_wired_clock
+      ~expected_clock_pins:["clock_wire"]);
+  [%expect {|
+    ("The following sequential elements have unexpected clock pin connections"
+     (signal_uid 1)
+     (signals ((
+       register
+       (width 1)
+       ((clock      clock_wire)
+        (clock_edge Rising)
+        (enable     0b1))
+       (data_in foo))))) |}];
+  let circuit_with_multiport_memory =
+    let foo = input "address" 7 in
+    let clock0 = input "clock0" 1 in
+    let clock1 = input "clock1" 1 in
+    let clock2 = input "clock2" 1 in
+    let clock3 = input "clock3" 1 in
+    let ram_outputs =
+      Ram.create
+        ~size:128
+        ~collision_mode:Read_before_write
+        ~write_ports:[|
+          { write_enable = vdd; write_address = foo; write_data = zero 8; write_clock = clock0; }
+        ; { write_enable = vdd; write_address = foo; write_data = zero 8; write_clock = clock1; }
+        |]
+        ~read_ports:[|
+          { read_enable = vdd; read_address = foo; read_clock = clock2; }
+        ; { read_enable = vdd; read_address = foo; read_clock = clock3; }
+        |]
+    in
+    Circuit.create_exn ~name:"name"
+      (List.mapi ~f:(fun i s -> output (Printf.sprintf "ram_%d" i) s)
+         (Array.to_list ram_outputs))
+  in
+  require_does_not_raise [%here] (fun () ->
+    Design_rule_checks.verify_clock_pins circuit_with_multiport_memory
+      ~expected_clock_pins:["clock0"; "clock1"; "clock2"; "clock3"]);
+  require_does_raise [%here] (fun () ->
+    Design_rule_checks.verify_clock_pins circuit_with_multiport_memory
+      ~expected_clock_pins:["clock0"; "clock1"; "clock2"; "clock5"]);
+  [%expect {|
+    ("The following sequential elements have unexpected clock pin connections"
+     (signal_uid 1)
+     (signals ((
+       register
+       (width 8)
+       ((clock      clock3)
+        (clock_edge Rising)
+        (enable     0b1))
+       (data_in memory_read_port))))) |}]
+;;

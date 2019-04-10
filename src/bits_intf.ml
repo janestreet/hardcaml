@@ -9,6 +9,10 @@ module type Bits = sig
   include Comb.S       with type t := t
   include Comparator.S with type t := t
 
+  module Unsafe : sig
+    val data : t -> bytes
+  end
+
   (** [Mutable] is a mutable bits used by [Cyclesim] for efficiency. *)
   module Mutable : sig
     type bits
