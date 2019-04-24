@@ -213,20 +213,20 @@ module Mutable = struct
 
   external umul
     : Bytes.t
-      -> Bytes.t
-      -> Bytes.t
-      -> (int[@untagged])
-      -> (int[@untagged])
-      -> unit
+    -> Bytes.t
+    -> Bytes.t
+    -> (int[@untagged])
+    -> (int[@untagged])
+    -> unit
     = "hardcaml_bits_umul_bc" "hardcaml_bits_umul"[@@noalloc]
 
   external smul
     : Bytes.t
-      -> Bytes.t
-      -> Bytes.t
-      -> (int[@untagged])
-      -> (int[@untagged])
-      -> unit
+    -> Bytes.t
+    -> Bytes.t
+    -> (int[@untagged])
+    -> (int[@untagged])
+    -> unit
     = "hardcaml_bits_smul_bc" "hardcaml_bits_smul"[@@noalloc]
 
   let ( *: ) dst a b =

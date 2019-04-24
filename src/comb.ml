@@ -154,7 +154,7 @@ module Make (Bits : Primitives) = struct
 
   module type Sexp_of_t = sig type t[@@deriving sexp_of] end
   let[@inline never] raise_const_width_greater_than_zero
-       (type t) (module X : Sexp_of_t with type t = t) width (const : t) =
+                       (type t) (module X : Sexp_of_t with type t = t) width (const : t) =
     raise_s [%message.omit_nil "Width of constant must be greater than zero"
                                  (width : int) (const : X.t)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]

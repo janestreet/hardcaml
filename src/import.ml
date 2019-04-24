@@ -1,11 +1,11 @@
 include (Base : (module type of struct include Base end
-                  with module Filename   := Caml.Filename
-                  with module Int        := Base.Int
-                  with module Int32      := Base.Int32
-                  with module Int64      := Base.Int64
-                  with module Map        := Base.Map (* we want the [Map] from [map.ml] *)
-                  with module Marshal    := Caml.Marshal
-                  with module Nativeint  := Base.Nativeint))
+                with module Filename   := Caml.Filename
+                with module Int        := Base.Int
+                with module Int32      := Base.Int32
+                with module Int64      := Base.Int64
+                with module Map        := Base.Map (* we want the [Map] from [map.ml] *)
+                with module Marshal    := Caml.Marshal
+                with module Nativeint  := Base.Nativeint))
 
 module Int = struct
   include Base.Int
