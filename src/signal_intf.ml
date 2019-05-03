@@ -168,9 +168,10 @@ module type Signal = sig
   val structural_compare
     :  ?check_names:bool
     -> ?check_deps:bool
+    -> ?initial_deps:Uid_set.t
     -> t
     -> t
-    -> bool
+    -> Uid_set.t * bool
 
   (** [sexp_of_signal_recursive ~depth signal] converts a signal recursively to a sexp for
       up to [depth] levels.  If [show_uids] is false then signal identifiers will not be

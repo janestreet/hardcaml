@@ -1,4 +1,5 @@
-# Hardcaml
+"Hardcaml"
+==========
 
 Hardcaml is an OCaml library for designing hardware.
 

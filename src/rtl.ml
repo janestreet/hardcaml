@@ -1001,7 +1001,7 @@ end
 
 module Make (R : Rtl_internal) = struct
 
-  let write io circ =
+  let write blackbox io circ =
     let inputs, outputs = Circuit.inputs circ, Circuit.outputs circ in
     let signal_graph = Circuit.signal_graph circ in
     (* write signal declarations *)
@@ -1038,47 +1038,49 @@ module Make (R : Rtl_internal) = struct
       ~i:(List.map inputs  ~f:primary @ phantom_inputs)
       ~o:(List.map outputs ~f:primary);
     (* write internal declarations *)
-    io (t4 ^ R.comment "signal declarations" ^ "\n");
-    List.iter internal_signals ~f:(fun s ->
-      (* primary signals *)
-      R.signal_decl io (primary_name s) s;
-      (* aliases *)
-      List.iter (secondary_names s)
-        ~f:(fun name -> R.alias_decl io name s);
-      (* special declarations *)
-      (match s with
-       | Mem _ | Multiport_mem _ ->
-         let mem_names = R.Names.mem_names nm s in
-         R.mem_decl io primary_name mem_names s
-       | _ -> ()));
-    io ("\n");
-    R.start_logic io;
-    (* logic *)
-    io (t4 ^ R.comment "logic" ^ "\n");
-    List.iter internal_signals ~f:(fun signal ->
-      match signal with
-      | Mem (_, _, r, m) ->
-        let mem = R.Names.mem_names nm signal in
-        R.logic_mem io primary_name mem signal r m
-      | Multiport_mem _ ->
-        let mem = R.Names.mem_names nm signal in
-        R.logic_mem2 io primary_name mem signal
-      | Inst (_, _, i) ->
-        let inst_name = R.Names.inst_label nm signal in
-        R.logic_inst io primary_name inst_name signal i
-      | _ ->
-        R.logic io primary_name signal);
-    io ("\n");
-    (* connect aliases *)
-    io (t4 ^ R.comment "aliases" ^ "\n");
-    List.iter internal_signals ~f:(fun s ->
-      List.iter (secondary_names s) ~f:(fun t ->
-        R.assign io t (primary_name s)));
-    io ("\n");
-    (* connect outputs *)
-    io (t4 ^ R.comment "output assignments" ^ "\n");
-    List.iter outputs ~f:(R.logic io primary_name);
-    io ("\n");
+    if not blackbox
+    then (
+      io (t4 ^ R.comment "signal declarations" ^ "\n");
+      List.iter internal_signals ~f:(fun s ->
+        (* primary signals *)
+        R.signal_decl io (primary_name s) s;
+        (* aliases *)
+        List.iter (secondary_names s)
+          ~f:(fun name -> R.alias_decl io name s);
+        (* special declarations *)
+        (match s with
+         | Mem _ | Multiport_mem _ ->
+           let mem_names = R.Names.mem_names nm s in
+           R.mem_decl io primary_name mem_names s
+         | _ -> ()));
+      io ("\n");
+      R.start_logic io;
+      (* logic *)
+      io (t4 ^ R.comment "logic" ^ "\n");
+      List.iter internal_signals ~f:(fun signal ->
+        match signal with
+        | Mem (_, _, r, m) ->
+          let mem = R.Names.mem_names nm signal in
+          R.logic_mem io primary_name mem signal r m
+        | Multiport_mem _ ->
+          let mem = R.Names.mem_names nm signal in
+          R.logic_mem2 io primary_name mem signal
+        | Inst (_, _, i) ->
+          let inst_name = R.Names.inst_label nm signal in
+          R.logic_inst io primary_name inst_name signal i
+        | _ ->
+          R.logic io primary_name signal);
+      io ("\n");
+      (* connect aliases *)
+      io (t4 ^ R.comment "aliases" ^ "\n");
+      List.iter internal_signals ~f:(fun s ->
+        List.iter (secondary_names s) ~f:(fun t ->
+          R.assign io t (primary_name s)));
+      io ("\n");
+      (* connect outputs *)
+      io (t4 ^ R.comment "output assignments" ^ "\n");
+      List.iter outputs ~f:(R.logic io primary_name);
+      io ("\n"));
     R.end_logic io
 end
 
@@ -1093,9 +1095,9 @@ module Language = struct
     | Verilog -> ".v"
     | Vhdl    -> ".vhd"
 
-  let output = function
-    | Vhdl    -> Vhdl.write
-    | Verilog -> Verilog.write
+  let output blackbox = function
+    | Vhdl    -> Vhdl.write blackbox
+    | Verilog -> Verilog.write blackbox
   let legalize_identifier = function
     | Verilog -> VerilogNames.legalize
     | Vhdl    -> VhdlNames.legalize
@@ -1153,7 +1155,7 @@ module Output = struct
     in
     { language; mode }
 
-  let output_circuit t circuit hierarchy_path =
+  let output_circuit (blackbox : bool) t circuit hierarchy_path =
     try
       let output, close =
         match t.mode with
@@ -1176,7 +1178,7 @@ module Output = struct
              if Hierarchy_path.is_top_circuit hierarchy_path circuit
              then Out_channel.close out_channel)
       in
-      Language.output t.language output circuit;
+      Language.output blackbox t.language output circuit;
       close ()
     with exn ->
       raise_s [%message "Error while writing circuit"
@@ -1186,7 +1188,15 @@ module Output = struct
                           (exn : exn)]
 end
 
-let output ?output_mode ?database language circuit =
+module Blackbox = struct
+  type t =
+    | None
+    | Top
+    | Instantiations
+  [@@deriving sexp_of]
+end
+
+let output ?output_mode ?database ?(blackbox=Blackbox.None) language circuit =
   let output_mode =
     Option.value output_mode
       ~default:(Output_mode.To_file
@@ -1203,15 +1213,23 @@ let output ?output_mode ?database language circuit =
   in
   let database = Option.value database ~default:(Circuit_database.create ()) in
   let circuits_already_output = Hash_set.create (module String) in
-  let rec output_circuit circuit hierarchy_path =
+  let rec output_circuit blackbox circuit hierarchy_path =
     let circuit_name = Circuit.name circuit in
     if not (Hash_set.mem circuits_already_output circuit_name)
     then (
       Hash_set.add circuits_already_output circuit_name;
       let hierarchy_path = Hierarchy_path.push hierarchy_path circuit_name in
-      output_instantitions circuit hierarchy_path;
-      Output.output_circuit output circuit hierarchy_path)
-  and output_instantitions circuit hierarchy_path =
+      match (blackbox : Blackbox.t) with
+      | None ->
+        output_instantitions (None : Blackbox.t) circuit hierarchy_path;
+        Output.output_circuit false output circuit hierarchy_path
+      | Top ->
+        Output.output_circuit true output circuit hierarchy_path
+      | Instantiations ->
+        output_instantitions Top circuit hierarchy_path;
+        Output.output_circuit false output circuit hierarchy_path
+    )
+  and output_instantitions (blackbox : Blackbox.t) circuit hierarchy_path =
     Signal_graph.iter (Circuit.signal_graph circuit) ~f:(fun signal ->
       match signal with
       | Inst (_, _, inst) ->
@@ -1220,12 +1238,12 @@ let output ?output_mode ?database language circuit =
            (* No hardcaml implementation available.  Downstream tooling will provide the
               implmentation. *)
            ()
-         | Some circuit -> output_circuit circuit hierarchy_path)
+         | Some circuit -> output_circuit blackbox circuit hierarchy_path)
       | _ -> ());
   in
-  output_circuit circuit Hierarchy_path.empty
+  output_circuit blackbox circuit Hierarchy_path.empty
 
-let print ?database language circuit =
+let print ?database ?blackbox language circuit =
   output
     ~output_mode:(To_channel Out_channel.stdout)
-    ?database language circuit
+    ?database ?blackbox language circuit

@@ -150,8 +150,10 @@ let structural_compare ?check_names c0 c1 =
       && Signal.width i0 = Signal.width i1)
     &&
     (* check full structural comparision from each output *)
-    List.fold2_exn (outputs c0) (outputs c1) ~init:true ~f:(fun b s t ->
-      b && (Signal.structural_compare ?check_names s t))
+    snd (List.fold2_exn (outputs c0) (outputs c1) ~init:(Uid_set.empty, true)
+           ~f:(fun (set, b) s t ->
+             let set, b' = Signal.structural_compare ?check_names ~initial_deps:set s t in
+             set, b && b'))
   with Not_found_s _ | Caml.Not_found ->
     false
 

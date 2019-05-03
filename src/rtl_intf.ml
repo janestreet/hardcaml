@@ -28,6 +28,17 @@ module type Rtl = sig
     [@@deriving sexp_of]
   end
 
+  (** Control blackbox generation. [None] implies blackboxes are not used. [Top] means the
+      circuit will be turned into a blackbox. [Instantiations] means that the top level
+      circuit will be written as normal, but submodules will be written as blackboxes. *)
+  module Blackbox : sig
+    type t =
+      | None
+      | Top
+      | Instantiations
+    [@@deriving sexp_of]
+  end
+
   (** Write circuit to [Verilog] or [Vhdl].  Instantiations are (recursively) looked up in
       [database] and if a circuit exists it is also written.  The [output_mode] specifies
       how the circuit should be written - either to a single file (or buffer, or channel)
@@ -36,6 +47,7 @@ module type Rtl = sig
   val output
     :  ?output_mode : Output_mode.t (** default is [To_file (Circuit.name circuit)]. *)
     -> ?database : Circuit_database.t (** default is an empty database  *)
+    -> ?blackbox : Blackbox.t (** Default is [None] *)
     -> Language.t
     -> Circuit.t
     -> unit
@@ -43,6 +55,7 @@ module type Rtl = sig
   (** [print] is [output ~output_mode:(To_channel stdout)] *)
   val print
     :  ?database : Circuit_database.t
+    -> ?blackbox : Blackbox.t (** Default is [None] *)
     -> Language.t
     -> Circuit.t
     -> unit

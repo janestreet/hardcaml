@@ -60,3 +60,8 @@ let insert ?(share = true) database circuit =
 let find t ~mangled_name =
   Hashtbl.find t.entry_by_mangled_name mangled_name
   |> Option.map ~f:Entry.circuit
+
+let get_circuits (t : t) =
+  List.map
+    (Hashtbl.data t.entry_by_mangled_name)
+    ~f:(fun (e : Entry.t) -> e.circuit)

@@ -20,3 +20,6 @@ val insert
 
 (** Find a circuit in the database, given its name. *)
 val find : t -> mangled_name : string -> Circuit.t option
+
+(** Return a list of all circuits in the database. *)
+val get_circuits : t -> Circuit.t list

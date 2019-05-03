@@ -293,13 +293,15 @@ let to_string signal =
   | Inst _ -> "Inst" ^ sid signal ^ "]"
 
 let structural_compare
-      ?(check_names=true) ?(check_deps=true) a b =
+      ?(check_names=true) ?(check_deps=true)
+      ?(initial_deps = (Set.empty (module  Uid)))
+      a b =
   let rec structural_compare
-            s a b =
-    if Set.mem s (uid a)
-    then true
+            set a b =
+    if Set.mem set (uid a)
+    then set, true
     else
-      let s = Set.add s (uid a) in
+      let set = Set.add set (uid a) in
       (* check we have the same type of node *)
       let typ () =
         match a, b with
@@ -342,16 +344,20 @@ let structural_compare
         if check_deps
         then
           try
-            List.fold2_exn (deps a) (deps b) ~init:true ~f:(fun b x y ->
-              b && (structural_compare s x y))
+            List.fold2_exn (deps a) (deps b) ~init:(set, true) ~f:(fun (set, b) x y ->
+              if b then
+                let set, b' = structural_compare set x y in
+                set, (b && b')
+              else set, b)
           with _ ->
-            false
+            set, false
         else
-          false
+          set, false
       in
-      typ () && wid () && names () && deps ()
+      if typ () && wid () && names () then deps ()
+      else set, false
   in
-  structural_compare (Set.empty (module Uid)) a b
+  structural_compare initial_deps a b
 
 let rec sexp_of_instantiation_recursive ?show_uids ~depth inst =
   let sexp_of_next s = sexp_of_signal_recursive ?show_uids ~depth:(depth-1) s in
