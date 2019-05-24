@@ -127,12 +127,12 @@ let%expect_test _ =
          (compare_and_swap 6 Max)))
        (compare_and_swap_by_depth (
          (1 (
-           (compare_and_swap 2
-             (input1 (input i2))
-             (input2 (input i3)))
            (compare_and_swap 1
              (input1 (input i0))
-             (input2 (input i1)))))
+             (input2 (input i1)))
+           (compare_and_swap 2
+             (input1 (input i2))
+             (input2 (input i3)))))
          (2 (
            (compare_and_swap 3
              (input1 (compare_and_swap 1 Min))
@@ -164,48 +164,48 @@ let%expect_test _ =
            (compare_and_swap 2
              (input1 (input i2))
              (input2 (input i3)))
-           (compare_and_swap 7
-             (input1 (input i4))
-             (input2 (input i5)))
            (compare_and_swap 1
              (input1 (input i0))
              (input2 (input i1)))
            (compare_and_swap 8
              (input1 (input i6))
-             (input2 (input i7)))))
+             (input2 (input i7)))
+           (compare_and_swap 7
+             (input1 (input i4))
+             (input2 (input i5)))))
          (2 (
-           (compare_and_swap 10
-             (input1 (compare_and_swap 7 Max))
-             (input2 (compare_and_swap 8 Min)))
            (compare_and_swap 3
              (input1 (compare_and_swap 1 Min))
              (input2 (compare_and_swap 2 Max)))
-           (compare_and_swap 4
-             (input1 (compare_and_swap 1 Max))
-             (input2 (compare_and_swap 2 Min)))
            (compare_and_swap 9
              (input1 (compare_and_swap 7 Min))
-             (input2 (compare_and_swap 8 Max)))))
+             (input2 (compare_and_swap 8 Max)))
+           (compare_and_swap 10
+             (input1 (compare_and_swap 7 Max))
+             (input2 (compare_and_swap 8 Min)))
+           (compare_and_swap 4
+             (input1 (compare_and_swap 1 Max))
+             (input2 (compare_and_swap 2 Min)))))
          (3 (
            (compare_and_swap 11
              (input1 (compare_and_swap 9  Max))
              (input2 (compare_and_swap 10 Max)))
-           (compare_and_swap 12
-             (input1 (compare_and_swap 9  Min))
-             (input2 (compare_and_swap 10 Min)))
            (compare_and_swap 6
              (input1 (compare_and_swap 3 Max))
              (input2 (compare_and_swap 4 Max)))
+           (compare_and_swap 12
+             (input1 (compare_and_swap 9  Min))
+             (input2 (compare_and_swap 10 Min)))
            (compare_and_swap 5
              (input1 (compare_and_swap 3 Min))
              (input2 (compare_and_swap 4 Min)))))
          (4 (
-           (compare_and_swap 15
-             (input1 (compare_and_swap 6  Min))
-             (input2 (compare_and_swap 12 Max)))
            (compare_and_swap 14
              (input1 (compare_and_swap 5  Max))
              (input2 (compare_and_swap 11 Min)))
+           (compare_and_swap 15
+             (input1 (compare_and_swap 6  Min))
+             (input2 (compare_and_swap 12 Max)))
            (compare_and_swap 13
              (input1 (compare_and_swap 5  Min))
              (input2 (compare_and_swap 11 Max)))
@@ -216,25 +216,25 @@ let%expect_test _ =
            (compare_and_swap 18
              (input1 (compare_and_swap 14 Min))
              (input2 (compare_and_swap 16 Min)))
+           (compare_and_swap 21
+             (input1 (compare_and_swap 13 Max))
+             (input2 (compare_and_swap 15 Max)))
            (compare_and_swap 22
              (input1 (compare_and_swap 14 Max))
              (input2 (compare_and_swap 16 Max)))
            (compare_and_swap 17
              (input1 (compare_and_swap 13 Min))
-             (input2 (compare_and_swap 15 Min)))
-           (compare_and_swap 21
-             (input1 (compare_and_swap 13 Max))
-             (input2 (compare_and_swap 15 Max)))))
+             (input2 (compare_and_swap 15 Min)))))
          (6 (
+           (compare_and_swap 19
+             (input1 (compare_and_swap 17 Min))
+             (input2 (compare_and_swap 18 Min)))
            (compare_and_swap 23
              (input1 (compare_and_swap 21 Min))
              (input2 (compare_and_swap 22 Min)))
            (compare_and_swap 24
              (input1 (compare_and_swap 21 Max))
              (input2 (compare_and_swap 22 Max)))
-           (compare_and_swap 19
-             (input1 (compare_and_swap 17 Min))
-             (input2 (compare_and_swap 18 Min)))
            (compare_and_swap 20
              (input1 (compare_and_swap 17 Max))
              (input2 (compare_and_swap 18 Max))))))))))
@@ -262,12 +262,12 @@ let%expect_test _ =
          (compare_and_swap 3 Max)))
        (compare_and_swap_by_depth (
          (1 (
-           (compare_and_swap 2
-             (input1 (input i0))
-             (input2 (input i1)))
            (compare_and_swap 1
              (input1 (input i2))
-             (input2 (input i3)))))
+             (input2 (input i3)))
+           (compare_and_swap 2
+             (input1 (input i0))
+             (input2 (input i1)))))
          (2 (
            (compare_and_swap 3
              (input1 (compare_and_swap 2 Max))
@@ -296,38 +296,38 @@ let%expect_test _ =
            (compare_and_swap 2
              (input1 (input i4))
              (input2 (input i5)))
-           (compare_and_swap 7
-             (input1 (input i0))
-             (input2 (input i1)))
+           (compare_and_swap 6
+             (input1 (input i2))
+             (input2 (input i3)))
            (compare_and_swap 1
              (input1 (input i6))
              (input2 (input i7)))
-           (compare_and_swap 6
-             (input1 (input i2))
-             (input2 (input i3)))))
+           (compare_and_swap 7
+             (input1 (input i0))
+             (input2 (input i1)))))
          (2 (
            (compare_and_swap 3
              (input1 (compare_and_swap 2 Max))
              (input2 (compare_and_swap 1 Max)))
-           (compare_and_swap 8
-             (input1 (compare_and_swap 7 Max))
-             (input2 (compare_and_swap 6 Max)))
+           (compare_and_swap 9
+             (input1 (compare_and_swap 7 Min))
+             (input2 (compare_and_swap 6 Min)))
            (compare_and_swap 4
              (input1 (compare_and_swap 2 Min))
              (input2 (compare_and_swap 1 Min)))
-           (compare_and_swap 9
-             (input1 (compare_and_swap 7 Min))
-             (input2 (compare_and_swap 6 Min)))))
+           (compare_and_swap 8
+             (input1 (compare_and_swap 7 Max))
+             (input2 (compare_and_swap 6 Max)))))
          (3 (
            (compare_and_swap 10
              (input1 (compare_and_swap 8 Min))
              (input2 (compare_and_swap 9 Max)))
-           (compare_and_swap 15
-             (input1 (compare_and_swap 9 Min))
-             (input2 (compare_and_swap 4 Min)))
            (compare_and_swap 11
              (input1 (compare_and_swap 8 Max))
              (input2 (compare_and_swap 3 Max)))
+           (compare_and_swap 15
+             (input1 (compare_and_swap 9 Min))
+             (input2 (compare_and_swap 4 Min)))
            (compare_and_swap 5
              (input1 (compare_and_swap 3 Min))
              (input2 (compare_and_swap 4 Max)))))
@@ -349,10 +349,10 @@ let%expect_test _ =
            (compare_and_swap 18
              (input1 (compare_and_swap 13 Min))
              (input2 (compare_and_swap 16 Max)))
-           (compare_and_swap 17
-             (input1 (compare_and_swap 12 Min))
-             (input2 (compare_and_swap 16 Min)))
            (compare_and_swap 19
              (input1 (compare_and_swap 13 Max))
-             (input2 (compare_and_swap 14 Max)))))))))) |}]
+             (input2 (compare_and_swap 14 Max)))
+           (compare_and_swap 17
+             (input1 (compare_and_swap 12 Min))
+             (input2 (compare_and_swap 16 Min)))))))))) |}]
 ;;

@@ -191,23 +191,23 @@ let%expect_test _ =
          ((expanded_sum (i0 i1 i2 i3)) (adder 4))))
        (add_by_depth (
          (1 (
-           ((expanded_sum (i2 i3))
-            (adder 2
-              (input i2)
-              (input i3)))
            ((expanded_sum (i0 i1))
             (adder 1
               (input i0)
-              (input i1)))))
+              (input i1)))
+           ((expanded_sum (i2 i3))
+            (adder 2
+              (input i2)
+              (input i3)))))
          (2 (
-           ((expanded_sum (i0 i1 i2))
-            (adder 3
-              (adder 1)
-              (input i2)))
            ((expanded_sum (i0 i1 i2 i3))
             (adder 4
               (adder 1)
-              (adder 2))))))))))
+              (adder 2)))
+           ((expanded_sum (i0 i1 i2))
+            (adder 3
+              (adder 1)
+              (input i2))))))))))
     ((config Sklansky)
      (inputs (i0 i1 i2 i3 i4 i5 i6 i7))
      (Ok (
@@ -222,14 +222,14 @@ let%expect_test _ =
          ((expanded_sum (i0 i1 i2 i3 i4 i5 i6 i7)) (adder 12))))
        (add_by_depth (
          (1 (
-           ((expanded_sum (i2 i3))
-            (adder 2
-              (input i2)
-              (input i3)))
            ((expanded_sum (i0 i1))
             (adder 1
               (input i0)
               (input i1)))
+           ((expanded_sum (i2 i3))
+            (adder 2
+              (input i2)
+              (input i3)))
            ((expanded_sum (i6 i7))
             (adder 6
               (input i6)
@@ -239,10 +239,6 @@ let%expect_test _ =
               (input i4)
               (input i5)))))
          (2 (
-           ((expanded_sum (i4 i5 i6))
-            (adder 7
-              (adder 5)
-              (input i6)))
            ((expanded_sum (i0 i1 i2))
             (adder 3
               (adder 1)
@@ -251,19 +247,15 @@ let%expect_test _ =
             (adder 8
               (adder 5)
               (adder 6)))
+           ((expanded_sum (i4 i5 i6))
+            (adder 7
+              (adder 5)
+              (input i6)))
            ((expanded_sum (i0 i1 i2 i3))
             (adder 4
               (adder 1)
               (adder 2)))))
          (3 (
-           ((expanded_sum (i0 i1 i2 i3 i4 i5))
-            (adder 10
-              (adder 4)
-              (adder 5)))
-           ((expanded_sum (i0 i1 i2 i3 i4 i5 i6))
-            (adder 11
-              (adder 4)
-              (adder 7)))
            ((expanded_sum (i0 i1 i2 i3 i4 i5 i6 i7))
             (adder 12
               (adder 4)
@@ -271,7 +263,15 @@ let%expect_test _ =
            ((expanded_sum (i0 i1 i2 i3 i4))
             (adder 9
               (adder 4)
-              (input i4))))))))))
+              (input i4)))
+           ((expanded_sum (i0 i1 i2 i3 i4 i5))
+            (adder 10
+              (adder 4)
+              (adder 5)))
+           ((expanded_sum (i0 i1 i2 i3 i4 i5 i6))
+            (adder 11
+              (adder 4)
+              (adder 7))))))))))
     ((config Brent_kung)
      (inputs (i0))
      (Ok ((outputs (((expanded_sum (i0)) (input i0)))) (add_by_depth ()))))
@@ -296,23 +296,23 @@ let%expect_test _ =
          ((expanded_sum (i0 i1 i2 i3)) (adder 3))))
        (add_by_depth (
          (1 (
-           ((expanded_sum (i2 i3))
-            (adder 2
-              (input i2)
-              (input i3)))
            ((expanded_sum (i0 i1))
             (adder 1
               (input i0)
-              (input i1)))))
+              (input i1)))
+           ((expanded_sum (i2 i3))
+            (adder 2
+              (input i2)
+              (input i3)))))
          (2 (
-           ((expanded_sum (i0 i1 i2 i3))
-            (adder 3
-              (adder 1)
-              (adder 2)))
            ((expanded_sum (i0 i1 i2))
             (adder 4
               (adder 1)
-              (input i2))))))))))
+              (input i2)))
+           ((expanded_sum (i0 i1 i2 i3))
+            (adder 3
+              (adder 1)
+              (adder 2))))))))))
     ((config Brent_kung)
      (inputs (i0 i1 i2 i3 i4 i5 i6 i7))
      (Ok (
@@ -327,18 +327,18 @@ let%expect_test _ =
          ((expanded_sum (i0 i1 i2 i3 i4 i5 i6 i7)) (adder 7))))
        (add_by_depth (
          (1 (
-           ((expanded_sum (i2 i3))
-            (adder 2
-              (input i2)
-              (input i3)))
-           ((expanded_sum (i4 i5))
-            (adder 3
-              (input i4)
-              (input i5)))
            ((expanded_sum (i0 i1))
             (adder 1
               (input i0)
               (input i1)))
+           ((expanded_sum (i4 i5))
+            (adder 3
+              (input i4)
+              (input i5)))
+           ((expanded_sum (i2 i3))
+            (adder 2
+              (input i2)
+              (input i3)))
            ((expanded_sum (i6 i7))
             (adder 4
               (input i6)
@@ -357,6 +357,10 @@ let%expect_test _ =
               (adder 1)
               (adder 2)))))
          (3 (
+           ((expanded_sum (i0 i1 i2 i3 i4 i5))
+            (adder 8
+              (adder 5)
+              (adder 3)))
            ((expanded_sum (i0 i1 i2 i3 i4))
             (adder 10
               (adder 5)
@@ -364,11 +368,7 @@ let%expect_test _ =
            ((expanded_sum (i0 i1 i2 i3 i4 i5 i6 i7))
             (adder 7
               (adder 5)
-              (adder 6)))
-           ((expanded_sum (i0 i1 i2 i3 i4 i5))
-            (adder 8
-              (adder 5)
-              (adder 3)))))
+              (adder 6)))))
          (4 ((
            (expanded_sum (i0 i1 i2 i3 i4 i5 i6))
            (adder 11
@@ -398,18 +398,18 @@ let%expect_test _ =
          ((expanded_sum (i0 i1 i2 i3)) (adder 5))))
        (add_by_depth (
          (1 (
-           ((expanded_sum (i1 i2))
-            (adder 2
-              (input i1)
-              (input i2)))
+           ((expanded_sum (i0 i1))
+            (adder 1
+              (input i0)
+              (input i1)))
            ((expanded_sum (i2 i3))
             (adder 3
               (input i2)
               (input i3)))
-           ((expanded_sum (i0 i1))
-            (adder 1
-              (input i0)
-              (input i1)))))
+           ((expanded_sum (i1 i2))
+            (adder 2
+              (input i1)
+              (input i2)))))
          (2 (
            ((expanded_sum (i0 i1 i2))
             (adder 4
@@ -433,35 +433,39 @@ let%expect_test _ =
          ((expanded_sum (i0 i1 i2 i3 i4 i5 i6 i7)) (adder 17))))
        (add_by_depth (
          (1 (
-           ((expanded_sum (i1 i2))
-            (adder 2
-              (input i1)
-              (input i2)))
-           ((expanded_sum (i6 i7))
-            (adder 7
-              (input i6)
-              (input i7)))
            ((expanded_sum (i2 i3))
             (adder 3
               (input i2)
               (input i3)))
-           ((expanded_sum (i0 i1))
-            (adder 1
-              (input i0)
-              (input i1)))
-           ((expanded_sum (i3 i4))
-            (adder 4
-              (input i3)
-              (input i4)))
+           ((expanded_sum (i1 i2))
+            (adder 2
+              (input i1)
+              (input i2)))
            ((expanded_sum (i5 i6))
             (adder 6
               (input i5)
               (input i6)))
+           ((expanded_sum (i3 i4))
+            (adder 4
+              (input i3)
+              (input i4)))
+           ((expanded_sum (i0 i1))
+            (adder 1
+              (input i0)
+              (input i1)))
+           ((expanded_sum (i6 i7))
+            (adder 7
+              (input i6)
+              (input i7)))
            ((expanded_sum (i4 i5))
             (adder 5
               (input i4)
               (input i5)))))
          (2 (
+           ((expanded_sum (i0 i1 i2 i3))
+            (adder 9
+              (adder 1)
+              (adder 3)))
            ((expanded_sum (i1 i2 i3 i4))
             (adder 10
               (adder 2)
@@ -470,6 +474,10 @@ let%expect_test _ =
             (adder 11
               (adder 3)
               (adder 5)))
+           ((expanded_sum (i4 i5 i6 i7))
+            (adder 13
+              (adder 5)
+              (adder 7)))
            ((expanded_sum (i0 i1 i2))
             (adder 8
               (input i0)
@@ -477,24 +485,16 @@ let%expect_test _ =
            ((expanded_sum (i3 i4 i5 i6))
             (adder 12
               (adder 4)
-              (adder 6)))
-           ((expanded_sum (i4 i5 i6 i7))
-            (adder 13
-              (adder 5)
-              (adder 7)))
-           ((expanded_sum (i0 i1 i2 i3))
-            (adder 9
-              (adder 1)
-              (adder 3)))))
+              (adder 6)))))
          (3 (
-           ((expanded_sum (i0 i1 i2 i3 i4 i5))
-            (adder 15
-              (adder 1)
-              (adder 11)))
            ((expanded_sum (i0 i1 i2 i3 i4))
             (adder 14
               (input i0)
               (adder 10)))
+           ((expanded_sum (i0 i1 i2 i3 i4 i5))
+            (adder 15
+              (adder 1)
+              (adder 11)))
            ((expanded_sum (i0 i1 i2 i3 i4 i5 i6 i7))
             (adder 17
               (adder 9)
