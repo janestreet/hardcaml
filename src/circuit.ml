@@ -137,8 +137,11 @@ let signal_map c = c.signal_by_uid
 
 let structural_compare ?check_names c0 c1 =
   try
+    (* Number of inputs and outputs match *)
+    List.length (outputs c0) = List.length (outputs c1)
+    && List.length (inputs c0) = List.length (inputs c1)
     (* outputs, including names, are the same *)
-    List.fold2_exn (outputs c0) (outputs c1) ~init:true ~f:(fun b o0 o1 ->
+    && List.fold2_exn (outputs c0) (outputs c1) ~init:true ~f:(fun b o0 o1 ->
       b
       && [%compare.equal: string list] (Signal.names o0) (Signal.names o1)
       && Signal.width o0 = Signal.width o1)
