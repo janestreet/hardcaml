@@ -169,6 +169,11 @@ let add_attribute signal attribute =
     s.s_attributes <- attribute :: s.s_attributes;
     signal
 
+let add_attributes signal attributes =
+  List.iter attributes ~f:(fun x -> ignore (add_attribute signal x));
+  signal
+;;
+
 let names s =
   match s with
   | Empty -> raise_s [%message "cannot get [names] from the empty signal"]
@@ -991,17 +996,7 @@ let memory size ~write_port ~read_address =
        ; mem_write_address = wa
        ; mem_read_address  = read_address })
 
-let ram_rbw size ~write_port ~read_port =
-  let spec = { reg_empty with reg_clock = read_port.read_clock } in
-  reg spec ~enable:read_port.read_enable
-    (memory size ~write_port ~read_address:read_port.read_address)
-
-let ram_wbr size ~write_port ~read_port =
-  let spec = { reg_empty with reg_clock = read_port.read_clock } in
-  memory size ~write_port
-    ~read_address:(reg spec ~enable:read_port.read_enable read_port.read_address)
-
-let multiport_memory size ~write_ports ~read_addresses =
+let multiport_memory ?(attributes = []) size ~write_ports ~read_addresses =
   (* size > 0 *)
   if size <= 0
   then raise_s [%message "[Signal.multiport_memory] size must be greater than 0" (size : int)];
@@ -1076,9 +1071,32 @@ let multiport_memory size ~write_ports ~read_addresses =
       [ write_clock; write_address; write_data; write_enable ])
     |> List.concat
   in
-  let mem = Multiport_mem(make_id data_width deps, size, write_ports) in
+  let mem =
+    add_attributes
+      (Multiport_mem (make_id data_width deps, size, write_ports))
+      attributes
+  in
   Array.map read_addresses ~f:(fun r ->
     Mem_read_port(make_id data_width [r; mem], mem, r))
+
+let ram_rbw size ~write_port ~read_port =
+  let spec = { reg_empty with reg_clock = read_port.read_clock } in
+  reg spec ~enable:read_port.read_enable
+    (multiport_memory
+       ~attributes:[Rtl_attribute.Vivado.Ram_style.block]
+       size
+       ~write_ports:[|write_port|]
+       ~read_addresses:[| read_port.read_address |]
+    ).(0)
+
+let ram_wbr size ~write_port ~read_port =
+  let spec = { reg_empty with reg_clock = read_port.read_clock } in
+  (multiport_memory size
+     ~attributes:[Rtl_attribute.Vivado.Ram_style.block]
+     ~write_ports:[|write_port|]
+     ~read_addresses:[| (reg spec ~enable:read_port.read_enable read_port.read_address) |]
+  ).(0)
+;;
 
 (* Pretty printer *)
 let pp fmt t = Caml.Format.fprintf fmt "%s" ([%sexp (t : t)] |> Sexp.to_string_hum)

@@ -276,10 +276,12 @@ module type Signal = sig
     -> t
 
   val multiport_memory
-    :  int
+    :  ?attributes: Rtl_attribute.t list
+    -> int
     -> write_ports : write_port array
     -> read_addresses : t array
     -> t array
+
 
   (** Pretty printer. *)
   val pp : Formatter.t -> t -> unit

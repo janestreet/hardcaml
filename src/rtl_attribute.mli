@@ -40,4 +40,11 @@ module Vivado : sig
 
   (** Export net for debugging with chipscope. *)
   val mark_debug : bool -> t
+
+  module Ram_style : sig
+    val block : t
+    val distributed : t
+    val registers : t
+    val ultra : t
+  end
 end

@@ -47,4 +47,10 @@ module Vivado = struct
 
   let mark_debug b = create "mark_debug" ~value:(true_or_false_string b)
 
+  module Ram_style = struct
+    let block = create "RAM_STYLE" ~value:(String "block")
+    let distributed = create "RAM_STYLE" ~value:(String "distributed")
+    let registers = create "RAM_STYLE" ~value:(String "registers")
+    let ultra = create "RAM_STYLE" ~value:(String "ultra")
+  end
 end
