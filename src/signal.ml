@@ -996,7 +996,7 @@ let memory size ~write_port ~read_address =
        ; mem_write_address = wa
        ; mem_read_address  = read_address })
 
-let multiport_memory ?(attributes = []) size ~write_ports ~read_addresses =
+let multiport_memory ?name ?(attributes = []) size ~write_ports ~read_addresses =
   (* size > 0 *)
   if size <= 0
   then raise_s [%message "[Signal.multiport_memory] size must be greater than 0" (size : int)];
@@ -1076,23 +1076,24 @@ let multiport_memory ?(attributes = []) size ~write_ports ~read_addresses =
       (Multiport_mem (make_id data_width deps, size, write_ports))
       attributes
   in
+  Option.iter name ~f:(fun name -> ignore (mem -- name : t));
   Array.map read_addresses ~f:(fun r ->
     Mem_read_port(make_id data_width [r; mem], mem, r))
 
-let ram_rbw size ~write_port ~read_port =
+let ram_rbw ?attributes ~write_port ~read_port size =
   let spec = { reg_empty with reg_clock = read_port.read_clock } in
   reg spec ~enable:read_port.read_enable
     (multiport_memory
-       ~attributes:[Rtl_attribute.Vivado.Ram_style.block]
+       ?attributes
        size
        ~write_ports:[|write_port|]
        ~read_addresses:[| read_port.read_address |]
     ).(0)
 
-let ram_wbr size ~write_port ~read_port =
+let ram_wbr ?attributes ~write_port ~read_port size =
   let spec = { reg_empty with reg_clock = read_port.read_clock } in
   (multiport_memory size
-     ~attributes:[Rtl_attribute.Vivado.Ram_style.block]
+     ?attributes
      ~write_ports:[|write_port|]
      ~read_addresses:[| (reg spec ~enable:read_port.read_enable read_port.read_address) |]
   ).(0)

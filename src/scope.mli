@@ -59,10 +59,13 @@ val flatten_design : t -> bool
 val naming_scheme : t -> Naming_scheme.t
 (** [naming_scheme t] returns the {!Naming.t} that [t] was constructed with. *)
 
+val name : ?sep:string -> t -> string -> string
+(** [name ?sep t signal string] creates a heirarchical name based on the path of [t] and
+    [string]. [sep], when provided, determines the separator for path components in the
+    heirarchical name (default is [$]). *)
+
 val naming : ?sep:string -> t -> Signal.t -> string -> Signal.t
-(** [naming ?sep t signal name] assigns a heirarchical name to [signal] based
-    on the path of [t] and [name]. [sep], when provided, determines the
-    separator for path components in the heirarchical name.
+(** Creates a hierarchical name, built with [name], and applies it to the signal.
 
     This is typically used as a partial application to construct a new signal
     naming operator, .e.g:

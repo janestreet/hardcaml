@@ -54,10 +54,13 @@ let sub_scope scope name =
       | Local_path -> Path.push (Path.create ()) name
       | No_path -> Path.create () }
 
-let naming ?(sep="$") scope s n =
+let name ?(sep="$") scope n =
   let path = name_path scope in
   match path with
-  | [] -> Signal.(s -- n)
+  | [] -> n
   | _ ->
     let path = Path.to_string path in
-    Signal.(s -- (path ^ sep ^ n))
+    (path ^ sep ^ n)
+
+let naming ?sep scope s n =
+  Signal.(--) s (name ?sep scope n)

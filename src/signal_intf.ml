@@ -264,19 +264,22 @@ module type Signal = sig
     -> t
 
   val ram_wbr
-    :  int
+    : ?attributes: Rtl_attribute.t list
     -> write_port:write_port
     -> read_port:read_port
+    -> int
     -> t
 
   val ram_rbw
-    :  int
+    : ?attributes: Rtl_attribute.t list
     -> write_port:write_port
     -> read_port:read_port
+    -> int
     -> t
 
   val multiport_memory
-    :  ?attributes: Rtl_attribute.t list
+    :  ?name:string
+    -> ?attributes: Rtl_attribute.t list
     -> int
     -> write_ports : write_port array
     -> read_addresses : t array

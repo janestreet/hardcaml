@@ -17,6 +17,7 @@ type create_fifo
   -> ?overflow_check  : bool      (** default is [true] *)
   -> ?reset           : Signal.t  (** default is [empty] **)
   -> ?underflow_check : bool      (** default is [true] *)
+  -> ?ram_attributes: Rtl_attribute.t list (** default is blockram *)
   -> unit
   -> capacity : int
   -> clock : Signal.t
@@ -30,7 +31,7 @@ type create_fifo
    Despite what's suggested by Vivado's BRAM documentation, [write_first] are not
    respected, even in SDP RAM mode.
 *)
-let ram_wbr_safe capacity ~write_port ~read_port =
+let ram_wbr_safe capacity ~write_port ~read_port ~ram_attributes =
   let open Signal in
   let collision =
     (reg
@@ -45,7 +46,7 @@ let ram_wbr_safe capacity ~write_port ~read_port =
        (Reg_spec.create ~clock:write_port.write_clock ())
        ~enable:(read_port.read_enable)
        write_port.write_data)
-    (ram_rbw capacity ~write_port ~read_port)
+    (ram_rbw capacity ~attributes:ram_attributes ~write_port ~read_port)
 
 ;;
 
@@ -56,6 +57,7 @@ let create
       ?(overflow_check = true)
       ?(reset = Signal.empty)
       ?(underflow_check = true)
+      ?(ram_attributes = [Rtl_attribute.Vivado.Ram_style.block])
       ()
       ~capacity:ram_capacity ~clock ~clear ~wr ~d ~rd =
   if Signal.is_empty clear && Signal.is_empty reset
@@ -112,7 +114,9 @@ let create
         let ra, ra_n = addr_count rd "READ_ADDRESS" in
         let ra = mux2 rd ra_n ra -- "RA" in
         let wa, _ = addr_count wr "WRITE_ADDRESS" in
-        ram_wbr_safe ram_capacity
+        ram_wbr_safe
+          ~ram_attributes
+          ram_capacity
           ~write_port:{ write_clock = clock
                       ; write_enable = wr
                       ; write_address = wa
@@ -127,7 +131,9 @@ let create
     else
       let ra, _ = addr_count rd "READ_ADDRESS" in
       let wa, _ = addr_count wr "WRITE_ADDRESS" in
-      ram_rbw ram_capacity
+      ram_rbw
+        ~attributes:ram_attributes
+        ram_capacity
         ~write_port:{ write_clock = clock
                     ; write_enable = wr
                     ; write_address = wa
@@ -149,6 +155,7 @@ let create_classic_with_extra_reg
       ?overflow_check
       ?reset
       ?underflow_check
+      ?ram_attributes
       ()
       ~capacity ~clock ~clear ~wr ~d ~rd =
   let spec = Reg_spec.create ~clock ~clear () in
@@ -161,7 +168,8 @@ let create_classic_with_extra_reg
     fifo_valid &: (middle_valid ==: will_update_dout)
   in
   let fifo =
-    create ~showahead:false ?nearly_empty ?nearly_full ?overflow_check ?reset ?underflow_check ()
+    create ~showahead:false ?nearly_empty ?nearly_full ?overflow_check ?reset
+      ?underflow_check ?ram_attributes ()
       ~capacity ~clock ~clear ~wr ~d ~rd:fifo_rd_en
   in
   let middle_dout = reg spec ~enable:will_update_middle fifo.q in
@@ -182,12 +190,14 @@ let create_showahead_from_classic
       ?overflow_check
       ?reset
       ?underflow_check
+      ?ram_attributes
       ()
       ~capacity ~clock ~clear ~wr ~d ~rd =
   let spec = Reg_spec.create ~clock:clock ~clear:clear () in
   let fifo_rd_en = wire 1 in
   let fifo =
-    create ~showahead:false ?nearly_empty ?nearly_full ?overflow_check ?reset ?underflow_check ()
+    create ~showahead:false ?nearly_empty ?nearly_full ?overflow_check ?reset
+      ?underflow_check ?ram_attributes ()
       ~capacity ~clock ~clear ~wr ~d ~rd:fifo_rd_en
   in
   let dout_valid = reg spec ~enable:(fifo_rd_en |: rd) fifo_rd_en in
@@ -202,12 +212,14 @@ let create_showahead_with_extra_reg
       ?overflow_check
       ?reset
       ?underflow_check
+      ?ram_attributes
       ()
       ~capacity ~clock ~clear ~wr ~d ~rd =
   let spec = Reg_spec.create ~clock:clock ~clear:clear () in
   let fifo_rd_en = wire 1 in
   let fifo =
-    create ~showahead:false ?nearly_empty ?nearly_full ?overflow_check ?reset ?underflow_check ()
+    create ~showahead:false ?nearly_empty ?nearly_full ?overflow_check ?reset
+      ?underflow_check ?ram_attributes ()
       ~capacity ~clock ~clear ~wr ~d ~rd:fifo_rd_en
   in
   let fifo_valid = wire 1 in
