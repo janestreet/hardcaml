@@ -18,6 +18,7 @@ type create_fifo
   -> ?reset           : Signal.t  (** default is [empty] **)
   -> ?underflow_check : bool      (** default is [true] *)
   -> ?ram_attributes: Rtl_attribute.t list (** default is blockram *)
+  -> ?scope: Scope.t (* to override naming prefix *)
   -> unit
   -> capacity : int
   -> clock : Signal.t

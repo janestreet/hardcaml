@@ -18,6 +18,7 @@ type create_fifo
   -> ?reset           : Signal.t  (** default is [empty] **)
   -> ?underflow_check : bool      (** default is [true] *)
   -> ?ram_attributes: Rtl_attribute.t list (** default is blockram *)
+  -> ?scope: Scope.t
   -> unit
   -> capacity : int
   -> clock : Signal.t
@@ -58,8 +59,14 @@ let create
       ?(reset = Signal.empty)
       ?(underflow_check = true)
       ?(ram_attributes = [Rtl_attribute.Vivado.Ram_style.block])
+      ?scope
       ()
       ~capacity:ram_capacity ~clock ~clear ~wr ~d ~rd =
+  let (--) =
+    match scope with
+    | Some scope -> Scope.naming scope
+    | None -> (--)
+  in
   if Signal.is_empty clear && Signal.is_empty reset
   then raise_s [%message
          "[Fifo.create] requires either a synchronous clear or asynchronous reset"];
@@ -156,6 +163,7 @@ let create_classic_with_extra_reg
       ?reset
       ?underflow_check
       ?ram_attributes
+      ?scope
       ()
       ~capacity ~clock ~clear ~wr ~d ~rd =
   let spec = Reg_spec.create ~clock ~clear () in
@@ -169,7 +177,7 @@ let create_classic_with_extra_reg
   in
   let fifo =
     create ~showahead:false ?nearly_empty ?nearly_full ?overflow_check ?reset
-      ?underflow_check ?ram_attributes ()
+      ?underflow_check ?ram_attributes ?scope ()
       ~capacity ~clock ~clear ~wr ~d ~rd:fifo_rd_en
   in
   let middle_dout = reg spec ~enable:will_update_middle fifo.q in
@@ -191,13 +199,14 @@ let create_showahead_from_classic
       ?reset
       ?underflow_check
       ?ram_attributes
+      ?scope
       ()
       ~capacity ~clock ~clear ~wr ~d ~rd =
   let spec = Reg_spec.create ~clock:clock ~clear:clear () in
   let fifo_rd_en = wire 1 in
   let fifo =
     create ~showahead:false ?nearly_empty ?nearly_full ?overflow_check ?reset
-      ?underflow_check ?ram_attributes ()
+      ?underflow_check ?ram_attributes ?scope ()
       ~capacity ~clock ~clear ~wr ~d ~rd:fifo_rd_en
   in
   let dout_valid = reg spec ~enable:(fifo_rd_en |: rd) fifo_rd_en in
@@ -213,13 +222,14 @@ let create_showahead_with_extra_reg
       ?reset
       ?underflow_check
       ?ram_attributes
+      ?scope
       ()
       ~capacity ~clock ~clear ~wr ~d ~rd =
   let spec = Reg_spec.create ~clock:clock ~clear:clear () in
   let fifo_rd_en = wire 1 in
   let fifo =
     create ~showahead:false ?nearly_empty ?nearly_full ?overflow_check ?reset
-      ?underflow_check ?ram_attributes ()
+      ?underflow_check ?ram_attributes ?scope ()
       ~capacity ~clock ~clear ~wr ~d ~rd:fifo_rd_en
   in
   let fifo_valid = wire 1 in
