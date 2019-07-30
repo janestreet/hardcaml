@@ -118,7 +118,7 @@ module Mutable = struct
     let words = words a in
     unsafe_set c.data 0 (lt (words-1) a b)
 
-  let[@inline never] raise_mux_of_empty_list () =
+  let[@cold] raise_mux_of_empty_list () =
     raise_s [%message "Bits.mux unexpected empty list"]
 
   (* For [mux2] this is ever so slightly slower.  For mux16, it's slightly faster. *)

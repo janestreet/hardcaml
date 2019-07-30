@@ -126,7 +126,7 @@ module Make (Bits : Primitives) = struct
   let width = Bits.width
 
 
-  let[@inline never] raise_arg_greater_than_zero fn x =
+  let[@cold] raise_arg_greater_than_zero fn x =
     raise_s [%message.omit_nil ("arg to [" ^ fn ^ "] must be >= 0")
                                  ~got:(x : int)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
@@ -148,13 +148,13 @@ module Make (Bits : Primitives) = struct
 
   (* constant generation *)
 
-  let[@inline never] raise_constb_bad_char b =
+  let[@cold] raise_constb_bad_char b =
     raise_s [%message.omit_nil "[constb] got invalid binary constant" ~_:(b : string)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
   module type Sexp_of_t = sig type t[@@deriving sexp_of] end
-  let[@inline never] raise_const_width_greater_than_zero
-                       (type t) (module X : Sexp_of_t with type t = t) width (const : t) =
+  let[@cold] raise_const_width_greater_than_zero
+               (type t) (module X : Sexp_of_t with type t = t) width (const : t) =
     raise_s [%message.omit_nil "Width of constant must be greater than zero"
                                  (width : int) (const : X.t)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
@@ -193,11 +193,11 @@ module Make (Bits : Primitives) = struct
            (List.length b) b;
     of_constant (Constant.of_bit_list b)
 
-  let[@inline never] raise_concat_empty s =
+  let[@cold] raise_concat_empty s =
     raise_s [%message.omit_nil "[concat] got [empty] input" ~_:(s : Bits.t list)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
-  let[@inline never] raise_concat_empty_list () =
+  let[@cold] raise_concat_empty_list () =
     raise_s [%message.omit_nil "[concat] got empty list"
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
@@ -226,11 +226,11 @@ module Make (Bits : Primitives) = struct
     | 1 -> vdd
     | _ -> (zero (w-1)) @: vdd
 
-  let[@inline never] raise_select_hi_lo hi lo =
+  let[@cold] raise_select_hi_lo hi lo =
     raise_s [%message.omit_nil "[select] got [hi < lo]" (hi : int) (lo : int)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
-  let[@inline never] raise_select_out_of_bounds a hi lo =
+  let[@cold] raise_select_out_of_bounds a hi lo =
     raise_s [%message.omit_nil "[select] indices are out of bounds"
                                  ~input_width:(width a : int)
                                  (hi : int)
@@ -261,11 +261,11 @@ module Make (Bits : Primitives) = struct
   let sel_bottom  x n = select x (n-1)             0
   let sel_top     x n = select x (width x - 1)     (width x - n)
 
-  let[@inline never] raise_insert_below_0 at_offset =
+  let[@cold] raise_insert_below_0 at_offset =
     raise_s [%message.omit_nil "[insert] below bit 0" ~_:(at_offset : int)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
-  let[@inline never] raise_insert_above_msb width_from width_target at_offset =
+  let[@cold] raise_insert_above_msb width_from width_target at_offset =
     raise_s [%message.omit_nil "[insert] above msb of target"
                                  (width_from : int)
                                  (width_target : int)
@@ -289,12 +289,12 @@ module Make (Bits : Primitives) = struct
 
   let sel x (h, l) = select x h l
 
-  let[@inline never] raise_assert_widths_same_not_empty function_ =
+  let[@cold] raise_assert_widths_same_not_empty function_ =
     raise_s [%message.omit_nil
       "" ~_:(String.concat [ "["; function_; "] got empty list" ] : string)
         ~loc:(Caller_id.get () : Caller_id.t option)]
 
-  let[@inline never] raise_widths_are_different function_ inputs =
+  let[@cold] raise_widths_are_different function_ inputs =
     raise_s [%message.omit_nil
       ""
         ~_:(String.concat ["["; function_; "] got inputs of different widths"]
@@ -314,7 +314,7 @@ module Make (Bits : Primitives) = struct
       let w = width t in
       List.iter ts ~f:(width_check function_ inputs w)
 
-  let[@inline never] raise_operator_widths_are_different function_ arg1 arg2 =
+  let[@cold] raise_operator_widths_are_different function_ arg1 arg2 =
     let inputs = [ arg1; arg2 ] in
     raise_s [%message.omit_nil
       ""
@@ -327,7 +327,7 @@ module Make (Bits : Primitives) = struct
     if width arg1 <> width arg2
     then raise_operator_widths_are_different function_ arg1 arg2
 
-  let[@inline never] raise_width_not_one msg =
+  let[@cold] raise_width_not_one msg =
     raise_s [%message.omit_nil "" ~_:(msg : string)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
@@ -337,13 +337,13 @@ module Make (Bits : Primitives) = struct
 
   let op_int_right op a b = op a (consti ~width:(width a) b)
 
-  let[@inline never] raise_mux_too_many_inputs inputs_provided maximum_expected =
+  let[@cold] raise_mux_too_many_inputs inputs_provided maximum_expected =
     raise_s [%message.omit_nil "[mux] got too many inputs"
                                  (inputs_provided :int)
                                  (maximum_expected : int)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
-  let[@inline never] raise_mux_too_few_inputs inputs_provided =
+  let[@cold] raise_mux_too_few_inputs inputs_provided =
     raise_s [%message.omit_nil "[mux] got fewer than 2 inputs" (inputs_provided : int)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
@@ -370,7 +370,7 @@ module Make (Bits : Primitives) = struct
     then mux sel (Array.to_list a)
     else mux sel (Array.to_list a @ [ default ])
 
-  let[@inline never] raise_matches_cases_not_unique () =
+  let[@cold] raise_matches_cases_not_unique () =
     raise_s [%message.omit_nil "[matches] cases must be unique"
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
@@ -567,15 +567,15 @@ module Make (Bits : Primitives) = struct
     select s (w-1) (w/2), select s ((w/2)-1) 0
 
 
-  let[@inline never] raise_split_empty_input () =
+  let[@cold] raise_split_empty_input () =
     raise_s [%message.omit_nil "[split] got [empty] input"
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
-  let[@inline never] raise_split_part_width part_width =
+  let[@cold] raise_split_part_width part_width =
     raise_s [%message.omit_nil "[split] got [part_width <= 0]" (part_width : int)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
-  let[@inline never] raise_split_inexact_split t_in part_width t =
+  let[@cold] raise_split_inexact_split t_in part_width t =
     raise_s [%message.omit_nil
       "[split ~exact:true] unable to split exactly"
         ~input_width:(width t_in : int)
@@ -597,7 +597,7 @@ module Make (Bits : Primitives) = struct
     in
     split t_in
 
-  let[@inline never] raise_shift_negative op shift =
+  let[@cold] raise_shift_negative op shift =
     raise_s [%message.omit_nil (op ^ " got negative shift") ~_:(shift : int)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
@@ -668,7 +668,7 @@ module Make (Bits : Primitives) = struct
 
   let to_sint a = to_int (sresize a Int.num_bits)
 
-  let[@inline never] raise_reduce_empty_list () =
+  let[@cold] raise_reduce_empty_list () =
     raise_s [%message.omit_nil "[reduce] got empty list"
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
@@ -689,11 +689,11 @@ module Make (Bits : Primitives) = struct
     then c +: (one w)
     else mux2 (c ==: (consti ~width:w max)) (zero w) (c +: (one w))
 
-  let[@inline never] raise_tree_invalid_arity () =
+  let[@cold] raise_tree_invalid_arity () =
     raise_s [%message.omit_nil "[tree] got [arity <= 1]"
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
-  let[@inline never] raise_tree_empty_list () =
+  let[@cold] raise_tree_empty_list () =
     raise_s [%message.omit_nil "[tree] got empty list"
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
@@ -717,11 +717,11 @@ module Make (Bits : Primitives) = struct
     | [ a ] -> a
     | _ -> tree ~arity ~f (t0 l)
 
-  let[@inline never] raise_tree_or_reduce_empty_list () =
+  let[@cold] raise_tree_or_reduce_empty_list () =
     raise_s [%message.omit_nil "[tree_or_reduce_binary_operator] got empty list"
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
-  let[@inline never] raise_tree_or_reduce_branching_factor branching_factor =
+  let[@cold] raise_tree_or_reduce_branching_factor branching_factor =
     raise_s [%message.omit_nil
       "[tree_or_reduce_binary_operator] got [branching_factor < 1]"
         (branching_factor : int)
@@ -751,7 +751,7 @@ module Make (Bits : Primitives) = struct
     List.map ts ~f:(fun d -> sresize d.valid (width d.value) &: d.value)
     |> tree_or_reduce_binary_operator ?branching_factor ~f:(|:)
 
-  let[@inline never] raise_of_empty function_ =
+  let[@cold] raise_of_empty function_ =
     raise_s [%message.omit_nil "" ~_:(function_ ^ " of [empty]")
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
@@ -852,11 +852,11 @@ module Make (Bits : Primitives) = struct
     in
     f b (msbs b)
 
-  let[@inline never] raise_constd_invalid_decimal_char v =
+  let[@cold] raise_constd_invalid_decimal_char v =
     raise_s [%message.omit_nil "[constd] got invalid decimal char" ~_:(v : char)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
-  let[@inline never] raise_constd_empty_string () =
+  let[@cold] raise_constd_empty_string () =
     raise_s [%message.omit_nil "[constd] got empty string"
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
@@ -901,19 +901,19 @@ module Make (Bits : Primitives) = struct
         (sum (l-1) (consti ~width:1 1) (consti ~width:1 0))
         bits
 
-  let[@inline never] raise_constv_missing_tick s =
+  let[@cold] raise_constv_missing_tick s =
     raise_s [%message.omit_nil "[constv] missing [']" ~_:(s : string)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
-  let[@inline never] raise_constv_missing_count s =
+  let[@cold] raise_constv_missing_count s =
     raise_s [%message.omit_nil "[constv] missing bit count" ~_:(s : string)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
-  let[@inline never] raise_constv_too_short s =
+  let[@cold] raise_constv_too_short s =
     raise_s [%message.omit_nil "[constv] value shorter than 2 characters" ~_:(s : string)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
-  let[@inline never] raise_constv_bad_control_char s =
+  let[@cold] raise_constv_bad_control_char s =
     raise_s [%message.omit_nil "[constv] bad control character" ~const:(s : string)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
@@ -957,7 +957,7 @@ module Make (Bits : Primitives) = struct
       else constb sval
     | _ -> raise_constv_bad_control_char s
 
-  let[@inline never] raise_const_convert_error const =
+  let[@cold] raise_const_convert_error const =
     raise_s [%message.omit_nil "[const] could not convert constant" (const : string)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
