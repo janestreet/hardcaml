@@ -598,7 +598,8 @@ module Make (Bits : Primitives) = struct
     split t_in
 
   let[@cold] raise_shift_negative op shift =
-    raise_s [%message.omit_nil (op ^ " got negative shift") ~_:(shift : int)
+    raise_s [%message.omit_nil (op ^ " got negative shift")
+                                 ~_:(shift : int)
                                  ~loc:(Caller_id.get () : Caller_id.t option)]
 
   let sll a shift =
@@ -627,6 +628,24 @@ module Make (Bits : Primitives) = struct
     else if shift >= (width a)
     then repeat (msb a) (width a)
     else concat [ (repeat (msb a) shift); (select a ((width a) - 1) shift) ]
+
+  let rec rotl d shift =
+    let width = width d in
+    if shift < 0 then raise_shift_negative "[rotl]" shift
+    else if shift = 0 then d
+    else if shift >= width then rotl d (shift % width)
+    else
+      select d (width - shift - 1) 0 @:
+      select d (width - 1) (width - shift)
+
+  let rec rotr d shift =
+    let width = width d in
+    if shift < 0 then raise_shift_negative "[rotr]" shift
+    else if shift = 0 then d
+    else if shift >= width then rotr d (shift % width)
+    else
+      select d (shift - 1) 0 @:
+      select d (width - 1) shift
 
   let log_shift op a b =
     let rec sft a n =

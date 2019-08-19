@@ -221,7 +221,11 @@ let%expect_test "shift errors" =
   require_does_raise [%here] (fun () -> srl vdd (-1));
   [%expect {| ("[srl] got negative shift" -1) |}];
   require_does_raise [%here] (fun () -> sra vdd (-1));
-  [%expect {| ("[sra] got negative shift" -1) |}]
+  [%expect {| ("[sra] got negative shift" -1) |}];
+  require_does_raise [%here] (fun () -> rotl vdd (-1));
+  [%expect {| ("[rotl] got negative shift" -1) |}];
+  require_does_raise [%here] (fun () -> rotr vdd (-1));
+  [%expect {| ("[rotr] got negative shift" -1) |}]
 ;;
 
 let%expect_test "tree errors" =

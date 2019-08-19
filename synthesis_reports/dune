@@ -1,0 +1,3 @@
+(executables (names synthesis_reports)
+ (libraries hardcaml hardcaml_synthesis_reports)
+ (preprocess (pps ppx_jane ppx_deriving_hardcaml)))

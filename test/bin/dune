@@ -1,5 +1,6 @@
 (executables (names test_gtkwave test_parameters test_multiport_memory)
- (libraries base hardcaml hardcaml_test stdio) (preprocess (pps ppx_jane)))
+ (libraries base hardcaml hardcaml_test stdio)
+ (preprocess (pps ppx_jane -allow-unannotated-ignores)))
 
 (rule (targets test_instantiate_verilog.v test_instantiate_vhdl.vhd)
  (deps test_parameters.exe) (action (bash ./test_parameters.exe)))

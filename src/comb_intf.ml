@@ -415,6 +415,12 @@ module type S = sig
   (** shift right arithmetic *)
   val sra : t -> int -> t
 
+  (** rotate left *)
+  val rotl : t -> int -> t
+
+  (** rotate right *)
+  val rotr : t -> int -> t
+
   (** shift by variable amount *)
   val log_shift : (t -> int -> t) -> t -> t -> t
 

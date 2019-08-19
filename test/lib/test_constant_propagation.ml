@@ -642,12 +642,6 @@ let%expect_test "split" =
   split ~exact:false ~part_width:4 (consti ~width:15 0x4321);
   [%expect {| (4'b0001 4'b0010 4'b0011 3'b100) |}]
 
-let rotl x n =
-  let w = width x in
-  let a = sll x (n % w) in
-  let b = srl x ((w - n) % w) in
-  a |: b
-
 let%expect_test "shifting" =
   print_s [%message
     "shifting"
@@ -659,6 +653,8 @@ let%expect_test "shifting" =
               : (signal, int) fn2 list)
       ~rotl: (List.init 4 ~f:(fn2 rotl (const "001"))
               : (signal, int) fn2 list)
+      ~rotr: (List.init 4 ~f:(fn2 rotr (const "001"))
+              : (signal, int) fn2 list)
       ~log_shift_sll:  (List.init 4 ~f:(fun i -> fn2 (log_shift sll)  (const "001") (consti ~width:2 i))
                         : (signal, signal) fn2 list)
       ~log_shift_srl:  (List.init 4 ~f:(fun i -> fn2 (log_shift srl)  (const "100") (consti ~width:2 i))
@@ -666,6 +662,8 @@ let%expect_test "shifting" =
       ~log_shift_sra:  (List.init 4 ~f:(fun i -> fn2 (log_shift sra)  (const "100") (consti ~width:2 i))
                         : (signal, signal) fn2 list)
       ~log_shift_rotl: (List.init 4 ~f:(fun i -> fn2 (log_shift rotl) (const "001") (consti ~width:2 i))
+                        : (signal, signal) fn2 list)
+      ~log_shift_rotr: (List.init 4 ~f:(fun i -> fn2 (log_shift rotr) (const "001") (consti ~width:2 i))
                         : (signal, signal) fn2 list) ];
   [%expect {|
     (shifting
@@ -689,6 +687,11 @@ let%expect_test "shifting" =
         ((3'b001 1) = 3'b010)
         ((3'b001 2) = 3'b100)
         ((3'b001 3) = 3'b001)))
+      (rotr (
+        ((3'b001 0) = 3'b001)
+        ((3'b001 1) = 3'b100)
+        ((3'b001 2) = 3'b010)
+        ((3'b001 3) = 3'b001)))
       (log_shift_sll (
         ((3'b001 2'b00) = 3'b001)
         ((3'b001 2'b01) = 3'b010)
@@ -708,6 +711,11 @@ let%expect_test "shifting" =
         ((3'b001 2'b00) = 3'b001)
         ((3'b001 2'b01) = 3'b010)
         ((3'b001 2'b10) = 3'b100)
+        ((3'b001 2'b11) = 3'b001)))
+      (log_shift_rotr (
+        ((3'b001 2'b00) = 3'b001)
+        ((3'b001 2'b01) = 3'b100)
+        ((3'b001 2'b10) = 3'b010)
         ((3'b001 2'b11) = 3'b001)))) |}]
 
 (* Various exceptions - this will be more exhaustively tested in the features that convert
