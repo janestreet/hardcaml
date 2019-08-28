@@ -6,3 +6,4 @@ let () =
   let circuit = Multiport_memory.dual_port () in
   Rtl.output Verilog ~output_mode:(To_file "dual_port.v") circuit;
   Rtl.output Vhdl ~output_mode:(To_file "dual_port.vhd") circuit
+;;

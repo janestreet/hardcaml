@@ -2,7 +2,6 @@
 
 open! Import
 open Signal
-
 include Rtl_intf
 
 (* utils *)
@@ -24,74 +23,85 @@ let t8 = tab 8
 let write_strings io f s =
   let s = Array.of_list s in
   let len = Array.length s in
-  for i=0 to len - 1 do
-    io (f (i=0) (i=len-1) s.(i))
+  for i = 0 to len - 1 do
+    io (f (i = 0) (i = len - 1) s.(i))
   done
+;;
 
 let rec sep s l =
   match l with
   | [] -> ""
   | [ a ] -> a
   | a :: b -> a ^ s ^ sep s b
+;;
 
 let str_map f s =
   let l = String.length s in
   let x = Bytes.create l in
-  for i=0 to l-1 do
+  for i = 0 to l - 1 do
     Bytes.set x i (f s.[i])
   done;
   Bytes.to_string x
+;;
 
 let is_alpha = function
   | 'a' .. 'z' | 'A' .. 'Z' -> true
   | _ -> false
+;;
 
 let is_num = function
   | '0' .. '9' -> true
   | _ -> false
+;;
 
 module VerilogNames = struct
   let case_sensitive = true
   let prefix = "_"
   let reserved = Reserved_words.verilog
+
   let rec legalize name =
     (* Alpha or '_' are legal staring identifiers.  If this is not the case add the prefix
        and try again. *)
     if is_alpha name.[0] || Char.equal name.[0] '_'
     then
       (* alpha, num, _, $ are ok, replace invalid chars with '_' *)
-      str_map (fun c ->
-        if is_alpha c || is_num c || Char.equal c '_' || Char.equal c '$'
-        then c
-        else '_') name
-    else
-      legalize (prefix ^ name)
+      str_map
+        (fun c ->
+           if is_alpha c || is_num c || Char.equal c '_' || Char.equal c '$'
+           then c
+           else '_')
+        name
+    else legalize (prefix ^ name)
+  ;;
 end
 
 module VhdlNames = struct
   let case_sensitive = false
   let prefix = "hc_"
+
   let reserved =
     Reserved_words.vhdl
     @ [ prefix ^ "uns"; prefix ^ "sgn"; prefix ^ "sl"; prefix ^ "slv" ]
+  ;;
+
   let rec legalize name =
     (* Alpha are legal staring identifiers.  If this is not the case add the prefix and
        try again. *)
     if is_alpha name.[0]
     then
       (* alpha, num, _ are ok, replace invalid chars with '_' *)
-      str_map (fun c ->
-        if is_alpha c || is_num c || Char.equal c '_'
-        then c
-        else '_') name
-    else
-      legalize (prefix ^ name)
+      str_map
+        (fun c -> if is_alpha c || is_num c || Char.equal c '_' then c else '_')
+        name
+    else legalize (prefix ^ name)
+  ;;
 end
 
 (* control mapping of signals to their (various) names *)
 module type SignalNaming = sig
   (* identifier case sensitivity *)
   val case_sensitive : bool
+
   (* given a name, turn it into a legal identifier *)
   val prefix : string
   val reserved : string list
@@ -105,22 +115,22 @@ module type SignalNameManager = sig
   type mem_names =
     { arr : string
     ; typ : string
-    ; t1  : string
-    ; t2  : string }
+    ; t1 : string
+    ; t2 : string
+    }
 
   type name_map =
-    { mangler     : Mangler.t
-    ; signals     : string SMap.t
-    ; mem         : mem_names Uid_map.t
-    ; inst_labels : string Uid_map.t }
+    { mangler : Mangler.t
+    ; signals : string SMap.t
+    ; mem : mem_names Uid_map.t
+    ; inst_labels : string Uid_map.t
+    }
 
   val prefix : string
   val reserved : string list
-
   val init : string list -> name_map
   val add_port : Signal.t -> name_map -> name_map
   val add_signal : Signal.t -> name_map -> name_map
-
   val signal_name : name_map -> Signal.t -> int -> string
   val mem_names : name_map -> Signal.t -> mem_names
   val inst_label : name_map -> Signal.t -> string
@@ -129,8 +139,10 @@ end
 module SignalNameManager (S : SignalNaming) () = struct
   module UI = struct
     type t = Uid.t * int [@@deriving compare, sexp_of]
+
     include (val Comparator.make ~compare ~sexp_of_t)
   end
+
   module SMap = Map.Make (UI)
 
   let prefix = S.prefix
@@ -139,84 +151,87 @@ module SignalNameManager (S : SignalNaming) () = struct
   type mem_names =
     { arr : string
     ; typ : string
-    ; t1  : string
-    ; t2  : string }
+    ; t1 : string
+    ; t2 : string
+    }
   [@@deriving sexp_of]
 
   type name_map =
-    { mangler     : Mangler.t
-    ; signals     : string SMap.t
-    ; mem         : mem_names Uid_map.t
-    ; inst_labels : string Uid_map.t }
+    { mangler : Mangler.t
+    ; signals : string SMap.t
+    ; mem : mem_names Uid_map.t
+    ; inst_labels : string Uid_map.t
+    }
   [@@deriving sexp_of]
 
   (* mangle a name *)
-  let mangle name nm =
-    Mangler.mangle nm.mangler name
-
-  let generate_name signal =
-    S.prefix ^ Int64.to_string (uid signal)
+  let mangle name nm = Mangler.mangle nm.mangler name
+  let generate_name signal = S.prefix ^ Int64.to_string (uid signal)
 
   (* get list of names of signal, or auto generate one *)
   let names_of_signal signal =
     let n = names signal in
-    if List.is_empty n
-    then [ generate_name signal ]
-    else n
+    if List.is_empty n then [ generate_name signal ] else n
+  ;;
 
   let add_signal_name uid idx name nm =
     (* mangle *)
     let name = mangle name nm in
     (* add to signal map *)
     { nm with signals = Map.set nm.signals ~key:(uid, idx) ~data:name }
+  ;;
 
   let add_signal_names signal nm =
     (* get names and legalize *)
     let names = names_of_signal signal in
     let names = List.map names ~f:S.legalize in
     (* add names to map *)
-    fst (
-      List.fold names ~init:(nm, 0) ~f:(fun (nm, idx) name ->
-        add_signal_name (uid signal) idx name nm, (idx+1)))
+    fst
+      (List.fold names ~init:(nm, 0) ~f:(fun (nm, idx) name ->
+         add_signal_name (uid signal) idx name nm, idx + 1))
+  ;;
 
   (* add reserved names to the mangler *)
   let init resv =
     let mangler = Mangler.create ~case_sensitive:S.case_sensitive in
     Mangler.add_identifiers_exn mangler resv;
-    { mangler
-    ; signals     = SMap.empty
-    ; mem         = Uid_map.empty
-    ; inst_labels = Uid_map.empty }
+    { mangler; signals = SMap.empty; mem = Uid_map.empty; inst_labels = Uid_map.empty }
+  ;;
 
   (* Add port names, but ensure they are unique and legal and throw and error if not. *)
   let add_port signal nm =
     match names signal with
     | [] ->
-      raise_s [%message
-        "circuit ports must have a name"
-          ~note:"This error should have been caught during circuit generation."
-          ~port:(signal : Signal.t)]
+      raise_s
+        [%message
+          "circuit ports must have a name"
+            ~note:"This error should have been caught during circuit generation."
+            ~port:(signal : Signal.t)]
     | [ name ] ->
       if not (String.equal (S.legalize name) name)
       then
-        raise_s [%message
-          "illegal port name"
-            (name : string)
-            ~legal_name:(S.legalize name : string)
-            ~note:"Hardcaml will not change ports names."
-            ~port:(signal : Signal.t)]
+        raise_s
+          [%message
+            "illegal port name"
+              (name : string)
+              ~legal_name:(S.legalize name : string)
+              ~note:"Hardcaml will not change ports names."
+              ~port:(signal : Signal.t)]
       else (
         match Mangler.find_index nm.mangler name with
         | Some _ ->
-          raise_s [%message
-            "port name has already been defined or matches a reserved identifier"
-              ~port:(signal : Signal.t)]
+          raise_s
+            [%message
+              "port name has already been defined or matches a reserved identifier"
+                ~port:(signal : Signal.t)]
         | None -> add_signal_name (uid signal) 0 name nm)
     | _ ->
-      raise_s [%message
-        "circuit ports may not have multiple names"
-          ~note:"This error should have been caught during circuit generation."
-          ~port:(signal : Signal.t)]
+      raise_s
+        [%message
+          "circuit ports may not have multiple names"
+            ~note:"This error should have been caught during circuit generation."
+            ~port:(signal : Signal.t)]
+  ;;
 
   let add_mem signal nm =
     let name =
@@ -228,17 +243,19 @@ module SignalNameManager (S : SignalNaming) () = struct
     let name_t1 = mangle (name ^ "_blk") nm in
     let name_t2 = mangle (name ^ "_idx") nm in
     { nm with
-      mem = Map.set nm.mem
-              ~key:(uid signal)
-              ~data:{ arr = name_arr
-                    ; typ = name_typ
-                    ; t1  = name_t1
-                    ; t2  = name_t2 } }
+      mem =
+        Map.set
+          nm.mem
+          ~key:(uid signal)
+          ~data:{ arr = name_arr; typ = name_typ; t1 = name_t1; t2 = name_t2 }
+    }
+  ;;
 
   let add_inst iname signal nm =
     let iname = S.legalize iname in
     let name = mangle iname nm in
     { nm with inst_labels = Map.set nm.inst_labels ~key:(uid signal) ~data:name }
+  ;;
 
   (* add signals names to map; deal with special cases *)
   let add_signal signal nm =
@@ -252,52 +269,67 @@ module SignalNameManager (S : SignalNaming) () = struct
       | _ -> nm
     in
     nm
+  ;;
 
   let raise_internal_error ~while_ ?index ~for_signal () =
-    raise_s [%message
-      (String.concat [ "[Rtl.SignalNameManager] internal error while ";  while_ ])
-        (index      : int option [@sexp.option])
-        (for_signal : Signal.t) ]
+    raise_s
+      [%message
+        (String.concat [ "[Rtl.SignalNameManager] internal error while "; while_ ])
+          (index : (int option[@sexp.option]))
+          (for_signal : Signal.t)]
+  ;;
 
   let signal_name nm signal idx =
     let uid = uid signal in
-    try Map.find_exn nm.signals (uid, idx)
-    with _ ->
-      raise_internal_error ~while_:"looking up signal name" ~index:idx ~for_signal:signal ()
+    try Map.find_exn nm.signals (uid, idx) with
+    | _ ->
+      raise_internal_error
+        ~while_:"looking up signal name"
+        ~index:idx
+        ~for_signal:signal
+        ()
+  ;;
 
   let mem_names nm signal =
     let uid = uid signal in
-    try Map.find_exn nm.mem uid
-    with _ -> raise_internal_error ~while_:"looking up memory names" ~for_signal:signal ()
+    try Map.find_exn nm.mem uid with
+    | _ -> raise_internal_error ~while_:"looking up memory names" ~for_signal:signal ()
+  ;;
 
   let inst_label nm signal =
     let uid = uid signal in
-    try Map.find_exn nm.inst_labels uid
-    with _ ->
+    try Map.find_exn nm.inst_labels uid with
+    | _ ->
       raise_internal_error ~while_:"looking up instantiation label" ~for_signal:signal ()
+  ;;
 end
 
 let raise_unexpected ~generator ~while_ ~got_signal =
-  raise_s [%message
-    (String.concat [ "unexpected signal type while "; while_ ])
-      (generator : string)
-      (got_signal : Signal.t)]
+  raise_s
+    [%message
+      (String.concat [ "unexpected signal type while "; while_ ])
+        (generator : string)
+        (got_signal : Signal.t)]
+;;
 
 let raise_expected ~generator ~while_ ~expected ~got_signal =
-  raise_s [%message
-    (String.concat [ "expected signal type"; while_ ])
-      (expected : string)
-      (generator : string)
-      (got_signal : Signal.t)]
+  raise_s
+    [%message
+      (String.concat [ "expected signal type"; while_ ])
+        (expected : string)
+        (generator : string)
+        (got_signal : Signal.t)]
+;;
 
 (* regiser/memory process/always helper *)
 
 module Process = struct
-
   (* helper for writing registers neatly *)
   type level =
     | Edge of Edge.t
-    | Level of Level.t[@@deriving sexp_of]
+    | Level of Level.t
+  [@@deriving sexp_of]
+
   type stat =
     | If of Signal.t * level * stat * stat
     | Assign of Signal.t * Signal.t
@@ -307,10 +339,15 @@ module Process = struct
   let stat_is_empty = function
     | Empty -> true
     | _ -> false
+  ;;
 
-  let make_reg ?d ?(clock=true) r s =
+  let make_reg ?d ?(clock = true) r s =
     let q = s in
-    let d = match d with None -> List.hd_exn (deps s) | Some(d) -> d in
+    let d =
+      match d with
+      | None -> List.hd_exn (deps s)
+      | Some d -> d
+    in
     (* main assignment *)
     let e = Assign (q, d) in
     (* enable *)
@@ -323,69 +360,51 @@ module Process = struct
     let e =
       if is_empty r.reg_clear
       then e
-      else If (r.reg_clear, Level r.reg_clear_level,
-               Assign (q, r.reg_clear_value), e)
+      else If (r.reg_clear, Level r.reg_clear_level, Assign (q, r.reg_clear_value), e)
     in
     (* reset and clock *)
     let clock e =
-      if clock
-      then If (r.reg_clock, Edge r.reg_clock_edge, e, Empty)
-      else e
+      if clock then If (r.reg_clock, Edge r.reg_clock_edge, e, Empty) else e
     in
     let e =
       if is_empty r.reg_reset
       then clock e
-      else
-        If (r.reg_reset, Edge r.reg_reset_edge,
-            Assign (q, r.reg_reset_value),
-            clock e)
+      else If (r.reg_reset, Edge r.reg_reset_edge, Assign (q, r.reg_reset_value), clock e)
     in
     e
+  ;;
 end
 
 (* vhdl/verilog config *)
 
 module type Rtl_internal = sig
-
   module Names : SignalNameManager
 
   val comment : string -> string
 
   val header_and_ports
-    : io:io -> name:string
+    :  io:io
+    -> name:string
     -> i:(string * int * Rtl_attribute.t list) list
-    -> o:(string * int * Rtl_attribute.t list) list -> unit
+    -> o:(string * int * Rtl_attribute.t list) list
+    -> unit
 
   val signal_decl : io -> string -> Signal.t -> unit
-
   val alias_decl : io -> string -> Signal.t -> unit
-
   val mem_decl : io -> name -> Names.mem_names -> Signal.t -> unit
-
   val start_logic : io -> unit
-
-  val logic :
-    io -> name -> Signal.t -> unit
-
-  val logic_mem : io -> name -> Names.mem_names -> Signal.t ->
-    register -> memory -> unit
-
+  val logic : io -> name -> Signal.t -> unit
+  val logic_mem : io -> name -> Names.mem_names -> Signal.t -> register -> memory -> unit
   val logic_mem2 : io -> name -> Names.mem_names -> Signal.t -> unit
-
   val logic_inst : io -> name -> string -> Signal.t -> instantiation -> unit
-
   val assign : io -> string -> string -> unit
-
   val end_logic : io -> unit
-
   val check_signal : Signal.t -> unit
 end
 
-
 module VerilogCore : Rtl_internal = struct
-
   let raise_unexpected = raise_unexpected ~generator:"verilog"
-  let raise_expected   = raise_expected   ~generator:"verilog"
+  let raise_expected = raise_expected ~generator:"verilog"
 
   module Names = SignalNameManager (VerilogNames) ()
 
@@ -395,20 +414,18 @@ module VerilogCore : Rtl_internal = struct
     | Wire -> "wire"
     | Reg -> "reg"
     | Constant _ -> "wire"
+  ;;
 
   let comment s = "/* " ^ s ^ " */"
 
   let decl t n b =
     let decl s n b =
-      if b=1
-      then s ^ " " ^ n
-      else s ^ " [" ^ Int.to_string (b - 1) ^ ":0] " ^ n
+      if b = 1 then s ^ " " ^ n else s ^ " [" ^ Int.to_string (b - 1) ^ ":0] " ^ n
     in
     match t with
-    | Constant v ->
-      decl (string_of_type t) n b ^ " = " ^ Int.to_string b ^ "'b" ^ v
-    | _ ->
-      decl (string_of_type t) n b
+    | Constant v -> decl (string_of_type t) n b ^ " = " ^ Int.to_string b ^ "'b" ^ v
+    | _ -> decl (string_of_type t) n b
+  ;;
 
   let print_attribute' attrs =
     match attrs with
@@ -424,31 +441,26 @@ module VerilogCore : Rtl_internal = struct
         match Rtl_attribute.value attr with
         | None -> Rtl_attribute.name attr
         | Some value ->
-          sprintf "%s=%s"
-            (Rtl_attribute.name attr)
-            (attribute_value_to_string value)
+          sprintf "%s=%s" (Rtl_attribute.name attr) (attribute_value_to_string value)
       in
-      let tag =
-        List.map attrs ~f:attribute_to_string
-        |> String.concat ~sep:","
-      in
+      let tag = List.map attrs ~f:attribute_to_string |> String.concat ~sep:"," in
       t4 ^ sprintf "(* %s *)\n" tag
+  ;;
 
   let print_attribute s = print_attribute' (attributes s)
 
   let header_and_ports ~io ~name ~i ~o =
     let module_port _ last (s, _, _tag) =
-      if last
-      then t4 ^ s ^ "\n"
-      else t4 ^ s ^ "," ^ "\n"
+      if last then t4 ^ s ^ "\n" else t4 ^ s ^ "," ^ "\n"
     in
-    let decl_port t _ _ (s, b, tag) =  print_attribute' tag ^ t4 ^ decl t s b ^ ";\n" in
+    let decl_port t _ _ (s, b, tag) = print_attribute' tag ^ t4 ^ decl t s b ^ ";\n" in
     io ("module " ^ name ^ " (\n");
     write_strings io module_port (i @ o);
-    io (");\n\n");
+    io ");\n\n";
     write_strings io (decl_port Input) i;
     write_strings io (decl_port Output) o;
-    io ("\n")
+    io "\n"
+  ;;
 
   let signal_decl io name s =
     let tag = print_attribute s in
@@ -458,22 +470,20 @@ module VerilogCore : Rtl_internal = struct
       if List.length (deps s) = 3
       then io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
       else io (tag ^ t4 ^ decl Reg name (width s) ^ ";\n")
-    | Op _ | Wire _
-    | Select _ | Inst _ ->
+    | Op _ | Wire _ | Select _ | Inst _ ->
       io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
-    | Reg _ ->
-      io (tag ^ t4 ^ decl Reg name (width s) ^ ";\n")
+    | Reg _ -> io (tag ^ t4 ^ decl Reg name (width s) ^ ";\n")
     | Const (_, v) ->
       io (tag ^ t4 ^ decl (Constant (Bits.to_bstr v)) name (width s) ^ ";\n")
-    | Mem _ ->
-      io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
-    | Mem_read_port _ ->
-      io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
+    | Mem _ -> io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
+    | Mem_read_port _ -> io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
     | Multiport_mem _ -> ()
+  ;;
 
   let alias_decl io name s =
     let tag = print_attribute s in
     io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
+  ;;
 
   let mem_decl io name mem s =
     let tag = print_attribute s in
@@ -488,6 +498,7 @@ module VerilogCore : Rtl_internal = struct
       let size = Int.to_string (mem_size - 1) in
       io (tag ^ t4 ^ "reg [" ^ b ^ ":0] " ^ name s ^ "[0:" ^ size ^ "];\n")
     | _ -> raise_expected ~while_:"declaring memories" ~expected:"memory" ~got_signal:s
+  ;;
 
   let start_logic _ = ()
 
@@ -507,22 +518,24 @@ module VerilogCore : Rtl_internal = struct
         then (
           io (tab ^ "else\n");
           write_reg (tab ^ t4) f)
-      | Assign (q, d) ->
-        assign tab q d
+      | Assign (q, d) -> assign tab q d
     in
     let edge s (l : Edge.t) =
-      (match l with Rising -> "posedge " | Falling -> "negedge ") ^ name s
+      (match l with
+       | Rising -> "posedge "
+       | Falling -> "negedge ")
+      ^ name s
     in
     let edges =
       if is_empty r.reg_reset
       then [ edge r.reg_clock r.reg_clock_edge ]
-      else [ edge r.reg_clock r.reg_clock_edge
-           ; edge r.reg_reset r.reg_reset_edge ]
+      else [ edge r.reg_clock r.reg_clock_edge; edge r.reg_reset r.reg_reset_edge ]
     in
     let edges = sep " or " edges in
     io (t4 ^ "always @(" ^ edges ^ ") begin\n");
     write_reg t8 (make_reg ?d ~clock:false r s);
     io (t4 ^ "end\n")
+  ;;
 
   let logic io name s =
     let dep n = List.nth_exn (deps s) n in
@@ -530,21 +543,17 @@ module VerilogCore : Rtl_internal = struct
     let binop op =
       let a = name (dep 0) in
       let b = name (dep 1) in
-      io (t4 ^ "assign " ^ sn ^ " = " ^
-          a ^ " " ^ op ^ " " ^ b ^ ";\n")
+      io (t4 ^ "assign " ^ sn ^ " = " ^ a ^ " " ^ op ^ " " ^ b ^ ";\n")
     in
     let sbinop op =
       let a = name (dep 0) in
       let b = name (dep 1) in
-      let a, b = "$signed("^a^")", "$signed("^b^")" in
-      io (t4 ^ "assign " ^ sn ^ " = " ^
-          a ^ " " ^ op ^ " " ^ b ^ ";\n")
+      let a, b = "$signed(" ^ a ^ ")", "$signed(" ^ b ^ ")" in
+      io (t4 ^ "assign " ^ sn ^ " = " ^ a ^ " " ^ op ^ " " ^ b ^ ";\n")
     in
     match s with
-    | Mem _
-    | Multiport_mem _
-    | Inst _
-    | Empty -> raise_unexpected ~while_:"writing logic assignments" ~got_signal:s
+    | Mem _ | Multiport_mem _ | Inst _ | Empty ->
+      raise_unexpected ~while_:"writing logic assignments" ~got_signal:s
     | Op (_, op) ->
       (match op with
        | Signal_add -> binop "+"
@@ -555,87 +564,113 @@ module VerilogCore : Rtl_internal = struct
        | Signal_or -> binop "|"
        | Signal_xor -> binop "^"
        | Signal_eq -> binop "=="
-       | Signal_not ->
-         io (t4 ^ "assign " ^ sn ^ " = ~ " ^
-             (name (dep 0)) ^ ";\n")
+       | Signal_not -> io (t4 ^ "assign " ^ sn ^ " = ~ " ^ name (dep 0) ^ ";\n")
        | Signal_lt -> binop "<"
        | Signal_cat ->
-         let cat = sep ", "
-                     (List.map (deps s) ~f:(fun s -> name s))
-         in
+         let cat = sep ", " (List.map (deps s) ~f:(fun s -> name s)) in
          io (t4 ^ "assign " ^ sn ^ " = { " ^ cat ^ " };\n")
        | Signal_mux ->
          let switch, cases = List.hd_exn (deps s), List.tl_exn (deps s) in
          let n = List.length cases in
-         if n=2
+         if n = 2
          then
-           io (t4 ^ "assign " ^ sn ^ " = " ^
-               name switch ^ " ? " ^
-               name (dep 2) ^ " : " ^
-               name (dep 1) ^ ";\n")
+           io
+             (t4
+              ^ "assign "
+              ^ sn
+              ^ " = "
+              ^ name switch
+              ^ " ? "
+              ^ name (dep 2)
+              ^ " : "
+              ^ name (dep 1)
+              ^ ";\n")
          else (
            io (t4 ^ "always @* begin\n");
            io (t8 ^ "case (" ^ name switch ^ ")\n");
            List.iteri cases ~f:(fun i s ->
-             (if i <> n-1
-              then io (t8 ^ Int.to_string i ^ ": ")
-              else io (t8 ^ "default" ^ ": "));
+             if i <> n - 1
+             then io (t8 ^ Int.to_string i ^ ": ")
+             else io (t8 ^ "default" ^ ": ");
              io (sn ^ " <= " ^ name s ^ ";\n"));
            io (t8 ^ "endcase\n");
            io (t4 ^ "end\n")))
-    | Wire (_, d) ->
-      io (t4 ^ "assign " ^ sn ^ " = " ^ name (!d) ^ ";\n")
+    | Wire (_, d) -> io (t4 ^ "assign " ^ sn ^ " = " ^ name !d ^ ";\n")
     | Reg (_, r) ->
-      clocked io s r name
-        (fun tab q d ->
-           io (tab ^ name q ^ " <= " ^ name d ^ ";\n"))
+      clocked io s r name (fun tab q d -> io (tab ^ name q ^ " <= " ^ name d ^ ";\n"))
     | Select (_, h, l) ->
-      io (t4 ^ "assign " ^ sn ^ " = " ^
-          (name (dep 0)) ^ "[" ^
-          (Int.to_string h) ^ ":" ^
-          (Int.to_string l) ^ "];\n")
-    | Mem_read_port(_, mem, read_address) ->
+      io
+        (t4
+         ^ "assign "
+         ^ sn
+         ^ " = "
+         ^ name (dep 0)
+         ^ "["
+         ^ Int.to_string h
+         ^ ":"
+         ^ Int.to_string l
+         ^ "];\n")
+    | Mem_read_port (_, mem, read_address) ->
       io (t4 ^ "assign " ^ sn ^ " = " ^ name mem ^ "[" ^ name read_address ^ "];\n")
-    | Const _ -> () (* already done *)
+    | Const _ -> ()
+  ;;
+
+  (* already done *)
 
   let logic_mem io name mem s r sp =
     let open Names in
     let sn = name s in
-    clocked io s r name
-      (fun tab _ d ->
-         let d' = uid (List.hd_exn (deps s)) in
-         if Uid.equal d' (uid d)
-         then (
-           let wa = name sp.mem_write_address in
-           io (tab ^ mem.arr ^ "[" ^ wa ^ "] <= " ^
-               name d ^ ";\n"))
-         else ( (* some reset/clear clause *)
-           let i = mem.t2 in
-           io (tab ^ "begin: " ^ mem.t1 ^ "\n");
-           io (tab ^ t4 ^ "integer " ^ i ^ ";\n");
-           io (tab ^ t4 ^ "for (" ^ i ^ "=0; " ^ i ^ "<" ^
-               Int.to_string sp.mem_size ^ "; " ^
-               i ^ "=" ^ i ^ "+1)\n");
-           io (tab ^ t8 ^ mem.arr ^ "[" ^ i ^ "] <= " ^
-               name d ^ ";\n");
-           io (tab ^ "end\n")));
+    clocked io s r name (fun tab _ d ->
+      let d' = uid (List.hd_exn (deps s)) in
+      if Uid.equal d' (uid d)
+      then (
+        let wa = name sp.mem_write_address in
+        io (tab ^ mem.arr ^ "[" ^ wa ^ "] <= " ^ name d ^ ";\n"))
+      else (
+        (* some reset/clear clause *)
+        let i = mem.t2 in
+        io (tab ^ "begin: " ^ mem.t1 ^ "\n");
+        io (tab ^ t4 ^ "integer " ^ i ^ ";\n");
+        io
+          (tab
+           ^ t4
+           ^ "for ("
+           ^ i
+           ^ "=0; "
+           ^ i
+           ^ "<"
+           ^ Int.to_string sp.mem_size
+           ^ "; "
+           ^ i
+           ^ "="
+           ^ i
+           ^ "+1)\n");
+        io (tab ^ t8 ^ mem.arr ^ "[" ^ i ^ "] <= " ^ name d ^ ";\n");
+        io (tab ^ "end\n")));
     (* read *)
     let a = name sp.mem_read_address in
     io (t4 ^ "assign " ^ sn ^ " = " ^ mem.arr ^ "[" ^ a ^ "];\n")
+  ;;
 
   let logic_mem2 io name _mem signal =
     let write_ports =
       match signal with
-      | Multiport_mem(_, _, write_ports) -> write_ports
-      | _ -> raise_s [%message "Internal error - expecting Multiport_mem signal"] in
+      | Multiport_mem (_, _, write_ports) -> write_ports
+      | _ -> raise_s [%message "Internal error - expecting Multiport_mem signal"]
+    in
     Array.iter write_ports ~f:(fun write_port ->
-      clocked ~d:(write_port.write_data) io signal
-        Reg_spec.(create () ~clock:write_port.write_clock
-                  |> override ~global_enable:write_port.write_enable)
+      clocked
+        ~d:write_port.write_data
+        io
+        signal
+        Reg_spec.(
+          create () ~clock:write_port.write_clock
+          |> override ~global_enable:write_port.write_enable)
         name
         (fun tab _ d ->
            let wa = name write_port.write_address in
            io (tab ^ name signal ^ "[" ^ wa ^ "] <= " ^ name d ^ ";\n")))
+  ;;
 
   let logic_inst io name inst_name s i =
     io (t4 ^ i.inst_name ^ "\n");
@@ -643,16 +678,18 @@ module VerilogCore : Rtl_internal = struct
     (* parameters *)
     let param_string (p : Parameter.t) =
       match p.value with
-      | String v        -> "\"" ^ v ^ "\""
-      | Int v           -> Int.to_string v
-      | Real v          -> Float.to_string v
-      | Bool b | Bit b  -> if b then "1'b1" else "1'b0"
+      | String v -> "\"" ^ v ^ "\""
+      | Int v -> Int.to_string v
+      | Real v -> Float.to_string v
+      | Bool b | Bit b -> if b then "1'b1" else "1'b0"
       | Std_logic_vector v | Std_ulogic_vector v ->
-        Printf.sprintf "%i'b%s"
+        Printf.sprintf
+          "%i'b%s"
           (Parameter.Std_logic_vector.width v)
           (Parameter.Std_logic_vector.to_string v)
       | Bit_vector v ->
-        Printf.sprintf "%i'b%s"
+        Printf.sprintf
+          "%i'b%s"
           (Parameter.Bit_vector.width v)
           (Parameter.Bit_vector.to_string v)
       | Std_logic b | Std_ulogic b ->
@@ -662,140 +699,164 @@ module VerilogCore : Rtl_internal = struct
     then (
       let generics =
         let generic (p : Parameter.t) =
-          assoc (Parameter_name.to_string p.name) (param_string p) in
+          assoc (Parameter_name.to_string p.name) (param_string p)
+        in
         sep ", " (List.map i.inst_generics ~f:generic)
       in
       io (t8 ^ "#( " ^ generics ^ " )\n"));
     io (t8 ^ inst_name ^ "\n");
     (* ports *)
-    let in_ports =
-      List.map i.inst_inputs ~f:(fun (n, s) -> assoc n (name s))
-    in
+    let in_ports = List.map i.inst_inputs ~f:(fun (n, s) -> assoc n (name s)) in
     let out_ports =
       if width s = 1
-      then (* special case - 1 output of 1 bit *)
+      then
+        (* special case - 1 output of 1 bit *)
         List.map i.inst_outputs ~f:(fun (n, _) -> assoc n (name s))
       else
         List.map i.inst_outputs ~f:(fun (n, (w, l)) ->
-          assoc n ((name s) ^ "[" ^ Int.to_string (w+l-1) ^ ":" ^
-                   Int.to_string l ^ "]"))
+          assoc
+            n
+            (name s ^ "[" ^ Int.to_string (w + l - 1) ^ ":" ^ Int.to_string l ^ "]"))
     in
     io (t8 ^ "( " ^ sep ", " (in_ports @ out_ports) ^ " );\n")
+  ;;
 
-  let assign io t f =
-    io (t4 ^ "assign " ^ t ^ " = " ^ f ^ ";\n")
-
-  let end_logic io = io ("endmodule\n")
-
+  let assign io t f = io (t4 ^ "assign " ^ t ^ " = " ^ f ^ ";\n")
+  let end_logic io = io "endmodule\n"
   let check_signal (_ : Signal.t) = ()
 end
 
 module VhdlCore : Rtl_internal = struct
-
   let raise_unexpected = raise_unexpected ~generator:"vhdl"
-  let raise_expected   = raise_expected   ~generator:"vhdl"
+  let raise_expected = raise_expected ~generator:"vhdl"
 
   module Names = SignalNameManager (VhdlNames) ()
 
   let conversions =
     let p = Names.prefix in
-    [ "function " ^ p ^ "uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;"
-    ; "function " ^ p ^ "uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;"
-    ; "function " ^ p ^ "sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;"
-    ; "function " ^ p ^ "sgn(a : std_logic_vector) return signed           is begin return signed(a); end;"
-    ; "function " ^ p ^ "sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;"
-    ; "function " ^ p ^ "sl (a : unsigned)         return std_logic        is begin return a(a'right); end;"
-    ; "function " ^ p ^ "sl (a : signed)           return std_logic        is begin return a(a'right); end;"
-    ; "function " ^ p ^ "sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;"
-    ; "function " ^ p ^ "slv(a : std_logic_vector) return std_logic_vector is begin return a; end;"
-    ; "function " ^ p ^ "slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;"
-    ; "function " ^ p ^ "slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;" ]
+    [ "function "
+      ^ p
+      ^ "uns(a : std_logic)        return unsigned         is variable b : unsigned(0 \
+         downto 0); begin b(0) := a; return b; end;"
+    ; "function "
+      ^ p
+      ^ "uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); \
+         end;"
+    ; "function "
+      ^ p
+      ^ "sgn(a : std_logic)        return signed           is variable b : signed(0 \
+         downto 0); begin b(0) := a; return b; end;"
+    ; "function "
+      ^ p
+      ^ "sgn(a : std_logic_vector) return signed           is begin return signed(a); \
+         end;"
+    ; "function "
+      ^ p
+      ^ "sl (a : std_logic_vector) return std_logic        is begin return a(a'right); \
+         end;"
+    ; "function "
+      ^ p
+      ^ "sl (a : unsigned)         return std_logic        is begin return a(a'right); \
+         end;"
+    ; "function "
+      ^ p
+      ^ "sl (a : signed)           return std_logic        is begin return a(a'right); \
+         end;"
+    ; "function "
+      ^ p
+      ^ "sl (a : boolean)          return std_logic        is begin if a then return \
+         '1'; else return '0'; end if; end;"
+    ; "function "
+      ^ p
+      ^ "slv(a : std_logic_vector) return std_logic_vector is begin return a; end;"
+    ; "function "
+      ^ p
+      ^ "slv(a : unsigned)         return std_logic_vector is begin return \
+         std_logic_vector(a); end;"
+    ; "function "
+      ^ p
+      ^ "slv(a : signed)           return std_logic_vector is begin return \
+         std_logic_vector(a); end;"
+    ]
+  ;;
 
   let comment s = "-- " ^ s
 
   let const_str b v =
-    let q = if b=1 then "'" else "\"" in
+    let q = if b = 1 then "'" else "\"" in
     q ^ v ^ q
+  ;;
 
   let decl t n b =
     let decl_slv b =
-      if b=1
+      if b = 1
       then "std_logic"
-      else "std_logic_vector (" ^ Int.to_string (b-1) ^ " downto 0)"
+      else "std_logic_vector (" ^ Int.to_string (b - 1) ^ " downto 0)"
     in
     match t with
-    | Constant v ->
-      "constant " ^ n ^ " : " ^ decl_slv b ^ " := " ^ const_str b v
+    | Constant v -> "constant " ^ n ^ " : " ^ decl_slv b ^ " := " ^ const_str b v
     | Input -> n ^ " : in " ^ decl_slv b
     | Output -> n ^ " : out " ^ decl_slv b
     | Wire -> "signal " ^ n ^ " : " ^ decl_slv b
     | Reg -> "signal " ^ n ^ " : " ^ decl_slv b
+  ;;
 
   let header_and_ports ~io ~name ~i ~o =
-    let entity_in_port _ _ (s, n, _attrs) =
-      t8 ^ decl Input s n ^ ";\n"
-    in
+    let entity_in_port _ _ (s, n, _attrs) = t8 ^ decl Input s n ^ ";\n" in
     let entity_out_port _ last (s, n, _attrs) =
-      t8 ^ decl Output s n ^ (if last then "\n" else ";\n")
+      t8 ^ decl Output s n ^ if last then "\n" else ";\n"
     in
-    io ("library ieee;\n");
-    io ("use ieee.std_logic_1164.all;\n");
-    io ("use ieee.numeric_std.all;\n\n");
+    io "library ieee;\n";
+    io "use ieee.std_logic_1164.all;\n";
+    io "use ieee.numeric_std.all;\n\n";
     io ("entity " ^ name ^ " is\n");
-    io ("    port (\n");
+    io "    port (\n";
     write_strings io entity_in_port i;
     write_strings io entity_out_port o;
-    io ("    );\n");
-    io ("end entity;\n\n");
+    io "    );\n";
+    io "end entity;\n\n";
     io ("architecture rtl of " ^ name ^ " is\n\n");
     io (t4 ^ comment "conversion functions" ^ "\n");
     List.iter conversions ~f:(fun s -> io (t4 ^ s ^ "\n"));
-    io ("\n")
+    io "\n"
+  ;;
 
   let signal_decl io name s =
-    begin match s with
+    match s with
     | Empty -> raise_unexpected ~while_:"declaring signals" ~got_signal:s
-    | Op _ | Wire _
-    | Select _ | Inst _ ->
-      io (t4 ^ decl Wire name (width s) ^ ";\n")
-    | Reg _ ->
-      io (t4 ^ decl Reg name (width s) ^ ";\n")
-    | Const (_, v) ->
-      io (t4 ^ decl (Constant (Bits.to_bstr v)) name (width s) ^ ";\n")
-    | Mem _ | Mem_read_port _ ->
-      io (t4 ^ decl Reg name (width s) ^ ";\n")
+    | Op _ | Wire _ | Select _ | Inst _ -> io (t4 ^ decl Wire name (width s) ^ ";\n")
+    | Reg _ -> io (t4 ^ decl Reg name (width s) ^ ";\n")
+    | Const (_, v) -> io (t4 ^ decl (Constant (Bits.to_bstr v)) name (width s) ^ ";\n")
+    | Mem _ | Mem_read_port _ -> io (t4 ^ decl Reg name (width s) ^ ";\n")
     | Multiport_mem _ -> ()
-    end
+  ;;
 
-  let alias_decl io name s =
-    io (t4 ^ decl Wire name (width s) ^ ";\n")
+  let alias_decl io name s = io (t4 ^ decl Wire name (width s) ^ ";\n")
 
   let mem_decl io name mem s =
     let open Names in
-    begin match s with
+    match s with
     | Mem (_, _, _, sp) ->
       let b = Int.to_string (width s - 1) in
       let sz = Int.to_string (sp.mem_size - 1) in
       (* need a sepatate ID for the array type *)
-      io (t4 ^ "type " ^ mem.typ ^
-          " is array (0 to " ^ sz ^ ") of ");
-      (if width s = 1
-       then io ("std_logic;\n")
-       else io ("std_logic_vector(" ^ b ^ " downto 0);\n"));
+      io (t4 ^ "type " ^ mem.typ ^ " is array (0 to " ^ sz ^ ") of ");
+      if width s = 1
+      then io "std_logic;\n"
+      else io ("std_logic_vector(" ^ b ^ " downto 0);\n");
       io (t4 ^ "signal " ^ mem.arr ^ " : " ^ mem.typ ^ ";\n")
     | Multiport_mem (_, mem_size, _) ->
       let b = Int.to_string (width s - 1) in
       let sz = Int.to_string (mem_size - 1) in
-      io (t4 ^ "type " ^ mem.typ ^
-          " is array (0 to " ^ sz ^ ") of ");
-      (if width s = 1
-       then io ("std_logic;\n")
-       else io ("std_logic_vector(" ^ b ^ " downto 0);\n"));
+      io (t4 ^ "type " ^ mem.typ ^ " is array (0 to " ^ sz ^ ") of ");
+      if width s = 1
+      then io "std_logic;\n"
+      else io ("std_logic_vector(" ^ b ^ " downto 0);\n");
       io (t4 ^ "signal " ^ name s ^ " : " ^ mem.typ ^ ";\n")
     | _ -> raise_expected ~while_:"declaring memories" ~expected:"memory" ~got_signal:s
-    end
+  ;;
 
-  let start_logic io = io ("begin\n\n")
+  let start_logic io = io "begin\n\n"
 
   let clocked ?d io s r name assign =
     let open Process in
@@ -816,43 +877,34 @@ module VhdlCore : Rtl_internal = struct
           io (tab ^ "else\n");
           write_reg (tab ^ t4) f);
         io (tab ^ "end if;\n")
-      | Assign (q, d) ->
-        assign tab q d
+      | Assign (q, d) -> assign tab q d
     in
     let edges =
-      if is_empty r.reg_reset
-      then [ r.reg_clock ]
-      else [ r.reg_clock; r.reg_reset ]
+      if is_empty r.reg_reset then [ r.reg_clock ] else [ r.reg_clock; r.reg_reset ]
     in
     let edges = sep ", " (List.map edges ~f:(fun s -> name s)) in
     io (t4 ^ "process (" ^ edges ^ ") begin\n");
     write_reg t8 (make_reg ?d r s);
     io (t4 ^ "end process;\n")
-
+  ;;
 
   let logic io name s =
     let dep n = List.nth_exn (deps s) n in
     let sn = name s in
-
     let dname n = name (dep n) in
     let udname n = Names.prefix ^ "uns(" ^ dname n ^ ")" in
     let sdname n = Names.prefix ^ "sgn(" ^ dname n ^ ")" in
     let slv str =
-      Names.prefix ^ (if width s=1 then "sl" else "slv") ^ "(" ^ str ^ ")"
+      Names.prefix ^ (if width s = 1 then "sl" else "slv") ^ "(" ^ str ^ ")"
     in
-
     let binop name op =
-      io (t4 ^ sn ^ " <= " ^
-          slv (name 0 ^ " " ^ op ^ " " ^ name 1) ^ ";\n")
+      io (t4 ^ sn ^ " <= " ^ slv (name 0 ^ " " ^ op ^ " " ^ name 1) ^ ";\n")
     in
     let sbinop = binop sdname in
     let binop = binop udname in
-
     match s with
-    | Mem _
-    | Multiport_mem _
-    | Inst _
-    | Empty -> raise_unexpected ~while_:"writing logic assignments" ~got_signal:s
+    | Mem _ | Multiport_mem _ | Inst _ | Empty ->
+      raise_unexpected ~while_:"writing logic assignments" ~got_signal:s
     | Op (_, op) ->
       (match op with
        | Signal_add -> binop "+"
@@ -863,14 +915,10 @@ module VhdlCore : Rtl_internal = struct
        | Signal_or -> binop "or"
        | Signal_xor -> binop "xor"
        | Signal_eq -> binop "="
-       | Signal_not ->
-         io (t4 ^ sn ^ " <= " ^
-             slv ("not " ^ udname 0) ^ ";\n")
+       | Signal_not -> io (t4 ^ sn ^ " <= " ^ slv ("not " ^ udname 0) ^ ";\n")
        | Signal_lt -> binop "<"
        | Signal_cat ->
-         let cat = sep " & "
-                     (List.map (deps s) ~f:(fun s -> name s))
-         in
+         let cat = sep " & " (List.map (deps s) ~f:(fun s -> name s)) in
          io (t4 ^ sn ^ " <= " ^ cat ^ ";\n")
        | Signal_mux ->
          let cases = List.tl_exn (deps s) in
@@ -879,84 +927,95 @@ module VhdlCore : Rtl_internal = struct
          io (sn ^ " <= \n");
          List.iteri cases ~f:(fun i s ->
            io (t8 ^ name s ^ " when ");
-           if i <> n-1
-           then io (Int.to_string i ^ ",\n")
-           else io ("others;\n")))
-    | Wire (_, d) ->
-      io (t4 ^ sn ^ " <= " ^ name (!d) ^ ";\n")
+           if i <> n - 1 then io (Int.to_string i ^ ",\n") else io "others;\n"))
+    | Wire (_, d) -> io (t4 ^ sn ^ " <= " ^ name !d ^ ";\n")
     | Reg (_, r) ->
-      clocked io s r name
-        (fun tab q d ->
-           io (tab ^ name q ^ " <= " ^ name d ^ ";\n"))
+      clocked io s r name (fun tab q d -> io (tab ^ name q ^ " <= " ^ name d ^ ";\n"))
     | Select (_, h, l) ->
-      let sel = dname 0 ^ "(" ^
-                Int.to_string h ^ " downto " ^
-                Int.to_string l ^ ")"
-      in
+      let sel = dname 0 ^ "(" ^ Int.to_string h ^ " downto " ^ Int.to_string l ^ ")" in
       let sel = if width s = 1 then slv sel else sel in
       io (t4 ^ sn ^ " <= " ^ sel ^ ";\n")
-    | Mem_read_port(_, mem, read_address) ->
-      io (t4 ^ sn ^ " <= "
-          ^ name mem ^ "(to_integer(hc_uns(" ^ name read_address ^ ")));\n")
-    | Const _ -> () (* already done *)
+    | Mem_read_port (_, mem, read_address) ->
+      io
+        (t4
+         ^ sn
+         ^ " <= "
+         ^ name mem
+         ^ "(to_integer(hc_uns("
+         ^ name read_address
+         ^ ")));\n")
+    | Const _ -> ()
+  ;;
+
+  (* already done *)
 
   let logic_mem io name mem s r sp =
     let open Names in
     let sn = name s in
-    let to_integer s =
-      "to_integer(" ^ Names.prefix ^ "uns(" ^ s ^ "))"
-    in
-    clocked io s r name
-      (fun tab _ d ->
-         let d' = uid (List.hd_exn (deps s)) in
-         if Uid.equal d' (uid d)
-         then (
-           let wa = name sp.mem_write_address in
-           io (tab ^ mem.arr ^ "(" ^ to_integer wa ^ ") <= " ^
-               name d ^ ";\n"))
-         else ( (* some reset/clear clause *)
-           let i = mem.t2 in
-           io (tab ^ "for " ^ i ^ " in 0 to " ^
-               Int.to_string (sp.mem_size - 1) ^ " loop\n");
-           io (tab ^ t4 ^ mem.arr ^ "(" ^ i ^ ") <= " ^
-               name d ^ ";\n");
-           io (tab ^ "end loop;\n")));
+    let to_integer s = "to_integer(" ^ Names.prefix ^ "uns(" ^ s ^ "))" in
+    clocked io s r name (fun tab _ d ->
+      let d' = uid (List.hd_exn (deps s)) in
+      if Uid.equal d' (uid d)
+      then (
+        let wa = name sp.mem_write_address in
+        io (tab ^ mem.arr ^ "(" ^ to_integer wa ^ ") <= " ^ name d ^ ";\n"))
+      else (
+        (* some reset/clear clause *)
+        let i = mem.t2 in
+        io
+          (tab ^ "for " ^ i ^ " in 0 to " ^ Int.to_string (sp.mem_size - 1) ^ " loop\n");
+        io (tab ^ t4 ^ mem.arr ^ "(" ^ i ^ ") <= " ^ name d ^ ";\n");
+        io (tab ^ "end loop;\n")));
     (* read *)
     let a = name sp.mem_read_address in
     io (t4 ^ sn ^ " <= " ^ mem.arr ^ "(" ^ to_integer a ^ ");\n")
+  ;;
 
   let logic_mem2 io name _mem signal =
     let to_integer s = "to_integer(" ^ Names.prefix ^ "uns(" ^ s ^ "))" in
     let write_ports =
       match signal with
-      | Multiport_mem(_, _, write_ports) -> write_ports
-      | _ -> raise_s [%message "Internal error - expecting Multiport_mem signal"] in
+      | Multiport_mem (_, _, write_ports) -> write_ports
+      | _ -> raise_s [%message "Internal error - expecting Multiport_mem signal"]
+    in
     Array.iter write_ports ~f:(fun write_port ->
-      clocked ~d:(write_port.write_data) io signal
-        Reg_spec.(create () ~clock:write_port.write_clock
-                  |> override ~global_enable:write_port.write_enable)
+      clocked
+        ~d:write_port.write_data
+        io
+        signal
+        Reg_spec.(
+          create () ~clock:write_port.write_clock
+          |> override ~global_enable:write_port.write_enable)
         name
         (fun tab _ d ->
            let wa = name write_port.write_address in
            io (tab ^ name signal ^ "(" ^ to_integer wa ^ ") <= " ^ name d ^ ";\n")))
+  ;;
 
   let logic_inst io name inst_name s i =
-    io (t4 ^ inst_name ^ ": entity " ^
-        i.inst_lib ^ "." ^ i.inst_name ^ " (" ^ i.inst_arch ^ ")" ^ "\n");
+    io
+      (t4
+       ^ inst_name
+       ^ ": entity "
+       ^ i.inst_lib
+       ^ "."
+       ^ i.inst_name
+       ^ " ("
+       ^ i.inst_arch
+       ^ ")"
+       ^ "\n");
     let assoc n v = n ^ " => " ^ v in
     (* parameters *)
     let param_string (p : Parameter.t) =
       match p.value with
       | String v -> "\"" ^ v ^ "\""
       | Bit_vector v -> "\"" ^ Parameter.Bit_vector.to_string v ^ "\""
-      | Std_logic_vector v -> String.concat
-                                [ "std_logic_vector'(\""
-                                ; Parameter.Std_logic_vector.to_string v
-                                ; "\")" ]
-      | Std_ulogic_vector v -> String.concat
-                                 [ "std_ulogic_vector'(\""
-                                 ; Parameter.Std_logic_vector.to_string v
-                                 ; "\")" ]
+      | Std_logic_vector v ->
+        String.concat
+          [ "std_logic_vector'(\""; Parameter.Std_logic_vector.to_string v; "\")" ]
+      | Std_ulogic_vector v ->
+        String.concat
+          [ "std_ulogic_vector'(\""; Parameter.Std_logic_vector.to_string v; "\")" ]
       | Int v -> Int.to_string v
       | Real v -> Float.to_string v
       | Bool v -> if v then "true" else "false"
@@ -966,49 +1025,55 @@ module VhdlCore : Rtl_internal = struct
     if not (List.is_empty i.inst_generics)
     then (
       let generics =
-        let generic (p : Parameter.t) = assoc (Parameter_name.to_string p.name) (param_string p) in
+        let generic (p : Parameter.t) =
+          assoc (Parameter_name.to_string p.name) (param_string p)
+        in
         sep ", " (List.map i.inst_generics ~f:generic)
       in
       io (t8 ^ "generic map ( " ^ generics ^ ")\n"));
-    let in_ports =
-      List.map i.inst_inputs ~f:(fun (n, s) -> assoc n (name s))
-    in
+    let in_ports = List.map i.inst_inputs ~f:(fun (n, s) -> assoc n (name s)) in
     let out_ports =
       if width s = 1
-      then (* special case - 1 output of 1 bit *)
+      then
+        (* special case - 1 output of 1 bit *)
         List.map i.inst_outputs ~f:(fun (n, _) -> assoc n (name s))
       else
         List.map i.inst_outputs ~f:(fun (n, (w, l)) ->
-          let n = if w=1 then "std_logic_vector(" ^ n ^ ")" else n in
-          assoc n ((name s) ^ "(" ^ Int.to_string (w+l-1) ^
-                   " downto " ^ Int.to_string l ^ ")"))
+          let n = if w = 1 then "std_logic_vector(" ^ n ^ ")" else n in
+          assoc
+            n
+            (name s
+             ^ "("
+             ^ Int.to_string (w + l - 1)
+             ^ " downto "
+             ^ Int.to_string l
+             ^ ")"))
     in
     io (t8 ^ "port map ( " ^ sep ", " (in_ports @ out_ports) ^ " );\n")
+  ;;
 
-  let assign io t f =
-    io (t4 ^ t ^ " <= " ^ f ^ ";\n")
-
-  let end_logic io =
-    io ("end architecture;\n")
+  let assign io t f = io (t4 ^ t ^ " <= " ^ f ^ ";\n")
+  let end_logic io = io "end architecture;\n"
 
   let check_signal t =
     match Signal.attributes t with
     | [] -> ()
-    | _  -> raise_s [%message "Signal attributes are not supported in VHDL yet"]
+    | _ -> raise_s [%message "Signal attributes are not supported in VHDL yet"]
+  ;;
 end
 
 (* RTL writer *)
 
 module Make (R : Rtl_internal) = struct
-
   let write blackbox io circ =
     let inputs, outputs = Circuit.inputs circ, Circuit.outputs circ in
     let signal_graph = Circuit.signal_graph circ in
     (* write signal declarations *)
     let is_internal s =
-      not (Circuit.is_input circ s)
-      && not (Circuit.is_output circ s)
-      && not (is_empty s) in
+      (not (Circuit.is_input circ s))
+      && (not (Circuit.is_output circ s))
+      && not (is_empty s)
+    in
     let internal_signals = Signal_graph.filter signal_graph ~f:is_internal in
     (* initialize the mangler *)
     let nm = R.Names.init R.Names.reserved in
@@ -1021,21 +1086,19 @@ module Make (R : Rtl_internal) = struct
       let l = List.length (names s) in
       if l < 2
       then []
-      else
-        let n = Array.init (l-1)
-                  ~f:(fun i -> R.Names.signal_name nm s (i+1))
-        in
-        Array.to_list n
+      else (
+        let n = Array.init (l - 1) ~f:(fun i -> R.Names.signal_name nm s (i + 1)) in
+        Array.to_list n)
     in
     let primary s = primary_name s, width s, attributes s in
     let phantom_inputs =
-      List.map ~f:(fun (a, b) -> (a, b, []))(Circuit.phantom_inputs circ)
+      List.map ~f:(fun (a, b) -> a, b, []) (Circuit.phantom_inputs circ)
     in
     List.iter internal_signals ~f:(fun s -> R.check_signal s);
     R.header_and_ports
       ~io
       ~name:(Circuit.name circ)
-      ~i:(List.map inputs  ~f:primary @ phantom_inputs)
+      ~i:(List.map inputs ~f:primary @ phantom_inputs)
       ~o:(List.map outputs ~f:primary);
     (* write internal declarations *)
     if not blackbox
@@ -1045,15 +1108,14 @@ module Make (R : Rtl_internal) = struct
         (* primary signals *)
         R.signal_decl io (primary_name s) s;
         (* aliases *)
-        List.iter (secondary_names s)
-          ~f:(fun name -> R.alias_decl io name s);
+        List.iter (secondary_names s) ~f:(fun name -> R.alias_decl io name s);
         (* special declarations *)
-        (match s with
-         | Mem _ | Multiport_mem _ ->
-           let mem_names = R.Names.mem_names nm s in
-           R.mem_decl io primary_name mem_names s
-         | _ -> ()));
-      io ("\n");
+        match s with
+        | Mem _ | Multiport_mem _ ->
+          let mem_names = R.Names.mem_names nm s in
+          R.mem_decl io primary_name mem_names s
+        | _ -> ());
+      io "\n";
       R.start_logic io;
       (* logic *)
       io (t4 ^ R.comment "logic" ^ "\n");
@@ -1068,65 +1130,73 @@ module Make (R : Rtl_internal) = struct
         | Inst (_, _, i) ->
           let inst_name = R.Names.inst_label nm signal in
           R.logic_inst io primary_name inst_name signal i
-        | _ ->
-          R.logic io primary_name signal);
-      io ("\n");
+        | _ -> R.logic io primary_name signal);
+      io "\n";
       (* connect aliases *)
       io (t4 ^ R.comment "aliases" ^ "\n");
       List.iter internal_signals ~f:(fun s ->
-        List.iter (secondary_names s) ~f:(fun t ->
-          R.assign io t (primary_name s)));
-      io ("\n");
+        List.iter (secondary_names s) ~f:(fun t -> R.assign io t (primary_name s)));
+      io "\n";
       (* connect outputs *)
       io (t4 ^ R.comment "output assignments" ^ "\n");
       List.iter outputs ~f:(R.logic io primary_name);
-      io ("\n"));
+      io "\n");
     R.end_logic io
+  ;;
 end
 
 module Vhdl = Make (VhdlCore)
 module Verilog = Make (VerilogCore)
 
 module Language = struct
-  type t = Verilog | Vhdl
+  type t =
+    | Verilog
+    | Vhdl
   [@@deriving sexp_of]
 
   let file_extension = function
     | Verilog -> ".v"
-    | Vhdl    -> ".vhd"
+    | Vhdl -> ".vhd"
+  ;;
 
   let output blackbox = function
-    | Vhdl    -> Vhdl.write blackbox
+    | Vhdl -> Vhdl.write blackbox
     | Verilog -> Verilog.write blackbox
+  ;;
+
   let legalize_identifier = function
     | Verilog -> VerilogNames.legalize
-    | Vhdl    -> VhdlNames.legalize
+    | Vhdl -> VhdlNames.legalize
+  ;;
 end
-
 
 module Hierarchy_path : sig
   type t [@@deriving sexp_of]
+
   val empty : t
   val push : t -> string -> t
   val is_top_circuit : t -> Circuit.t -> bool
 end = struct
   type t = string list
+
   let empty = []
   let push t s = s :: t
   let to_string_list t = List.rev t
   let sexp_of_t t = [%sexp (to_string_list t : string list)]
+
   let is_top_circuit t circuit =
     match t with
     | [ name ] -> String.equal (Circuit.name circuit) name
     | _ -> false
+  ;;
 end
 
 module Output_mode = struct
   type t =
     | In_directory of string
-    | To_buffer    of Buffer.t
-    | To_channel   of Out_channel.t
-    | To_file      of string
+    | To_buffer of Buffer.t
+    | To_channel of Out_channel.t
+    | To_file of string
   [@@deriving sexp_of]
 end
 
@@ -1134,26 +1204,31 @@ module Output = struct
   module Mode = struct
     type t =
       | In_directory of string
-      | To_buffer    of Buffer.t
-      | To_channel   of Out_channel.t
-      | To_file      of { file : string; out_channel : Out_channel.t }
+      | To_buffer of Buffer.t
+      | To_channel of Out_channel.t
+      | To_file of
+          { file : string
+          ; out_channel : Out_channel.t
+          }
     [@@deriving sexp_of]
   end
 
   type t =
     { language : Language.t
-    ; mode     : Mode.t }
+    ; mode : Mode.t
+    }
   [@@deriving sexp_of]
 
   let create ~(output_mode : Output_mode.t) ~language =
     let mode : Mode.t =
       match output_mode with
       | In_directory d -> In_directory d
-      | To_buffer b    -> To_buffer b
-      | To_channel c   -> To_channel c
-      | To_file file   -> To_file { file; out_channel = Out_channel.create file }
+      | To_buffer b -> To_buffer b
+      | To_channel c -> To_channel c
+      | To_file file -> To_file { file; out_channel = Out_channel.create file }
     in
     { language; mode }
+  ;;
 
   let output_circuit (blackbox : bool) t circuit hierarchy_path =
     try
@@ -1163,9 +1238,10 @@ module Output = struct
           (* New file created for each circuit. *)
           let name = Circuit.name circuit in
           let file_name =
-            Filename.concat directory (name ^ Language.file_extension t.language) in
+            Filename.concat directory (name ^ Language.file_extension t.language)
+          in
           let chan = Out_channel.create file_name in
-          Out_channel.output_string chan, (fun () -> Out_channel.close chan)
+          Out_channel.output_string chan, fun () -> Out_channel.close chan
         | To_buffer buffer -> Buffer.add_string buffer, Fn.id
         | To_channel out_channel ->
           (* Note; up to caller to flush. *)
@@ -1173,19 +1249,23 @@ module Output = struct
         | To_file { file = _; out_channel } ->
           (* File is created before any processing occurs, then closed with the top
              level module. *)
-          Out_channel.output_string out_channel,
-          (fun () ->
-             if Hierarchy_path.is_top_circuit hierarchy_path circuit
-             then Out_channel.close out_channel)
+          ( Out_channel.output_string out_channel
+          , fun () ->
+            if Hierarchy_path.is_top_circuit hierarchy_path circuit
+            then Out_channel.close out_channel )
       in
       Language.output blackbox t.language output circuit;
       close ()
-    with exn ->
-      raise_s [%message "Error while writing circuit"
-                          ~circuit_name:(Circuit.name circuit : string)
-                          (hierarchy_path : Hierarchy_path.t)
-                          ~output:(t : t)
-                          (exn : exn)]
+    with
+    | exn ->
+      raise_s
+        [%message
+          "Error while writing circuit"
+            ~circuit_name:(Circuit.name circuit : string)
+            (hierarchy_path : Hierarchy_path.t)
+            ~output:(t : t)
+            (exn : exn)]
+  ;;
 end
 
 module Blackbox = struct
@@ -1196,20 +1276,23 @@ module Blackbox = struct
   [@@deriving sexp_of]
 end
 
-let output ?output_mode ?database ?(blackbox=Blackbox.None) language circuit =
+let output ?output_mode ?database ?(blackbox = Blackbox.None) language circuit =
   let output_mode =
-    Option.value output_mode
-      ~default:(Output_mode.To_file
-                  (Circuit.name circuit ^ Language.file_extension language))
+    Option.value
+      output_mode
+      ~default:
+        (Output_mode.To_file (Circuit.name circuit ^ Language.file_extension language))
   in
   let output =
-    try Output.create ~language ~output_mode
-    with exn ->
-      raise_s [%message "Error while initializing output mode."
-                          ~circuit_name:(Circuit.name circuit)
-                          (language : Language.t)
-                          (output_mode : Output_mode.t)
-                          (exn : exn)]
+    try Output.create ~language ~output_mode with
+    | exn ->
+      raise_s
+        [%message
+          "Error while initializing output mode."
+            ~circuit_name:(Circuit.name circuit)
+            (language : Language.t)
+            (output_mode : Output_mode.t)
+            (exn : exn)]
   in
   let database = Option.value database ~default:(Circuit_database.create ()) in
   let circuits_already_output = Hash_set.create (module String) in
@@ -1223,12 +1306,10 @@ let output ?output_mode ?database ?(blackbox=Blackbox.None) language circuit =
       | None ->
         output_instantitions (None : Blackbox.t) circuit hierarchy_path;
         Output.output_circuit false output circuit hierarchy_path
-      | Top ->
-        Output.output_circuit true output circuit hierarchy_path
+      | Top -> Output.output_circuit true output circuit hierarchy_path
       | Instantiations ->
         output_instantitions Top circuit hierarchy_path;
-        Output.output_circuit false output circuit hierarchy_path
-    )
+        Output.output_circuit false output circuit hierarchy_path)
   and output_instantitions (blackbox : Blackbox.t) circuit hierarchy_path =
     Signal_graph.iter (Circuit.signal_graph circuit) ~f:(fun signal ->
       match signal with
@@ -1239,11 +1320,16 @@ let output ?output_mode ?database ?(blackbox=Blackbox.None) language circuit =
               implmentation. *)
            ()
          | Some circuit -> output_circuit blackbox circuit hierarchy_path)
-      | _ -> ());
+      | _ -> ())
   in
   output_circuit blackbox circuit Hierarchy_path.empty
+;;
 
 let print ?database ?blackbox language circuit =
   output
     ~output_mode:(To_channel Out_channel.stdout)
-    ?database ?blackbox language circuit
+    ?database
+    ?blackbox
+    language
+    circuit
+;;

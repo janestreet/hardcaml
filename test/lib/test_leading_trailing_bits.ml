@@ -12,15 +12,18 @@ let%expect_test "bits = 1, 2, 3, 4" =
     let test f =
       List.init (1 lsl bits) ~f:(fun i ->
         let c = Bits.consti ~width:bits i in
-        c, f c |> Bits.to_int) in
-    print_s [%message
-      (bits : int)
-        ~leading_zeros: (test Bits.leading_zeros  : result)
-        ~leading_ones:  (test Bits.leading_ones   : result)
-        ~trailing_zeros:(test Bits.trailing_zeros : result)
-        ~trailing_ones: (test Bits.trailing_ones  : result)]
+        c, f c |> Bits.to_int)
+    in
+    print_s
+      [%message
+        (bits : int)
+          ~leading_zeros:(test Bits.leading_zeros : result)
+          ~leading_ones:(test Bits.leading_ones : result)
+          ~trailing_zeros:(test Bits.trailing_zeros : result)
+          ~trailing_ones:(test Bits.trailing_ones : result)]
   done;
-  [%expect {|
+  [%expect
+    {|
     ((bits 1)
      (leading_zeros  ((0 1) (1 0)))
      (leading_ones   ((0 0) (1 1)))
@@ -152,7 +155,7 @@ let%expect_test "bits = 1, 2, 3, 4" =
        (1100 0)
        (1101 1)
        (1110 0)
-       (1111 4)))) |}];
+       (1111 4)))) |}]
 ;;
 
 let%expect_test "random" =
@@ -162,8 +165,11 @@ let%expect_test "random" =
     let hw = Bits.leading_zeros value |> Bits.to_int in
     let value = Bits.to_int value in
     let sw = if value = 0 then bits else bits - (Int.floor_log2 value + 1) in
-    require [%here] (hw = sw)
-      ~if_false_then_print_s:(
-        lazy [%message "" ~_:(bits, value, hw, sw : int * int * int * int)]);
+    require
+      [%here]
+      (hw = sw)
+      ~if_false_then_print_s:
+        (lazy [%message "" ~_:(bits, value, hw, sw : int * int * int * int)])
   done;
   [%expect {| |}]
+;;

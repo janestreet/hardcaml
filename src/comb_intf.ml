@@ -11,30 +11,28 @@ open! Import
     circuit.  With [N] inputs and [branching_factor = 1] the depth is [N].  With
     [branching_factor = 2] the the depth is [ceil_log2 N].  Similarly for
     [branching_factor = X], the depth is by [ceil_log_{X} N]. *)
-type 'a optional_branching_factor
-  =  ?branching_factor : int (** default is 2 *)
-  -> 'a
+type 'a optional_branching_factor = ?branching_factor:int (** default is 2 *) -> 'a
 
 module type TypedMath = sig
   type t
   type v
+
   val of_signal : t -> v
   val to_signal : v -> t
-  val (+:) : v -> v -> v
-  val (-:) : v -> v -> v
+  val ( +: ) : v -> v -> v
+  val ( -: ) : v -> v -> v
   val ( *: ) : v -> v -> v
-  val (<:) : v -> v -> v
-  val (>:) : v -> v -> v
-  val (<=:) : v -> v -> v
-  val (>=:) : v -> v -> v
-  val (==:) : v -> v -> v
-  val (<>:) : v -> v -> v
+  val ( <: ) : v -> v -> v
+  val ( >: ) : v -> v -> v
+  val ( <=: ) : v -> v -> v
+  val ( >=: ) : v -> v -> v
+  val ( ==: ) : v -> v -> v
+  val ( <>: ) : v -> v -> v
   val resize : v -> int -> v
 end
 
 module type Gates = sig
-  type t
-  [@@deriving sexp_of]
+  type t [@@deriving sexp_of]
 
   include Equal.S with type t := t
 
@@ -48,6 +46,7 @@ module type Gates = sig
 
   (** creates a constant *)
   val of_constant : Constant.t -> t
+
   val to_constant : t -> Constant.t
 
   (** concatenates a list of signals *)
@@ -57,19 +56,19 @@ module type Gates = sig
   val select : t -> int -> int -> t
 
   (** names a signal *)
-  val (--) : t -> string -> t
+  val ( -- ) : t -> string -> t
 
   (** bitwise and *)
-  val (&:) : t -> t -> t
+  val ( &: ) : t -> t -> t
 
   (** bitwise or *)
-  val (|:) : t -> t -> t
+  val ( |: ) : t -> t -> t
 
   (** bitwise xor *)
-  val (^:) : t -> t -> t
+  val ( ^: ) : t -> t -> t
 
   (** bitwise not *)
-  val (~:) : t -> t
+  val ( ~: ) : t -> t
 
   (** create string from signal *)
   val to_string : t -> string
@@ -77,17 +76,16 @@ end
 
 (** Type required to generate the full combinational API *)
 module type Primitives = sig
-
   include Gates
 
   (** multiplexer *)
   val mux : t -> t list -> t
 
   (** addition *)
-  val (+:) : t -> t -> t
+  val ( +: ) : t -> t -> t
 
   (** subtraction *)
-  val (-:) : t -> t -> t
+  val ( -: ) : t -> t -> t
 
   (** unsigned multiplication *)
   val ( *: ) : t -> t -> t
@@ -96,17 +94,15 @@ module type Primitives = sig
   val ( *+ ) : t -> t -> t
 
   (** equality *)
-  val (==:) : t -> t -> t
+  val ( ==: ) : t -> t -> t
 
   (** less than *)
-  val (<:) : t -> t -> t
+  val ( <: ) : t -> t -> t
 end
 
 (** Full combinational API *)
 module type S = sig
-
-  type t
-  [@@deriving sexp_of]
+  type t [@@deriving sexp_of]
 
   include Equal.S with type t := t
 
@@ -146,6 +142,7 @@ module type S = sig
 
   (** convert integer to constant *)
   val consti : width:int -> int -> t
+
   val consti32 : width:int -> int32 -> t
   val consti64 : width:int -> int64 -> t
 
@@ -167,6 +164,7 @@ module type S = sig
   (** convert verilog style or binary string to constant *)
   val const : string -> t
 
+
   (** [concat ts] concatenates a list of signals - the msb of the head of the list will
       become the msb of the result.
 
@@ -174,6 +172,7 @@ module type S = sig
 
       [concat] raises if [ts] is empty or if any [t] in [ts] is empty. *)
   val concat : t list -> t
+
 
   (** same as [concat] except empty signals are first filtered out *)
   val concat_e : t list -> t
@@ -243,7 +242,7 @@ module type S = sig
   val insert : into:t -> t -> at_offset:int -> t
 
   (** *)
-  val sel : t -> (int * int) -> t
+  val sel : t -> int * int -> t
 
   (** multiplexer.
 
@@ -269,6 +268,7 @@ module type S = sig
 
   val mux_init : t -> int -> f:(int -> t) -> t
 
+
   (** case mux *)
   val cases : t -> t -> (int * t) list -> t
 
@@ -276,32 +276,37 @@ module type S = sig
   val matches : ?resize:(t -> int -> t) -> ?default:t -> t -> (int * t) list -> t
 
   (** logical and *)
-  val (&:) : t -> t -> t
-  val (&:.) : t -> int -> t
+  val ( &: ) : t -> t -> t
+
+  val ( &:. ) : t -> int -> t
 
   (** a <>:. 0 &: b <>:. 0 *)
-  val (&&:) : t -> t -> t
+  val ( &&: ) : t -> t -> t
 
   (** logical or *)
-  val (|:) : t -> t -> t
-  val (|:.) : t -> int -> t
+  val ( |: ) : t -> t -> t
+
+  val ( |:. ) : t -> int -> t
 
   (** a <>:. 0 |: b <>:. 0 *)
-  val (||:) : t -> t -> t
+  val ( ||: ) : t -> t -> t
 
   (** logic xor *)
-  val (^:) : t -> t -> t
-  val (^:.) : t -> int -> t
+  val ( ^: ) : t -> t -> t
+
+  val ( ^:. ) : t -> int -> t
 
   (** logical not *)
   val ( ~: ) : t -> t
 
   (** addition *)
   val ( +: ) : t -> t -> t
+
   val ( +:. ) : t -> int -> t
 
   (** subtraction *)
   val ( -: ) : t -> t -> t
+
   val ( -:. ) : t -> int -> t
 
   (** negation *)
@@ -315,48 +320,60 @@ module type S = sig
 
   (** equality *)
   val ( ==: ) : t -> t -> t
-  val (==:.) : t -> int -> t
+
+  val ( ==:. ) : t -> int -> t
 
   (** inequality *)
   val ( <>: ) : t -> t -> t
-  val (<>:.) : t -> int -> t
+
+  val ( <>:. ) : t -> int -> t
 
   (** less than *)
   val ( <: ) : t -> t -> t
-  val (<:.) : t -> int -> t
+
+  val ( <:. ) : t -> int -> t
+
   (* added due to clash with camlp5 *)
   val lt : t -> t -> t
 
   (** greater than *)
   val ( >: ) : t -> t -> t
-  val (>:.) : t -> int -> t
+
+  val ( >:. ) : t -> int -> t
 
   (** less than or equal to *)
   val ( <=: ) : t -> t -> t
-  val (<=:.) : t -> int -> t
+
+  val ( <=:. ) : t -> int -> t
 
   (** greater than or equal to *)
   val ( >=: ) : t -> t -> t
-  val (>=:.) : t -> int -> t
+
+  val ( >=:. ) : t -> int -> t
 
   (** signed less than *)
   val ( <+ ) : t -> t -> t
-  val (<+.) : t -> int -> t
+
+  val ( <+. ) : t -> int -> t
 
   (** signed greater than *)
   val ( >+ ) : t -> t -> t
-  val (>+.) : t -> int -> t
+
+  val ( >+. ) : t -> int -> t
 
   (** signed less than or equal to *)
   val ( <=+ ) : t -> t -> t
-  val (<=+.) : t -> int -> t
+
+  val ( <=+. ) : t -> int -> t
 
   (** signed greated than or equal to *)
   val ( >=+ ) : t -> t -> t
-  val (>=+.) : t -> int -> t
+
+  val ( >=+. ) : t -> int -> t
 
   (** create string from signal *)
   val to_string : t -> string
+
 
   (** [to_int t] treats [t] as unsigned and resizes it to fit exactly within an OCaml
       [Int.t].
@@ -366,6 +383,7 @@ module type S = sig
         the resulting [Int.t] is set), then the result is negative.
       - If [t] is [Signal.t] and not a constant value, an exception is raised. *)
   val to_int : t -> int
+
 
   (** [to_sint t] treats [t] as signed and resizes it to fit exactly within an OCaml
       [Int.t].
@@ -400,11 +418,7 @@ module type S = sig
   (** Split signal into a list of signals with width equal to [part_width].  The least
       significant bits are at the head of the returned list.  If [exact] is [true] the
       input signal width must be exactly divisable by [part_width]. *)
-  val split
-    :  ?exact : bool (** default is [true] **)
-    -> part_width : int
-    -> t
-    -> t list
+  val split : ?exact:bool (** default is [true] **) -> part_width:int -> t -> t list
 
   (** shift left logical *)
   val sll : t -> int -> t
@@ -470,7 +484,7 @@ module type S = sig
 
   (** Same as [priority_select] except returns [default] if no case matches. *)
   val priority_select_with_default
-    : (t With_valid.t list -> default : t -> t) optional_branching_factor
+    : (t With_valid.t list -> default:t -> t) optional_branching_factor
 
   (** Select a case where one and only one [valid] signal is enabled.  If more than one
       case is [valid] then the return value is undefined.  If no cases are valid, [0] is
@@ -540,9 +554,9 @@ module type S = sig
 end
 
 module type Comb = sig
-  module type Gates      = Gates
+  module type Gates = Gates
   module type Primitives = Primitives
-  module type S          = S
+  module type S = S
 
   module Make_primitives (Gates : Gates) : Primitives with type t = Gates.t
 

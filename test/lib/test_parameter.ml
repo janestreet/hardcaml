@@ -2,9 +2,7 @@ open! Import
 open! Parameter
 
 let show t = print_s [%sexp (t : t)]
-
 let is_subset ts1 ts2 = print_s [%sexp (is_subset ts1 ts2 : bool)]
-
 let sort_by_name ts = print_s [%sexp (sort_by_name ts : t list)]
 
 let find_name ts name =
@@ -12,9 +10,10 @@ let find_name ts name =
 ;;
 
 let find_name_exn ts name =
-  print_s [%sexp (
-    try_with (fun () -> find_name_exn ts (Parameter_name.of_string name))
-    : Value.t Or_error.t) ]
+  print_s
+    [%sexp
+      (try_with (fun () -> find_name_exn ts (Parameter_name.of_string name))
+       : Value.t Or_error.t)]
 ;;
 
 let t1 = { name = Parameter_name.of_string "N1"; value = Int 1 }
@@ -23,7 +22,7 @@ let t2 = { name = Parameter_name.of_string "N2"; value = Int 2 }
 let%expect_test "[sexp_of_t]" =
   show t1;
   [%expect {|
-    (N1 1) |}];
+    (N1 1) |}]
 ;;
 
 let%expect_test "[find_name]" =
@@ -38,7 +37,7 @@ let%expect_test "[find_name]" =
     () |}];
   find_name [ t1; t2 ] "N2";
   [%expect {|
-    (2) |}];
+    (2) |}]
 ;;
 
 let%expect_test "[find_name_exn]" =
@@ -53,7 +52,7 @@ let%expect_test "[find_name_exn]" =
     (Error ("couldn't find parameter" (name N2) (parameters ((N1 1))))) |}];
   find_name_exn [ t1; t2 ] "N2";
   [%expect {|
-    (Ok 2) |}];
+    (Ok 2) |}]
 ;;
 
 let%expect_test "[is_subset]" =
@@ -71,7 +70,7 @@ let%expect_test "[is_subset]" =
     true |}];
   is_subset [ t1 ] [ t2 ];
   [%expect {|
-    false |}];
+    false |}]
 ;;
 
 let%expect_test "[sort_by_name]" =
@@ -88,25 +87,25 @@ let%expect_test "[sort_by_name]" =
   sort_by_name [ t2; t1 ];
   [%expect {|
     ((N1 1)
-     (N2 2)) |}];
+     (N2 2)) |}]
 ;;
 
 let%expect_test "std_logic rountrip" =
   let roundtrip std_logic =
     let char = Std_logic.to_char std_logic in
     let converted = try_with (fun () -> Std_logic.of_char_exn char) in
-    print_s [%message
-      ""
-        (std_logic : Std_logic.t)
-        (char : char)
-        (converted : Std_logic.t Or_error.t)];
-    require [%here] (
-      match converted with
-      | Error _ -> false
-      | Ok x -> Std_logic.equal x std_logic);
+    print_s
+      [%message
+        "" (std_logic : Std_logic.t) (char : char) (converted : Std_logic.t Or_error.t)];
+    require
+      [%here]
+      (match converted with
+       | Error _ -> false
+       | Ok x -> Std_logic.equal x std_logic)
   in
   List.iter Std_logic.all ~f:roundtrip;
-  [%expect {|
+  [%expect
+    {|
     ((std_logic U)
      (char      U)
      (converted (Ok U)))
@@ -134,62 +133,73 @@ let%expect_test "std_logic rountrip" =
     ((std_logic _)
      (char      _)
      (converted (Ok _))) |}]
+;;
 
 let%expect_test "bad std_logic" =
   show_raise (fun () -> Std_logic.of_char_exn 'a');
   [%expect {| (raised ("[Std_logic.of_char_exn] got invalid char" (char a))) |}]
+;;
 
 let%expect_test "std_logic_vector" =
-  print_s [%message
-    "" ~_:(Std_logic_vector.create Std_logic.all : Std_logic_vector.t)];
+  print_s [%message "" ~_:(Std_logic_vector.create Std_logic.all : Std_logic_vector.t)];
   [%expect {| UX01ZWLH_ |}]
+;;
 
 let%expect_test "bad std_logic_vector" =
   show_raise (fun () -> Std_logic_vector.of_string "1Ab0");
   [%expect {| (raised ("[Std_logic.of_char_exn] got invalid char" (char A))) |}]
+;;
 
 let%expect_test "bit_vector" =
   print_s [%message "" ~_:(Bit_vector.create [ true; false; true ] : Bit_vector.t)];
   [%expect {| 101 |}]
+;;
 
 let%expect_test "bad bit_vector" =
   show_raise (fun () -> Bit_vector.of_string "1U0");
   [%expect {| (raised ("[Bit_vector.of_string] got invalid char" (char U))) |}]
+;;
 
 let create_instantiation_test =
   let parameters =
-    List.map ~f:(fun (name, value) -> create ~name ~value)
-      [ "an_int"              , Value.Int 7
-      ; "a_bool"              , Bool true
-      ; "a_string"            , String "world"
-      ; "a_real"              , Real 3.9
-      ; "a_bit"               , Bit true
-      ; "a_bit_vector"        , Bit_vector (Bit_vector.of_string "1100")
-      ; "a_std_logic"         , Std_logic Std_logic.W
-      ; "a_std_ulogic"        , Std_ulogic Std_logic.L1
-      ; "a_std_logic_vector"  , Std_logic_vector (Std_logic_vector.of_string "1010")
-      ; "a_std_ulogic_vector" , Std_ulogic_vector (Std_logic_vector.of_string "1011")]
+    List.map
+      ~f:(fun (name, value) -> create ~name ~value)
+      [ "an_int", Value.Int 7
+      ; "a_bool", Bool true
+      ; "a_string", String "world"
+      ; "a_real", Real 3.9
+      ; "a_bit", Bit true
+      ; "a_bit_vector", Bit_vector (Bit_vector.of_string "1100")
+      ; "a_std_logic", Std_logic Std_logic.W
+      ; "a_std_ulogic", Std_ulogic Std_logic.L1
+      ; "a_std_logic_vector", Std_logic_vector (Std_logic_vector.of_string "1010")
+      ; "a_std_ulogic_vector", Std_ulogic_vector (Std_logic_vector.of_string "1011")
+      ]
   in
   let inst hdl a =
-    (Instantiation.create ()
+    (Instantiation.create
+       ()
        ~name:("test_parameters_" ^ hdl)
        ~parameters
        ~inputs:[ "a", a ]
-       ~outputs:[ "b", 2 ])#o "b"
+       ~outputs:[ "b", 2 ])
+    #o
+      "b"
     |> Signal.output ("b_" ^ hdl)
   in
   let a = Signal.input "a" 1 in
   let circ hdl =
     Circuit.create_exn
       ~name:("test_parameter_instantiation_" ^ hdl)
-      [ inst "vhdl" a
-      ; inst "verilog" a ]
+      [ inst "vhdl" a; inst "verilog" a ]
   in
   circ
+;;
 
 let%expect_test "instantiation in verilog" =
   Rtl.print Verilog (create_instantiation_test "verilog");
-  [%expect {|
+  [%expect
+    {|
     module test_parameter_instantiation_verilog (
         a,
         b_vhdl,
@@ -221,10 +231,12 @@ let%expect_test "instantiation in verilog" =
         assign b_verilog = _5;
 
     endmodule |}]
+;;
 
 let%expect_test "instantiation in vhdl" =
   Rtl.print Vhdl (create_instantiation_test "vhdl");
-  [%expect {|
+  [%expect
+    {|
     library ieee;
     use ieee.std_logic_1164.all;
     use ieee.numeric_std.all;
@@ -273,3 +285,4 @@ let%expect_test "instantiation in vhdl" =
         b_verilog <= hc_5;
 
     end architecture; |}]
+;;

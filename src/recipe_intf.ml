@@ -7,8 +7,8 @@ open! Import
 module type Same = sig
   type var
   type 'a recipe
-
   type 'a same
+
   val smap : f:(var -> Signal.t) -> var same -> Signal.t same
   val szip : var same -> Signal.t same -> (var * Signal.t) list
   val newVar : unit -> var same recipe
@@ -16,13 +16,18 @@ module type Same = sig
   val rewrite : (Signal.t same -> Signal.t same) -> var same -> var same -> unit recipe
   val apply : (Signal.t same -> Signal.t same) -> var same -> unit recipe
   val set : var same -> Signal.t same -> unit recipe
+
   val ifte
-    : (Signal.t same -> Signal.t) -> var same -> 'a recipe -> 'b recipe -> unit recipe
+    :  (Signal.t same -> Signal.t)
+    -> var same
+    -> 'a recipe
+    -> 'b recipe
+    -> unit recipe
+
   val while_ : (Signal.t same -> Signal.t) -> var same -> 'a recipe -> 'a recipe
 end
 
 module type Recipe = sig
-
   type var
   type inp
   type env
@@ -31,8 +36,8 @@ module type Recipe = sig
   module Monad : sig
     val return : 'a -> 'a recipe
     val bind : 'a recipe -> ('a -> 'b recipe) -> 'b recipe
-    val (>>=) : 'a recipe -> ('a -> 'b recipe) -> 'b recipe
-    val (>>) : 'a recipe -> 'b recipe -> 'b recipe
+    val ( >>= ) : 'a recipe -> ('a -> 'b recipe) -> 'b recipe
+    val ( >> ) : 'a recipe -> 'b recipe -> 'b recipe
   end
 
   (** skip 1 cycle *)
@@ -48,8 +53,7 @@ module type Recipe = sig
   val par : ?comb_fin:bool -> 'a recipe list -> 'a list recipe
 
   val par2 : ?comb_fin:bool -> 'a recipe -> 'b recipe -> ('a * 'b) recipe
-
-  val (|||) : 'a recipe -> 'b recipe -> ('a * 'b) recipe
+  val ( ||| ) : 'a recipe -> 'b recipe -> ('a * 'b) recipe
 
   (** [cond c t f]  performs [t] if [c] is high, otherwise performs [f] *)
   val cond : Signal.t -> 'a recipe -> 'b recipe -> unit recipe
@@ -87,9 +91,7 @@ module type Recipe = sig
   (** read a register, modify value, write a second register *)
   val rewriteVar : (Signal.t -> Signal.t) -> var -> var -> unit recipe
 
-  module type Same = Same
-    with type var := var
-    with type 'a recipe := 'a recipe
+  module type Same = Same with type var := var with type 'a recipe := 'a recipe
 
   module Same (X : Interface.Pre) : Same with type 'a same = 'a X.t
   module SVar : Same with type 'a same = 'a

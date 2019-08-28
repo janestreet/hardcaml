@@ -18,7 +18,7 @@
     [Circuit_database.t]. *)
 open! Import
 
-type t[@@deriving sexp_of]
+type t [@@deriving sexp_of]
 
 (** Calculate the utilization of gates, rams, registers. If [database] is provided
     instantiations are recursively calculated as well. *)

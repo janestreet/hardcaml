@@ -9,12 +9,14 @@ let create t = t
 
 let depth_first_search
       ?(deps = deps)
-      ?(f_before = (fun a _ -> a))
-      ?(f_after  = (fun a _ -> a))
-      t ~init =
+      ?(f_before = fun a _ -> a)
+      ?(f_after = fun a _ -> a)
+      t
+      ~init
+  =
   let rec search1 signal ~set acc =
     if Set.mem set (uid signal)
-    then (acc, set)
+    then acc, set
     else (
       let set = Set.add set (uid signal) in
       let acc = f_before acc signal in
@@ -25,14 +27,15 @@ let depth_first_search
     List.fold t ~init:(acc, set) ~f:(fun (arg, set) s -> search1 s ~set arg)
   in
   fst (search t init ~set:(Set.empty (module Signal.Uid)))
+;;
 
 let fold t ~init ~f = depth_first_search t ~init ~f_before:f
-
 let iter t ~f = depth_first_search t ~f_before:(fun _ s -> f s) ~init:()
 
 let filter t ~f =
   depth_first_search t ~init:[] ~f_before:(fun arg signal ->
     if f signal then signal :: arg else arg)
+;;
 
 let inputs graph =
   Or_error.try_with (fun () ->
@@ -45,13 +48,18 @@ let inputs graph =
         else (
           match names signal with
           | [ _ ] -> signal :: acc
-          | [ ] -> raise_s [%message
-                     "circuit input signal must have a port name (unassigned wire?)"
-                       ~input_signal:(signal : Signal.t)]
-          | _ -> raise_s [%message
-                   "circuit input signal should only have one port name"
-                     ~input_signal:(signal : Signal.t)])
+          | [] ->
+            raise_s
+              [%message
+                "circuit input signal must have a port name (unassigned wire?)"
+                  ~input_signal:(signal : Signal.t)]
+          | _ ->
+            raise_s
+              [%message
+                "circuit input signal should only have one port name"
+                  ~input_signal:(signal : Signal.t)])
       | _ -> acc))
+;;
 
 let outputs ?(validate = false) t =
   Or_error.try_with (fun () ->
@@ -60,24 +68,31 @@ let outputs ?(validate = false) t =
       List.iter t ~f:(fun (output_signal : Signal.t) ->
         let open Signal in
         match output_signal with
-        | Wire _ -> (
-            match deps output_signal with
-            | [] | [ Empty ] ->
-              raise_s [%message
-                "circuit output signal is not driven" (output_signal : Signal.t)]
-            | _ ->
-              match names output_signal with
+        | Wire _ ->
+          (match deps output_signal with
+           | [] | [ Empty ] ->
+             raise_s
+               [%message
+                 "circuit output signal is not driven" (output_signal : Signal.t)]
+           | _ ->
+             (match names output_signal with
               | [ _ ] -> ()
-              | [] -> raise_s [%message
-                        "circuit output signal must have a port name"
-                          (output_signal : Signal.t)]
-              | _ -> raise_s [%message
-                       "circuit output signal should only have one port name"
-                         (output_signal : Signal.t)])
+              | [] ->
+                raise_s
+                  [%message
+                    "circuit output signal must have a port name"
+                      (output_signal : Signal.t)]
+              | _ ->
+                raise_s
+                  [%message
+                    "circuit output signal should only have one port name"
+                      (output_signal : Signal.t)]))
         | _ ->
-          raise_s [%message
-            "circuit output signal must be a wire" (output_signal : Signal.t)]);
+          raise_s
+            [%message
+              "circuit output signal must be a wire" (output_signal : Signal.t)]);
     t)
+;;
 
 let detect_combinational_loops t =
   Or_error.try_with (fun () ->
@@ -88,20 +103,18 @@ let detect_combinational_loops t =
         | Visiting
         | Visited
       [@@deriving sexp_of]
-    end in
+    end
+    in
     let state_by_uid : (Uid.t, Signal_state.t ref) Hashtbl.t =
-      Hashtbl.create (module Uid) in
+      Hashtbl.create (module Uid)
+    in
     let signal_state signal =
-      Hashtbl.find_or_add state_by_uid (uid signal)
-        ~default:(fun _ -> ref Signal_state.Unvisited) in
+      Hashtbl.find_or_add state_by_uid (uid signal) ~default:(fun _ ->
+        ref Signal_state.Unvisited)
+    in
     let set_state signal state = signal_state signal := state in
     (* Registers, memories etc are always in the [Visited] state. *)
-    let breaks_a_cycle s =
-      is_reg s
-      || is_mem s
-      || is_inst s
-      || is_empty s
-    in
+    let breaks_a_cycle s = is_reg s || is_mem s || is_inst s || is_empty s in
     let initial_visited = filter t ~f:breaks_a_cycle in
     List.iter initial_visited ~f:(fun signal -> set_state signal Visited);
     let rec dfs signal =
@@ -113,10 +126,12 @@ let detect_combinational_loops t =
       | Unvisited ->
         state := Visiting;
         List.iter (deps signal) ~f:dfs;
-        state := Visited in
+        state := Visited
+    in
     (* We only need to check from the given outputs, and all dependents of registers,
        memories etc. *)
     List.iter ~f:dfs (List.concat (t :: List.map initial_visited ~f:deps)))
+;;
 
 (* [normalize_uids] maintains a table mapping signals in the input graph to
    the corresponding signal in the output graph.  It first creates an entry for
@@ -126,12 +141,15 @@ let detect_combinational_loops t =
 let normalize_uids t =
   let open Signal in
   let expecting_a_wire signal =
-    raise_s [%message "expecting a wire (internal error)" (signal : Signal.t)] in
+    raise_s [%message "expecting a wire (internal error)" (signal : Signal.t)]
+  in
   let not_expecting_a_wire signal =
-    raise_s [%message "not expecting a wire (internal error)" (signal : Signal.t)] in
+    raise_s [%message "not expecting a wire (internal error)" (signal : Signal.t)]
+  in
   let new_signal_by_old_uid = Hashtbl.create (module Uid) in
   let add_mapping ~old_signal ~new_signal =
-    Hashtbl.add_exn new_signal_by_old_uid ~key:(uid old_signal) ~data:new_signal in
+    Hashtbl.add_exn new_signal_by_old_uid ~key:(uid old_signal) ~data:new_signal
+  in
   let new_signal signal = Hashtbl.find_exn new_signal_by_old_uid (uid signal) in
   (* uid generation (note; 1L and up, 0L reserved for empty) *)
   let id = ref 0L in
@@ -140,31 +158,35 @@ let normalize_uids t =
     !id
   in
   let new_reg r =
-    { reg_clock       = new_signal r.reg_clock
-    ; reg_clock_edge  = r.reg_clock_edge
-    ; reg_reset       = new_signal r.reg_reset
-    ; reg_reset_edge  = r.reg_reset_edge
+    { reg_clock = new_signal r.reg_clock
+    ; reg_clock_edge = r.reg_clock_edge
+    ; reg_reset = new_signal r.reg_reset
+    ; reg_reset_edge = r.reg_reset_edge
     ; reg_reset_value = new_signal r.reg_reset_value
-    ; reg_clear       = new_signal r.reg_clear
+    ; reg_clear = new_signal r.reg_clear
     ; reg_clear_level = r.reg_clear_level
     ; reg_clear_value = new_signal r.reg_clear_value
-    ; reg_enable      = new_signal r.reg_enable }
+    ; reg_enable = new_signal r.reg_enable
+    }
   in
   let new_mem m =
-    { mem_size          = m.mem_size
-    ; mem_read_address  = new_signal m.mem_read_address
-    ; mem_write_address = new_signal m.mem_write_address }
+    { mem_size = m.mem_size
+    ; mem_read_address = new_signal m.mem_read_address
+    ; mem_write_address = new_signal m.mem_write_address
+    }
   in
   let new_write_port write_port =
-    { write_clock   = new_signal write_port.write_clock
+    { write_clock = new_signal write_port.write_clock
     ; write_address = new_signal write_port.write_address
-    ; write_enable  = new_signal write_port.write_enable
-    ; write_data    = new_signal write_port.write_data }
+    ; write_enable = new_signal write_port.write_enable
+    ; write_data = new_signal write_port.write_data
+    }
   in
   let new_inst i =
     { i with
-      inst_inputs = List.map i.inst_inputs
-                      ~f:(fun (name, input) -> (name, new_signal input))}
+      inst_inputs =
+        List.map i.inst_inputs ~f:(fun (name, input) -> name, new_signal input)
+    }
   in
   let rec rewrite_signal_upto_wires signal =
     match Hashtbl.find new_signal_by_old_uid (uid signal) with
@@ -174,42 +196,36 @@ let normalize_uids t =
       let update_id id = { id with s_id = fresh_id (); s_deps = new_deps } in
       let new_signal =
         match signal with
-        | Empty              -> Empty
-        | Const (id, b)      -> Const         (update_id id, b)
-        | Op (id, op)        -> Op            (update_id id, op)
-        | Select (id, h, l)  -> Select        (update_id id, h, l)
-        | Reg (id, r)        -> Reg           (update_id id, new_reg r)
-        | Mem (id, _, r , m) -> Mem           (update_id id, fresh_id (),
-                                               new_reg r, new_mem m)
-        | Multiport_mem
-            (id, mem_size,
-             write_ports)    -> Multiport_mem (update_id id, mem_size,
-                                               Array.map write_ports ~f:new_write_port)
-        | Mem_read_port
-            (id, memory,
-             read_address)   -> Mem_read_port (update_id id, new_signal memory,
-                                               new_signal read_address)
-        | Inst (id, _, i)    -> Inst          (update_id id, fresh_id (),
-                                               new_inst i)
-        | Wire (_, _)        -> not_expecting_a_wire signal
+        | Empty -> Empty
+        | Const (id, b) -> Const (update_id id, b)
+        | Op (id, op) -> Op (update_id id, op)
+        | Select (id, h, l) -> Select (update_id id, h, l)
+        | Reg (id, r) -> Reg (update_id id, new_reg r)
+        | Mem (id, _, r, m) -> Mem (update_id id, fresh_id (), new_reg r, new_mem m)
+        | Multiport_mem (id, mem_size, write_ports) ->
+          Multiport_mem (update_id id, mem_size, Array.map write_ports ~f:new_write_port)
+        | Mem_read_port (id, memory, read_address) ->
+          Mem_read_port (update_id id, new_signal memory, new_signal read_address)
+        | Inst (id, _, i) -> Inst (update_id id, fresh_id (), new_inst i)
+        | Wire (_, _) -> not_expecting_a_wire signal
       in
       add_mapping ~old_signal:signal ~new_signal;
-      new_signal in
+      new_signal
+  in
   (* find wires *)
   let old_wires = filter t ~f:is_wire in
   (* create unattached replacement wires *)
   List.iter old_wires ~f:(fun old_wire ->
     add_mapping
       ~old_signal:old_wire
-      ~new_signal:(
-        match old_wire with
-        | Wire (id, _) ->
-          Wire ({ id with s_id = fresh_id ()}, ref Signal.empty)
-        | _ -> expecting_a_wire old_wire));
+      ~new_signal:
+        (match old_wire with
+         | Wire (id, _) -> Wire ({ id with s_id = fresh_id () }, ref Signal.empty)
+         | _ -> expecting_a_wire old_wire));
   (* rewrite from every wire *)
   List.iter old_wires ~f:(function
     | Wire (_, d) -> ignore (rewrite_signal_upto_wires !d : Signal.t)
-    | signal             -> expecting_a_wire signal);
+    | signal -> expecting_a_wire signal);
   (* re-attach wires *)
   List.iter old_wires ~f:(fun old_wire ->
     match old_wire with
@@ -218,49 +234,59 @@ let normalize_uids t =
       then (
         let new_d = new_signal !d in
         let new_wire = new_signal old_wire in
-        Signal.(new_wire <== new_d));
+        Signal.(new_wire <== new_d))
     | signal -> expecting_a_wire signal);
   List.map t ~f:new_signal
+;;
 
 let fan_out_map ?(deps = Signal.deps) t =
-  depth_first_search t ~init:(Map.empty (module Signal.Uid))
+  depth_first_search
+    t
+    ~init:(Map.empty (module Signal.Uid))
     ~f_before:(fun map signal ->
       let target = Signal.uid signal in
       (* [signal] is in the fan_out of all of its [deps] *)
       List.fold (deps signal) ~init:map ~f:(fun map source ->
         let source = Signal.uid source in
-        let fan_out = Map.find map source |> Option.value ~default:Signal.Uid_set.empty in
+        let fan_out =
+          Map.find map source |> Option.value ~default:Signal.Uid_set.empty
+        in
         Map.set map ~key:source ~data:(Set.add fan_out target)))
+;;
 
 let fan_in_map ?(deps = Signal.deps) t =
-  depth_first_search t ~init:Signal.Uid_map.empty
-    ~f_before:(fun map signal ->
-      List.map (deps signal) ~f:Signal.uid
-      |> Set.of_list (module Signal.Uid)
-      |> (fun data -> Map.set map ~key:(Signal.uid signal) ~data))
+  depth_first_search t ~init:Signal.Uid_map.empty ~f_before:(fun map signal ->
+    List.map (deps signal) ~f:Signal.uid
+    |> Set.of_list (module Signal.Uid)
+    |> fun data -> Map.set map ~key:(Signal.uid signal) ~data)
+;;
 
 let topological_sort ?(deps = Signal.deps) (graph : t) =
   let module Node = struct
     include Signal
+
     let compare a b = Signal.Uid.compare (uid a) (uid b)
     let hash s = Signal.Uid.hash (uid s)
     let sexp_of_t = Signal.sexp_of_signal_recursive ~show_uids:false ~depth:0
-  end in
+  end
+  in
   let nodes, edges =
     fold graph ~init:([], []) ~f:(fun (nodes, edges) to_ ->
-      to_ :: nodes,
-      List.map (deps to_) ~f:(fun from -> { Topological_sort.Edge. from; to_ })
-      @ edges)
+      ( to_ :: nodes
+      , List.map (deps to_) ~f:(fun from -> { Topological_sort.Edge.from; to_ })
+        @ edges ))
   in
   Topological_sort.sort (module Node) nodes edges |> Or_error.ok_exn
+;;
 
 let scheduling_deps (s : Signal.t) =
   match s with
   | Mem (_, _, _, m) -> [ m.mem_read_address ]
   | Mem_read_port (_, _, read_address) -> [ read_address ]
-  | Reg _ -> [ ]
-  | Multiport_mem _ -> [ ]
+  | Reg _ -> []
+  | Multiport_mem _ -> []
   | Empty | Const _ | Op _ | Wire _ | Select _ | Inst _ -> Signal.deps s
+;;
 
 let last_layer_of_nodes ~is_input graph =
   let deps t = scheduling_deps t in
@@ -273,7 +299,7 @@ let last_layer_of_nodes ~is_input graph =
      layer also doubles as a visited set for the DFS. *)
   let rec visit_signal ((in_layer, _) : bool Map.M(Signal.Uid).t * bool) signal =
     match Map.find in_layer (uid signal) with
-    | Some(is_in_layer) -> in_layer, is_in_layer
+    | Some is_in_layer -> in_layer, is_in_layer
     | None ->
       (* These nodes are not scheduled, so need filtering. They are all terminal nodes
          under scheduling deps. Put them in the map as not in the final layer. *)
@@ -281,22 +307,21 @@ let last_layer_of_nodes ~is_input graph =
       || Signal.is_empty signal
       || Signal.is_multiport_mem signal
       || is_input signal
-      then Map.set in_layer ~key:(uid signal) ~data:false, false
-      (* Regs are not in the final layer either, but we can't add them to the map as
-         [false].  We will have to recurse to them each time instead. *)
+      then
+        Map.set in_layer ~key:(uid signal) ~data:false, false
+        (* Regs are not in the final layer either, but we can't add them to the map as
+           [false].  We will have to recurse to them each time instead. *)
       else if Signal.is_reg signal
       then in_layer, true
-      else
+      else (
         (* recurse deeper *)
         let in_layer, is_in_layer = fold_signals (in_layer, false) (deps signal) in
-        Map.set in_layer ~key:(uid signal) ~data:is_in_layer, is_in_layer
+        Map.set in_layer ~key:(uid signal) ~data:is_in_layer, is_in_layer)
   (* In final layer if any dependancy is also in the final layer. *)
   and fold_signals layer signals =
-    List.fold signals ~init:layer
-      ~f:(fun (in_layer, is_in_layer) signal ->
-        let in_layer, is_in_layer' = visit_signal (in_layer, is_in_layer) signal in
-        in_layer, is_in_layer || is_in_layer')
-
+    List.fold signals ~init:layer ~f:(fun (in_layer, is_in_layer) signal ->
+      let in_layer, is_in_layer' = visit_signal (in_layer, is_in_layer) signal in
+      in_layer, is_in_layer || is_in_layer')
   in
   let in_layer, _ = fold_signals (Map.empty (module Signal.Uid), false) graph in
   (* Drop nodes not in the final layer. That will track back to an input or constant but
@@ -304,3 +329,4 @@ let last_layer_of_nodes ~is_input graph =
   Map.to_alist in_layer
   |> List.filter_map ~f:(fun (uid, is_in_layer) ->
     if is_in_layer then Some uid else None)
+;;

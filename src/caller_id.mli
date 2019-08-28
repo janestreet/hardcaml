@@ -6,8 +6,8 @@ module Mode : sig
     | Top_of_stack
     | Full_trace
 end
-type t[@@deriving sexp_of]
+
+type t [@@deriving sexp_of]
 
 val set_mode : Mode.t -> unit
-
 val get : ?skip:string list -> unit -> t option

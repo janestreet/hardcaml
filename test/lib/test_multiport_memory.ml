@@ -1,78 +1,104 @@
 open! Import
 
 let write_port address_width data_width =
-  { Signal.
-    write_clock = Signal.gnd
+  { Signal.write_clock = Signal.gnd
   ; write_address = Signal.consti ~width:address_width 0
   ; write_data = Signal.consti ~width:data_width 0
-  ; write_enable = Signal.gnd }
+  ; write_enable = Signal.gnd
+  }
+;;
 
 let%expect_test "exceptions" =
   require_does_raise [%here] (fun () ->
-    Signal.multiport_memory 16 ~write_ports:[|write_port 3 8|]
-      ~read_addresses:[|Signal.consti ~width:3 0|]);
-  [%expect {|
+    Signal.multiport_memory
+      16
+      ~write_ports:[| write_port 3 8 |]
+      ~read_addresses:[| Signal.consti ~width:3 0 |]);
+  [%expect
+    {|
     ("[Signal.multiport_memory] size is greater than what can be addressed by write port"
      (size          16)
      (address_width 3)) |}];
   require_does_raise [%here] (fun () ->
-    Signal.multiport_memory 16 ~write_ports:[|write_port 4 8|]
-      ~read_addresses:[|Signal.consti ~width:3 0|]);
-  [%expect {|
+    Signal.multiport_memory
+      16
+      ~write_ports:[| write_port 4 8 |]
+      ~read_addresses:[| Signal.consti ~width:3 0 |]);
+  [%expect
+    {|
     ("[Signal.multiport_memory] size is greater than what can be addressed by read port"
      (size          16)
      (address_width 3)) |}];
   require_does_raise [%here] (fun () ->
-    Signal.multiport_memory 16 ~write_ports:[|write_port 4 8|]
-      ~read_addresses:[|Signal.consti ~width:5 0|]);
-  [%expect {|
+    Signal.multiport_memory
+      16
+      ~write_ports:[| write_port 4 8 |]
+      ~read_addresses:[| Signal.consti ~width:5 0 |]);
+  [%expect
+    {|
     ("[Signal.multiport_memory] width of read and write addresses differ"
      (write_address_width 4)
      (read_address_width  5)) |}];
   require_does_raise [%here] (fun () ->
-    Signal.multiport_memory 16 ~write_ports:[| { (write_port 4 8) with
-                                                 write_clock = Signal.consti ~width:2 0 }|]
-      ~read_addresses:[|Signal.consti ~width:4 0|]);
-  [%expect {|
+    Signal.multiport_memory
+      16
+      ~write_ports:
+        [| { (write_port 4 8) with write_clock = Signal.consti ~width:2 0 } |]
+      ~read_addresses:[| Signal.consti ~width:4 0 |]);
+  [%expect
+    {|
     ("[Signal.multiport_memory] width of clock must be 1"
      (port               0)
      (write_enable_width 1)) |}];
   require_does_raise [%here] (fun () ->
-    Signal.multiport_memory 16 ~write_ports:[| { (write_port 4 8) with
-                                                 write_enable = Signal.consti ~width:2 0 }|]
-      ~read_addresses:[|Signal.consti ~width:4 0|]);
-  [%expect {|
+    Signal.multiport_memory
+      16
+      ~write_ports:
+        [| { (write_port 4 8) with write_enable = Signal.consti ~width:2 0 } |]
+      ~read_addresses:[| Signal.consti ~width:4 0 |]);
+  [%expect
+    {|
     ("[Signal.multiport_memory] width of write enable must be 1"
      (port               0)
      (write_enable_width 2)) |}];
   require_does_raise [%here] (fun () ->
-    Signal.multiport_memory 16 ~write_ports:[||]
-      ~read_addresses:[|Signal.consti ~width:4 0|]);
+    Signal.multiport_memory
+      16
+      ~write_ports:[||]
+      ~read_addresses:[| Signal.consti ~width:4 0 |]);
   [%expect {| "[Signal.multiport_memory] requires at least one write port" |}];
   require_does_raise [%here] (fun () ->
-    Signal.multiport_memory 16 ~write_ports:[|write_port 4 8|]
-      ~read_addresses:[||]);
+    Signal.multiport_memory 16 ~write_ports:[| write_port 4 8 |] ~read_addresses:[||]);
   [%expect {| "[Signal.multiport_memory] requires at least one read port" |}];
   require_does_raise [%here] (fun () ->
-    Signal.multiport_memory 16 ~write_ports:[|write_port 4 8|]
+    Signal.multiport_memory
+      16
+      ~write_ports:[| write_port 4 8 |]
       ~read_addresses:[| Signal.consti ~width:4 0; Signal.consti ~width:5 0 |]);
-  [%expect {|
+  [%expect
+    {|
     ("[Signal.multiport_memory] width of read address is inconsistent"
      (port               1)
      (read_address_width 5)
      (expected           4)) |}];
   require_does_raise [%here] (fun () ->
-    Signal.multiport_memory 16 ~write_ports:[|write_port 4 8; write_port 5 8|]
+    Signal.multiport_memory
+      16
+      ~write_ports:[| write_port 4 8; write_port 5 8 |]
       ~read_addresses:[| Signal.consti ~width:4 0 |]);
-  [%expect {|
+  [%expect
+    {|
     ("[Signal.multiport_memory] width of write address is inconsistent"
      (port                1)
      (write_address_width 5)
      (expected            4)) |}];
   require_does_raise [%here] (fun () ->
-    Signal.multiport_memory 16 ~write_ports:[|write_port 4 8; write_port 4 16|]
+    Signal.multiport_memory
+      16
+      ~write_ports:[| write_port 4 8; write_port 4 16 |]
       ~read_addresses:[| Signal.consti ~width:4 0 |]);
-  [%expect {|
+  [%expect
+    {|
     ("[Signal.multiport_memory] width of write data is inconsistent"
      (port             1)
      (write_data_width 16)
@@ -82,11 +108,14 @@ let%expect_test "exceptions" =
 let%expect_test "sexp" =
   let sexp_of_signal = Signal.sexp_of_signal_recursive ~depth:2 in
   let memory =
-    Signal.multiport_memory 32 ~write_ports:[|write_port 5 12; write_port 5 12|]
-      ~read_addresses:[| Signal.consti ~width:5 0; Signal.consti ~width:5 0|]
+    Signal.multiport_memory
+      32
+      ~write_ports:[| write_port 5 12; write_port 5 12 |]
+      ~read_addresses:[| Signal.consti ~width:5 0; Signal.consti ~width:5 0 |]
   in
   print_s [%message (memory : signal array)];
-  [%expect {|
+  [%expect
+    {|
     (memory (
       (memory_read_port
         (width 12)
@@ -118,18 +147,26 @@ let%expect_test "sexp" =
 
 let%expect_test "verilog, async memory, 1 port" =
   let read_data =
-    Signal.multiport_memory 32
-      ~write_ports:[| { write_clock = clock
-                      ; write_enable = Signal.input "write_enable" 1
-                      ; write_address = Signal.input "write_address" 5
-                      ; write_data = Signal.input "write_data" 15 } |]
-      ~read_addresses:[| Signal.input "read_address" 5|]
+    Signal.multiport_memory
+      32
+      ~write_ports:
+        [| { write_clock = clock
+           ; write_enable = Signal.input "write_enable" 1
+           ; write_address = Signal.input "write_address" 5
+           ; write_data = Signal.input "write_data" 15
+           }
+        |]
+      ~read_addresses:[| Signal.input "read_address" 5 |]
   in
-  let circuit = Circuit.create_exn ~name:"single_port_memory"
-                  (List.mapi (Array.to_list read_data)
-                     ~f:(fun i q -> Signal.output ("q" ^ Int.to_string i) q)) in
+  let circuit =
+    Circuit.create_exn
+      ~name:"single_port_memory"
+      (List.mapi (Array.to_list read_data) ~f:(fun i q ->
+         Signal.output ("q" ^ Int.to_string i) q))
+  in
   Rtl.print Verilog circuit;
-  [%expect {|
+  [%expect
+    {|
     module single_port_memory (
         write_enable,
         write_data,
@@ -167,23 +204,31 @@ let%expect_test "verilog, async memory, 1 port" =
 
 let%expect_test "verilog, async memory, 2 ports" =
   let read_data =
-    Signal.multiport_memory 32
-      ~write_ports:[| { write_clock = clock
-                      ; write_enable = Signal.input "write_enable" 1
-                      ; write_address = Signal.input "write_address" 5
-                      ; write_data = Signal.input "write_data" 15 }
-                    ; { write_clock = Signal.input "clock2" 1
-                      ; write_enable = Signal.input "write_enable2" 1
-                      ; write_address = Signal.input "write_address2" 5
-                      ; write_data = Signal.input "write_data2" 15 } |]
-      ~read_addresses:[| Signal.input "read_address" 5
-                       ; Signal.input "read_address2" 5 |]
+    Signal.multiport_memory
+      32
+      ~write_ports:
+        [| { write_clock = clock
+           ; write_enable = Signal.input "write_enable" 1
+           ; write_address = Signal.input "write_address" 5
+           ; write_data = Signal.input "write_data" 15
+           }
+         ; { write_clock = Signal.input "clock2" 1
+           ; write_enable = Signal.input "write_enable2" 1
+           ; write_address = Signal.input "write_address2" 5
+           ; write_data = Signal.input "write_data2" 15
+           }
+        |]
+      ~read_addresses:[| Signal.input "read_address" 5; Signal.input "read_address2" 5 |]
   in
-  let circuit = Circuit.create_exn ~name:"multi_port_memory"
-                  (List.mapi (Array.to_list read_data)
-                     ~f:(fun i q -> Signal.output ("q" ^ Int.to_string i) q)) in
+  let circuit =
+    Circuit.create_exn
+      ~name:"multi_port_memory"
+      (List.mapi (Array.to_list read_data) ~f:(fun i q ->
+         Signal.output ("q" ^ Int.to_string i) q))
+  in
   Rtl.print Verilog circuit;
-  [%expect {|
+  [%expect
+    {|
     module multi_port_memory (
         write_enable2,
         write_data2,
@@ -243,30 +288,40 @@ let dual_port ?(collision_mode = Ram.Collision_mode.Read_before_write) () =
     Ram.create
       ~collision_mode
       ~size:32
-      ~write_ports:[| { write_clock = Signal.input "write_clock1" 1
-                      ; write_enable = Signal.input "write_enable1" 1
-                      ; write_address = Signal.input "write_address1" 5
-                      ; write_data = Signal.input "write_data1" 15 }
-                    ; { write_clock = Signal.input "write_clock2" 1
-                      ; write_enable = Signal.input "write_enable2" 1
-                      ; write_address = Signal.input "write_address2" 5
-                      ; write_data = Signal.input "write_data2" 15 } |]
-      ~read_ports:[| { Ram.Read_port.
-                       read_clock = Signal.input "read_clock1" 1
-                     ; read_address = Signal.input "read_address1" 5
-                     ; read_enable = Signal.input "read_enable1" 1 }
-                   ; { read_clock = Signal.input "read_clock2" 1
-                     ; read_address = Signal.input "read_address2" 5
-                     ; read_enable = Signal.input "read_enable2" 1 } |]
+      ~write_ports:
+        [| { write_clock = Signal.input "write_clock1" 1
+           ; write_enable = Signal.input "write_enable1" 1
+           ; write_address = Signal.input "write_address1" 5
+           ; write_data = Signal.input "write_data1" 15
+           }
+         ; { write_clock = Signal.input "write_clock2" 1
+           ; write_enable = Signal.input "write_enable2" 1
+           ; write_address = Signal.input "write_address2" 5
+           ; write_data = Signal.input "write_data2" 15
+           }
+        |]
+      ~read_ports:
+        [| { Ram.Read_port.read_clock = Signal.input "read_clock1" 1
+           ; read_address = Signal.input "read_address1" 5
+           ; read_enable = Signal.input "read_enable1" 1
+           }
+         ; { read_clock = Signal.input "read_clock2" 1
+           ; read_address = Signal.input "read_address2" 5
+           ; read_enable = Signal.input "read_enable2" 1
+           }
+        |]
   in
-  Circuit.create_exn ~name:"multi_port_memory"
-    (List.mapi (Array.to_list read_data)
-       ~f:(fun i q -> Signal.output ("q" ^ Int.to_string i) q))
+  Circuit.create_exn
+    ~name:"multi_port_memory"
+    (List.mapi (Array.to_list read_data) ~f:(fun i q ->
+       Signal.output ("q" ^ Int.to_string i) q))
+;;
 
 let%expect_test "dual port Verilog" =
   let circuit = dual_port () in
   Rtl.print Verilog circuit;
-  [%expect {|
+  [%expect
+    {|
     module multi_port_memory (
         read_enable2,
         read_clock2,
@@ -346,7 +401,8 @@ let%expect_test "dual port Verilog" =
 let%expect_test "dual port VHDL" =
   let circuit = dual_port () in
   Rtl.print Vhdl circuit;
-  [%expect {|
+  [%expect
+    {|
     library ieee;
     use ieee.std_logic_1164.all;
     use ieee.numeric_std.all;
@@ -446,17 +502,16 @@ let%expect_test "simulation - write and read data on both ports" =
   let circuit = dual_port () in
   let simulator = Cyclesim.create circuit in
   let waves, simulator = Waves.Waveform.create simulator in
-  let write_enable1  = Cyclesim.in_port simulator "write_enable1" in
+  let write_enable1 = Cyclesim.in_port simulator "write_enable1" in
   let write_address1 = Cyclesim.in_port simulator "write_address1" in
-  let write_data1    = Cyclesim.in_port simulator "write_data1" in
-  let _write_enable2  = Cyclesim.in_port simulator "write_enable2" in
+  let write_data1 = Cyclesim.in_port simulator "write_data1" in
+  let _write_enable2 = Cyclesim.in_port simulator "write_enable2" in
   let _write_address2 = Cyclesim.in_port simulator "write_address2" in
-  let _write_data2    = Cyclesim.in_port simulator "write_data2" in
-  let read_address1  = Cyclesim.in_port simulator "read_address1" in
-  let read_enable1   = Cyclesim.in_port simulator "read_enable1" in
-  let read_address2  = Cyclesim.in_port simulator "read_address2" in
-  let read_enable2   = Cyclesim.in_port simulator "read_enable2" in
-
+  let _write_data2 = Cyclesim.in_port simulator "write_data2" in
+  let read_address1 = Cyclesim.in_port simulator "read_address1" in
+  let read_enable1 = Cyclesim.in_port simulator "read_enable1" in
+  let read_address2 = Cyclesim.in_port simulator "read_address2" in
+  let read_enable2 = Cyclesim.in_port simulator "read_enable2" in
   Cyclesim.reset simulator;
   (* write on port 1 and 2 *)
   write_enable1 := Bits.vdd;
@@ -488,9 +543,9 @@ let%expect_test "simulation - write and read data on both ports" =
   read_enable1 := Bits.gnd;
   read_enable2 := Bits.gnd;
   Cyclesim.cycle simulator;
-
   Waves.Waveform.print ~display_height:42 ~display_width:86 ~wave_width:2 waves;
-  [%expect {|
+  [%expect
+    {|
     ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────┐
     │                  ││────────────────────────┬─────────────────┬───────────          │
     │read_address1     ││ 00                     │03               │04                   │
@@ -539,17 +594,16 @@ let%expect_test "simulation - write on both ports - highest indexed port wins" =
   let circuit = dual_port () in
   let simulator = Cyclesim.create circuit in
   let waves, simulator = Waves.Waveform.create simulator in
-  let write_enable1  = Cyclesim.in_port simulator "write_enable1" in
+  let write_enable1 = Cyclesim.in_port simulator "write_enable1" in
   let write_address1 = Cyclesim.in_port simulator "write_address1" in
-  let write_data1    = Cyclesim.in_port simulator "write_data1" in
-  let write_enable2  = Cyclesim.in_port simulator "write_enable2" in
+  let write_data1 = Cyclesim.in_port simulator "write_data1" in
+  let write_enable2 = Cyclesim.in_port simulator "write_enable2" in
   let write_address2 = Cyclesim.in_port simulator "write_address2" in
-  let write_data2    = Cyclesim.in_port simulator "write_data2" in
-  let read_address1  = Cyclesim.in_port simulator "read_address1" in
-  let read_enable1   = Cyclesim.in_port simulator "read_enable1" in
-  let read_address2  = Cyclesim.in_port simulator "read_address2" in
-  let read_enable2   = Cyclesim.in_port simulator "read_enable2" in
-
+  let write_data2 = Cyclesim.in_port simulator "write_data2" in
+  let read_address1 = Cyclesim.in_port simulator "read_address1" in
+  let read_enable1 = Cyclesim.in_port simulator "read_enable1" in
+  let read_address2 = Cyclesim.in_port simulator "read_address2" in
+  let read_enable2 = Cyclesim.in_port simulator "read_enable2" in
   Cyclesim.reset simulator;
   write_enable1 := Bits.vdd;
   write_address1 := Bits.consti ~width:5 9;
@@ -570,7 +624,8 @@ let%expect_test "simulation - write on both ports - highest indexed port wins" =
   read_enable2 := Bits.gnd;
   Cyclesim.cycle simulator;
   Waves.Waveform.print ~display_height:42 ~display_width:60 ~wave_width:2 waves;
-  [%expect {|
+  [%expect
+    {|
     ┌Signals──────┐┌Waves──────────────────────────────────────┐
     │             ││──────────────────┬───────────             │
     │read_address1││ 00               │09                      │
@@ -620,12 +675,11 @@ let%expect_test "simulation - demonstrate collision modes" =
     let circuit = dual_port ~collision_mode () in
     let simulator = Cyclesim.create circuit in
     let waves, simulator = Waves.Waveform.create simulator in
-    let write_enable1  = Cyclesim.in_port simulator "write_enable1" in
+    let write_enable1 = Cyclesim.in_port simulator "write_enable1" in
     let write_address1 = Cyclesim.in_port simulator "write_address1" in
-    let write_data1    = Cyclesim.in_port simulator "write_data1" in
-    let read_address1  = Cyclesim.in_port simulator "read_address1" in
-    let read_enable1   = Cyclesim.in_port simulator "read_enable1" in
-
+    let write_data1 = Cyclesim.in_port simulator "write_data1" in
+    let read_address1 = Cyclesim.in_port simulator "read_address1" in
+    let read_enable1 = Cyclesim.in_port simulator "read_enable1" in
     Cyclesim.reset simulator;
     write_enable1 := Bits.vdd;
     write_address1 := Bits.consti ~width:5 13;
@@ -640,10 +694,11 @@ let%expect_test "simulation - demonstrate collision modes" =
     write_enable1 := Bits.gnd;
     read_enable1 := Bits.gnd;
     Cyclesim.cycle simulator;
-    Waves.Waveform.print ~display_height:42 ~display_width:60 ~wave_width:2 waves;
+    Waves.Waveform.print ~display_height:42 ~display_width:60 ~wave_width:2 waves
   in
   test Read_before_write;
-  [%expect {|
+  [%expect
+    {|
     ┌Signals──────┐┌Waves──────────────────────────────────────┐
     │             ││────────────┬───────────                   │
     │read_address1││ 00         │0D                            │
@@ -687,7 +742,8 @@ let%expect_test "simulation - demonstrate collision modes" =
     │             ││────────────────────────                   │
     └─────────────┘└───────────────────────────────────────────┘ |}];
   test Write_before_read;
-  [%expect {|
+  [%expect
+    {|
     ┌Signals──────┐┌Waves──────────────────────────────────────┐
     │             ││────────────┬───────────                   │
     │read_address1││ 00         │0D                            │
@@ -730,5 +786,4 @@ let%expect_test "simulation - demonstrate collision modes" =
     │q1           ││ 0000                                      │
     │             ││────────────────────────                   │
     └─────────────┘└───────────────────────────────────────────┘ |}]
-
 ;;

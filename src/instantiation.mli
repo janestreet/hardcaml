@@ -1,6 +1,6 @@
 open! Import
 
-type instobj = < i : string -> Signal.t; o : string -> Signal.t >
+type instobj = < i : string -> Signal.t ; o : string -> Signal.t >
 
 val create
   :  ?lib:string

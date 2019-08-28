@@ -5,7 +5,8 @@ open! Import
 
 type 'a t =
   { valid : 'a
-  ; value : 'a }
+  ; value : 'a
+  }
 [@@deriving sexp_of]
 
 val map : 'a t -> f:('a -> 'b) -> 'b t

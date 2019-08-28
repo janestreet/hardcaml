@@ -3,8 +3,9 @@ open Signal.Const_prop.Comb
 open Test_constant_propagation.Trace
 
 let%expect_test "and" =
-  print_s @@ binary_op_tests "&:" (&:) (&:.);
-  [%expect {|
+  print_s @@ binary_op_tests "&:" ( &: ) ( &:. );
+  [%expect
+    {|
     (&:
       (all_1_bit (
         (1'b0 &: 1'b0 = 1'b0)
@@ -38,10 +39,12 @@ let%expect_test "and" =
       (int_on_right (
         (7'b0011011 &: 12  = 7'b0001000)
         (7'b0011011 &: -12 = 7'b0010000)))) |}]
+;;
 
 let%expect_test "[&:] with one constant" =
   binary_op_tests_with_one_constant "&:" ( &: );
-  [%expect {|
+  [%expect
+    {|
     (1'b0 &: x = 1'b0)
     (x &: 1'b0 = 1'b0)
     (1'b1 &: x = x)
@@ -117,8 +120,9 @@ let%expect_test "[&:] with one constant" =
 ;;
 
 let%expect_test "or" =
-  print_s @@ binary_op_tests "|:" (|:) (|:.);
-  [%expect {|
+  print_s @@ binary_op_tests "|:" ( |: ) ( |:. );
+  [%expect
+    {|
     (|:
       (all_1_bit (
         (1'b0 |: 1'b0 = 1'b0)
@@ -152,10 +156,12 @@ let%expect_test "or" =
       (int_on_right (
         (7'b0011011 |: 12  = 7'b0011111)
         (7'b0011011 |: -12 = 7'b1111111)))) |}]
+;;
 
 let%expect_test "[|:] with one constant" =
   binary_op_tests_with_one_constant "|:" ( |: );
-  [%expect {|
+  [%expect
+    {|
     (1'b0 |: x = x)
     (x |: 1'b0 = x)
     (1'b1 |: x = 1'b1)
@@ -227,12 +233,13 @@ let%expect_test "[|:] with one constant" =
              (width 2)
              (value 0b10))))))))
     (2'b11 |: x = 2'b11)
-    (x |: 2'b11 = 2'b11) |}];
+    (x |: 2'b11 = 2'b11) |}]
 ;;
 
 let%expect_test "xor" =
-  print_s @@ binary_op_tests "^:" (^:) (^:.);
-  [%expect {|
+  print_s @@ binary_op_tests "^:" ( ^: ) ( ^:. );
+  [%expect
+    {|
     (^:
       (all_1_bit (
         (1'b0 ^: 1'b0 = 1'b0)
@@ -266,15 +273,18 @@ let%expect_test "xor" =
       (int_on_right (
         (7'b0011011 ^: 12  = 7'b0010111)
         (7'b0011011 ^: -12 = 7'b1101111)))) |}]
+;;
 
 let%expect_test "not" =
-  let (~:) = fn1 (~:) in
+  let ( ~: ) = fn1 ( ~: ) in
   print_s
-    [%message "~:"
-                ~all_1_bit:       (op1 1 ~f:(~:) : signal fn1 list)
-                ~all_2_bits:      (op1 2 ~f:(~:) : signal fn1 list)
-                ~all_3_bits:      (op1 3 ~f:(~:) : signal fn1 list) ];
-  [%expect {|
+    [%message
+      "~:"
+        ~all_1_bit:(op1 1 ~f:( ~: ) : signal fn1 list)
+        ~all_2_bits:(op1 2 ~f:( ~: ) : signal fn1 list)
+        ~all_3_bits:(op1 3 ~f:( ~: ) : signal fn1 list)];
+  [%expect
+    {|
     (~:
       (all_1_bit (
         (1'b0 = 1'b1)
@@ -293,3 +303,4 @@ let%expect_test "not" =
         (3'b101 = 3'b010)
         (3'b110 = 3'b001)
         (3'b111 = 3'b000)))) |}]
+;;

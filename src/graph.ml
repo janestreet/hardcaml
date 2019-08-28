@@ -15,8 +15,10 @@ let write_dot_rank chan circuit =
        in
      ]} *)
   let outputs =
-    List.fold (Circuit.outputs circuit) ~init:(Set.empty (module Uid)) ~f:(fun set signal ->
-      Set.add set (uid signal))
+    List.fold
+      (Circuit.outputs circuit)
+      ~init:(Set.empty (module Uid))
+      ~f:(fun set signal -> Set.add set (uid signal))
   in
   (* create a suitable fan-out mapping *)
   let fdeps s =
@@ -49,51 +51,52 @@ let write_dot_rank chan circuit =
       (* filter out already visited signals, and outputs *)
       let signals =
         List.filter signals ~f:(fun signal ->
-          (not (Set.mem visited signal))
-          && (not (Set.mem outputs signal)))
+          (not (Set.mem visited signal)) && not (Set.mem outputs signal))
       in
       (* create set of uids of nodes at this rank *)
       let rank =
-        List.fold signals ~init: (Set.empty (module Uid)) ~f:(fun set signal ->
-          Set.add set signal)
+        List.fold
+          signals
+          ~init:(Set.empty (module Uid))
+          ~f:(fun set signal -> Set.add set signal)
       in
-      if Set.is_empty rank
-      then ranks
-      else dfs visited (rank :: ranks) signals
+      if Set.is_empty rank then ranks else dfs visited (rank :: ranks) signals
   in
   let ranks =
-    dfs (Set.empty (module Uid)) [] (Circuit.inputs circuit |> uids) |>
-    List.map ~f:Set.to_list
+    dfs (Set.empty (module Uid)) [] (Circuit.inputs circuit |> uids)
+    |> List.map ~f:Set.to_list
   in
   (* create the output level and add it to the ranks *)
   let ranks =
-    List.map (Circuit.outputs circuit) ~f:(fun s -> uid s) :: ranks
-    |> List.rev
+    List.map (Circuit.outputs circuit) ~f:(fun s -> uid s) :: ranks |> List.rev
   in
   let nranks = List.length ranks in
   (* write the bit to the left *)
   fprintf chan "digraph %s {\n" (Circuit.name circuit);
-  for i=0 to nranks-1 do
+  for i = 0 to nranks - 1 do
     fprintf chan "%i" i;
-    if i <> nranks-1
-    then fprintf chan " -> ";
+    if i <> nranks - 1 then fprintf chan " -> "
   done;
   fprintf chan "\n";
   List.iteri ranks ~f:(fun i s ->
     fprintf chan " { rank=same; %i [shape=plaintext];\n" i;
     List.iter s ~f:(fun s -> fprintf chan "  _%Li;\n" s);
     fprintf chan "}\n");
-
   (* write edges *)
   Signal_graph.iter (Circuit.signal_graph circuit) ~f:(fun s ->
-    List.iter (fdeps s) ~f:(fun d ->
-      fprintf chan "_%Li -> _%Li;\n" (uid d) (uid s)));
-
+    List.iter (fdeps s) ~f:(fun d -> fprintf chan "_%Li -> _%Li;\n" (uid d) (uid s)));
   fprintf chan "}\n"
+;;
 
 (* GDL file with manhatten layout - looks much, much nicer *)
-let write_gdl ?(names=false) ?(widths=false) ?(consts=true) ?(clocks=false)
-      chan circuit =
+let write_gdl
+      ?(names = false)
+      ?(widths = false)
+      ?(consts = true)
+      ?(clocks = false)
+      chan
+      circuit
+  =
   let quote s = "\"" ^ s ^ "\"" in
   fprintf chan "graph: {\n";
   let props =
@@ -101,73 +104,67 @@ let write_gdl ?(names=false) ?(widths=false) ?(consts=true) ?(clocks=false)
     ; "manhattenedges", "yes"
     ; "inportsharing", "no"
     ; "outportsharing", "yes"
-    ; "node.bordercolor", "lightblue" ]
+    ; "node.bordercolor", "lightblue"
+    ]
   in
-  let props =
-    if widths
-    then ("display_edge_labels", "yes") :: props
-    else props
-  in
+  let props = if widths then ("display_edge_labels", "yes") :: props else props in
   (* write list of default attributes *)
   List.iter props ~f:(fun (a, b) -> fprintf chan "%s: %s\n" a b);
   let folds c s =
-    List.fold s ~init:"" ~f:(fun s n -> if String.is_empty s then n else n ^ c ^  s)
+    List.fold s ~init:"" ~f:(fun s n -> if String.is_empty s then n else n ^ c ^ s)
   in
   let name s =
     let names = Signal.names s in
     match names with
     | [] -> ""
-    | h :: [] -> h
+    | [ h ] -> h
     | h :: t -> h ^ " (" ^ folds "," t ^ ")"
   in
   let write_node
-        ?(border="invisible") ?(shape="box") ?(label="")
-        ?(bordercolour="") ?(colour="") ?(textcolour="")
-        signal =
+        ?(border = "invisible")
+        ?(shape = "box")
+        ?(label = "")
+        ?(bordercolour = "")
+        ?(colour = "")
+        ?(textcolour = "")
+        signal
+    =
     fprintf chan "node: { title: \"%Li\" " (uid signal);
     let name = if String.is_empty label || names then name signal else "" in
     (match label, name with
      | "", "" -> fprintf chan "label: \"none\" "
-     | _ , "" -> fprintf chan "label: \"%s\" " label
-     | "", _  -> fprintf chan "label: \"\\fI%s\" " name
+     | _, "" -> fprintf chan "label: \"%s\" " label
+     | "", _ -> fprintf chan "label: \"\\fI%s\" " name
      | _ -> fprintf chan "label: \"%s\\n\\fI%s\" " label name);
     fprintf chan "shape: %s " shape;
     fprintf chan "borderstyle: %s " border;
-    if not (String.is_empty textcolour)
-    then fprintf chan "textcolor: %s " textcolour;
+    if not (String.is_empty textcolour) then fprintf chan "textcolor: %s " textcolour;
     if not (String.is_empty bordercolour)
     then fprintf chan "bordercolor: %s " bordercolour;
-    if not (String.is_empty colour)
-    then fprintf chan "color: %s " colour;
+    if not (String.is_empty colour) then fprintf chan "color: %s " colour;
     fprintf chan " }\n"
   in
   let is_rom s =
     match s with
     | Op (_, Signal_mux) ->
-      List.fold (List.tl_exn (deps s)) ~init:true
-        ~f:(fun b s -> b && is_const s)
+      List.fold (List.tl_exn (deps s)) ~init:true ~f:(fun b s -> b && is_const s)
     | _ -> false
   in
   let reg_deps s =
     match s with
     | Reg (_, r) ->
-      (if clocks then [r.reg_clock] else [])
-      @ [ List.hd_exn (deps s); r.reg_enable ]
+      (if clocks then [ r.reg_clock ] else []) @ [ List.hd_exn (deps s); r.reg_enable ]
     | _ -> []
   in
   let mem_deps s =
     match s with
     | Mem (_, _, r, m) ->
-      [ List.hd_exn (deps s); r.reg_enable
-      ; m.mem_read_address
-      ; m.mem_write_address ]
+      [ List.hd_exn (deps s); r.reg_enable; m.mem_read_address; m.mem_write_address ]
     | Multiport_mem (_, _, write_ports) ->
       Array.map write_ports ~f:(fun wr ->
-        [ wr.write_clock
-        ; wr.write_enable
-        ; wr.write_address
-        ; wr.write_data ])
-      |> Array.to_list |> List.concat
+        [ wr.write_clock; wr.write_enable; wr.write_address; wr.write_data ])
+      |> Array.to_list
+      |> List.concat
     | _ -> []
   in
   let is_input s = Circuit.is_input circuit s in
@@ -175,12 +172,10 @@ let write_gdl ?(names=false) ?(widths=false) ?(consts=true) ?(clocks=false)
   (* write nodes *)
   let write_node s =
     match s with
-    | Empty ->
-      write_node ~label:"empty" s
+    | Empty -> write_node ~label:"empty" s
     | Const (_, c) ->
       write_node
-        ~label:(Bits.to_constant c
-                |> Constant.to_hex_string ~signedness:Unsigned)
+        ~label:(Bits.to_constant c |> Constant.to_hex_string ~signedness:Unsigned)
         s
     | Wire _ ->
       if List.is_empty (Signal.names s)
@@ -207,24 +202,42 @@ let write_gdl ?(names=false) ?(widths=false) ?(consts=true) ?(clocks=false)
        | Signal_cat -> write_node ~border:"solid" ~shape:"trapeze" ~label:"cat" s
        | Signal_mux ->
          if is_rom s
-         then
+         then (
            let els = List.length (deps s) - 1 in
-           write_node ~border:"solid" ~shape:"box"
-             ~label:(sprintf "rom%i" els) s
-         else
-           write_node ~border:"solid" ~shape:"uptrapeze" ~label:"mux" s)
+           write_node ~border:"solid" ~shape:"box" ~label:(sprintf "rom%i" els) s)
+         else write_node ~border:"solid" ~shape:"uptrapeze" ~label:"mux" s)
     | Reg _ ->
-      write_node ~bordercolour:"lightblue" ~textcolour:"white"
-        ~colour:"black" ~border:"solid" ~label:"reg" s
+      write_node
+        ~bordercolour:"lightblue"
+        ~textcolour:"white"
+        ~colour:"black"
+        ~border:"solid"
+        ~label:"reg"
+        s
     | Mem (_, _, _, m) ->
-      write_node ~bordercolour:"lightblue" ~textcolour:"white"
-        ~colour:"black" ~border:"solid" ~label:(sprintf "mem%i" m.mem_size) s
+      write_node
+        ~bordercolour:"lightblue"
+        ~textcolour:"white"
+        ~colour:"black"
+        ~border:"solid"
+        ~label:(sprintf "mem%i" m.mem_size)
+        s
     | Multiport_mem (_, mem_size, _) ->
-      write_node ~bordercolour:"lightblue" ~textcolour:"white"
-        ~colour:"black" ~border:"solid" ~label:(sprintf "mem%i" mem_size) s
+      write_node
+        ~bordercolour:"lightblue"
+        ~textcolour:"white"
+        ~colour:"black"
+        ~border:"solid"
+        ~label:(sprintf "mem%i" mem_size)
+        s
     | Mem_read_port _ ->
-      write_node ~bordercolour:"lightblue" ~textcolour:"white"
-        ~colour:"black" ~border:"solid" ~label:"mem_rdp" s
+      write_node
+        ~bordercolour:"lightblue"
+        ~textcolour:"white"
+        ~colour:"black"
+        ~border:"solid"
+        ~label:"mem_rdp"
+        s
     | Inst (_, _, i) ->
       write_node ~border:"solid" ~label:(sprintf "inst\n%s" i.inst_name) s
   in
@@ -240,38 +253,40 @@ let write_gdl ?(names=false) ?(widths=false) ?(consts=true) ?(clocks=false)
   in
   (* write edges *)
   let write_edges () =
-    Signal_graph.depth_first_search (Circuit.signal_graph circuit)
+    Signal_graph.depth_first_search
+      (Circuit.signal_graph circuit)
       ~init:(Set.empty (module Uid))
       ~f_before:(fun a s ->
         let deps = deps s |> List.filter ~f:(fun t -> not (is_empty t)) in
         let deps =
-          if consts
-          then deps
-          else deps |> List.filter ~f:(fun s -> not (is_const s))
+          if consts then deps else deps |> List.filter ~f:(fun s -> not (is_const s))
         in
-        if not (List.is_empty deps) && not (is_empty s)
+        if (not (List.is_empty deps)) && not (is_empty s)
         then (
           List.iter deps ~f:(fun d ->
             (* Note; labels always specified, even if they are disabled *)
-            fprintf chan
-              "edge: { source: \"%Li\" target: \"%Li\" "
-              (uid d) (uid s);
-            if ((is_wire s) && (not (is_output s))) || (is_select s)
+            fprintf chan "edge: { source: \"%Li\" target: \"%Li\" " (uid d) (uid s);
+            if (is_wire s && not (is_output s)) || is_select s
             then fprintf chan "arrowstyle: none ";
-            fprintf chan
-              "color:lightgrey thickness: 1 label: \"%i\" }\n"
-              (width d));
+            fprintf chan "color:lightgrey thickness: 1 label: \"%i\" }\n" (width d));
           List.fold (s :: deps) ~init:a ~f:(fun a s -> Set.add a (uid s)))
         else a)
   in
   let nodes = write_edges () in
   Set.iter nodes ~f:(fun u -> write_node (Circuit.find_signal_exn circuit u));
   fprintf chan "}\n"
+;;
 
-let aisee3 ?(args="")
-      ?(names=false) ?(widths=false) ?(consts=true) ?(clocks=false)
-      circuit =
+let aisee3
+      ?(args = "")
+      ?(names = false)
+      ?(widths = false)
+      ?(consts = true)
+      ?(clocks = false)
+      circuit
+  =
   let name, file = Filename.open_temp_file "aisee3" ".gdl" in
-  write_gdl ~names:names ~widths:widths ~consts:consts ~clocks:clocks file circuit;
+  write_gdl ~names ~widths ~consts ~clocks file circuit;
   Out_channel.close file;
-  ignore (Unix.open_process_in ("aisee3 " ^ name ^ " " ^ args))
+  ignore (Unix.open_process_in ("aisee3 " ^ name ^ " " ^ args) : Stdio.In_channel.t)
+;;

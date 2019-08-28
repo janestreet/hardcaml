@@ -3,29 +3,30 @@
 open! Import
 
 type t =
-  { q            : Signal.t
-  ; full         : Signal.t
-  ; empty        : Signal.t
-  ; nearly_full  : Signal.t
+  { q : Signal.t
+  ; full : Signal.t
+  ; empty : Signal.t
+  ; nearly_full : Signal.t
   ; nearly_empty : Signal.t
-  ; used         : Signal.t }
+  ; used : Signal.t
+  }
 [@@deriving sexp_of]
 
-type create_fifo
-  =  ?nearly_empty    : int       (** default is [1] **)
-  -> ?nearly_full     : int       (** default is [depth-1] **)
-  -> ?overflow_check  : bool      (** default is [true] *)
-  -> ?reset           : Signal.t  (** default is [empty] **)
-  -> ?underflow_check : bool      (** default is [true] *)
-  -> ?ram_attributes: Rtl_attribute.t list (** default is blockram *)
-  -> ?scope: Scope.t (* to override naming prefix *)
+type create_fifo =
+  ?nearly_empty:int (** default is [1] **)
+  -> ?nearly_full:int (** default is [depth-1] **)
+  -> ?overflow_check:bool (** default is [true] *)
+  -> ?reset:Signal.t (** default is [empty] **)
+  -> ?underflow_check:bool (** default is [true] *)
+  -> ?ram_attributes:Rtl_attribute.t list (** default is blockram *)
+  -> ?scope:Scope.t (* to override naming prefix *)
   -> unit
-  -> capacity : int
-  -> clock : Signal.t
-  -> clear : Signal.t
-  -> wr    : Signal.t
-  -> d     : Signal.t
-  -> rd    : Signal.t
+  -> capacity:int
+  -> clock:Signal.t
+  -> clear:Signal.t
+  -> wr:Signal.t
+  -> d:Signal.t
+  -> rd:Signal.t
   -> t
 
 (** {4 Base RTL FIFO} *)
@@ -53,9 +54,7 @@ type create_fifo
     Note; [showahead] is sometimes referred to as "first word fall through".
 
     The [used] output indicates the number of elements currently in the FIFO. *)
-val create
-  :  ?showahead:bool (** default is [false] *)
-  -> create_fifo
+val create : ?showahead:bool (** default is [false] *) -> create_fifo
 
 
 (** {3 Derived FIFO architectures.} *)

@@ -4,21 +4,15 @@ open! Import
    slow. *)
 
 module Gates = struct
-
   (* msb first *)
   type t = int list [@@deriving compare]
 
   let equal = [%compare.equal: t]
-
   let empty = []
-
   let is_empty = List.is_empty
-
   let width x = List.length x
-
   let of_constant = Constant.to_bit_list
   let to_constant = Constant.of_bit_list
-
   let concat l = List.concat l
 
   let select s h l =
@@ -26,28 +20,25 @@ module Gates = struct
       match b with
       | [] -> []
       | hd :: tl ->
-        if i > h
-        then []
-        else if i >= l
-        then hd :: sel tl (i+1)
-        else sel tl (i+1)
+        if i > h then [] else if i >= l then hd :: sel tl (i + 1) else sel tl (i + 1)
     in
     List.rev (sel (List.rev s) 0)
+  ;;
 
-  let (&:) = List.map2_exn ~f:(land)
-  let (|:) = List.map2_exn ~f:(lor)
-  let (^:) = List.map2_exn ~f:(lxor)
-  let (~:) = List.map ~f:(fun x -> if x = 1 then 0 else 1)
+  let ( &: ) = List.map2_exn ~f:( land )
+  let ( |: ) = List.map2_exn ~f:( lor )
+  let ( ^: ) = List.map2_exn ~f:( lxor )
+  let ( ~: ) = List.map ~f:(fun x -> if x = 1 then 0 else 1)
 
   let rec to_string b =
     match b with
     | [] -> ""
-    | h :: t -> (if h = 1 then "1" else "0") ^ (to_string t)
+    | h :: t -> (if h = 1 then "1" else "0") ^ to_string t
+  ;;
 
   let to_bstr = to_string
   let sexp_of_t s = [%sexp (to_bstr s : string)]
-
-  let (--) a _ = a
+  let ( -- ) a _ = a
 end
 
 module Primitives = struct
@@ -57,7 +48,8 @@ module Primitives = struct
   let mux sel vals =
     let len = List.length vals in
     let idx = to_constant sel |> Constant.to_int64 |> Int64.to_int_trunc in
-    List.nth_exn vals (if idx >= len then len-1 else idx)
+    List.nth_exn vals (if idx >= len then len - 1 else idx)
+  ;;
 end
 
 include Comb.Make (Primitives)

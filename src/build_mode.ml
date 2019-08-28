@@ -8,4 +8,5 @@ type t =
 let of_string = function
   | "simulation" -> Simulation
   | "synthesis" -> Synthesis
-  | build_mode -> raise_s[%message "Invalid [Build_mode]" (build_mode : string)]
+  | build_mode -> raise_s [%message "Invalid [Build_mode]" (build_mode : string)]
+;;

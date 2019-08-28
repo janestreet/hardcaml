@@ -9,23 +9,30 @@ let%expect_test "combinational loop" =
   let signal_graph = Signal_graph.create [ b ] in
   print_s [%sexp (Signal_graph.normalize_uids signal_graph : Signal_graph.t)];
   [%expect {|
-    ((add (width 2) (arguments (a wire)))) |}];
+    ((add (width 2) (arguments (a wire)))) |}]
 ;;
 
 let design () =
   let a = input "a" 2 in
   let b = input "b" 2 in
-  let x = Instantiation.create ()
-            ~name:"blah"
-            ~inputs:[ "a", a; "b", b ]
-            ~outputs:[ "c", 3; "d", 3; "e", 3 ] in
-  let m = memory 4
-            ~write_port:
-              { write_clock = clock
-              ; write_enable = bit a 1
-              ; write_address = b
-              ; write_data = a }
-            ~read_address:a in
+  let x =
+    Instantiation.create
+      ()
+      ~name:"blah"
+      ~inputs:[ "a", a; "b", b ]
+      ~outputs:[ "c", 3; "d", 3; "e", 3 ]
+  in
+  let m =
+    memory
+      4
+      ~write_port:
+        { write_clock = clock
+        ; write_enable = bit a 1
+        ; write_address = b
+        ; write_data = a
+        }
+      ~read_address:a
+  in
   let w = wireof a in
   let reg_spec = Reg_spec.create () ~clock ~clear in
   [ output "c" (reg reg_spec ~enable:vdd (a +: b))
@@ -33,11 +40,14 @@ let design () =
   ; output "e" (x#o "c" |: x#o "d" |: x#o "e")
   ; output "f" m
   ; output "g" m
-  ; output "h" w ]
+  ; output "h" w
+  ]
+;;
 
 let test ~normalize_uids =
   let circuit = Circuit.create_exn ~normalize_uids ~name:"foo" (design ()) in
   Rtl.print Verilog circuit
+;;
 
 (* The following test is now commented out as it is brittle to changes in the test
    environment.
@@ -137,7 +147,8 @@ v} *)
 
 let%expect_test "verilog with normalization" =
   test ~normalize_uids:true;
-  [%expect {|
+  [%expect
+    {|
     module foo (
         clear,
         clock,
@@ -218,3 +229,4 @@ let%expect_test "verilog with normalization" =
         assign h = _1;
 
     endmodule |}]
+;;

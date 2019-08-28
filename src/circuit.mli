@@ -16,13 +16,14 @@ type t [@@deriving sexp_of]
     the circuit starting at one.  Uid normalization ensures that circuits will print the
     same (as sexps or rtl) regardless of the environment in which they are constructed (in
     particular with regard to the global uid generator). *)
-type 'a with_create_options
-  =  ?detect_combinational_loops : bool  (** default is [true] *)
-  -> ?normalize_uids             : bool  (** default is [true] *)
+type 'a with_create_options =
+  ?detect_combinational_loops:bool (** default is [true] *)
+  -> ?normalize_uids:bool (** default is [true] *)
   -> 'a
 
+
 (** create circuit data structure  *)
-val create_exn : (name : string -> Signal.t list -> t) with_create_options
+val create_exn : (name:string -> Signal.t list -> t) with_create_options
 
 (** return circuit inputs *)
 val inputs : t -> Signal.t list
@@ -95,7 +96,6 @@ module Create_options : sig
 end
 
 val with_create_options : (Create_options.t -> 'a) -> 'a with_create_options
-
 val call_with_create_options : 'a with_create_options -> Create_options.t -> 'a
 
 (** Check if the ports specified in the interface match those defined in the circuit. *)
@@ -103,19 +103,20 @@ module Port_checks : sig
   type t =
     | Relaxed (** No checks *)
     | Port_sets (** Input and output port sets agree *)
-    | Port_sets_and_widths (** Input and output port sets agree, and their widths are the same. *)
+    | Port_sets_and_widths
+    (** Input and output port sets agree, and their widths are the same. *)
 end
 
 module With_interface (I : Interface.S) (O : Interface.S) : sig
-
   type create = Signal.t Interface.Create_fn(I)(O).t
 
   (** Create a circuit with [inputs] and [outputs] automatically defined and labelled
       according to the input ([I]) and output ([O]) interfaces. *)
-  val create_exn :
-    (?port_checks : Port_checks.t (** Default is [Relaxed]. *)
-     -> ?add_phantom_inputs : bool (** Default is [true]. *)
-     -> name : string
-     -> create
-     -> t) with_create_options
+  val create_exn
+    : (?port_checks:Port_checks.t (** Default is [Relaxed]. *)
+       -> ?add_phantom_inputs:bool (** Default is [true]. *)
+       -> name:string
+       -> create
+       -> t)
+        with_create_options
 end

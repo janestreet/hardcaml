@@ -1,8 +1,6 @@
 open! Import
 
-let keywords s =
-  String.split_lines s
-  |> List.map ~f:String.strip
+let keywords s = String.split_lines s |> List.map ~f:String.strip
 
 let verilog =
   keywords
@@ -100,6 +98,7 @@ let verilog =
        while
        wire
        wor |}
+;;
 
 let vhdl =
   keywords
@@ -198,6 +197,7 @@ let vhdl =
        with
        xnor
        xor |}
+;;
 
 (* From the OCaml source code: src/parsing/lexer.mll:38 *)
 let ocaml =
@@ -258,3 +258,4 @@ let ocaml =
        lsl
        lsr
        asr |}
+;;

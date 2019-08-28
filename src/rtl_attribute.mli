@@ -15,10 +15,7 @@ module Value : sig
 end
 
 (** Create a new attribute. *)
-val create
-  : ?value : Value.t
-  -> string
-  -> t
+val create : ?value:Value.t -> string -> t
 
 (** Returns the attribute name *)
 val name : t -> string

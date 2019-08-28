@@ -14,17 +14,17 @@ let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
     | Mem_read_port (id, _, _)
     | Inst (id, _, _) -> id
     | Wire (id, reference) ->
-      match !reference with
-      | Empty -> id
-      | otherwise -> transitively_resolve otherwise
+      (match !reference with
+       | Empty -> id
+       | otherwise -> transitively_resolve otherwise)
   in
   let clock_domains =
-    Signal_graph.depth_first_search (Circuit.signal_graph t)
+    Signal_graph.depth_first_search
+      (Circuit.signal_graph t)
       ~init:Signal.Uid_map.empty
       ~f_before:(fun unchanged signal ->
         match signal with
-        | Mem (_, _, r, _)
-        | Reg (_, r) ->
+        | Mem (_, _, r, _) | Reg (_, r) ->
           let clock_domain = transitively_resolve r.reg_clock in
           Map.add_multi unchanged ~key:clock_domain.s_id ~data:(clock_domain, signal)
         | Multiport_mem (_, _, write_ports) ->
@@ -38,16 +38,18 @@ let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
     let clock_domain_in_expected =
       List.exists all ~f:(fun (clock_domain, _) ->
         List.exists clock_domain.s_names ~f:(fun name ->
-          if Hash_set.mem expected_clock_domains name then (
+          if Hash_set.mem expected_clock_domains name
+          then (
             Hash_set.remove expected_clock_domains name;
-            true
-          ) else
-            false))
+            true)
+          else false))
     in
     let signals = List.map ~f:snd all in
-    if not clock_domain_in_expected then begin
-      raise_s [%message
-        "The following sequential elements have unexpected clock pin connections"
-          (signal_uid : int64) (signals : Signal.t list)]
-    end)
+    if not clock_domain_in_expected
+    then
+      raise_s
+        [%message
+          "The following sequential elements have unexpected clock pin connections"
+            (signal_uid : int64)
+            (signals : Signal.t list)])
 ;;

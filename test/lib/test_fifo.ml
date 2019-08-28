@@ -39,12 +39,18 @@ let wrap ~capacity ~(create_fn : Fifo.create_fifo) (i : _ I.t) =
 
 let display_rules =
   Waves.Display_rules.(
-    [ I.map I.port_names ~f:(Rule.port_name_is ~wave_format:(Bit_or Unsigned_int)) |> I.to_list
-    ; O.map O.port_names ~f:(Rule.port_name_is ~wave_format:(Bit_or Unsigned_int)) |> O.to_list
-    ; [ Rule.port_name_matches (Re.Posix.(re ".*" |> compile)) ~wave_format:(Bit_or Unsigned_int) ]
+    [ I.map I.port_names ~f:(Rule.port_name_is ~wave_format:(Bit_or Unsigned_int))
+      |> I.to_list
+    ; O.map O.port_names ~f:(Rule.port_name_is ~wave_format:(Bit_or Unsigned_int))
+      |> O.to_list
+    ; [ Rule.port_name_matches
+          Re.Posix.(re ".*" |> compile)
+          ~wave_format:(Bit_or Unsigned_int)
+      ]
     ]
     |> List.concat
     |> Waves.Display_rules.of_list)
+;;
 
 let fill_then_empty (waves, sim) =
   let inputs : _ I.t = Cyclesim.inputs sim in
@@ -56,9 +62,9 @@ let fill_then_empty (waves, sim) =
   let rec write i =
     if Bits.to_int !(outputs.full) = 0
     then (
-      inputs.d := Bits.consti ~width:32 ((i+1)*10);
+      inputs.d := Bits.consti ~width:32 ((i + 1) * 10);
       Cyclesim.cycle sim;
-      write (i+1))
+      write (i + 1))
     else i
   in
   let wr_count = write 0 in
@@ -66,8 +72,8 @@ let fill_then_empty (waves, sim) =
   inputs.d := Bits.consti ~width:32 0;
   Cyclesim.cycle sim;
   inputs.rd := Bits.vdd;
-  for _=1 to wr_count do
-    Cyclesim.cycle sim;
+  for _ = 1 to wr_count do
+    Cyclesim.cycle sim
   done;
   inputs.rd := Bits.gnd;
   Cyclesim.cycle sim;
@@ -78,14 +84,16 @@ let fill_then_empty (waves, sim) =
     ~wave_width:1
     ~display_rules
     waves
+;;
 
 let%expect_test "classic" =
-  let module Sim = Cyclesim.With_interface(I)(O) in
+  let module Sim = Cyclesim.With_interface (I) (O) in
   wrap ~capacity:4 ~create_fn:(Fifo.create ~showahead:false)
   |> Sim.create
   |> Waves.Waveform.create
   |> fill_then_empty;
-  [%expect {|
+  [%expect
+    {|
     ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
     │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
     │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
@@ -116,12 +124,13 @@ let%expect_test "classic" =
 ;;
 
 let%expect_test "showahead" =
-  let module Sim = Cyclesim.With_interface(I)(O) in
+  let module Sim = Cyclesim.With_interface (I) (O) in
   wrap ~capacity:4 ~create_fn:(Fifo.create ~showahead:true)
   |> Sim.create
   |> Waves.Waveform.create
   |> fill_then_empty;
-  [%expect {|
+  [%expect
+    {|
     ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
     │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
     │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
@@ -152,12 +161,13 @@ let%expect_test "showahead" =
 ;;
 
 let%expect_test "classic with reg" =
-  let module Sim = Cyclesim.With_interface(I)(O) in
+  let module Sim = Cyclesim.With_interface (I) (O) in
   wrap ~capacity:4 ~create_fn:Fifo.create_classic_with_extra_reg
   |> Sim.create
   |> Waves.Waveform.create
   |> fill_then_empty;
-  [%expect {|
+  [%expect
+    {|
     ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
     │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
     │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
@@ -188,12 +198,13 @@ let%expect_test "classic with reg" =
 ;;
 
 let%expect_test "showahead from classic" =
-  let module Sim = Cyclesim.With_interface(I)(O) in
+  let module Sim = Cyclesim.With_interface (I) (O) in
   wrap ~capacity:4 ~create_fn:Fifo.create_showahead_from_classic
   |> Sim.create
   |> Waves.Waveform.create
   |> fill_then_empty;
-  [%expect {|
+  [%expect
+    {|
     ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
     │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
     │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
@@ -221,14 +232,16 @@ let%expect_test "showahead from classic" =
     │used              ││ 0      │1      │2  │3  │4      │3  │2  │1  │0                   │
     │                  ││────────┴───────┴───┴───┴───────┴───┴───┴───┴───────────         │
     └──────────────────┘└─────────────────────────────────────────────────────────────────┘ |}]
+;;
 
 let%expect_test "showahead with extra reg" =
-  let module Sim = Cyclesim.With_interface(I)(O) in
+  let module Sim = Cyclesim.With_interface (I) (O) in
   wrap ~capacity:4 ~create_fn:Fifo.create_showahead_with_extra_reg
   |> Sim.create
   |> Waves.Waveform.create
   |> fill_then_empty;
-  [%expect {|
+  [%expect
+    {|
     ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
     │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
     │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
@@ -256,3 +269,4 @@ let%expect_test "showahead with extra reg" =
     │used              ││ 0      │1              │2  │3  │4          │3  │2  │1  │0       │
     │                  ││────────┴───────────────┴───┴───┴───────────┴───┴───┴───┴────────│
     └──────────────────┘└─────────────────────────────────────────────────────────────────┘ |}]
+;;

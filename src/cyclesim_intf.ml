@@ -3,7 +3,6 @@
 open! Import
 
 module type Cyclesim = sig
-
   module Port_list : sig
     type t = (string * Bits.t ref) list [@@deriving sexp_of]
   end
@@ -28,6 +27,7 @@ module type Cyclesim = sig
 
   (** advance by 1 clock cycle (check->comb->seq->comb) *)
   val cycle : _ t -> unit
+
 
   (** check inputs are valid before a simulation cycle *)
   val cycle_check : _ t -> unit
@@ -56,22 +56,20 @@ module type Cyclesim = sig
     -> string
     -> Bits.t ref
 
-  val inputs  : ('i , _ ) t -> 'i
-  val outputs : ?clock_edge:Side.t -> (_  , 'o) t -> 'o
-
-  val in_ports  : _ t -> Port_list.t
+  val inputs : ('i, _) t -> 'i
+  val outputs : ?clock_edge:Side.t -> (_, 'o) t -> 'o
+  val in_ports : _ t -> Port_list.t
   val out_ports : ?clock_edge:Side.t -> _ t -> Port_list.t
 
   (** get list of internal nodes *)
   val internal_ports : _ t -> Port_list.t
 
   val lookup_signal : _ t -> Signal.Uid.t -> Bits.t ref
-
   val lookup_reg : _ t -> Signal.Uid.t -> Bits.t ref
 
-  type 'a with_create_options
-    =  ?is_internal_port : (Signal.t -> bool)
-    -> ?combinational_ops_database : Combinational_ops_database.t
+  type 'a with_create_options =
+    ?is_internal_port:(Signal.t -> bool)
+    -> ?combinational_ops_database:Combinational_ops_database.t
     -> 'a
 
   (** construct a simulator from a circuit *)
@@ -79,11 +77,12 @@ module type Cyclesim = sig
 
   module Combine_error : sig
     type t =
-      { cycle_no  : int
-      ; clock_edge: Side.t
+      { cycle_no : int
+      ; clock_edge : Side.t
       ; port_name : string
-      ; value0    : Bits.t
-      ; value1    : Bits.t }
+      ; value0 : Bits.t
+      ; value1 : Bits.t
+      }
     [@@deriving sexp_of]
   end
 
@@ -95,8 +94,8 @@ module type Cyclesim = sig
       [port_sets_may_differ] is [true], in which case only ports which exist on both
       simulators are checked. *)
   val combine
-    :  ?port_sets_may_differ : bool (** Default is [false]. *)
-    -> ?on_error : (Combine_error.t -> unit)
+    :  ?port_sets_may_differ:bool (** Default is [false]. *)
+    -> ?on_error:(Combine_error.t -> unit)
     -> ('i, 'o) t
     -> ('i, 'o) t
     -> ('i, 'o) t
@@ -107,38 +106,41 @@ module type Cyclesim = sig
     (** Create a simulator using the provided [Create_fn].  The returned simulator ports
         are coerced to the input and output interface types. *)
     val create
-      : (?port_checks : Circuit.Port_checks.t
-         -> ?add_phantom_inputs : bool
+      : (?port_checks:Circuit.Port_checks.t
+         -> ?add_phantom_inputs:bool
          -> Circuit.With_interface(I)(O).create
          -> t)
           with_create_options
           Circuit.with_create_options
 
     (** Coerce simulator port types to use the provided input and output interfaces. *)
-    val coerce
-      :  t_port_list
-      -> t
+    val coerce : t_port_list -> t
   end
 
   module Private : sig
     type task = unit -> unit
 
     val create
-      :  in_ports                    : Port_list.t
-      -> out_ports_before_clock_edge : Port_list.t
-      -> out_ports_after_clock_edge  : Port_list.t
-      -> internal_ports              : Port_list.t
-      -> reset                       : task
-      -> cycle_check                 : task
-      -> cycle_comb0                 : task
-      -> cycle_seq                   : task
-      -> cycle_comb1                 : task
-      -> lookup_signal               : (Signal.Uid.t -> Bits.t ref)
-      -> lookup_reg                  : (Signal.Uid.t -> Bits.t ref)
+      :  in_ports:Port_list.t
+      -> out_ports_before_clock_edge:Port_list.t
+      -> out_ports_after_clock_edge:Port_list.t
+      -> internal_ports:Port_list.t
+      -> reset:task
+      -> cycle_check:task
+      -> cycle_comb0:task
+      -> cycle_seq:task
+      -> cycle_comb1:task
+      -> lookup_signal:(Signal.Uid.t -> Bits.t ref)
+      -> lookup_reg:(Signal.Uid.t -> Bits.t ref)
       -> t_port_list
 
     module Step : sig
-      type t = Reset | Check | Comb0 | Seq | Comb1
+      type t =
+        | Reset
+        | Check
+        | Comb0
+        | Seq
+        | Comb1
       [@@deriving sexp_of]
     end
 
@@ -146,8 +148,8 @@ module type Cyclesim = sig
 
     val coerce
       :  (Port_list.t, Port_list.t) t
-      -> to_input  : (Port_list.t -> 'i)
-      -> to_output : (Port_list.t -> 'o)
+      -> to_input:(Port_list.t -> 'i)
+      -> to_output:(Port_list.t -> 'o)
       -> ('i, 'o) t
   end
 end

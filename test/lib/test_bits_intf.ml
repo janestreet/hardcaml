@@ -6,11 +6,7 @@ open! Import
     this is a thin wrapper around [Expect_test_helpers_kernel.require].  In long-running
     regression tests in ../regression, this prints to a log. *)
 module type Require = sig
-  val require
-    :  Source_code_position.t
-    -> bool
-    -> error_message : Sexp.t Lazy.t
-    -> unit
+  val require : Source_code_position.t -> bool -> error_message:Sexp.t Lazy.t -> unit
 end
 
 module type Test_ = sig
@@ -20,7 +16,7 @@ module type Test_ = sig
       iteration for a particular primitive at the first error if
       [stop_on_first_primitive_error]. *)
   val test
-    :  ?stop_on_first_primitive_error : bool  (** default is [true] *)
+    :  ?stop_on_first_primitive_error:bool (** default is [true] *)
     -> Source_code_position.t
     -> config
     -> unit
@@ -47,7 +43,6 @@ module type Test_bits = sig
     [@@deriving enumerate, sexp_of]
 
     val name : t -> string
-
     val arg_type : t Command.Arg_type.t
   end
 
@@ -64,7 +59,6 @@ module type Test_bits = sig
     [@@deriving sexp_of, enumerate]
 
     val arg_type : t Command.Arg_type.t
-
     val module_ : t -> (module Comb.S)
     val name : t -> string
     val short_name : t -> string
@@ -72,20 +66,19 @@ module type Test_bits = sig
 
   module Config : sig
     type t =
-      { bits1         : Bits_module.t
-      ; bits2         : Bits_module.t
-      ; prims         : Primitive_op.t list
-      ; iterations    : int
+      { bits1 : Bits_module.t
+      ; bits2 : Bits_module.t
+      ; prims : Primitive_op.t list
+      ; iterations : int
       ; min_bit_width : int
-      ; max_bit_width : int }
+      ; max_bit_width : int
+      }
     [@@deriving sexp_of]
   end
 
   module type Require = Require
-
   module type Test = Test_ with type config := Config.t
 
   module Make (R : Require) : Test
-
   module Test : Test
 end

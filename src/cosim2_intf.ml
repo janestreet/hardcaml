@@ -1,7 +1,6 @@
 (** Icarus Verilog Cosimulation interface *)
 
 module type Simulator = sig
-
   (** compile verilog files *)
   val compile : string list -> string -> unit
 
@@ -13,12 +12,12 @@ module type Simulator = sig
 end
 
 module type Cosim2 = sig
-
   (** run [sets], then [gets] then schedule next callback at cur_time+[delta_time]*)
   type delta_message =
-    { sets       : (int * int32 list) list
-    ; gets       : int list
-    ; delta_time : int64 }
+    { sets : (int * int32 list) list
+    ; gets : int list
+    ; delta_time : int64
+    }
 
   (** expected inputs and outputs *)
   type init_message = string list
@@ -38,16 +37,15 @@ module type Cosim2 = sig
   (** basic TCP communications between client (simulation) and server (hardcaml) *)
   module Comms : sig
     open Unix
+
     val create_client : string -> int -> file_descr
     val create_server : string -> int -> file_descr
     val accept_client : file_descr -> file_descr
-
     val send : file_descr -> bytes -> unit
     val send_int : file_descr -> int -> unit
     val send_int32 : file_descr -> int32 -> unit
     val send_int64 : file_descr -> int64 -> unit
     val send_string : file_descr -> string -> unit
-
     val recv : file_descr -> bytes -> int -> unit
     val recv_int : file_descr -> int
     val recv_int32 : file_descr -> int32
@@ -63,9 +61,10 @@ module type Cosim2 = sig
   val write_testbench
     :  ?dump_file:string
     -> name:string
-    -> inputs:(string*int) list
-    -> outputs:(string*int) list
-    -> (string -> unit) -> unit
+    -> inputs:(string * int) list
+    -> outputs:(string * int) list
+    -> (string -> unit)
+    -> unit
 
   (** write test hardness derivied from a hardcaml circuit *)
   val write_testbench_from_circuit
@@ -80,13 +79,10 @@ module type Cosim2 = sig
   module type Simulator = Simulator
 
   module Icarus : Simulator
-
   module Mti32 : Simulator
-
   module Mti64 : Simulator
 
   module Make (SIM : Simulator) : sig
-
     val init_sim
       :  (unit -> unit)
       -> (string * int) list
@@ -102,11 +98,7 @@ module type Cosim2 = sig
       -> Cyclesim.t_port_list
 
     (** create simulator from hardcaml circuit *)
-    val make
-      :  ?dump_file:string
-      -> ?opts:string
-      -> Circuit.t
-      -> Cyclesim.t_port_list
+    val make : ?dump_file:string -> ?opts:string -> Circuit.t -> Cyclesim.t_port_list
 
     (** load icarus vvp simulation *)
     val load
@@ -122,11 +114,12 @@ module type Cosim2 = sig
       (** Create a co-simulator using the provided [Create_fn].  The returned simulator
           ports are coerced to the input and output interface types. *)
       val create
-        : (?vcd_file_name : string
-           -> ?port_checks : Circuit.Port_checks.t
-           -> ?add_phantom_inputs : bool
+        : (?vcd_file_name:string
+           -> ?port_checks:Circuit.Port_checks.t
+           -> ?add_phantom_inputs:bool
            -> Circuit.With_interface(I)(O).create
-           -> Cyclesim.With_interface(I)(O).t) Circuit.with_create_options
+           -> Cyclesim.With_interface(I)(O).t)
+            Circuit.with_create_options
     end
   end
 end

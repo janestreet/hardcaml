@@ -30,14 +30,24 @@ struct
     { O.count = leading_zeros_pow2 i.data }
   ;;
 
-  module With_regs = Wrap_with_registers.Make (I) (O)
+  module With_regs = Hardcaml_synthesis_reports.Wrap_with_registers.Make (I) (O)
 
   let create scope (i : _ With_regs.I_with_clock.t) =
     { O.count =
         reduce
           ~f:( |: )
-          [ (With_regs.hier ~name:"priority_mux" create_with_priority_mux scope i).count
-          ; (With_regs.hier ~name:"rec_decomp" create_recursive_decomp scope i).count
+          [ (With_regs.hier
+               ~name:"priority_mux"
+               (`Combinational create_with_priority_mux)
+               scope
+               i)
+            .count
+          ; (With_regs.hier
+               ~name:"rec_decomp"
+               (`Combinational create_recursive_decomp)
+               scope
+               i)
+            .count
           ]
     }
   ;;

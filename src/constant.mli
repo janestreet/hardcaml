@@ -1,10 +1,13 @@
 (** Representation of variable width Constants and conversion to/from OCaml types. *)
 open! Import
 
-type t = Bits0.t[@@deriving compare, sexp_of]
+type t = Bits0.t [@@deriving compare, sexp_of]
 
 module Signedness : sig
-  type t = Signed | Unsigned[@@deriving sexp_of]
+  type t =
+    | Signed
+    | Unsigned
+  [@@deriving sexp_of]
 end
 
 (* The empty constant. Contains no bits. *)
@@ -38,7 +41,7 @@ val to_int64_array : t -> int64 array
 val to_z : t -> Zarith.Z.t
 
 (** Convert to a hex encoded string. *)
-val to_hex_string : signedness : Signedness.t -> t -> string
+val to_hex_string : signedness:Signedness.t -> t -> string
 
 (** Convert a string containing ['1'] and ['0'] characters to a constant. Width is
     inferred from the strings length. *)
@@ -48,22 +51,22 @@ val of_binary_string : string -> t
 val of_binary_string_hum : string -> t
 
 (** Create a constant from the given [int] value. *)
-val of_int : width : int -> int -> t
+val of_int : width:int -> int -> t
 
 (** Create a constant from the given [int32] value *)
-val of_int32 : width : int -> int32 -> t
+val of_int32 : width:int -> int32 -> t
 
 (** Create a constant from the given [int64] value *)
-val of_int64 : width : int -> int64 -> t
+val of_int64 : width:int -> int64 -> t
 
 (** Create from an array of [int64]s *)
-val of_int64_array : width : int -> int64 array -> t
+val of_int64_array : width:int -> int64 array -> t
 
 (** Convert from an arbitrary precision integer. *)
-val of_z : width : int -> Zarith.Z.t -> t
+val of_z : width:int -> Zarith.Z.t -> t
 
 (** Create from a hex encoded string. *)
-val of_hex_string : signedness : Signedness.t -> width : int -> string -> t
+val of_hex_string : signedness:Signedness.t -> width:int -> string -> t
 
 (** Utility conversion functions to/from hex chars *)
 val int_of_hex_char : char -> int
@@ -74,24 +77,19 @@ module type Bit = sig
   type t
 
   val vdd : t
-
   val gnd : t
-
   val equal : t -> t -> bool
 end
 
 (** Create constant conversion functions from lists of some inner [Bit.t] type. *)
 module Make_bit_list (Bit : Bit) : sig
   val to_constant : Bit.t list -> t
-
   val of_constant : t -> Bit.t list
 end
 
 val of_bit_list : int list -> t
 val to_bit_list : t -> int list
-
 val pp : Formatter.t -> t -> unit
-
 
 (** {2 Unsafe Operations} *)
 
@@ -104,4 +102,4 @@ val unsafe_to_bytes : t -> Bytes.t
 
     The length of the given [Bytes.t] must be rounded up to 64 bits and be the correct
     size of fit [width] bits or an exception is raised. *)
-val unsafe_of_bytes : width : int -> Bytes.t -> t
+val unsafe_of_bytes : width:int -> Bytes.t -> t

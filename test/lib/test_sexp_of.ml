@@ -1,24 +1,29 @@
 open! Import
 
 let%expect_test "IntbitsList" =
-  print_s (IntbitsList.(consti ~width:8 127 |> sexp_of_t));
+  print_s IntbitsList.(consti ~width:8 127 |> sexp_of_t);
   [%expect {| 01111111 |}]
+;;
 
 let%expect_test "Bits" =
-  print_s (Bits.(consti ~width:3 3 |> sexp_of_t));
+  print_s Bits.(consti ~width:3 3 |> sexp_of_t);
   [%expect {| 011 |}]
+;;
 
 let%expect_test "Bits" =
-  print_s (Bits.(consti ~width:67 (-2) |> sexp_of_t));
+  print_s Bits.(consti ~width:67 (-2) |> sexp_of_t);
   [%expect {| 1111111111111111111111111111111111111111111111111111111111111111110 |}]
+;;
 
 let%expect_test "Mutable.ArraybitsInt" =
-  print_s (Bits.Mutable.Comb.(consti ~width:13 294 |> sexp_of_t));
+  print_s Bits.Mutable.Comb.(consti ~width:13 294 |> sexp_of_t);
   [%expect {| 0000100100110 |}]
+;;
 
 let%expect_test "Mutable.ArraybitsInt" =
-  print_s (Bits.Mutable.Comb.(consti ~width:19 (-30) |> sexp_of_t));
+  print_s Bits.Mutable.Comb.(consti ~width:19 (-30) |> sexp_of_t);
   [%expect {| 1111111111111100010 |}]
+;;
 
 open Signal
 
@@ -27,6 +32,7 @@ let print_signal signal = print_s [%sexp (signal : Signal.t)]
 let%expect_test "empty" =
   print_signal empty;
   [%expect {| empty |}]
+;;
 
 let%expect_test "simple constant" =
   print_signal (consti ~width:2 2);
@@ -34,6 +40,7 @@ let%expect_test "simple constant" =
     (const
       (width 2)
       (value 0b10)) |}]
+;;
 
 let%expect_test "named constant" =
   print_signal vdd;
@@ -42,6 +49,7 @@ let%expect_test "named constant" =
       (names (vdd))
       (width 1)
       (value 0b1)) |}]
+;;
 
 let%expect_test "large constant" =
   print_signal (consti ~width:9 0x123);
@@ -49,6 +57,7 @@ let%expect_test "large constant" =
     (const
       (width 9)
       (value 0x123)) |}]
+;;
 
 let%expect_test "unassigned wire" =
   print_signal (wire 1);
@@ -56,6 +65,7 @@ let%expect_test "unassigned wire" =
     (wire
       (width   1)
       (data_in empty)) |}]
+;;
 
 let%expect_test "assigned wire" =
   let w = wire 1 in
@@ -65,14 +75,17 @@ let%expect_test "assigned wire" =
     (wire
       (width   1)
       (data_in 0b1)) |}]
+;;
 
 let%expect_test "multiple names" =
   print_signal (wire 1 -- "foo" -- "bar");
-  [%expect {|
+  [%expect
+    {|
     (wire
       (names (bar foo))
       (width   1)
       (data_in empty)) |}]
+;;
 
 let%expect_test "multiple names in arg" =
   let w = wire 1 in
@@ -80,6 +93,7 @@ let%expect_test "multiple names in arg" =
   print_signal w;
   [%expect {|
     (wire (width 1) (data_in (bar foo))) |}]
+;;
 
 let%expect_test "binary ops" =
   let a, b = input "a" 4, const "1101" in
@@ -90,11 +104,12 @@ let%expect_test "binary ops" =
   print_signal (a &: b);
   print_signal (a |: b);
   print_signal (a ^: b);
-  print_signal (~: a);
+  print_signal ~:a;
   print_signal (a <: b);
   print_signal (a ==: b);
-  print_signal (concat [a;b;a]);
-  [%expect {|
+  print_signal (concat [ a; b; a ]);
+  [%expect
+    {|
     (add (width 4) (arguments (a 0b1101)))
     (sub (width 4) (arguments (a 0b1101)))
     (mulu (width 8) (arguments (a 0b1101)))
@@ -106,28 +121,36 @@ let%expect_test "binary ops" =
     (lt (width 1) (arguments (a 0b1101)))
     (eq (width 1) (arguments (a 0b1101)))
     (cat (width 12) (arguments (a 0b1101 a))) |}]
+;;
 
 let%expect_test "printing at leaves" =
   let a, b = input "a" 2, input "b" 2 in
-  List.iter ~f:print_signal
+  List.iter
+    ~f:print_signal
     [ wireof (a +: b)
     ; zero 2 +: (a -: b)
-    ; ~: (a *: b)
+    ; ~:(a *: b)
     ; input "c" 4 +: (a *+ b)
-    ; ((a ==: b) -- "eq") ==: (a ==: b)
+    ; (a ==: b) -- "eq" ==: (a ==: b)
     ; wireof (a <: b)
-    ; wireof (~: a)
+    ; wireof ~:a
     ; wireof (mux2 vdd a b)
     ; wireof (bit a 1)
-    ; wireof (concat [a;b])
+    ; wireof (concat [ a; b ])
     ; wireof (reg (Reg_spec.create () ~clock) ~enable:empty a)
-    ; wireof (memory 4
-                ~write_port:{ write_clock = clock
-                            ; write_address = a
-                            ; write_enable = bit b 1
-                            ; write_data = b }
-                ~read_address:a) ];
-  [%expect {|
+    ; wireof
+        (memory
+           4
+           ~write_port:
+             { write_clock = clock
+             ; write_address = a
+             ; write_enable = bit b 1
+             ; write_data = b
+             }
+           ~read_address:a)
+    ];
+  [%expect
+    {|
     (wire
       (width   2)
       (data_in add))
@@ -156,24 +179,29 @@ let%expect_test "printing at leaves" =
     (wire
       (width   2)
       (data_in memory)) |}]
+;;
 
 let%expect_test "printing at leaves - different types" =
   let a, b = input "a" 2, input "b" 2 in
-  print_signal (concat [ concat [a;b]; wire 2 -- "cat"; a -- "cat" ]);
+  print_signal (concat [ concat [ a; b ]; wire 2 -- "cat"; a -- "cat" ]);
   [%expect {|
     (cat (width 8) (arguments (cat cat (cat a)))) |}]
+;;
 
 let%expect_test "mux" =
   print_signal (mux (input "sel" 2) (List.init 4 ~f:(consti ~width:16)));
-  [%expect {|
+  [%expect
+    {|
     (mux
       (width  16)
       (select sel)
       (data (0x0000 0x0001 0x0002 0x0003))) |}]
+;;
 
 let%expect_test "big mux" =
   print_signal (mux (input "sel" 4) (List.init 16 ~f:(consti ~width:8)));
-  [%expect {|
+  [%expect
+    {|
     (mux
       (width  8)
       (select sel)
@@ -194,25 +222,30 @@ let%expect_test "big mux" =
         0b00001101
         0b00001110
         0b00001111))) |}]
+;;
 
 let%expect_test "select" =
   print_signal (select (consti ~width:4 2) 3 2);
   [%expect {|
     (select (width 2) (range (3 2)) (data_in 0b0010)) |}]
+;;
 
 let%expect_test "reg r_none" =
   print_signal (reg (Reg_spec.create () ~clock) ~enable:empty (input "a" 1));
-  [%expect {|
+  [%expect
+    {|
     (register
       (width 1)
       ((clock      clock)
        (clock_edge Rising)
        (enable     0b1))
       (data_in a)) |}]
+;;
 
 let%expect_test "reg r_async" =
   print_signal (reg (Reg_spec.create () ~clock ~reset) ~enable:empty (input "a" 1));
-  [%expect {|
+  [%expect
+    {|
     (register
       (width 1)
       ((clock      clock)
@@ -222,13 +255,16 @@ let%expect_test "reg r_async" =
        (reset_to   0b0)
        (enable     0b1))
       (data_in a)) |}]
+;;
 
 let%expect_test "reg r_sync" =
-  print_signal (
-    reg
-      (Reg_spec.override (Reg_spec.create () ~clock ~clear) ~clock_edge:Falling)
-      ~enable:empty (input "a" 1));
-  [%expect {|
+  print_signal
+    (reg
+       (Reg_spec.override (Reg_spec.create () ~clock ~clear) ~clock_edge:Falling)
+       ~enable:empty
+       (input "a" 1));
+  [%expect
+    {|
     (register
       (width 1)
       ((clock       clock)
@@ -238,11 +274,13 @@ let%expect_test "reg r_sync" =
        (clear_to    0b0)
        (enable      0b1))
       (data_in a)) |}]
+;;
 
 let%expect_test "reg r_full" =
-  print_signal (
-    reg (Reg_spec.create () ~clock ~clear ~reset) ~enable:empty (input "a" 1));
-  [%expect {|
+  print_signal
+    (reg (Reg_spec.create () ~clock ~clear ~reset) ~enable:empty (input "a" 1));
+  [%expect
+    {|
     (register
       (width 1)
       ((clock       clock)
@@ -255,16 +293,21 @@ let%expect_test "reg r_full" =
        (clear_to    0b0)
        (enable      0b1))
       (data_in a)) |}]
+;;
 
 let%expect_test "memory" =
-  print_signal (
-    memory 16
-      ~write_port:{ write_clock = clock
-                  ; write_enable = input "we" 1
-                  ; write_address = input "w" 4
-                  ; write_data = input "d" 32 }
-      ~read_address:(input "r" 4));
-  [%expect {|
+  print_signal
+    (memory
+       16
+       ~write_port:
+         { write_clock = clock
+         ; write_enable = input "we" 1
+         ; write_address = input "w" 4
+         ; write_data = input "d" 32
+         }
+       ~read_address:(input "r" 4));
+  [%expect
+    {|
     (memory
       (width 32)
       ((clock      clock)
@@ -275,11 +318,12 @@ let%expect_test "memory" =
        (read_address  r)
        (write_enable  we))
       (data_in d)) |}]
+;;
 
 let%expect_test "test depth" =
-  Signal.sexp_of_signal_recursive ~depth:3 (input "a" 1 <=: input "b" 1)
-  |> print_s;
-  [%expect {|
+  Signal.sexp_of_signal_recursive ~depth:3 (input "a" 1 <=: input "b" 1) |> print_s;
+  [%expect
+    {|
     (not
       (width 1)
       (arguments ((
@@ -294,22 +338,27 @@ let%expect_test "test depth" =
             (names (a))
             (width   1)
             (data_in empty)))))))) |}]
+;;
 
 let%expect_test "test instantiation" =
-  Signal.sexp_of_signal_recursive ~depth:2
-    ((Instantiation.create ()
+  Signal.sexp_of_signal_recursive
+    ~depth:2
+    ((Instantiation.create
+        ()
         ~name:"module_name"
-        ~parameters:[ Parameter.create ~name:"int_param"    ~value:(Int 1)
-                    ; Parameter.create ~name:"string_param" ~value:(String "string_value")
-                    ; Parameter.create ~name:"bool_param"   ~value:(Bool true)
-                    ; Parameter.create ~name:"float_param"  ~value:(Real 1.2) ]
-        ~inputs:[ "i1",           input "a" 3
-                ; "i2",           input "b" 2 ]
-        ~outputs:[ "o1",           4
-                 ; "o2",           3 ]
-     )#o "o2")
+        ~parameters:
+          [ Parameter.create ~name:"int_param" ~value:(Int 1)
+          ; Parameter.create ~name:"string_param" ~value:(String "string_value")
+          ; Parameter.create ~name:"bool_param" ~value:(Bool true)
+          ; Parameter.create ~name:"float_param" ~value:(Real 1.2)
+          ]
+        ~inputs:[ "i1", input "a" 3; "i2", input "b" 2 ]
+        ~outputs:[ "o1", 4; "o2", 3 ])
+     #o
+       "o2")
   |> print_s;
-  [%expect {|
+  [%expect
+    {|
     (select
       (width 3)
       (range (6 4))
@@ -324,6 +373,7 @@ let%expect_test "test instantiation" =
             (float_param  1.2)))
           (inputs  ((i1 a) (i2 b)))
           (outputs ((o2 3) (o1 4))))))) |}]
+;;
 
 (* Structural.sexp_of *)
 
@@ -351,11 +401,12 @@ module Structural_test (Base : Comb.Primitives with type t = Structural.signal) 
     let tri_wire = mk_triwire 2 in
     let tri_direct = mk_tristate "tri_direct" 2 in
     let tri_indirect = mk_tristate "tri_indirect" 2 in
-    inst "foo"
-      ~g:["G", GInt 7]
-      ~i:["I" ==> mux]
-      ~o:["O" ==> out_wire; "OO" ==> out_direct]
-      ~t:["T" ==> tri_wire; "TO" ==> tri_direct];
+    inst
+      "foo"
+      ~g:[ "G", GInt 7 ]
+      ~i:[ "I" ==> mux ]
+      ~o:[ "O" ==> out_wire; "OO" ==> out_direct ]
+      ~t:[ "T" ==> tri_wire; "TO" ==> tri_direct ];
     tri_indirect <== tri_wire;
     out_indirect <== out_wire;
     const_o <== const;
@@ -376,14 +427,17 @@ module Structural_test (Base : Comb.Primitives with type t = Structural.signal) 
     print_s (sexp_of_t tri_indirect);
     print_s (sexp_of_t out_wire);
     print_s (sexp_of_t out_direct);
-    print_s (sexp_of_t out_indirect);
-    (*write_verilog print_string (find_circuit name); *)
+    print_s (sexp_of_t out_indirect)
+  ;;
+
+  (*write_verilog print_string (find_circuit name); *)
 end
 
 let%expect_test "Structural.Base0 sexp_of_t" =
   let module T = Structural_test (Structural.Base0) in
   T.test "base0";
-  [%expect {|
+  [%expect
+    {|
     (Module_input
       (id    3)
       (name  a)
@@ -431,6 +485,7 @@ let%expect_test "Structural.Base0 sexp_of_t" =
       (id    19)
       (name  out_indirect)
       (width 5)) |}]
+;;
 
 (* {[
      let%expect_test "Structural.Base1 sexp_of_t" =

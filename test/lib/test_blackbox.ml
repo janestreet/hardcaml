@@ -4,11 +4,11 @@ open Signal
 let f_coefs = Test_fir_filter.f (List.init 4 ~f:(fun _ -> random ~width:16))
 
 let%expect_test "top level blackbox" =
-  let module Circuit = Circuit.With_interface (Test_fir_filter.I)(Test_fir_filter.O) in
-  let circuit = Circuit.create_exn ~name:"fir_filter_blackbox"
-                  f_coefs in
+  let module Circuit = Circuit.With_interface (Test_fir_filter.I) (Test_fir_filter.O) in
+  let circuit = Circuit.create_exn ~name:"fir_filter_blackbox" f_coefs in
   Rtl.print ~blackbox:Top Verilog circuit;
-  [%expect {|
+  [%expect
+    {|
     module fir_filter_blackbox (
         enable,
         clr,
@@ -27,16 +27,18 @@ let%expect_test "top level blackbox" =
 ;;
 
 let f_inst scope =
-  let module Hierarchy = Hierarchy.In_scope (Test_fir_filter.I)(Test_fir_filter.O) in
+  let module Hierarchy = Hierarchy.In_scope (Test_fir_filter.I) (Test_fir_filter.O) in
   Hierarchy.hierarchical ~scope ~name:"fir_filter" (fun _scope -> f_coefs)
+;;
 
 let%expect_test "Instantiation blackbox" =
-  let module Circuit = Circuit.With_interface (Test_fir_filter.I)(Test_fir_filter.O) in
+  let module Circuit = Circuit.With_interface (Test_fir_filter.I) (Test_fir_filter.O) in
   let scope = Scope.create ~flatten_design:false () in
   let circuit = Circuit.create_exn ~name:"fir_filter_top" (f_inst scope) in
   (* Print the whole thing, include the fir filter sub-circuit. *)
   Rtl.print ~database:(Scope.circuit_database scope) ~blackbox:None Verilog circuit;
-  [%expect {|
+  [%expect
+    {|
     module fir_filter (
         enable,
         clr,
@@ -164,8 +166,13 @@ let%expect_test "Instantiation blackbox" =
 
     endmodule |}];
   (* Now just print the top level module, plus black boxes for the instantiations *)
-  Rtl.print ~database:(Scope.circuit_database scope) ~blackbox:Instantiations Verilog circuit;
-  [%expect {|
+  Rtl.print
+    ~database:(Scope.circuit_database scope)
+    ~blackbox:Instantiations
+    Verilog
+    circuit;
+  [%expect
+    {|
     module fir_filter (
         enable,
         clr,
@@ -217,3 +224,4 @@ let%expect_test "Instantiation blackbox" =
         assign q = _11;
 
     endmodule |}]
+;;

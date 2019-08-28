@@ -4,19 +4,18 @@ open! Import
    1 bit - this requires a slightly different syntax in the port association map. *)
 
 let instantiation_circuit =
-  lazy (
-    let a = Signal.input "a" 1 in
-    let inst =
-      Instantiation.create ()
-        ~name:"example"
-        ~inputs:[ "a", a ]
-        ~outputs:[ "b", 1 ]
-    in
-    Circuit.create_exn ~name:"example" [Signal.output "b" (inst#o "b")])
+  lazy
+    (let a = Signal.input "a" 1 in
+     let inst =
+       Instantiation.create () ~name:"example" ~inputs:[ "a", a ] ~outputs:[ "b", 1 ]
+     in
+     Circuit.create_exn ~name:"example" [ Signal.output "b" (inst#o "b") ])
+;;
 
 let%expect_test "Intstantiation in Verilog with single bit output" =
   Rtl.print Verilog (force instantiation_circuit);
-  [%expect {|
+  [%expect
+    {|
     module example (
         a,
         b
@@ -39,10 +38,12 @@ let%expect_test "Intstantiation in Verilog with single bit output" =
         assign b = _4;
 
     endmodule |}]
+;;
 
 let%expect_test "Intstantiation in VHDL with single bit output" =
   Rtl.print Vhdl (force instantiation_circuit);
-  [%expect {|
+  [%expect
+    {|
     library ieee;
     use ieee.std_logic_1164.all;
     use ieee.numeric_std.all;
@@ -84,26 +85,30 @@ let%expect_test "Intstantiation in VHDL with single bit output" =
         b <= hc_4;
 
     end architecture; |}]
+;;
 
 (* Another instantiation test, this time with multiple inputs and outputs *)
 
 let instantiation_circuit =
-  lazy (
-    let a = Signal.input "a" 1 in
-    let b = Signal.input "b" 3 in
-    let inst =
-      Instantiation.create ()
-        ~name:"example"
-        ~inputs:[ "a", a; "b", b ]
-        ~outputs:[ "c", 1; "d", 4 ]
-    in
-    Circuit.create_exn ~name:"example"
-      [ Signal.output "c" (inst#o "c")
-      ; Signal.output "d" (inst#o "d") ])
+  lazy
+    (let a = Signal.input "a" 1 in
+     let b = Signal.input "b" 3 in
+     let inst =
+       Instantiation.create
+         ()
+         ~name:"example"
+         ~inputs:[ "a", a; "b", b ]
+         ~outputs:[ "c", 1; "d", 4 ]
+     in
+     Circuit.create_exn
+       ~name:"example"
+       [ Signal.output "c" (inst#o "c"); Signal.output "d" (inst#o "d") ])
+;;
 
 let%expect_test "Intstantiation in Verilog with multiple inputs and outputs" =
   Rtl.print Verilog (force instantiation_circuit);
-  [%expect {|
+  [%expect
+    {|
     module example (
         b,
         a,
@@ -135,3 +140,4 @@ let%expect_test "Intstantiation in Verilog with multiple inputs and outputs" =
         assign d = _7;
 
     endmodule |}]
+;;

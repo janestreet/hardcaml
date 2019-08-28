@@ -3,7 +3,6 @@
 open! Import
 
 module type Signal = sig
-
   (** Signal data type and low-level functions *)
 
   (** simple operators *)
@@ -23,8 +22,9 @@ module type Signal = sig
 
   module Uid : sig
     type t = int64 [@@deriving compare, hash, sexp_of]
+
     include Comparator.S with type t := t
-    include Equal.S      with type t := t
+    include Equal.S with type t := t
   end
 
   module Uid_map : Map.S with module Key := Uid
@@ -37,15 +37,16 @@ module type Signal = sig
 
   (** internal structure for tracking signals *)
   type signal_id =
-    { s_id                  : Uid.t
-    ; mutable s_names       : string list
-    ; s_width               : int
-    ; mutable s_attributes  : Rtl_attribute.t list
-    ; (** Making this mutable turns hardcaml from pretty functional to pretty imperative.
-          however, if used carefully and only with the library, we can provide a
-          potentially easier way of changing the graph structure in some cases *)
-      mutable s_deps        : t list
-    ; caller_id             : Caller_id.t option }
+    { s_id : Uid.t
+    ; mutable s_names : string list
+    ; s_width : int
+    ; mutable s_attributes : Rtl_attribute.t list
+    (** Making this mutable turns hardcaml from pretty functional to pretty imperative.
+        however, if used carefully and only with the library, we can provide a
+        potentially easier way of changing the graph structure in some cases *)
+    ; mutable s_deps : t list
+    ; caller_id : Caller_id.t option
+    }
 
   (** main signal data type *)
   and t =
@@ -64,12 +65,14 @@ module type Signal = sig
     { write_clock : t
     ; write_address : t
     ; write_enable : t
-    ; write_data : t }
+    ; write_data : t
+    }
 
   and read_port =
     { read_clock : t
     ; read_address : t
-    ; read_enable : t }
+    ; read_enable : t
+    }
 
   (** These types are used to define a particular type of register as per the following
       template, where each part is optional:
@@ -81,32 +84,38 @@ module type Signal = sig
          else if (enable) d <= ...;
      v} *)
   and register =
-    { reg_clock       : t       (** clock *)
-    ; reg_clock_edge  : Edge.t  (** active clock edge *)
-    ; reg_reset       : t       (** asynchronous reset *)
-    ; reg_reset_edge  : Edge.t  (** asynchronous reset edge *)
-    ; reg_reset_value : t       (** asychhronous reset value *)
-    ; reg_clear       : t       (** synchronous clear *)
+    { reg_clock : t (** clock *)
+    ; reg_clock_edge : Edge.t (** active clock edge *)
+    ; reg_reset : t (** asynchronous reset *)
+    ; reg_reset_edge : Edge.t (** asynchronous reset edge *)
+    ; reg_reset_value : t (** asychhronous reset value *)
+    ; reg_clear : t (** synchronous clear *)
     ; reg_clear_level : Level.t (** synchronous clear level *)
-    ; reg_clear_value : t       (** sychhronous clear value *)
+    ; reg_clear_value : t (** sychhronous clear value *)
     ;
-      reg_enable      : t       (** global system enable *) }
+      reg_enable : t (** global system enable *)
+    }
 
   and memory =
-    { mem_size          : int
-    ; mem_read_address  : t
-    ; mem_write_address : t }
+    { mem_size : int
+    ; mem_read_address : t
+    ; mem_write_address : t
+    }
 
   and instantiation =
-    { inst_name     : string                      (** name of circuit *)
-    ; inst_instance : string                      (** instantiation label *)
-    ; inst_generics : Parameter.t list            (** [Parameter.int ...] *)
-    ; inst_inputs   : (string * t) list           (** name and input signal *)
-    ; inst_outputs  : (string * (int * int)) list (** name, width and low index of output *)
-    ; inst_lib      : string
-    ; inst_arch     : string }
+    { inst_name : string (** name of circuit *)
+    ; inst_instance : string
+    (** instantiation label *)
+    ; inst_generics : Parameter.t list (** [Parameter.int ...] *)
+    ; inst_inputs : (string * t) list (** name and input signal *)
+    ; inst_outputs : (string * (int * int)) list
+    (** name, width and low index of output *)
+    ; inst_lib : string
+    ; inst_arch : string
+    }
 
   type signal = t
+
 
   (** returns the (private) signal_id.  For internal use only. *)
   val signal_id : t -> signal_id
@@ -155,6 +164,7 @@ module type Signal = sig
   (** return the (binary) string representing a constants value *)
   val const_value : t -> Bits.t
 
+
   (** creates a new signal uid *)
   val new_id : unit -> Uid.t
 
@@ -178,7 +188,7 @@ module type Signal = sig
       printed.  [max_list_length] controls how many [mux] and [concat] arguments
       (dependancies) are printed. *)
   val sexp_of_signal_recursive
-    :  ?show_uids:bool      (** default is [false] *)
+    :  ?show_uids:bool (** default is [false] *)
     -> depth:int
     -> t
     -> Sexp.t
@@ -198,6 +208,7 @@ module type Signal = sig
 
   (** assigns to wire *)
   val ( <== ) : t -> t -> unit
+
   val assign : t -> t -> unit
 
   (** creates an input *)
@@ -212,23 +223,18 @@ module type Signal = sig
   module Reg_spec_ : sig
     type t = register [@@deriving sexp_of]
 
-    val create
-      :  ?clear : signal
-      -> ?reset : signal
-      -> unit
-      -> clock : signal
-      -> t
+    val create : ?clear:signal -> ?reset:signal -> unit -> clock:signal -> t
 
     val override
-      :  ?clock         : signal
-      -> ?clock_edge    : Edge.t
-      -> ?reset         : signal
-      -> ?reset_edge    : Edge.t
-      -> ?reset_to      : signal
-      -> ?clear         : signal
-      -> ?clear_level   : Level.t
-      -> ?clear_to      : signal
-      -> ?global_enable : signal
+      :  ?clock:signal
+      -> ?clock_edge:Edge.t
+      -> ?reset:signal
+      -> ?reset_edge:Edge.t
+      -> ?reset_to:signal
+      -> ?clear:signal
+      -> ?clear_level:Level.t
+      -> ?clear_to:signal
+      -> ?global_enable:signal
       -> t
       -> t
 
@@ -237,41 +243,21 @@ module type Signal = sig
     val reset : t -> signal
   end
 
-  val reg
-    :  Reg_spec_.t
-    -> enable:t
-    -> t
-    -> t
+  val reg : Reg_spec_.t -> enable:t -> t -> t
+  val reg_fb : Reg_spec_.t -> enable:t -> w:int -> (t -> t) -> t
+  val pipeline : Reg_spec_.t -> n:int -> enable:t -> t -> t
 
-  val reg_fb
-    :  Reg_spec_.t
-    -> enable:t
-    -> w:int
-    -> (t -> t)
-    -> t
-
-  val pipeline
-    :  Reg_spec_.t
-    -> n:int
-    -> enable:t
-    -> t
-    -> t
-
-  val memory
-    :  int
-    -> write_port:write_port
-    -> read_address:t
-    -> t
+  val memory : int -> write_port:write_port -> read_address:t -> t
 
   val ram_wbr
-    : ?attributes: Rtl_attribute.t list
+    :  ?attributes:Rtl_attribute.t list
     -> write_port:write_port
     -> read_port:read_port
     -> int
     -> t
 
   val ram_rbw
-    : ?attributes: Rtl_attribute.t list
+    :  ?attributes:Rtl_attribute.t list
     -> write_port:write_port
     -> read_port:read_port
     -> int
@@ -279,12 +265,11 @@ module type Signal = sig
 
   val multiport_memory
     :  ?name:string
-    -> ?attributes: Rtl_attribute.t list
+    -> ?attributes:Rtl_attribute.t list
     -> int
-    -> write_ports : write_port array
-    -> read_addresses : t array
+    -> write_ports:write_port array
+    -> read_addresses:t array
     -> t array
-
 
   (** Pretty printer. *)
   val pp : Formatter.t -> t -> unit

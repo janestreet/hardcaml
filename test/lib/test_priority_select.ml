@@ -7,7 +7,8 @@ let cases index =
   |> Bits.bits
   |> List.rev
   |> List.mapi ~f:(fun i valid ->
-    { With_valid. valid; value = Bits.consti ~width:8 (i+1) })
+    { With_valid.valid; value = Bits.consti ~width:8 (i + 1) })
+;;
 
 let sexp_of_int_with_valid (i : int With_valid.t) =
   match i.valid with
@@ -18,29 +19,33 @@ let sexp_of_int_with_valid (i : int With_valid.t) =
 
 let test ~branching_factor ~case_count =
   print_s [%message (branching_factor : int) (case_count : int)];
-  for index = 0 to 1 lsl case_count - 1 do
+  for index = 0 to (1 lsl case_count) - 1 do
     let index = Bits.consti ~width:case_count index in
-    print_s [%message
-      "priority_select"
-        ~_:(index : Bits.t)
-        "="
-        ~_:(cases index
-            |> Bits.priority_select ~branching_factor
-            |> With_valid.map ~f:Bits.to_int
-            : int_with_valid)];
-  done;
+    print_s
+      [%message
+        "priority_select"
+          ~_:(index : Bits.t)
+          "="
+          ~_:
+            (cases index
+             |> Bits.priority_select ~branching_factor
+             |> With_valid.map ~f:Bits.to_int
+             : int_with_valid)]
+  done
 ;;
 
 let%expect_test "empty data" =
   show_raise (fun () -> Bits.priority_select []);
   [%expect {|
     (raised "[tree_or_reduce_binary_operator] got empty list") |}]
+;;
 
 let%expect_test "branching factor 1" =
   for case_count = 1 to 4 do
-    test ~branching_factor:1 ~case_count;
+    test ~branching_factor:1 ~case_count
   done;
-  [%expect {|
+  [%expect
+    {|
     ((branching_factor 1)
      (case_count       1))
     (priority_select 0 = <invalid>)
@@ -78,12 +83,13 @@ let%expect_test "branching factor 1" =
     (priority_select 1100 = 3)
     (priority_select 1101 = 1)
     (priority_select 1110 = 2)
-    (priority_select 1111 = 1) |}];
+    (priority_select 1111 = 1) |}]
 ;;
 
 let%expect_test "branching factor 2" =
   test ~branching_factor:2 ~case_count:4;
-  [%expect {|
+  [%expect
+    {|
     ((branching_factor 2)
      (case_count       4))
     (priority_select 0000 = <invalid>)
@@ -102,10 +108,12 @@ let%expect_test "branching factor 2" =
     (priority_select 1101 = 1)
     (priority_select 1110 = 2)
     (priority_select 1111 = 1) |}]
+;;
 
 let%expect_test "branching factor 3" =
   test ~branching_factor:3 ~case_count:4;
-  [%expect {|
+  [%expect
+    {|
     ((branching_factor 3)
      (case_count       4))
     (priority_select 0000 = <invalid>)
@@ -124,10 +132,12 @@ let%expect_test "branching factor 3" =
     (priority_select 1101 = 1)
     (priority_select 1110 = 2)
     (priority_select 1111 = 1) |}]
+;;
 
 let%expect_test "branching factor 4" =
   test ~branching_factor:4 ~case_count:5;
-  [%expect {|
+  [%expect
+    {|
     ((branching_factor 4)
      (case_count       5))
     (priority_select 00000 = <invalid>)
@@ -162,31 +172,38 @@ let%expect_test "branching factor 4" =
     (priority_select 11101 = 1)
     (priority_select 11110 = 2)
     (priority_select 11111 = 1) |}]
+;;
 
 let test_with_default ~branching_factor ~case_count =
   print_s [%message (branching_factor : int) (case_count : int)];
-  for index = 0 to 1 lsl case_count - 1 do
+  for index = 0 to (1 lsl case_count) - 1 do
     let index = Bits.consti ~width:case_count index in
-    print_s [%message
-      "priority_select_with_default"
-        ~_:(index : Bits.t)
-        "="
-        ~_:(cases index
-            |> Bits.priority_select_with_default ~branching_factor ~default:(Bits.ones 8)
-            |> Bits.to_int
-            : int)];
-  done;
+    print_s
+      [%message
+        "priority_select_with_default"
+          ~_:(index : Bits.t)
+          "="
+          ~_:
+            (cases index
+             |> Bits.priority_select_with_default
+                  ~branching_factor
+                  ~default:(Bits.ones 8)
+             |> Bits.to_int
+             : int)]
+  done
 ;;
 
 let%expect_test "with default" =
   test_with_default ~branching_factor:1 ~case_count:1;
-  [%expect {|
+  [%expect
+    {|
     ((branching_factor 1)
      (case_count       1))
     (priority_select_with_default 0 = 255)
     (priority_select_with_default 1 = 1) |}];
   test_with_default ~branching_factor:3 ~case_count:5;
-  [%expect {|
+  [%expect
+    {|
     ((branching_factor 3)
      (case_count       5))
     (priority_select_with_default 00000 = 255)
@@ -221,31 +238,32 @@ let%expect_test "with default" =
     (priority_select_with_default 11101 = 1)
     (priority_select_with_default 11110 = 2)
     (priority_select_with_default 11111 = 1) |}]
+;;
 
 let test_onehot ~branching_factor ~case_count =
   print_s [%message (branching_factor : int) (case_count : int)];
-  for index = 0 to 1 lsl case_count - 1 do
+  for index = 0 to (1 lsl case_count) - 1 do
     let index = Bits.consti ~width:case_count index in
-    print_s [%message
-      "onehot_select"
-        ~_:(index : Bits.t)
-        "="
-        ~_:(cases index
-            |> Bits.onehot_select ~branching_factor
-            |> Bits.to_int
-            : int)];
-  done;
+    print_s
+      [%message
+        "onehot_select"
+          ~_:(index : Bits.t)
+          "="
+          ~_:(cases index |> Bits.onehot_select ~branching_factor |> Bits.to_int : int)]
+  done
 ;;
 
 let%expect_test "onehot" =
   test_onehot ~branching_factor:1 ~case_count:1;
-  [%expect {|
+  [%expect
+    {|
     ((branching_factor 1)
      (case_count       1))
     (onehot_select 0 = 0)
     (onehot_select 1 = 1) |}];
   test_onehot ~branching_factor:2 ~case_count:4;
-  [%expect {|
+  [%expect
+    {|
     ((branching_factor 2)
      (case_count       4))
     (onehot_select 0000 = 0)
@@ -264,3 +282,4 @@ let%expect_test "onehot" =
     (onehot_select 1101 = 7)
     (onehot_select 1110 = 7)
     (onehot_select 1111 = 7) |}]
+;;

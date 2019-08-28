@@ -3,8 +3,9 @@ open Signal.Const_prop.Comb
 open Test_constant_propagation.Trace
 
 let%expect_test "less than" =
-  print_s @@ binary_op_tests "<:" (<:) (<:.);
-  [%expect {|
+  print_s @@ binary_op_tests "<:" ( <: ) ( <:. );
+  [%expect
+    {|
     (<:
       (all_1_bit (
         (1'b0 <: 1'b0 = 1'b0)
@@ -38,10 +39,12 @@ let%expect_test "less than" =
       (int_on_right (
         (7'b0011011 <: 12  = 1'b0)
         (7'b0011011 <: -12 = 1'b1)))) |}]
+;;
 
 let%expect_test "greater than" =
-  print_s @@ binary_op_tests ">:" (>:) (>:.);
-  [%expect {|
+  print_s @@ binary_op_tests ">:" ( >: ) ( >:. );
+  [%expect
+    {|
     (>:
       (all_1_bit (
         (1'b0 >: 1'b0 = 1'b0)
@@ -75,10 +78,12 @@ let%expect_test "greater than" =
       (int_on_right (
         (7'b0011011 >: 12  = 1'b1)
         (7'b0011011 >: -12 = 1'b0)))) |}]
+;;
 
 let%expect_test "less than or equal to" =
-  print_s @@ binary_op_tests "<=:" (<=:) (<=:.);
-  [%expect {|
+  print_s @@ binary_op_tests "<=:" ( <=: ) ( <=:. );
+  [%expect
+    {|
     (<=:
       (all_1_bit (
         (1'b0 <=: 1'b0 = 1'b1)
@@ -112,10 +117,12 @@ let%expect_test "less than or equal to" =
       (int_on_right (
         (7'b0011011 <=: 12  = 1'b0)
         (7'b0011011 <=: -12 = 1'b1)))) |}]
+;;
 
 let%expect_test "greater than or equal to" =
-  print_s @@ binary_op_tests ">=:" (>=:) (>=:.);
-  [%expect {|
+  print_s @@ binary_op_tests ">=:" ( >=: ) ( >=:. );
+  [%expect
+    {|
     (>=:
       (all_1_bit (
         (1'b0 >=: 1'b0 = 1'b1)
@@ -149,12 +156,14 @@ let%expect_test "greater than or equal to" =
       (int_on_right (
         (7'b0011011 >=: 12  = 1'b1)
         (7'b0011011 >=: -12 = 1'b0)))) |}]
+;;
 
 (* equality *)
 
 let%expect_test "equals" =
-  print_s @@ binary_op_tests "==:" (==:) (==:.);
-  [%expect {|
+  print_s @@ binary_op_tests "==:" ( ==: ) ( ==:. );
+  [%expect
+    {|
     (==:
       (all_1_bit (
         (1'b0 ==: 1'b0 = 1'b1)
@@ -188,10 +197,12 @@ let%expect_test "equals" =
       (int_on_right (
         (7'b0011011 ==: 12  = 1'b0)
         (7'b0011011 ==: -12 = 1'b0)))) |}]
+;;
 
 let%expect_test "not equals" =
-  print_s @@ binary_op_tests "<>:" (<>:) (<>:.);
-  [%expect {|
+  print_s @@ binary_op_tests "<>:" ( <>: ) ( <>:. );
+  [%expect
+    {|
     (<>:
       (all_1_bit (
         (1'b0 <>: 1'b0 = 1'b0)
@@ -225,3 +236,4 @@ let%expect_test "not equals" =
       (int_on_right (
         (7'b0011011 <>: 12  = 1'b1)
         (7'b0011011 <>: -12 = 1'b1)))) |}]
+;;

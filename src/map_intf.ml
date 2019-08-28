@@ -6,6 +6,7 @@ open! Import
 
 module type Key = sig
   type t [@@deriving sexp_of]
+
   include Comparator.S with type t := t
 end
 
@@ -18,10 +19,12 @@ module type S = sig
 end
 
 module type Map = sig
-  include module type of struct include Base.Map end
+  include module type of struct
+    include Base.Map
+  end
 
   module type Key = Key
-  module type S   = S
+  module type S = S
 
   module Make (Key : Key) : S with module Key := Key
 end

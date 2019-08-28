@@ -1,15 +1,15 @@
 (* Test generation of hierarchical circuits. *)
 open! Import
-
 open Signal
 
 (* [inner] *)
 let inner ~cause_exn ~db ~share =
   let a = input "a" 1 in
   let b = output (if cause_exn then "a" else "b") a in
-  let circ = Circuit.create_exn ~name:"inner" [b] in
+  let circ = Circuit.create_exn ~name:"inner" [ b ] in
   let name = Circuit_database.insert ~share db circ in
   name
+;;
 
 (* [middle] *)
 let middle ~cause_exn ~db ~share =
@@ -18,38 +18,41 @@ let middle ~cause_exn ~db ~share =
   (* create 2 instantiations of [inner] so we can demonstrate the effect of sharing. *)
   let a = input "a" 1 in
   let inst =
-    Instantiation.create () ~name:inner_name1 ~inputs:["a", a] ~outputs:["b", 1] in
+    Instantiation.create () ~name:inner_name1 ~inputs:[ "a", a ] ~outputs:[ "b", 1 ]
+  in
   let b1 = inst#o "b" in
   let inst =
-    Instantiation.create () ~name:inner_name2 ~inputs:["a", a] ~outputs:["b", 1] in
+    Instantiation.create () ~name:inner_name2 ~inputs:[ "a", a ] ~outputs:[ "b", 1 ]
+  in
   let b2 = inst#o "b" in
-  let circ = Circuit.create_exn ~name:"middle" [output "b" (b1 |: b2)] in
+  let circ = Circuit.create_exn ~name:"middle" [ output "b" (b1 |: b2) ] in
   let name = Circuit_database.insert ~share db circ in
   name
+;;
 
 (* [outer] *)
 let outer ~cause_exn ~db ~share =
   let middle_name = middle ~cause_exn ~db ~share in
   let a = input "a" 1 in
   let inst =
-    Instantiation.create () ~name:middle_name ~inputs:["a", a] ~outputs:["b", 1] in
+    Instantiation.create () ~name:middle_name ~inputs:[ "a", a ] ~outputs:[ "b", 1 ]
+  in
   let b = output "b" (inst#o "b") in
-  Circuit.create_exn ~name:"outer" [b]
+  Circuit.create_exn ~name:"outer" [ b ]
+;;
 
 let create ~cause_exn ~share =
   let db = Circuit_database.create () in
   let outer_circ = outer ~cause_exn ~db ~share in
   print_s [%message "" ~circuit_database:(db : Circuit_database.t)];
-  print_string "\
-
-Verilog
---------
-";
+  print_string "\nVerilog\n--------\n";
   Rtl.print ~database:db Verilog outer_circ
+;;
 
 let%expect_test "generate hierarchy without sharing" =
   create ~cause_exn:false ~share:false;
-  [%expect {|
+  [%expect
+    {|
     (circuit_database (
       (inner  inner)
       (inner  inner_0)
@@ -142,12 +145,13 @@ let%expect_test "generate hierarchy without sharing" =
         /* output assignments */
         assign b = _4;
 
-    endmodule |}];
+    endmodule |}]
 ;;
 
 let%expect_test "generate hierarchy with sharing" =
   create ~cause_exn:false ~share:true;
-  [%expect {|
+  [%expect
+    {|
     (circuit_database (
       (inner  inner)
       (middle middle)))
@@ -222,10 +226,12 @@ let%expect_test "generate hierarchy with sharing" =
         assign b = _4;
 
     endmodule |}]
+;;
 
 let%expect_test "generate hierarchy exn" =
   show_raise (fun () -> create ~cause_exn:true ~share:true);
-  [%expect {|
+  [%expect
+    {|
     (circuit_database (
       (inner  inner)
       (middle middle)))
@@ -244,6 +250,7 @@ let%expect_test "generate hierarchy exn" =
           (names (a))
           (width   1)
           (data_in a))))))) |}]
+;;
 
 open Async
 open Expect_test_helpers
@@ -254,8 +261,10 @@ let%expect_test "To_file" =
       let database = Circuit_database.create () in
       let circuit = outer ~db:database ~cause_exn:false ~share:true in
       Rtl.output Verilog circuit ~output_mode:(To_file "single_file.v") ~database;
-      system ("ls *.v; cat *.v")) in
-  [%expect {|
+      system "ls *.v; cat *.v")
+  in
+  [%expect
+    {|
     single_file.v
     module inner (
         a,
@@ -325,6 +334,7 @@ let%expect_test "To_file" =
         assign b = _4;
 
     endmodule |}]
+;;
 
 let%expect_test "In_directory" =
   let%bind () =
@@ -332,8 +342,10 @@ let%expect_test "In_directory" =
       let database = Circuit_database.create () in
       let circuit = outer ~db:database ~cause_exn:false ~share:true in
       Rtl.output Vhdl circuit ~output_mode:(In_directory ".") ~database;
-      system ("ls *.vhd; cat *.vhd")) in
-  [%expect {|
+      system "ls *.vhd; cat *.vhd")
+  in
+  [%expect
+    {|
     inner.vhd
     middle.vhd
     outer.vhd
@@ -462,3 +474,4 @@ let%expect_test "In_directory" =
         b <= hc_4;
 
     end architecture; |}]
+;;

@@ -1,21 +1,25 @@
 open! Import
-
 open Signal
 
 let rtl_write_null lang outputs =
   Rtl.print lang (Circuit.create_exn ~name:"test" outputs)
+;;
 
 let output =
-  let a = add_attribute (wire 4 -- "a") (Rtl_attribute.create "baz" ~value:(Bool true)) in
+  let a =
+    add_attribute (wire 4 -- "a") (Rtl_attribute.create "baz" ~value:(Bool true))
+  in
   let b =
     add_attribute
       (add_attribute (wire 4 -- "b") (Rtl_attribute.create "bar" ~value:(Int 10)))
       (Rtl_attribute.create "bla")
   in
-  let output = (wire 4 -- "result") in
-  output <== add_attribute (a +: b +:. 3)
-               (Rtl_attribute.create "hello" ~value:(String "world")) -- "tmp";
+  let output = wire 4 -- "result" in
   output
+  <== add_attribute (a +: b +:. 3) (Rtl_attribute.create "hello" ~value:(String "world"))
+      -- "tmp";
+  output
+;;
 
 module Test_component = struct
   module I = struct
@@ -29,10 +33,7 @@ module Test_component = struct
   end
 
   module O = struct
-    type 'a t =
-      { c : 'a [@bits 4]
-      }
-    [@@deriving sexp_of, hardcaml]
+    type 'a t = { c : 'a [@bits 4] } [@@deriving sexp_of, hardcaml]
   end
 
   let create (i : _ I.t) =
@@ -41,15 +42,18 @@ module Test_component = struct
     let a = add_attribute a (Rtl_attribute.Vivado.dont_touch true) in
     let b = add_attribute i.b (Rtl_attribute.Vivado.mark_debug true) in
     let c = add_attribute (a +: b) (Rtl_attribute.Vivado.mark_debug true) in
-    { O. c }
+    { O.c }
+  ;;
 end
 
-let%expect_test "Signal attributes on top of signals in Verilog for circuits\
-                 constructed using Circuit.With_interface" =
+let%expect_test "Signal attributes on top of signals in Verilog for circuitsconstructed \
+                 using Circuit.With_interface"
+  =
   let open Test_component in
-  let module Circuit = Circuit.With_interface(I)(O) in
+  let module Circuit = Circuit.With_interface (I) (O) in
   Rtl.print Verilog (Circuit.create_exn ~name:"module_foo" create);
-  [%expect {|
+  [%expect
+    {|
     module module_foo (
         b,
         clk,
@@ -96,7 +100,8 @@ let%expect_test "Signal attributes on top of signals in Verilog for circuits\
 
 let%expect_test "Signal attributes on top of signals in Verilog" =
   rtl_write_null Verilog [ output ];
-  [%expect {|
+  [%expect
+    {|
     module test (
         b,
         a,
@@ -125,13 +130,15 @@ let%expect_test "Signal attributes on top of signals in Verilog" =
         assign result = tmp;
 
     endmodule |}]
+;;
 
 let%expect_test "Signal attributes on top of signals in VHDL" =
-  require_does_raise [%here] (fun () ->
-    rtl_write_null Vhdl [ output ]);
-  [%expect {|
+  require_does_raise [%here] (fun () -> rtl_write_null Vhdl [ output ]);
+  [%expect
+    {|
     ("Error while writing circuit"
       (circuit_name test)
       (hierarchy_path (test))
       (output ((language Vhdl) (mode (To_channel <stdout>))))
       (exn "Signal attributes are not supported in VHDL yet")) |}]
+;;

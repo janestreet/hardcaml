@@ -3,36 +3,40 @@
 
 open! Import
 
-module Make_nand_gates
-    (X : sig
-       module Bits : Comb.S
-       val nand : Bits.t -> Bits.t -> Bits.t
-     end) : Comb.Gates with type t = X.Bits.t = struct
+module Make_nand_gates (X : sig
+    module Bits : Comb.S
+
+    val nand : Bits.t -> Bits.t -> Bits.t
+  end) : Comb.Gates with type t = X.Bits.t = struct
   include X.Bits
-  let (~:) a = X.nand a a
-  let (&:) a b = ~: (X.nand a b)
-  let (|:) a b = X.nand (~: a) (~: b)
-  let (^:) a b =
+
+  let ( ~: ) a = X.nand a a
+  let ( &: ) a b = ~:(X.nand a b)
+  let ( |: ) a b = X.nand ~:a ~:b
+
+  let ( ^: ) a b =
     let c = X.nand a b in
     X.nand (X.nand a c) (X.nand b c)
+  ;;
 end
 
-module Bits_nand =
-  Comb.Make (Comb.Make_primitives (Make_nand_gates
-                                     (struct
-                                       module Bits = Bits
-                                       let nand a b = Bits.(~: (a &: b))
-                                     end)))
+module Bits_nand = Comb.Make (Comb.Make_primitives (Make_nand_gates (struct
+                                                      module Bits = Bits
+
+                                                      let nand a b = Bits.(~:(a &: b))
+                                                    end)))
 
 let%expect_test "3 bit adder, bits" =
-  for a=0 to 7 do
-    print_s [%message
-      ""
-        ~_:(List.init 8
-              ~f:(fun b -> Bits_nand.(consti ~width:3 a +: consti ~width:3 b))
-            : Bits.t list)]
+  for a = 0 to 7 do
+    print_s
+      [%message
+        ""
+          ~_:
+            (List.init 8 ~f:(fun b -> Bits_nand.(consti ~width:3 a +: consti ~width:3 b))
+             : Bits.t list)]
   done;
-  [%expect {|
+  [%expect
+    {|
     (000 001 010 011 100 101 110 111)
     (001 010 011 100 101 110 111 000)
     (010 011 100 101 110 111 000 001)
@@ -43,27 +47,29 @@ let%expect_test "3 bit adder, bits" =
     (111 000 001 010 011 100 101 110) |}]
 ;;
 
-module Asic_nand =
-  Comb.Make
-    (Comb.Make_primitives
-       (Make_nand_gates
-          (struct
-            module Bits = Signal
-            let nand a b =
-              assert (Bits.width a = Bits.width b);
-              (Instantiation.create ()
-                 ~name:"nand"
-                 ~inputs:[ "a", a; "b", b ]
-                 ~outputs:[ "c", Bits.width a ]) # o "c"
-          end)))
+module Asic_nand = Comb.Make (Comb.Make_primitives (Make_nand_gates (struct
+                                                      module Bits = Signal
+
+                                                      let nand a b =
+                                                        assert (Bits.width a = Bits.width b);
+                                                        (Instantiation.create
+                                                           ()
+                                                           ~name:"nand"
+                                                           ~inputs:[ "a", a; "b", b ]
+                                                           ~outputs:[ "c", Bits.width a ])
+                                                        #o
+                                                          "c"
+                                                      ;;
+                                                    end)))
 
 let%expect_test "3 bit adder, ASIC style, verilog" =
   let open Signal in
   let a, b = input "a" 3, input "b" 3 in
   let c = output "c" Asic_nand.(a +: b) in
-  let circuit = Circuit.create_exn ~name:"adder_nand" [c] in
+  let circuit = Circuit.create_exn ~name:"adder_nand" [ c ] in
   Rtl.print Verilog circuit;
-  [%expect {|
+  [%expect
+    {|
     module adder_nand (
         b,
         a,
@@ -293,32 +299,36 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
     endmodule |}]
 ;;
 
-module Fpga_nand =
-  Comb.Make
-    (Comb.Make_primitives
-       (Make_nand_gates
-          (struct
-            module Bits = Signal
-            open Signal
-            let nand_lut a b =
-              (Instantiation.create ()
-                 ~name:"LUT2"
-                 ~parameters:[Parameter.create ~name:"INIT" ~value:(String "1110")]
-                 ~inputs:[ "I", (a @: b) ]
-                 ~outputs:[ "O", 1 ]) # o "O"
-            let nand a b =
-              assert (width a = width b);
-              concat (List.map2_exn (bits a) (bits b) ~f:nand_lut)
-          end)))
+module Fpga_nand = Comb.Make (Comb.Make_primitives (Make_nand_gates (struct
+                                                      module Bits = Signal
+                                                      open Signal
+
+                                                      let nand_lut a b =
+                                                        (Instantiation.create
+                                                           ()
+                                                           ~name:"LUT2"
+                                                           ~parameters:[ Parameter.create ~name:"INIT" ~value:(String "1110") ]
+                                                           ~inputs:[ "I", a @: b ]
+                                                           ~outputs:[ "O", 1 ])
+                                                        #o
+                                                          "O"
+                                                      ;;
+
+                                                      let nand a b =
+                                                        assert (width a = width b);
+                                                        concat (List.map2_exn (bits a) (bits b) ~f:nand_lut)
+                                                      ;;
+                                                    end)))
 
 let%expect_test "3 bit adder, FPGA style, verilog" =
   (* Not sayin' this is an efficient way to go about this... *)
   let open Signal in
   let a, b = input "a" 3, input "b" 3 in
   let c = output "c" Fpga_nand.(a +: b) in
-  let circuit = Circuit.create_exn ~name:"adder_nand" [c] in
+  let circuit = Circuit.create_exn ~name:"adder_nand" [ c ] in
   Rtl.print Verilog circuit;
-  [%expect {|
+  [%expect
+    {|
     module adder_nand (
         b,
         a,

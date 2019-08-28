@@ -1,14 +1,12 @@
 open! Import
-
 open Signal
 
-let rtl_write_null outputs =
-  Rtl.print Verilog (Circuit.create_exn ~name:"test" outputs)
+let rtl_write_null outputs = Rtl.print Verilog (Circuit.create_exn ~name:"test" outputs)
 
 let%expect_test "Port names must be unique" =
-  require_does_raise [%here] (fun () ->
-    rtl_write_null [ output "a" (input "a" 1) ]);
-  [%expect {|
+  require_does_raise [%here] (fun () -> rtl_write_null [ output "a" (input "a" 1) ]);
+  [%expect
+    {|
     ("Error while writing circuit"
       (circuit_name test)
       (hierarchy_path (test))
@@ -23,9 +21,9 @@ let%expect_test "Port names must be unique" =
 ;;
 
 let%expect_test "Port names must be legal" =
-  require_does_raise [%here] (fun () ->
-    rtl_write_null [ output "a" (input "1^7" 1) ]);
-  [%expect {|
+  require_does_raise [%here] (fun () -> rtl_write_null [ output "a" (input "1^7" 1) ]);
+  [%expect
+    {|
     ("Error while writing circuit"
       (circuit_name test)
       (hierarchy_path (test))
@@ -43,9 +41,9 @@ let%expect_test "Port names must be legal" =
 ;;
 
 let%expect_test "Port name clashes with reserved name" =
-  require_does_raise [%here] (fun () ->
-    rtl_write_null [ output "module" (input "x" 1) ]);
-  [%expect {|
+  require_does_raise [%here] (fun () -> rtl_write_null [ output "module" (input "x" 1) ]);
+  [%expect
+    {|
     ("Error while writing circuit"
       (circuit_name test)
       (hierarchy_path (test))
@@ -60,9 +58,9 @@ let%expect_test "Port name clashes with reserved name" =
 ;;
 
 let%expect_test "SignalNameManager internal error" =
-  require_does_raise [%here] (fun () ->
-    rtl_write_null [ output "x" (empty +: empty)]);
-  [%expect {|
+  require_does_raise [%here] (fun () -> rtl_write_null [ output "x" (empty +: empty) ]);
+  [%expect
+    {|
     module test (
         x
     );
@@ -80,16 +78,19 @@ let%expect_test "SignalNameManager internal error" =
       (exn (
         "[Rtl.SignalNameManager] internal error while looking up signal name"
         (index      0)
-        (for_signal empty)))) |} ]
+        (for_signal empty)))) |}]
 ;;
 
 let%expect_test "file IO" =
   let output output_mode =
-    Rtl.output ~output_mode Verilog
-      (Circuit.create_exn ~name:"test" [output "x" (input "y" 1)])
+    Rtl.output
+      ~output_mode
+      Verilog
+      (Circuit.create_exn ~name:"test" [ output "x" (input "y" 1) ])
   in
   require_does_raise [%here] (fun () -> output (To_file "/foo"));
-  [%expect {|
+  [%expect
+    {|
     ("Error while initializing output mode."
       (circuit_name test)
       (language     Verilog)
@@ -97,7 +98,8 @@ let%expect_test "file IO" =
       (exn         (Sys_error "/foo: Permission denied")))
     |}];
   require_does_raise [%here] (fun () -> output (In_directory "/foo"));
-  [%expect {|
+  [%expect
+    {|
     ("Error while writing circuit"
       (circuit_name test)
       (hierarchy_path (test))

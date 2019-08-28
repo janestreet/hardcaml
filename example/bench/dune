@@ -1,3 +1,0 @@
-(library (name hardcaml_examples_bench)
- (libraries hardcaml hardcaml_examples hardcaml_examples_tests)
- (preprocess (pps ppx_jane)))

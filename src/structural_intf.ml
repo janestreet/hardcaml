@@ -9,35 +9,32 @@ module type Config = sig
 end
 
 module type Structural = sig
-
   type name = string
   type id = int
   type width = int
 
   type signal =
     | Empty
-
-    (** module interface *)
+    (* module interface *)
     | Module_input of id * name * width
     | Module_output of id * name * width * signal ref
     | Module_tristate of id * name * width * signal list ref
-
-    (** internal wires *)
+    (* internal wires *)
     | Internal_wire of id * width * signal ref
     | Internal_triwire of id * width * signal list ref
-
-    (** instantiations *)
+    (* instantiations *)
     | Instantiation_output of id * name (** reference to instantiation *)
     | Instantiation_tristate of id * name
-    | Instantiation
-      of id
-         * name
-         * (string * generic) list
-         * (string * signal)  list  (** inputs (read) *)
-         * (string * signal)  list  (** outputs (write; drive wires/module outputs *)
-         * (string * signal)  list  (** tristate (write; drive triwires/module tristates *)
-
-    (** basic RTL operators *)
+    | Instantiation of
+        id
+        * name
+        * (string * generic) list
+        * (string * signal) list
+    (* inputs (read) *)
+        * (string * signal) list
+    (* outputs (write; drive wires/module outputs *)
+        * (string * signal) list (* tristate (write; drive triwires/module tristates *)
+    (* basic RTL operators *)
     | Rtl_op of id * width * rtl_op
 
   and rtl_op =
@@ -53,9 +50,10 @@ module type Structural = sig
     | GUnquoted of string
 
   type circuit =
-    { name            : string
-    ; id              : id
-    ; mutable signals : signal list }
+    { name : string
+    ; id : id
+    ; mutable signals : signal list
+    }
 
   exception Invalid_submodule_input_connection of string * string * signal
   exception Invalid_submodule_output_connection of string * string * signal
@@ -64,11 +62,9 @@ module type Structural = sig
   exception Invalid_assignment_target of signal
   exception Cant_assign_wire_with of signal
   exception Cant_assign_triwire_with of signal
-
   exception Invalid_name of signal
   exception Invalid_width of signal
   exception Invalid_id of signal
-
   exception Invalid_constant of string
   exception Rtl_op_arg_not_readable of signal
   exception Too_few_mux_data_elements
@@ -77,7 +73,6 @@ module type Structural = sig
   exception No_elements_to_concat
   exception Select_index_error of int * int
   exception Binop_arg_widths_different of string
-
   exception No_circuit
   exception Circuit_already_started
 
@@ -91,16 +86,12 @@ module type Structural = sig
   val find_circuit : string -> circuit
 
   val width : signal -> int
-
   val mk_input : string -> int -> signal
   val mk_output : string -> int -> signal
   val mk_tristate : string -> int -> signal
-
   val mk_wire : int -> signal
   val mk_triwire : int -> signal
-
-  val (<==) : signal -> signal -> unit
-
+  val ( <== ) : signal -> signal -> unit
   val is_connected : signal -> bool
 
   val inst
@@ -111,8 +102,7 @@ module type Structural = sig
     -> string
     -> unit
 
-  val (==>) : 'a -> 'b -> 'a * 'b
-
+  val ( ==> ) : 'a -> 'b -> 'a * 'b
   val const : string -> signal
   val constz : int -> signal
   val mux : signal -> signal list -> signal
@@ -128,18 +118,23 @@ module type Structural = sig
 
   (** progressively more structural APIs *)
   module Base0 : Comb.Primitives with type t = signal
-  module Base1 : Comb.Primitives with type t = signal (** + mux, concat, select *)
+
+
+  (** includes mux, concat, select *)
+  module Base1 : Comb.Primitives with type t = signal
     [@@deprecated "[since 2017-11] Waiting on further work."]
-  module Base2 : Comb.Primitives with type t = signal (** + consts *)
+
+  (** includes consts *)
+  module Base2 : Comb.Primitives with type t = signal
     [@@deprecated "[since 2017-11] Waiting on further work."]
 
   val write_verilog : (string -> unit) -> circuit -> unit
 
   module Lib : sig
-
     val reg : clock:signal -> en:signal -> signal -> signal
     val reg_r : clock:signal -> reset:signal -> ?def:int -> en:signal -> signal -> signal
     val reg_c : clock:signal -> clear:signal -> ?def:int -> en:signal -> signal -> signal
+
     val reg_rc
       :  clock:signal
       -> reset:signal

@@ -1,9 +1,6 @@
 module Map_intf_in_this_directory = Map_intf
-
 open! Import
-
 include Map_intf_in_this_directory
-
 include Base.Map
 
 module Make (Key : Key) = struct

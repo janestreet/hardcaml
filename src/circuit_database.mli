@@ -12,14 +12,10 @@ val create : unit -> t
     which should used when creating a Hardcaml instantiation.  If [share] is true and the
     database contains a structurally equal circuit then a reference to the existing
     circuit is returned.  Otherwise, a new entry is created. *)
-val insert
-  :  ?share : bool (** default is [true] **)
-  -> t
-  -> Circuit.t
-  -> string
+val insert : ?share:bool (** default is [true] **) -> t -> Circuit.t -> string
 
 (** Find a circuit in the database, given its name. *)
-val find : t -> mangled_name : string -> Circuit.t option
+val find : t -> mangled_name:string -> Circuit.t option
 
 (** Return a list of all circuits in the database. *)
 val get_circuits : t -> Circuit.t list

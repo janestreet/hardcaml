@@ -4,17 +4,18 @@ open! Import
 
 module type MakePureCombTransform_arg = sig
   include Comb.Primitives
+
   val wire : int -> t
-  val (<==) : t -> t -> unit
+  val ( <== ) : t -> t -> unit
 end
 
 module type Transform = sig
-
   type 'a transform_fn' = (Signal.Uid.t -> 'a) -> Signal.t -> 'a
   type transform_fn = Signal.t transform_fn'
 
   module type TransformFn' = sig
     type t
+
     val transform : t transform_fn'
     val rewrite : t transform_fn' -> Signal.t Signal.Uid_map.t -> Signal.t list -> t list
     val rewrite_signals : t transform_fn' -> Signal.t list -> t list
@@ -29,11 +30,12 @@ module type Transform = sig
 
   (** functor to build the function to map a signal to a new combinatorial signal
       representation *)
-  module MakePureCombTransform (B : MakePureCombTransform_arg) : TransformFn' with type t = B.t
+  module MakePureCombTransform (B : MakePureCombTransform_arg) :
+    TransformFn' with type t = B.t
 
   (** functor to build the function to map a signal to a new combinatorial signal
       representation *)
-  module MakeCombTransform (B : (Comb.Primitives with type t = Signal.t)) : TransformFn
+  module MakeCombTransform (B : Comb.Primitives with type t = Signal.t) : TransformFn
 
   (** simple copying transform *)
   module CopyTransform : TransformFn

@@ -5,15 +5,17 @@ open! Import
 let%expect_test "[is_pow2]" =
   for bits = 1 to 4 do
     print_s [%message (bits : int)];
-    for i = 0 to 1 lsl bits - 1 do
-      print_s [%message
-        "is_pow2"
-          ~_:(i : int)
-          "="
-          ~_:(Bits.is_pow2 (Bits.consti ~width:bits i) : Bits.t)];
-    done;
+    for i = 0 to (1 lsl bits) - 1 do
+      print_s
+        [%message
+          "is_pow2"
+            ~_:(i : int)
+            "="
+            ~_:(Bits.is_pow2 (Bits.consti ~width:bits i) : Bits.t)]
+    done
   done;
-  [%expect {|
+  [%expect
+    {|
     (bits 1)
     (is_pow2 0 = 0)
     (is_pow2 1 = 1)
@@ -47,7 +49,7 @@ let%expect_test "[is_pow2]" =
     (is_pow2 12 = 0)
     (is_pow2 13 = 0)
     (is_pow2 14 = 0)
-    (is_pow2 15 = 0) |}];
+    (is_pow2 15 = 0) |}]
 ;;
 
 let sexp_of_bits_with_valid (t : Bits.t With_valid.t) =
@@ -59,19 +61,20 @@ let sexp_of_bits_with_valid (t : Bits.t With_valid.t) =
 let test name (bits_f : Bits.t -> Bits.t With_valid.t) int_f =
   for bits = 1 to 4 do
     print_s [%message (bits : int)];
-    for i = 0 to 1 lsl bits - 1 do
+    for i = 0 to (1 lsl bits) - 1 do
       let result = bits_f (Bits.consti ~width:bits i) in
       (match int_f i with
        | exception _ -> require [%here] (Bits.is_gnd result.valid)
        | x -> require_equal [%here] (module Int) x (result.value |> Bits.to_int));
-      print_s [%message name ~_:(i : int) "=" ~_:(result : bits_with_valid)];
-    done;
-  done;
+      print_s [%message name ~_:(i : int) "=" ~_:(result : bits_with_valid)]
+    done
+  done
 ;;
 
 let%expect_test "[floor_log2]" =
   test "floor_log2" Bits.floor_log2 Int.floor_log2;
-  [%expect {|
+  [%expect
+    {|
     (bits 1)
     (floor_log2 0 = <invalid>)
     (floor_log2 1 = 0)
@@ -105,12 +108,13 @@ let%expect_test "[floor_log2]" =
     (floor_log2 12 = 3)
     (floor_log2 13 = 3)
     (floor_log2 14 = 3)
-    (floor_log2 15 = 3) |}];
+    (floor_log2 15 = 3) |}]
 ;;
 
 let%expect_test "ceil_log2" =
   test "ceil_log2" Bits.ceil_log2 Int.ceil_log2;
-  [%expect {|
+  [%expect
+    {|
     (bits 1)
     (ceil_log2 0 = <invalid>)
     (ceil_log2 1 = 0)
@@ -144,5 +148,5 @@ let%expect_test "ceil_log2" =
     (ceil_log2 12 = 4)
     (ceil_log2 13 = 4)
     (ceil_log2 14 = 4)
-    (ceil_log2 15 = 4) |}];
+    (ceil_log2 15 = 4) |}]
 ;;

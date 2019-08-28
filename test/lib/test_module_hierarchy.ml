@@ -4,22 +4,25 @@ module Inner = struct
   module I = struct
     type 'a t =
       { a : 'a
-      ; b : 'a }
+      ; b : 'a
+      }
     [@@deriving sexp_of, hardcaml]
   end
 
   module O = struct
     type 'a t =
       { c : 'a
-      ; d : 'a }
+      ; d : 'a
+      }
     [@@deriving sexp_of, hardcaml]
   end
 
   open Signal
+
   let create scope (i : _ I.t) =
-    let (--) = Scope.naming scope in
-    { O.c = (~: (i.a)) -- "a"
-    ; d = i.b }
+    let ( -- ) = Scope.naming scope in
+    { O.c = ~:(i.a) -- "a"; d = i.b }
+  ;;
 end
 
 module Middle = struct
@@ -27,29 +30,32 @@ module Middle = struct
 
   module O = struct
     type 'a t =
-      { o : 'a Inner.O.t array[@length 2]
-      ; x : 'a }
+      { o : 'a Inner.O.t array [@length 2]
+      ; x : 'a
+      }
     [@@deriving sexp_of, hardcaml]
   end
 
   module Inner_inst = Hierarchy.In_scope (Inner.I) (Inner.O)
 
   let create scope (i : _ I.t) =
-    let (--) = Scope.naming scope in
+    let ( -- ) = Scope.naming scope in
     let (o1 : _ Inner.O.t) = Inner_inst.create ~scope ~name:"inner" Inner.create i in
-    let (o2 : _ Inner.O.t) = Inner_inst.hierarchical ~scope ~name:"inner" Inner.create i in
-    { O.o = [| o1; o2; |]
-    ; x = Signal.consti ~width:1 0 -- "x" }
+    let (o2 : _ Inner.O.t) =
+      Inner_inst.hierarchical ~scope ~name:"inner" Inner.create i
+    in
+    { O.o = [| o1; o2 |]; x = Signal.consti ~width:1 0 -- "x" }
+  ;;
 end
 
 module Outer = struct
   module I = Middle.I
   module O = Middle.O
-
   module Middle_inst = Hierarchy.In_scope (Middle.I) (Middle.O)
 
   let create scope (i : _ I.t) =
     Middle_inst.hierarchical ~scope ~instance:"the_middle" ~name:"middle" Middle.create i
+  ;;
 end
 
 let%expect_test "flattened" =
@@ -57,11 +63,14 @@ let%expect_test "flattened" =
   let module Circuit = Circuit.With_interface (Outer.I) (Outer.O) in
   let test (naming_scheme : Scope.Naming_scheme.t) =
     let scope = Scope.create ~flatten_design:true ~naming_scheme ~name () in
-    Rtl.print ~database:(Scope.circuit_database scope) Verilog
+    Rtl.print
+      ~database:(Scope.circuit_database scope)
+      Verilog
       (Circuit.create_exn ~name (Outer.create scope))
   in
   test No_path;
-  [%expect {|
+  [%expect
+    {|
       module outer (
           b,
           a,
@@ -104,7 +113,8 @@ let%expect_test "flattened" =
 
       endmodule |}];
   test Local_path;
-  [%expect {|
+  [%expect
+    {|
     module outer (
         b,
         a,
@@ -147,7 +157,8 @@ let%expect_test "flattened" =
 
     endmodule |}];
   test Full_path;
-  [%expect {|
+  [%expect
+    {|
     module outer (
         b,
         a,
@@ -194,13 +205,16 @@ let%expect_test "flattened" =
 let%expect_test "hierarchical" =
   let name = "outer" in
   let module Circuit = Circuit.With_interface (Outer.I) (Outer.O) in
-  let test (naming_scheme : Scope.Naming_scheme.t)  =
+  let test (naming_scheme : Scope.Naming_scheme.t) =
     let scope = Scope.create ~flatten_design:false ~naming_scheme ~name () in
-    Rtl.print ~database:(Scope.circuit_database scope) Verilog
+    Rtl.print
+      ~database:(Scope.circuit_database scope)
+      Verilog
       (Circuit.create_exn ~name (Outer.create scope))
   in
   test No_path;
-  [%expect {|
+  [%expect
+    {|
       module inner (
           b,
           a,
@@ -328,7 +342,8 @@ let%expect_test "hierarchical" =
 
       endmodule |}];
   test Local_path;
-  [%expect {|
+  [%expect
+    {|
     module inner (
         b,
         a,
@@ -456,7 +471,8 @@ let%expect_test "hierarchical" =
 
     endmodule |}];
   test Full_path;
-  [%expect {|
+  [%expect
+    {|
     module inner (
         b,
         a,

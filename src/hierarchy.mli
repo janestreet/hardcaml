@@ -5,13 +5,14 @@ module With_interface (I : Interface.S) (O : Interface.S) : sig
       inputs] and adds it to [database].  It is then referenced in current circuit by an
       instantiation. *)
   val create
-    : (?port_checks : Circuit.Port_checks.t
-       -> ?add_phantom_inputs : bool
-       -> ?instance : string
+    : (?port_checks:Circuit.Port_checks.t
+       -> ?add_phantom_inputs:bool
+       -> ?instance:string
        -> Circuit_database.t
-       -> name : string
+       -> name:string
        -> Circuit.With_interface(I)(O).create
-       -> Circuit.With_interface(I)(O).create) Circuit.with_create_options
+       -> Circuit.With_interface(I)(O).create)
+        Circuit.with_create_options
 end
 
 (** Support for hierarchically structured Hardcaml designs.  We extend the standard
@@ -25,8 +26,8 @@ module In_scope (I : Interface.S) (O : Interface.S) : sig
   (** Create a Hardcaml child design and link it into the parent design.  This will not
       form a hierarchical structure, but the signal naming will still be scoped. *)
   val create
-    :  scope : Scope.t
-    -> name : string
+    :  scope:Scope.t
+    -> name:string
     -> create
     -> Circuit.With_interface(I)(O).create
 
@@ -39,11 +40,12 @@ module In_scope (I : Interface.S) (O : Interface.S) : sig
       provided.  Otherwise [name] is used as the scope name, and the instantiation name is
       derived automatically. *)
   val hierarchical
-    : (?port_checks : Circuit.Port_checks.t
-       -> ?add_phantom_inputs : bool
+    : (?port_checks:Circuit.Port_checks.t
+       -> ?add_phantom_inputs:bool
        -> ?instance:string
-       -> scope : Scope.t
-       -> name : string
+       -> scope:Scope.t
+       -> name:string
        -> create
-       -> Circuit.With_interface(I)(O).create) Circuit.with_create_options
+       -> Circuit.With_interface(I)(O).create)
+        Circuit.with_create_options
 end

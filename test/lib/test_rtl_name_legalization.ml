@@ -5,11 +5,12 @@ let%expect_test "rtl name legalization" =
     [%message
       ""
         ~verilog:(Rtl.Language.legalize_identifier Verilog name : string)
-        ~vhdl:   (Rtl.Language.legalize_identifier Vhdl    name : string)]
+        ~vhdl:(Rtl.Language.legalize_identifier Vhdl name : string)]
     |> print_s
   in
   require_does_not_raise ~cr:CR_someday [%here] (fun () -> show "");
-  [%expect {|
+  [%expect
+    {|
     ("unexpectedly raised" (Invalid_argument "index out of bounds")) |}];
   (* underscore really is a valid verilog name... *)
   show "_";
@@ -31,5 +32,5 @@ let%expect_test "rtl name legalization" =
   show "foo!\"£$%^&*()\"";
   [%expect {|
     ((verilog foo____$_______)
-     (vhdl    foo____________)) |}];
+     (vhdl    foo____________)) |}]
 ;;

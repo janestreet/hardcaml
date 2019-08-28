@@ -83,7 +83,6 @@
 open! Import
 
 type t [@@deriving sexp_of]
-
 type always = t
 
 (** The type of variables in guarded assignments.  Variables may be asychronous
@@ -91,9 +90,11 @@ type always = t
     accessed through the [value] field below. *)
 module Variable : sig
   type internal
+
   type t = private
-    { value    : Signal.t
-    ; internal : internal }
+    { value : Signal.t
+    ; internal : internal
+    }
   [@@deriving fields, sexp_of]
 
   (** create a wire *)
@@ -135,17 +136,22 @@ val ( <--. ) : Variable.t -> int -> t
 
 module State_machine : sig
   type 'a t =
-    { current  : Signal.t
-    ; is       : 'a -> Signal.t
+    { current : Signal.t
+    ; is : 'a -> Signal.t
     ; set_next : 'a -> always
     (** [switch cases] does a switch on all possible states.  The cases must be exhaustive
         and irredundant.  If the cases are non-exhaustive, one can supply [~default] to
         make them exhaustive. *)
-    ; switch   : ?default:always list -> 'a cases -> always }
+    ; switch : ?default:always list -> 'a cases -> always
+    }
   [@@deriving sexp_of]
 
   module Encoding : sig
-    type t = Binary | Gray | Onehot [@@deriving sexp_of]
+    type t =
+      | Binary
+      | Gray
+      | Onehot
+    [@@deriving sexp_of]
 
     val to_string : t -> string
   end
@@ -157,7 +163,7 @@ module State_machine : sig
   (** [create reg_spec ~e] creates a new state machine where the state is stored in a
       register created from [reg_spec] and [e]. *)
   val create
-    :  ?encoding : Encoding.t  (** default is [Binary] *)
+    :  ?encoding:Encoding.t (** default is [Binary] *)
     -> (module State with type t = 'a)
     -> Reg_spec.t
     -> enable:Signal.t

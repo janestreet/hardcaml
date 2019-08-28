@@ -3,8 +3,9 @@ open Signal.Const_prop.Comb
 open Test_constant_propagation.Trace
 
 let%expect_test "add" =
-  print_s @@ binary_op_tests "+:" (+:) (+:.);
-  [%expect {|
+  print_s @@ binary_op_tests "+:" ( +: ) ( +:. );
+  [%expect
+    {|
     (+:
       (all_1_bit (
         (1'b0 +: 1'b0 = 1'b0)
@@ -38,10 +39,12 @@ let%expect_test "add" =
       (int_on_right (
         (7'b0011011 +: 12  = 7'b0100111)
         (7'b0011011 +: -12 = 7'b0001111)))) |}]
+;;
 
 let%expect_test "[+:] with one constant" =
   binary_op_tests_with_one_constant "+:" ( +: );
-  [%expect {|
+  [%expect
+    {|
     (1'b0 +: x = x)
     (x +: 1'b0 = x)
     (1'b1
@@ -173,12 +176,13 @@ let%expect_test "[+:] with one constant" =
              (data_in empty))
            (const
              (width 2)
-             (value 0b11)))))))) |}];
+             (value 0b11)))))))) |}]
 ;;
 
 let%expect_test "sub" =
-  print_s @@ binary_op_tests "-:" (-:) (-:.);
-  [%expect {|
+  print_s @@ binary_op_tests "-:" ( -: ) ( -:. );
+  [%expect
+    {|
     (-:
       (all_1_bit (
         (1'b0 -: 1'b0 = 1'b0)
@@ -212,10 +216,12 @@ let%expect_test "sub" =
       (int_on_right (
         (7'b0011011 -: 12  = 7'b0001111)
         (7'b0011011 -: -12 = 7'b0100111)))) |}]
+;;
 
 let%expect_test "[-:] with one constant" =
   binary_op_tests_with_one_constant "-:" ( -: );
-  [%expect {|
+  [%expect
+    {|
     (1'b0
      -:
      x
@@ -377,13 +383,15 @@ let%expect_test "[-:] with one constant" =
              (data_in empty))
            (const
              (width 2)
-             (value 0b11)))))))) |}];
+             (value 0b11)))))))) |}]
 ;;
 
 let%expect_test "multiplication" =
-  print_s @@ [%message "" ~_:(mul_op_tests "*:" ( *: ) : Sexp.t)
-                         ~_:(mul_op_tests "*+" ( *+ ) : Sexp.t) ];
-  [%expect {|
+  print_s
+  @@ [%message
+    "" ~_:(mul_op_tests "*:" ( *: ) : Sexp.t) ~_:(mul_op_tests "*+" ( *+ ) : Sexp.t)];
+  [%expect
+    {|
     ((*:
        (all_1_bit (
          (1'b0 *: 1'b0 = 2'b00)
@@ -452,7 +460,8 @@ let%expect_test "multiplication" =
 
 let%expect_test "multiplication with one constant" =
   binary_op_tests_with_one_constant "*:" ( *: );
-  [%expect {|
+  [%expect
+    {|
     (1'b0 *: x = 2'b00)
     (x *: 1'b0 = 2'b00)
     (1'b1
@@ -598,21 +607,25 @@ let%expect_test "multiplication with one constant" =
              (data_in empty))
            (const
              (width 2)
-             (value 0b11)))))))) |}];
+             (value 0b11)))))))) |}]
 ;;
 
 let%expect_test "negate" =
   let negate = fn1 negate in
   print_s
-    [%message "negate"
-                ~all_1_bit:       (op1 1 ~f:negate : signal fn1 list)
-                ~all_2_bits:      (op1 2 ~f:negate : signal fn1 list)
-                ~all_3_bits:      (op1 3 ~f:negate : signal fn1 list)
-                ~_63_bit_min_max: ([ negate (consti ~width:63 Int.max_value)
-                                   ; negate (consti ~width:63 Int.min_value)
-                                   ; negate (consti ~width:63 (Int.min_value+1)) ]
-                                   : signal fn1 list) ];
-  [%expect {|
+    [%message
+      "negate"
+        ~all_1_bit:(op1 1 ~f:negate : signal fn1 list)
+        ~all_2_bits:(op1 2 ~f:negate : signal fn1 list)
+        ~all_3_bits:(op1 3 ~f:negate : signal fn1 list)
+        ~_63_bit_min_max:
+          ([ negate (consti ~width:63 Int.max_value)
+           ; negate (consti ~width:63 Int.min_value)
+           ; negate (consti ~width:63 (Int.min_value + 1))
+           ]
+           : signal fn1 list)];
+  [%expect
+    {|
     (negate
       (all_1_bit (
         (1'b0 = 1'b0)
@@ -635,3 +648,4 @@ let%expect_test "negate" =
         (63'h3fffffffffffffff = 63'h4000000000000001)
         (63'h4000000000000000 = 63'h4000000000000000)
         (63'h4000000000000001 = 63'h3fffffffffffffff)))) |}]
+;;

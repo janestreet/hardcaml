@@ -11,29 +11,23 @@ open! Import
 type create_fn = Bits.t list -> Bits.t list
 
 (** Implementation of the custom operation using [Bits.Mutable.t] *)
-type create_fn_mutable
-  =  Bits.Mutable.t list
-  -> Bits.Mutable.t list
-  -> unit
+type create_fn_mutable = Bits.Mutable.t list -> Bits.Mutable.t list -> unit
 
 type t [@@deriving sexp_of]
 
 (** One must supply at least one of [create_fn] and [create_fn_mutable]. *)
 val create
-  :  ?create_fn         : create_fn
-  -> ?create_fn_mutable : create_fn_mutable
+  :  ?create_fn:create_fn
+  -> ?create_fn_mutable:create_fn_mutable
   -> unit
-  -> name          : string
-  -> input_widths  : int list
-  -> output_widths : int list
+  -> name:string
+  -> input_widths:int list
+  -> output_widths:int list
   -> t
 
-val name              : t -> string
-val create_fn         : t -> create_fn
+val name : t -> string
+val create_fn : t -> create_fn
 val create_fn_mutable : t -> create_fn_mutable
 
 (** Instantiate a custom operation within a hardcaml design. *)
-val instantiate
-  :  t
-  -> inputs : Signal.t list
-  -> Signal.t list
+val instantiate : t -> inputs:Signal.t list -> Signal.t list

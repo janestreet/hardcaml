@@ -1,33 +1,36 @@
 open! Import
-
 open Signal.Const_prop.Comb
 
 type 'a signed_and_unsigned =
   { unsigned : 'a
-  ; signed   : 'a }
+  ; signed : 'a
+  }
 [@@deriving sexp_of]
 
 let bits ~f bits = List.init (1 lsl bits) ~f:(fun i -> consti ~width:bits i |> f)
+let convert ~uint ~sint const = { signed = sint const; unsigned = uint const }
 
-let convert ~uint ~sint const =
-  { signed   = sint const
-  ; unsigned = uint const}
-
-let convert_bits ?(f=Fn.id) ~uint ~sint b = List.map ~f:(convert ~uint ~sint) (bits ~f b)
+let convert_bits ?(f = Fn.id) ~uint ~sint b =
+  List.map ~f:(convert ~uint ~sint) (bits ~f b)
+;;
 
 let pad_zero n c = c @: zero n
 
 let%expect_test "Bits.to_sint" =
-  print_s [%message ""
-                      ~should_be_minus_1:(Bits.to_sint (Bits.constb "1") : int)
-                      ~should_be_minus_2:(Bits.to_sint (Bits.constb "10") : int)
-                      ~should_be_min_int:(Bits.to_sint Bits.(vdd @: zero 62) : int)
-                      ~should_be_:(Bits.to_sint Bits.(vdd @: zero 63) : int)];
-  [%expect {|
+  print_s
+    [%message
+      ""
+        ~should_be_minus_1:(Bits.to_sint (Bits.constb "1") : int)
+        ~should_be_minus_2:(Bits.to_sint (Bits.constb "10") : int)
+        ~should_be_min_int:(Bits.to_sint Bits.(vdd @: zero 62) : int)
+        ~should_be_:(Bits.to_sint Bits.(vdd @: zero 63) : int)];
+  [%expect
+    {|
     ((should_be_minus_1 -1)
      (should_be_minus_2 -2)
      (should_be_min_int -4611686018427387904)
      (should_be_        0)) |}]
+;;
 
 let%expect_test "to_[s]int" =
   let convert_bits = convert_bits ~uint:to_int ~sint:to_sint in
@@ -40,8 +43,9 @@ let%expect_test "to_[s]int" =
         ~bits_4:(convert_bits 4 : int signed_and_unsigned list)
         ~at_msb:(convert_bits ~f:(pad_zero 61) 2 : int signed_and_unsigned list)
         ~across_msb:(convert_bits ~f:(pad_zero 62) 2 : int signed_and_unsigned list)
-        ~above_msb:(convert_bits ~f:(pad_zero 63) 2 : int signed_and_unsigned list) ];
-  [%expect {|
+        ~above_msb:(convert_bits ~f:(pad_zero 63) 2 : int signed_and_unsigned list)];
+  [%expect
+    {|
     ((bits_1 (
        ((unsigned 0) (signed 0))
        ((unsigned 1) (signed -1))))
@@ -99,6 +103,7 @@ let%expect_test "to_[s]int" =
        ((unsigned 0) (signed 0))
        ((unsigned 0) (signed 0))
        ((unsigned 0) (signed 0))))) |}]
+;;
 
 let%expect_test "to_[s]int32" =
   let convert_bits = convert_bits ~uint:to_int32 ~sint:to_sint32 in
@@ -111,8 +116,9 @@ let%expect_test "to_[s]int32" =
         ~bits_4:(convert_bits 4 : int32 signed_and_unsigned list)
         ~at_msb:(convert_bits ~f:(pad_zero 30) 2 : int32 signed_and_unsigned list)
         ~across_msb:(convert_bits ~f:(pad_zero 61) 2 : int32 signed_and_unsigned list)
-        ~above_msb:(convert_bits ~f:(pad_zero 32) 2 : int32 signed_and_unsigned list) ];
-  [%expect {|
+        ~above_msb:(convert_bits ~f:(pad_zero 32) 2 : int32 signed_and_unsigned list)];
+  [%expect
+    {|
    ((bits_1 (
       ((unsigned 0) (signed 0))
       ((unsigned 1) (signed -1))))
@@ -162,6 +168,7 @@ let%expect_test "to_[s]int32" =
       ((unsigned 0) (signed 0))
       ((unsigned 0) (signed 0))
       ((unsigned 0) (signed 0))))) |}]
+;;
 
 let%expect_test "to_[s]int64" =
   let convert_bits = convert_bits ~uint:to_int64 ~sint:to_sint64 in
@@ -174,8 +181,9 @@ let%expect_test "to_[s]int64" =
         ~bits_4:(convert_bits 4 : int64 signed_and_unsigned list)
         ~at_msb:(convert_bits ~f:(pad_zero 62) 2 : int64 signed_and_unsigned list)
         ~across_msb:(convert_bits ~f:(pad_zero 63) 2 : int64 signed_and_unsigned list)
-        ~above_msb:(convert_bits ~f:(pad_zero 64) 2 : int64 signed_and_unsigned list) ];
-  [%expect {|
+        ~above_msb:(convert_bits ~f:(pad_zero 64) 2 : int64 signed_and_unsigned list)];
+  [%expect
+    {|
    ((bits_1 (
       ((unsigned 0) (signed 0))
       ((unsigned 1) (signed -1))))
@@ -233,13 +241,14 @@ let%expect_test "to_[s]int64" =
       ((unsigned 0) (signed 0))
       ((unsigned 0) (signed 0))
       ((unsigned 0) (signed 0))))) |}]
+;;
 
 let%expect_test "to_bstr" =
-  print_s [%sexp ((List.map ~f:(fun c -> const c |> to_bstr)
-                     [ "0"
-                     ; "1"
-                     ; "0000"
-                     ; "1111"
-                     ; "10011"
-                     ; "1101000101010101011010" ]) : string list)];
+  print_s
+    [%sexp
+      (List.map
+         ~f:(fun c -> const c |> to_bstr)
+         [ "0"; "1"; "0000"; "1111"; "10011"; "1101000101010101011010" ]
+       : string list)];
   [%expect {| (0 1 0000 1111 10011 1101000101010101011010) |}]
+;;
