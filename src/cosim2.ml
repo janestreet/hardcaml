@@ -351,7 +351,7 @@ module Make (SIM : Simulator) = struct
         assert (w > 32);
         Bits.consti32 ~width:32 h :: f (w - 32) t
     in
-    Bits.concat (f w x)
+    Bits.concat_msb (f w x)
   ;;
 
   let rec read_nets server =

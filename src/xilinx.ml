@@ -127,8 +127,7 @@ module Unisim = struct
        ()
        ~name:("LUT" ^ w')
        ~parameters:[ Parameter.create ~name:"INIT" ~value:(String init) ]
-       ~inputs:
-         (List.mapi (bits sel |> List.rev) ~f:(fun i b -> "I" ^ Int.to_string i, b))
+       ~inputs:(List.mapi (bits_lsb sel) ~f:(fun i b -> "I" ^ Int.to_string i, b))
        ~outputs:[ "O", 1 ])
     #o
       "O"
@@ -229,7 +228,7 @@ module Unisim = struct
   let ram1s a d clk we =
     let width = width a in
     let size = 1 lsl width in
-    let a = List.mapi (a |> bits |> List.rev) ~f:(fun i s -> "A" ^ Int.to_string i, s) in
+    let a = List.mapi (bits_lsb a) ~f:(fun i s -> "A" ^ Int.to_string i, s) in
     (Instantiation.create
        ()
        ~name:("RAM" ^ Int.to_string size ^ "X1S")
@@ -274,15 +273,15 @@ module XMake (X : S) (L : LutSize) = struct
 
   let x_map f l =
     let w = List.hd_exn l |> width in
-    let lut n = x_lut f (List.map l ~f:(fun s -> select s n n) |> List.rev |> concat) in
+    let lut n = x_lut f (List.map l ~f:(fun s -> select s n n) |> concat_lsb) in
     let rec build n = if n = w then [] else lut n :: build (n + 1) in
-    concat (build 0 |> List.rev)
+    concat_lsb (build 0)
   ;;
 
   let x_and a b = x_map (i0 &: i1) [ a; b ]
   let x_or a b = x_map (i0 |: i1) [ a; b ]
   let x_xor a b = x_map (i0 ^: i1) [ a; b ]
-  let x_not a = a |> bits |> List.map ~f:X.inv |> concat
+  let x_not a = bits_msb a |> List.map ~f:X.inv |> concat_msb
   let inputs n = List.take [ i0; i1; i2; i3; i4; i5 ] n
 
   let reduce_inputs op n =
@@ -322,15 +321,11 @@ module XMake (X : S) (L : LutSize) = struct
       c, s
     in
     let r, c =
-      List.fold2_exn
-        (bits a |> List.rev)
-        (bits b |> List.rev)
-        ~init:([], c)
-        ~f:(fun (r, c) a b ->
-          let c, s = lut c a b in
-          s :: r, c)
+      List.fold2_exn (bits_lsb a) (bits_lsb b) ~init:([], c) ~f:(fun (r, c) a b ->
+        let c, s = lut c a b in
+        s :: r, c)
     in
-    c, concat r
+    c, concat_msb r
   ;;
 
   let x_add a b = snd (x_add_carry (i0 ^: i1) S.gnd a b)
@@ -346,14 +341,14 @@ module XMake (X : S) (L : LutSize) = struct
     let zip a b = List.map2_exn a b ~f:(fun a b -> a, b) in
     let r, c =
       List.fold2_exn
-        (zip (bits a |> List.rev) (bits a' |> List.rev))
-        (bits b |> List.rev)
+        (zip (bits_lsb a) (bits_lsb a'))
+        (bits_lsb b)
         ~init:([], c)
         ~f:(fun (r, c) (a, a') b ->
           let c, s = lut op x c (a, a') b in
           s :: r, c)
     in
-    c, concat r
+    c, concat_msb r
   ;;
 
   let x_mux_add x (a, a') b =
@@ -496,7 +491,7 @@ module XMake (X : S) (L : LutSize) = struct
         let d = List.map d ~f:(fun s -> bit s i) in
         x_mux_bit s d :: mux_bits (i + 1))
     in
-    mux_bits 0 |> List.rev |> Signal.concat
+    mux_bits 0 |> List.rev |> Signal.concat_msb
   ;;
 
   (* multiplier *)
@@ -511,8 +506,8 @@ module XMake (X : S) (L : LutSize) = struct
       c, s
     in
     let x_mul_2 a b =
-      let a1 = concat [ ex a; ex a; a ] |> bits |> List.rev in
-      let a0 = concat [ ex a; a; S.gnd ] |> bits |> List.rev in
+      let a1 = concat_msb [ ex a; ex a; a ] |> bits_lsb in
+      let a0 = concat_msb [ ex a; a; S.gnd ] |> bits_lsb in
       let rec build a0 a1 b0 b1 c =
         match a0, a1 with
         | [], [] -> []
@@ -522,10 +517,10 @@ module XMake (X : S) (L : LutSize) = struct
           s :: build a0t a1t b0 b1 c
         | _ -> failwith "x_mul_2"
       in
-      build a0 a1 (bit b 0) (bit b 1) S.gnd |> List.rev |> concat
+      build a0 a1 (bit b 0) (bit b 1) S.gnd |> concat_lsb
     in
     let x_mul_1 a b =
-      let a = concat [ ex a; ex a; a ] in
+      let a = concat_msb [ ex a; ex a; a ] in
       x_and a (repeat b (width a))
     in
     let rec build_products i a b =
@@ -646,9 +641,9 @@ module XSynthesize (X : S) (L : LutSize) = struct
         then r.reg_enable |: clear, mux2 clear (zero (width signal)) d
         else r.reg_enable |: clear, mux2 clear r.reg_clear_value d
       in
-      List.mapi (bits d) ~f:(fun i d ->
+      List.mapi (bits_msb d) ~f:(fun i d ->
         if vreset i then X.fdpe clk ena reset d else X.fdce clk ena reset d)
-      |> concat
+      |> concat_msb
     | _ -> T.transform find signal
   ;;
 end

@@ -13,7 +13,7 @@ module Gates = struct
   let width x = List.length x
   let of_constant = Constant.to_bit_list
   let to_constant = Constant.of_bit_list
-  let concat l = List.concat l
+  let concat_msb l = List.concat l
 
   let select s h l =
     let rec sel b i =

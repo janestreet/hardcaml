@@ -675,7 +675,7 @@ module Base = struct
 
   let op2 op len a b = Op (make_id len [ a; b ], op)
 
-  let concat a =
+  let concat_msb a =
     (* automatically concatenate successive constants *)
     let rec optimise_consts l =
       match l with
@@ -875,17 +875,17 @@ module Const_prop = struct
       | _ -> a <: b
     ;;
 
-    let concat l =
+    let concat_msb l =
       let rec f l nl =
         match l with
         | [] -> List.rev nl
         | h :: t when is_const h ->
           (match nl with
-           | h' :: t' when is_const h' -> f t (cst (Bits.concat [ cv h'; cv h ]) :: t')
+           | h' :: t' when is_const h' -> f t (cst (Bits.concat_msb [ cv h'; cv h ]) :: t')
            | _ -> f t (h :: nl))
         | h :: t -> f t (h :: nl)
       in
-      concat (f l [])
+      concat_msb (f l [])
     ;;
 
     (* {[

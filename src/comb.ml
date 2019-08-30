@@ -16,12 +16,12 @@ module Make_primitives (Gates : Gates) = struct
   let reduce_bits def op a = List.fold (bits_lsb a) ~init:def ~f:op
 
   let repeat s n =
-    if n <= 0 then empty else concat (Array.to_list (Array.init n ~f:(fun _ -> s)))
+    if n <= 0 then empty else concat_msb (Array.to_list (Array.init n ~f:(fun _ -> s)))
   ;;
 
-  let concat_e l =
+  let concat_msb_e l =
     let x = List.filter l ~f:(fun t -> not (is_empty t)) in
-    if List.is_empty x then empty else concat x
+    if List.is_empty x then empty else concat_msb x
   ;;
 
   let ripple_carry_adder cin a b =
@@ -37,7 +37,7 @@ module Make_primitives (Gates : Gates) = struct
         let sum, carry_out = fa carry_in a b in
         sum :: sum_in, carry_out)
     in
-    concat sum
+    concat_msb sum
   ;;
 
   (** addition *)
@@ -53,8 +53,8 @@ module Make_primitives (Gates : Gates) = struct
         (bits_lsb b)
         ~init:(0, repeat gnd (width a))
         ~f:(fun (i, acc) b ->
-          let acc = concat_e [ gnd; acc ] in
-          let a = concat_e [ gnd; a; repeat gnd i ] in
+          let acc = concat_msb_e [ gnd; acc ] in
+          let a = concat_msb_e [ gnd; a; repeat gnd i ] in
           i + 1, acc +: (a &: repeat b (width a)))
     in
     r
@@ -69,8 +69,8 @@ module Make_primitives (Gates : Gates) = struct
         (bits_lsb b)
         ~init:(0, repeat gnd (width a))
         ~f:(fun (i, acc) b ->
-          let acc = concat_e [ msb acc; acc ] in
-          let a = concat_e [ msb a; a; repeat gnd i ] in
+          let acc = concat_msb_e [ msb acc; acc ] in
+          let a = concat_msb_e [ msb a; a; repeat gnd i ] in
           i + 1, (if i = last then (-:) else (+:)) acc (a &: repeat b (width a)))
     in
     r
@@ -85,7 +85,7 @@ module Make_primitives (Gates : Gates) = struct
   (** less than *)
   let ( <: ) a b =
     let w = width a in
-    let a, b = concat [ gnd; a ], concat [ gnd; b ] in
+    let a, b = concat_msb [ gnd; a ], concat_msb [ gnd; b ] in
     let d = a -: b in
     select d w w
   ;;
@@ -242,14 +242,16 @@ module Make (Bits : Primitives) = struct
 
   let concat_check_not_empty s x = if is_empty x then raise_concat_empty s
 
-  let concat s =
+  let concat_msb s =
     List.iter s ~f:(concat_check_not_empty s);
     if List.is_empty s then raise_concat_empty_list ();
-    Bits.concat s
+    Bits.concat_msb s
   ;;
 
-  let ( @: ) a b = concat [ a; b ]
-  let concat_e s = Bits.concat (List.filter s ~f:(fun b -> not (Bits.is_empty b)))
+  let concat_lsb s = concat_msb (List.rev s)
+  let ( @: ) a b = concat_msb [ a; b ]
+  let concat_msb_e s = concat_msb (List.filter s ~f:(fun b -> not (Bits.is_empty b)))
+  let concat_lsb_e s = concat_lsb (List.filter s ~f:(fun b -> not (Bits.is_empty b)))
   let vdd = constb "1" -- "vdd"
   let gnd = constb "0" -- "gnd"
   let is_vdd t = equal t vdd
@@ -601,14 +603,10 @@ module Make (Bits : Primitives) = struct
   let to_int a = to_constant a |> Constant.to_int
   let to_bstr a = to_constant a |> Constant.to_binary_string
   let sexp_of_t = Bits.sexp_of_t
-
-  let bits s =
-    let a = Array.init (width s) ~f:(fun i -> bit s i) in
-    List.rev (Array.to_list a)
-  ;;
-
-  let to_array b = Array.of_list (List.rev (bits b))
-  let of_array l = concat (List.rev (Array.to_list l))
+  let bits_lsb s = List.init (width s) ~f:(bit s)
+  let bits_msb s = bits_lsb s |> List.rev
+  let to_array b = Array.of_list (bits_lsb b)
+  let of_array l = concat_lsb (Array.to_list l)
 
   (* {[
        let rec repeat s n =
@@ -629,13 +627,15 @@ module Make (Bits : Primitives) = struct
         if n = 0
         then res_s
         else if pwr land n <> 0
-        then build (pwr * 2) (rep_s @: rep_s) (concat_e [ rep_s; res_s ]) (n - pwr)
+        then build (pwr * 2) (rep_s @: rep_s) (concat_msb_e [ rep_s; res_s ]) (n - pwr)
         else build (pwr * 2) (rep_s @: rep_s) res_s n
       in
       build 1 s empty n
   ;;
 
-  let split_in_half s =
+  (* It doesn't seem worth providing an [_lsb] variant for this function - it just flips
+     the order of the tuple which can be done in the let binding anyway. *)
+  let split_in_half_msb s =
     let w = width s in
     select s (w - 1) (w / 2), select s ((w / 2) - 1) 0
   ;;
@@ -664,17 +664,23 @@ module Make (Bits : Primitives) = struct
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
-  let split ?(exact = true) ~part_width t_in =
+  let split ?(exact = true) ~part_width ~sel ~drop t_in =
     if is_empty t_in then raise_split_empty_input ();
     if part_width <= 0 then raise_split_part_width part_width;
     let rec split t =
       if width t < part_width && exact then raise_split_inexact_split t_in part_width t;
       if width t <= part_width
       then [ t ]
-      else sel_bottom t part_width :: split (drop_bottom t part_width)
+      else sel t part_width :: split (drop t part_width)
     in
     split t_in
   ;;
+
+  let split_lsb ?exact ~part_width =
+    split ?exact ~part_width ~sel:sel_bottom ~drop:drop_bottom
+  ;;
+
+  let split_msb ?exact ~part_width = split ?exact ~part_width ~sel:sel_top ~drop:drop_top
 
   let[@cold] raise_shift_negative op shift =
     raise_s
@@ -690,7 +696,7 @@ module Make (Bits : Primitives) = struct
     then a
     else if shift >= width a
     then zero (width a)
-    else concat [ select a (width a - 1 - shift) 0; zero shift ]
+    else concat_msb [ select a (width a - 1 - shift) 0; zero shift ]
   ;;
 
   let srl a shift =
@@ -699,7 +705,7 @@ module Make (Bits : Primitives) = struct
     then a
     else if shift >= width a
     then zero (width a)
-    else concat [ zero shift; select a (width a - 1) shift ]
+    else concat_msb [ zero shift; select a (width a - 1) shift ]
   ;;
 
   let sra a shift =
@@ -708,7 +714,7 @@ module Make (Bits : Primitives) = struct
     then a
     else if shift >= width a
     then repeat (msb a) (width a)
-    else concat [ repeat (msb a) shift; select a (width a - 1) shift ]
+    else concat_msb [ repeat (msb a) shift; select a (width a - 1) shift ]
   ;;
 
   let rec rotl d shift =
@@ -749,7 +755,7 @@ module Make (Bits : Primitives) = struct
     if w = x
     then s
     else if w > x
-    then concat [ repeat gnd (w - x); s ]
+    then concat_msb [ repeat gnd (w - x); s ]
     else select s (w - 1) 0
   ;;
 
@@ -758,7 +764,7 @@ module Make (Bits : Primitives) = struct
     if w = x
     then s
     else if w > x
-    then concat [ repeat (msb s) (w - x); s ]
+    then concat_msb [ repeat (msb s) (w - x); s ]
     else select s (w - 1) 0
   ;;
 
@@ -790,9 +796,9 @@ module Make (Bits : Primitives) = struct
     | _ -> List.reduce_exn s ~f:(fun acc x -> op acc x)
   ;;
 
-  let ( ||: ) a b = reduce ~f:( |: ) (bits a) |: reduce ~f:( |: ) (bits b)
-  let ( &&: ) a b = reduce ~f:( |: ) (bits a) &: reduce ~f:( |: ) (bits b)
-  let reverse a = concat (List.rev (bits a))
+  let ( ||: ) a b = reduce ~f:( |: ) (bits_msb a) |: reduce ~f:( |: ) (bits_msb b)
+  let ( &&: ) a b = reduce ~f:( |: ) (bits_msb a) &: reduce ~f:( |: ) (bits_msb b)
+  let reverse a = concat_msb (bits_lsb a)
 
   let mod_counter ~max c =
     let w = width c in
@@ -884,7 +890,7 @@ module Make (Bits : Primitives) = struct
     tree_or_reduce_binary_operator
       ?branching_factor
       ~f:( +: )
-      (List.map (bits t) ~f:(fun d -> uresize d result_width))
+      (List.map (bits_msb t) ~f:(fun d -> uresize d result_width))
   ;;
 
   let leading_zeros_of_bits_list ?branching_factor d =
@@ -898,22 +904,22 @@ module Make (Bits : Primitives) = struct
 
   let leading_ones ?branching_factor t =
     if width t = 0 then raise_of_empty "[leading_ones]";
-    leading_zeros_of_bits_list (bits ~:t) ?branching_factor
+    leading_zeros_of_bits_list (bits_msb ~:t) ?branching_factor
   ;;
 
   let trailing_ones ?branching_factor t =
     if width t = 0 then raise_of_empty "[trailing_ones]";
-    leading_zeros_of_bits_list (bits ~:t |> List.rev) ?branching_factor
+    leading_zeros_of_bits_list (bits_lsb ~:t) ?branching_factor
   ;;
 
   let leading_zeros ?branching_factor t =
     if width t = 0 then raise_of_empty "[leading_zeros]";
-    leading_zeros_of_bits_list (bits t) ?branching_factor
+    leading_zeros_of_bits_list (bits_msb t) ?branching_factor
   ;;
 
   let trailing_zeros ?branching_factor t =
     if width t = 0 then raise_of_empty "[trailing_zeros]";
-    leading_zeros_of_bits_list (bits t |> List.rev) ?branching_factor
+    leading_zeros_of_bits_list (bits_lsb t) ?branching_factor
   ;;
 
   let is_pow2 ?branching_factor t =
@@ -951,12 +957,12 @@ module Make (Bits : Primitives) = struct
         let l1 = List.map b2 ~f:(( &: ) a) in
         l1 @ l2
     in
-    concat (build (bits s))
+    concat_msb (build (bits_msb s))
   ;;
 
   let onehot_to_binary x =
     let n = num_bits_to_represent (width x - 1) in
-    let x = List.rev (bits x) in
+    let x = bits_lsb x in
     let rec f i =
       if i = n
       then []
@@ -972,7 +978,7 @@ module Make (Bits : Primitives) = struct
         | [] -> gnd :: f (i + 1)
         | _ -> reduce ~f:( |: ) g :: f (i + 1))
     in
-    concat List.(rev (f 0))
+    concat_lsb (f 0)
   ;;
 
   let binary_to_gray b = b ^: srl b 1

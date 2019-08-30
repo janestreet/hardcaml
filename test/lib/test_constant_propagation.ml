@@ -131,12 +131,12 @@ let%expect_test "concat" =
       ""
         ~concat:
           (List.map
-             ~f:(fn1 concat)
+             ~f:(fn1 concat_msb)
              [ [ vdd; gnd ]; [ vdd; gnd; vdd ]; [ one 4; ones 3; zero 2 ] ]
            : signal list fn1 list)
         ~concat_e:
           (List.map
-             ~f:(fn1 concat_e)
+             ~f:(fn1 concat_msb_e)
              [ [ vdd; empty ]
              ; [ empty; vdd ]
              ; [ empty; vdd; empty; gnd ]
@@ -190,16 +190,16 @@ let%expect_test "concat" =
 ;;
 
 let%expect_test "concat empty list" =
-  show_raise (fun () -> concat []);
+  show_raise (fun () -> concat_msb []);
   [%expect {|
     (raised "[concat] got empty list") |}];
-  show_raise (fun () -> concat_e []);
+  show_raise (fun () -> concat_msb_e []);
   [%expect {|
     (raised "[concat] got empty list") |}]
 ;;
 
-let%expect_test "concat empty signal" =
-  show_raise (fun () -> concat [ empty ]);
+let%expect_test "concat_msb empty signal" =
+  show_raise (fun () -> concat_msb [ empty ]);
   [%expect {|
     (raised ("[concat] got [empty] input" (empty))) |}]
 ;;
@@ -549,7 +549,7 @@ let%expect_test "[select]" =
     for split = 0 to width - 2 do
       incr num_tests;
       let output =
-        concat_e [ select input (width - 1) (split + 1); select input split 0 ]
+        concat_msb_e [ select input (width - 1) (split + 1); select input split 0 ]
       in
       require
         [%here]
@@ -594,7 +594,7 @@ let%expect_test "select" =
         ~sel_top:
           (List.init 5 ~f:(fun i -> fn2 sel_top (const "11100") (i + 1))
            : (signal, int) fn2 list)
-        ~bits_of_101:(bits (const "101") : signal list)];
+        ~bits_of_101:(bits_msb (const "101") : signal list)];
   [%expect
     {|
     (select
@@ -691,7 +691,7 @@ let%expect_test "insert" =
 ;;
 
 let%expect_test "split_in_half" =
-  let create b = concat_e [ ones ((b + 1) / 2); zero (b / 2) ] in
+  let create b = concat_msb_e [ ones ((b + 1) / 2); zero (b / 2) ] in
   let sexp_of_left_and_right (left, right) =
     [%message "" (left : signal) (right : signal)]
   in
@@ -699,7 +699,7 @@ let%expect_test "split_in_half" =
     [%message
       "split"
         ~_:
-          (List.init 8 ~f:(fun b -> split_in_half (create (b + 2)))
+          (List.init 8 ~f:(fun b -> split_in_half_msb (create (b + 2)))
            : left_and_right list)];
   [%expect
     {|
@@ -715,9 +715,9 @@ let%expect_test "split_in_half" =
   [%expect {| |}]
 ;;
 
-let%expect_test "split" =
+let%expect_test "split_lsb" =
   let split ?exact ~part_width t =
-    print_s [%sexp (split ?exact ~part_width t : signal list)]
+    print_s [%sexp (split_lsb ?exact ~part_width t : signal list)]
   in
   let split_raises ~part_width t =
     require_does_raise [%here] (fun () -> split ~part_width t)
@@ -742,6 +742,35 @@ let%expect_test "split" =
      (width_of_last_part 3)) |}];
   split ~exact:false ~part_width:4 (consti ~width:15 0x4321);
   [%expect {| (4'b0001 4'b0010 4'b0011 3'b100) |}]
+;;
+
+let%expect_test "split_msb" =
+  let split ?exact ~part_width t =
+    print_s [%sexp (split_msb ?exact ~part_width t : signal list)]
+  in
+  let split_raises ~part_width t =
+    require_does_raise [%here] (fun () -> split ~part_width t)
+  in
+  split_raises ~part_width:0 vdd;
+  [%expect {| ("[split] got [part_width <= 0]" (part_width 0)) |}];
+  split_raises ~part_width:1 empty;
+  [%expect {|
+    "[split] got [empty] input" |}];
+  split ~part_width:1 (consti ~width:2 1);
+  [%expect {| (1'b0 1'b1) |}];
+  split ~part_width:2 (consti ~width:2 1);
+  [%expect {| (2'b01) |}];
+  split ~part_width:4 (consti ~width:16 0x4321);
+  [%expect {| (4'b0100 4'b0011 4'b0010 4'b0001) |}];
+  split_raises ~part_width:4 (consti ~width:15 0x4321);
+  [%expect
+    {|
+    ("[split ~exact:true] unable to split exactly"
+     (input_width        15)
+     (part_width         4)
+     (width_of_last_part 3)) |}];
+  split ~exact:false ~part_width:4 (consti ~width:15 0x4321);
+  [%expect {| (4'b1000 4'b0110 4'b0100 3'b001) |}]
 ;;
 
 let%expect_test "shifting" =

@@ -107,7 +107,7 @@ let%expect_test "binary ops" =
   print_signal ~:a;
   print_signal (a <: b);
   print_signal (a ==: b);
-  print_signal (concat [ a; b; a ]);
+  print_signal (concat_msb [ a; b; a ]);
   [%expect
     {|
     (add (width 4) (arguments (a 0b1101)))
@@ -136,7 +136,7 @@ let%expect_test "printing at leaves" =
     ; wireof ~:a
     ; wireof (mux2 vdd a b)
     ; wireof (bit a 1)
-    ; wireof (concat [ a; b ])
+    ; wireof (concat_msb [ a; b ])
     ; wireof (reg (Reg_spec.create () ~clock) ~enable:empty a)
     ; wireof
         (memory
@@ -183,7 +183,7 @@ let%expect_test "printing at leaves" =
 
 let%expect_test "printing at leaves - different types" =
   let a, b = input "a" 2, input "b" 2 in
-  print_signal (concat [ concat [ a; b ]; wire 2 -- "cat"; a -- "cat" ]);
+  print_signal (concat_msb [ concat_msb [ a; b ]; wire 2 -- "cat"; a -- "cat" ]);
   [%expect {|
     (cat (width 8) (arguments (cat cat (cat a)))) |}]
 ;;

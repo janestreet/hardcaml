@@ -316,7 +316,7 @@ module Fpga_nand = Comb.Make (Comb.Make_primitives (Make_nand_gates (struct
 
                                                       let nand a b =
                                                         assert (width a = width b);
-                                                        concat (List.map2_exn (bits a) (bits b) ~f:nand_lut)
+                                                        concat_msb (List.map2_exn (bits_msb a) (bits_msb b) ~f:nand_lut)
                                                       ;;
                                                     end)))
 

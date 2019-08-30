@@ -38,7 +38,7 @@ module MakePureCombTransform (B : MakePureCombTransform_arg) = struct
          | Signal_eq -> op2 B.( ==: )
          | Signal_not -> B.( ~: ) (dep 0)
          | Signal_lt -> op2 B.( <: )
-         | Signal_cat -> B.concat (deps signal |> List.map ~f:find_uid)
+         | Signal_cat -> B.concat_msb (deps signal |> List.map ~f:find_uid)
          | Signal_mux ->
            let sel = List.hd_exn (deps signal) |> find_uid in
            let cases = List.tl_exn (deps signal) |> List.map ~f:find_uid in
@@ -180,7 +180,7 @@ module MakeCombTransform (B : Comb.Primitives with type t = Signal.t) = struct
          | Signal_eq -> op2 B.( ==: )
          | Signal_not -> B.( ~: ) (dep 0)
          | Signal_lt -> op2 B.( <: )
-         | Signal_cat -> B.concat (deps signal |> List.map ~f:find_uid)
+         | Signal_cat -> B.concat_msb (deps signal |> List.map ~f:find_uid)
          | Signal_mux ->
            let sel = List.hd_exn (deps signal) |> find_uid in
            let cases = List.tl_exn (deps signal) |> List.map ~f:find_uid in

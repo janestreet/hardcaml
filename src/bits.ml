@@ -300,7 +300,7 @@ module Mutable = struct
       let to_constant = to_constant
       let add_widths w y = w + width y
 
-      let concat l =
+      let concat_msb l =
         let w = List.fold l ~init:0 ~f:add_widths in
         let c = create w in
         concat c l;

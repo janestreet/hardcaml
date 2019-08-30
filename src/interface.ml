@@ -196,7 +196,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     let consts i = map2 port_widths i ~f:(fun width -> Comb.consti ~width)
 
     let pack ?(rev = false) t =
-      if rev then to_list t |> Comb.concat else to_list_rev t |> Comb.concat
+      if rev then to_list t |> Comb.concat_msb else to_list_rev t |> Comb.concat_msb
     ;;
 
     let unpack ?(rev = false) comb =
@@ -212,7 +212,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
 
     let mux s l = map ~f:(Comb.mux s) (of_interface_list l)
     let mux2 s h l = mux s [ l; h ]
-    let concat l = map ~f:Comb.concat (of_interface_list l)
+    let concat l = map ~f:Comb.concat_msb (of_interface_list l)
   end
 
   module type Comb = Comb with type 'a interface := 'a t

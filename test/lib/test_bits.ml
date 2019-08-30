@@ -220,7 +220,7 @@ module Bits_module = struct
 
       let ( +: ) a b = ~:(a +: b)
       let ( *: ) a b = ~:(a *: b)
-      let concat d = ~:(concat d)
+      let concat_msb d = ~:(concat_msb d)
       let mux s d = ~:(mux s d)
       let select d h l = ~:(select d h l)
     end
@@ -376,8 +376,8 @@ module Make (R : Require) = struct
 
     (* test concatenation *)
     let cat here min_bit_width max_bit_width =
-      let concat1 d = B1.concat @@ List.map d ~f:const1 in
-      let concat2 d = B2.concat @@ List.map d ~f:const2 in
+      let concat1 d = B1.concat_msb @@ List.map d ~f:const1 in
+      let concat2 d = B2.concat_msb @@ List.map d ~f:const2 in
       let cnt = 1 + Random.int 8 in
       let args =
         Array.to_list

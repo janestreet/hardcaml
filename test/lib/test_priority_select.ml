@@ -4,8 +4,7 @@ open! Import
 
 let cases index =
   index
-  |> Bits.bits
-  |> List.rev
+  |> Bits.bits_lsb
   |> List.mapi ~f:(fun i valid ->
     { With_valid.valid; value = Bits.consti ~width:8 (i + 1) })
 ;;

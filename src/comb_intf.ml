@@ -50,7 +50,7 @@ module type Gates = sig
   val to_constant : t -> Constant.t
 
   (** concatenates a list of signals *)
-  val concat : t list -> t
+  val concat_msb : t list -> t
 
   (** select a range of bits *)
   val select : t -> int -> int -> t
@@ -171,11 +171,18 @@ module type S = sig
       [let c = concat \[ a; b; c \] in ...]
 
       [concat] raises if [ts] is empty or if any [t] in [ts] is empty. *)
-  val concat : t list -> t
+  val concat_msb : t list -> t
+
+  (** Similar to [concat_msb] except the lsb of the head of the list will become the lsb
+      of the result. *)
+  val concat_lsb : t list -> t
 
 
-  (** same as [concat] except empty signals are first filtered out *)
-  val concat_e : t list -> t
+  (** same as [concat_msb] except empty signals are first filtered out *)
+  val concat_msb_e : t list -> t
+
+  (** same as [concat_lsb] except empty signals are first filtered out *)
+  val concat_lsb_e : t list -> t
 
   (** concatenate two signals.
 
@@ -400,8 +407,11 @@ module type S = sig
   (** create binary string from signal *)
   val to_bstr : t -> string
 
-  (** convert signal to a list of bits, msb first *)
-  val bits : t -> t list
+  (** convert signal to a list of bits with msb at head of list *)
+  val bits_msb : t -> t list
+
+  (** convert signal to a list of bits with lsb at head of list *)
+  val bits_lsb : t -> t list
 
   (** [to_array s] convert signal [s] to array of bits with lsb at index 0 *)
   val to_array : t -> t array
@@ -412,13 +422,33 @@ module type S = sig
   (** repeat signal n times *)
   val repeat : t -> int -> t
 
-  (** split signal in half *)
-  val split_in_half : t -> t * t
+  (** split signal in half. The most significant bits will be in the left half of the
+      returned tuple. *)
+  val split_in_half_msb : t -> t * t
 
-  (** Split signal into a list of signals with width equal to [part_width].  The least
-      significant bits are at the head of the returned list.  If [exact] is [true] the
-      input signal width must be exactly divisable by [part_width]. *)
-  val split : ?exact:bool (** default is [true] **) -> part_width:int -> t -> t list
+  (** Split signal into a list of signals with width equal to [part_width]. The least
+      significant bits are at the head of the returned list. If [exact] is [true] the
+      input signal width must be exactly divisable by [part_width]. When [exact] is
+      [false] and the input signal width is not exactly divisible by [part_width], the
+      last element will contains residual bits.
+
+      eg:
+
+      {v
+        split_lsb ~part_width:4 16b0001_0010_0011_0100 =
+          [ 4b0100; 4b0011; 4b0010; 4b0001 ]
+
+        split_lsb ~exact:false ~part_width:4 17b11_0001_0010_0011_0100 =
+          [ 4b0100; 4b0011; 4b0010; 4b0001; 2b11 ]
+      v}
+  *)
+  val split_lsb : ?exact:bool (** default is [true] **) -> part_width:int -> t -> t list
+
+  (** Like [split_lsb] except the most significant bits are at the head of the returned
+      list. Residual bits when [exact] is [false] goes to the last element of the list,
+      so in the general case [split_lsb] is not necessarily equivalent to
+      [split_msb |> List.rev]. *)
+  val split_msb : ?exact:bool (** default is [true] **) -> part_width:int -> t -> t list
 
   (** shift left logical *)
   val sll : t -> int -> t

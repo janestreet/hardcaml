@@ -222,7 +222,7 @@ module T = struct
 
   (* XXX some of the harder operations *)
 
-  let concat l =
+  let concat_msb l =
     let c_width = List.fold l ~init:0 ~f:(fun a b -> a + width b) in
     let c_words = words c_width in
     let c = create_words c_width in
@@ -281,7 +281,7 @@ module T = struct
   ;;
 
   (* a few functions introduced a earlier for the multipliers *)
-  let ( @: ) a b = concat [ a; b ]
+  let ( @: ) a b = concat_msb [ a; b ]
   let consti bits n = words_of_int bits n, bits
   let zero n = consti n 0
 
@@ -649,7 +649,7 @@ module Mutable = struct
 
       let to_constant (b, width) = bstr_of_abits_int ~width b |> Constant.of_binary_string
 
-      let concat l =
+      let concat_msb l =
         let w = List.fold l ~init:0 ~f:(fun w y -> w + width y) in
         mk1 w T.concat l
       ;;

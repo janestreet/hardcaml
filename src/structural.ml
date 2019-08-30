@@ -322,7 +322,7 @@ let mux sel d =
   Rtl_op (id (), w, Mux (sel, d)) >> add_sig
 ;;
 
-let concat d =
+let concat_msb d =
   check_readable d;
   if List.length d = 0 then raise No_elements_to_concat;
   Rtl_op (id (), List.fold d ~init:0 ~f:(fun a s -> a + width s), Concat d) >> add_sig
@@ -406,7 +406,7 @@ module Base (C : Config) = struct
 
   let concat2 = binop2 "concat2"
 
-  let s_concat d =
+  let s_concat_msb d =
     let rec cat2 = function
       | [] -> raise No_elements_to_concat
       | [ a ] -> a
@@ -415,7 +415,7 @@ module Base (C : Config) = struct
     cat2 d
   ;;
 
-  let concat = if structural_concat then s_concat else concat
+  let concat_msb = if structural_concat then s_concat_msb else concat_msb
 
   let s_select d h l =
     let o = wire (h - l + 1) in
@@ -468,7 +468,7 @@ module Base (C : Config) = struct
   let mux = if structural_mux then s_mux else mux
 
   let s_const b =
-    concat
+    concat_msb
       (List.map (list_of_string b) ~f:(function
          | '0' -> Lazy.force gnd
          | '1' -> Lazy.force vdd

@@ -19,7 +19,7 @@ module Make (B : Comb.S) = struct
 
   let ceil fp s =
     let ib = width s - fp in
-    let max_frac = concat_e [ zero ib; ones fp ] in
+    let max_frac = concat_msb_e [ zero ib; ones fp ] in
     get_int fp (s +: max_frac)
   ;;
 
@@ -102,7 +102,7 @@ module Make (B : Comb.S) = struct
     module Overflow = struct
       type t = unsigned overflow
 
-      let wrap fp ib s = concat_e [ select (get_int fp s) (ib - 1) 0; get_frac fp s ]
+      let wrap fp ib s = concat_msb_e [ select (get_int fp s) (ib - 1) 0; get_frac fp s ]
 
       let saturate fp ib s =
         let i = get_int fp s in
@@ -112,12 +112,12 @@ module Make (B : Comb.S) = struct
         else if width i < ib
         then
           (*failwith "Overflow.Unsigned.Saturate"*)
-          concat_e [ zero (ib - width i); i; f ]
+          concat_msb_e [ zero (ib - width i); i; f ]
         else (
           let dropped = select i (width i - 1) ib in
           let remaining = select i (ib - 1) 0 in
-          let overflow = reduce ~f:( |: ) (bits dropped) in
-          let clipped = mux2 overflow (ones (ib + fp)) (concat_e [ remaining; f ]) in
+          let overflow = reduce ~f:( |: ) (bits_msb dropped) in
+          let clipped = mux2 overflow (ones (ib + fp)) (concat_msb_e [ remaining; f ]) in
           clipped)
       ;;
 
@@ -168,7 +168,7 @@ module Make (B : Comb.S) = struct
         then failwith "Fixed.Unsigned.extend"
         else if n = 0
         then s
-        else { s = B.concat [ B.zero n; s.s ]; fp = s.fp }
+        else { s = B.concat_msb [ B.zero n; s.s ]; fp = s.fp }
       ;;
 
       let select_int s i =
@@ -177,7 +177,7 @@ module Make (B : Comb.S) = struct
         else (
           let si = int s in
           let wi = width_int s in
-          if i <= wi then B.select si (i - 1) 0 else B.concat [ B.zero (i - wi); si ])
+          if i <= wi then B.select si (i - 1) 0 else B.concat_msb [ B.zero (i - wi); si ])
       ;;
 
       let select_frac s f =
@@ -193,13 +193,13 @@ module Make (B : Comb.S) = struct
             let sf = frac s in
             if f <= wf
             then B.select sf (wf - 1) (wf - f)
-            else B.concat [ sf; B.zero (f - wf) ]))
+            else B.concat_msb [ sf; B.zero (f - wf) ]))
       ;;
 
       let select s i f =
         let i' = select_int s i in
         let f' = select_frac s f in
-        mk f (B.concat_e [ i'; f' ])
+        mk f (B.concat_msb_e [ i'; f' ])
       ;;
 
       let norm l =
@@ -373,7 +373,7 @@ module Make (B : Comb.S) = struct
     module Overflow = struct
       type t = signed overflow
 
-      let wrap fp ib s = concat_e [ select (get_int fp s) (ib - 1) 0; get_frac fp s ]
+      let wrap fp ib s = concat_msb_e [ select (get_int fp s) (ib - 1) 0; get_frac fp s ]
 
       let saturate fp ib s =
         let i = get_int fp s in
@@ -383,7 +383,7 @@ module Make (B : Comb.S) = struct
         else if width i < ib
         then
           (*failwith "Overflow.Signed.Saturate"*)
-          concat_e [ repeat (msb i) (ib - width i); i; f ]
+          concat_msb_e [ repeat (msb i) (ib - width i); i; f ]
         else (
           let dropped = select i (width i - 1) ib in
           let remaining = select i (ib - 1) 0 in
@@ -391,7 +391,7 @@ module Make (B : Comb.S) = struct
           let min = reverse (one (ib + fp)) in
           let max = ~:min in
           let clipped =
-            mux2 overflow_n (concat_e [ remaining; f ]) (mux2 (msb dropped) min max)
+            mux2 overflow_n (concat_msb_e [ remaining; f ]) (mux2 (msb dropped) min max)
           in
           clipped)
       ;;
@@ -444,7 +444,7 @@ module Make (B : Comb.S) = struct
         then failwith "Fixed.Signed.extend"
         else if n = 0
         then s
-        else { s = B.concat [ B.repeat (B.msb s.s) n; s.s ]; fp = s.fp }
+        else { s = B.concat_msb [ B.repeat (B.msb s.s) n; s.s ]; fp = s.fp }
       ;;
 
       let select_int s i =
@@ -455,7 +455,7 @@ module Make (B : Comb.S) = struct
           let wi = width_int s in
           if i <= wi
           then B.select si (i - 1) 0
-          else B.concat [ B.repeat (B.msb si) (i - wi); si ])
+          else B.concat_msb [ B.repeat (B.msb si) (i - wi); si ])
       ;;
 
       let select_frac s f =
@@ -471,13 +471,13 @@ module Make (B : Comb.S) = struct
             let sf = frac s in
             if f <= wf
             then B.select sf (wf - 1) (wf - f)
-            else B.concat [ sf; B.zero (f - wf) ]))
+            else B.concat_msb [ sf; B.zero (f - wf) ]))
       ;;
 
       let select s i f =
         let i' = select_int s i in
         let f' = select_frac s f in
-        mk f (B.concat_e [ i'; f' ])
+        mk f (B.concat_msb_e [ i'; f' ])
       ;;
 
       let norm l =

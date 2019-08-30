@@ -120,7 +120,7 @@ let rec compile_mux statements ~default =
     let default =
       match statement with
       | If (s, t, f) ->
-        let s = Signal.reduce ~f:Signal.( |: ) (Signal.bits s) in
+        let s = Signal.reduce ~f:Signal.( |: ) (Signal.bits_msb s) in
         let t = compile_mux t ~default in
         let f = compile_mux f ~default in
         Signal.mux s [ f; t ]

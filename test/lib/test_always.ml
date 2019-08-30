@@ -130,16 +130,13 @@ let%expect_test "test statemachine encodings" =
       ];
     let prefix = State_machine.Encoding.to_string encoding |> String.lowercase in
     let states =
-      List.map State.all ~f:state.is
-      |> List.rev
-      |> Signal.concat
-      |> output (prefix ^ "_states")
+      List.map State.all ~f:state.is |> Signal.concat_lsb |> output (prefix ^ "_states")
     in
     let decoded =
       Array.to_list decoded
       |> List.rev
       |> List.map ~f:(fun d -> d.value)
-      |> Signal.concat
+      |> Signal.concat_msb
       |> output (prefix ^ "_decoded")
     in
     let current = state.current |> output (prefix ^ "_current") in

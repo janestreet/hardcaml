@@ -106,7 +106,7 @@ module type Structural = sig
   val const : string -> signal
   val constz : int -> signal
   val mux : signal -> signal list -> signal
-  val concat : signal list -> signal
+  val concat_msb : signal list -> signal
   val select : signal -> int -> int -> signal
 
   module type Config = Config

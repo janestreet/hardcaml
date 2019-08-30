@@ -23,7 +23,7 @@ struct
       if width t = 2
       then ~:(bit t 1)
       else (
-        let lhs, rhs = split_in_half t in
+        let lhs, rhs = split_in_half_msb t in
         let lhs_empty = lhs ==:. 0 in
         lhs_empty @: leading_zeros_pow2 (mux2 lhs_empty rhs lhs))
     in
