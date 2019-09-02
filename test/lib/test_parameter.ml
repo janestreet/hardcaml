@@ -216,11 +216,11 @@ let%expect_test "instantiation in verilog" =
 
         /* logic */
         test_parameters_verilog
-            #( .an_int(7), .a_bool(1'b1), .a_string("world"), .a_real(3.9), .a_bit(1'b1), .a_bit_vector(4'b1100), .a_std_logic(4'd5), .a_std_ulogic(4'd3), .a_std_logic_vector(4'b1010), .a_std_ulogic_vector(4'b1011) )
+            #( .an_int(7), .a_bool(1'b1), .a_string("world"), .a_real(3.900000), .a_bit(1'b1), .a_bit_vector(4'b1100), .a_std_logic(4'd5), .a_std_ulogic(4'd3), .a_std_logic_vector(4'b1010), .a_std_ulogic_vector(4'b1011) )
             the_test_parameters_verilog
             ( .a(a), .b(_5[1:0]) );
         test_parameters_vhdl
-            #( .an_int(7), .a_bool(1'b1), .a_string("world"), .a_real(3.9), .a_bit(1'b1), .a_bit_vector(4'b1100), .a_std_logic(4'd5), .a_std_ulogic(4'd3), .a_std_logic_vector(4'b1010), .a_std_ulogic_vector(4'b1011) )
+            #( .an_int(7), .a_bool(1'b1), .a_string("world"), .a_real(3.900000), .a_bit(1'b1), .a_bit_vector(4'b1100), .a_std_logic(4'd5), .a_std_ulogic(4'd3), .a_std_logic_vector(4'b1010), .a_std_ulogic_vector(4'b1011) )
             the_test_parameters_vhdl
             ( .a(a), .b(_7[1:0]) );
 
@@ -272,10 +272,10 @@ let%expect_test "instantiation in vhdl" =
 
         -- logic
         the_test_parameters_verilog: entity work.test_parameters_verilog (rtl)
-            generic map ( an_int => 7, a_bool => true, a_string => "world", a_real => 3.9, a_bit => '1', a_bit_vector => "1100", a_std_logic => 'W', a_std_ulogic => '1', a_std_logic_vector => std_logic_vector'("1010"), a_std_ulogic_vector => std_ulogic_vector'("1011"))
+            generic map ( an_int => 7, a_bool => true, a_string => "world", a_real => 3.900000, a_bit => '1', a_bit_vector => "1100", a_std_logic => 'W', a_std_ulogic => '1', a_std_logic_vector => std_logic_vector'("1010"), a_std_ulogic_vector => std_ulogic_vector'("1011"))
             port map ( a => a, b => hc_5(1 downto 0) );
         the_test_parameters_vhdl: entity work.test_parameters_vhdl (rtl)
-            generic map ( an_int => 7, a_bool => true, a_string => "world", a_real => 3.9, a_bit => '1', a_bit_vector => "1100", a_std_logic => 'W', a_std_ulogic => '1', a_std_logic_vector => std_logic_vector'("1010"), a_std_ulogic_vector => std_ulogic_vector'("1011"))
+            generic map ( an_int => 7, a_bool => true, a_string => "world", a_real => 3.900000, a_bit => '1', a_bit_vector => "1100", a_std_logic => 'W', a_std_ulogic => '1', a_std_logic_vector => std_logic_vector'("1010"), a_std_ulogic_vector => std_ulogic_vector'("1011"))
             port map ( a => a, b => hc_7(1 downto 0) );
 
         -- aliases

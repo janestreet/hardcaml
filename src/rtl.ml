@@ -680,7 +680,8 @@ module VerilogCore : Rtl_internal = struct
       match p.value with
       | String v -> "\"" ^ v ^ "\""
       | Int v -> Int.to_string v
-      | Real v -> Float.to_string v
+      (* For consistency with VHDL, but not proved necessary for verilog. *)
+      | Real v -> sprintf "%f" v
       | Bool b | Bit b -> if b then "1'b1" else "1'b0"
       | Std_logic_vector v | Std_ulogic_vector v ->
         Printf.sprintf
@@ -1017,7 +1018,9 @@ module VhdlCore : Rtl_internal = struct
         String.concat
           [ "std_ulogic_vector'(\""; Parameter.Std_logic_vector.to_string v; "\")" ]
       | Int v -> Int.to_string v
-      | Real v -> Float.to_string v
+      (* floats must be printed with a trailing number in vhdl (ie [11.0] not [11.]) and
+         [%f] seems to do that. *)
+      | Real v -> sprintf "%f" v
       | Bool v -> if v then "true" else "false"
       | Bit b -> if b then "'1'" else "'0'"
       | Std_ulogic b | Std_logic b -> sprintf "'%c'" (Parameter.Std_logic.to_char b)
@@ -1039,15 +1042,17 @@ module VhdlCore : Rtl_internal = struct
         List.map i.inst_outputs ~f:(fun (n, _) -> assoc n (name s))
       else
         List.map i.inst_outputs ~f:(fun (n, (w, l)) ->
-          let n = if w = 1 then "std_logic_vector(" ^ n ^ ")" else n in
-          assoc
-            n
-            (name s
-             ^ "("
-             ^ Int.to_string (w + l - 1)
-             ^ " downto "
-             ^ Int.to_string l
-             ^ ")"))
+          if w = 1
+          then assoc n (name s ^ "(" ^ Int.to_string l ^ ")")
+          else
+            assoc
+              n
+              (name s
+               ^ "("
+               ^ Int.to_string (w + l - 1)
+               ^ " downto "
+               ^ Int.to_string l
+               ^ ")"))
     in
     io (t8 ^ "port map ( " ^ sep ", " (in_ports @ out_ports) ^ " );\n")
   ;;
