@@ -316,6 +316,7 @@ let last_layer_of_nodes ~is_input graph =
       else (
         (* recurse deeper *)
         let in_layer, is_in_layer = fold_signals (in_layer, false) (deps signal) in
+        let is_in_layer = is_in_layer || Signal.is_mem_read_port signal in
         Map.set in_layer ~key:(uid signal) ~data:is_in_layer, is_in_layer)
   (* In final layer if any dependancy is also in the final layer. *)
   and fold_signals layer signals =

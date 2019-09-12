@@ -33,6 +33,7 @@ type signal_op = Signal_op.t =
   | Signal_lt
   | Signal_cat
   | Signal_mux
+[@@deriving sexp_of, compare, hash]
 
 module Uid = struct
   module T = struct
@@ -282,6 +283,11 @@ let is_multiport_mem = function
 
 let is_inst = function
   | Inst _ -> true
+  | _ -> false
+;;
+
+let is_mem_read_port = function
+  | Mem_read_port _ -> true
   | _ -> false
 ;;
 

@@ -14,6 +14,7 @@ module Cosim2 = Cosim2
 module Cyclesim = Cyclesim
 module Cyclesim_float_ops = Cyclesim_float_ops
 module Design_rule_checks = Design_rule_checks
+module Dedup = Dedup
 module Edge = Edge
 module Fifo = Fifo
 module Fixed = Fixed

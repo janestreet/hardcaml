@@ -19,6 +19,7 @@ module type Signal = sig
     | Signal_lt
     | Signal_cat
     | Signal_mux
+  [@@deriving sexp_of, compare, hash]
 
   module Uid : sig
     type t = int64 [@@deriving compare, hash, sexp_of]
@@ -145,6 +146,9 @@ module type Signal = sig
 
   (** is the signal a multiport memory? *)
   val is_multiport_mem : t -> bool
+
+  (** is the signal a memory read port? *)
+  val is_mem_read_port : t -> bool
 
   (** is the signal an instantiation? *)
   val is_inst : t -> bool
