@@ -395,6 +395,7 @@ include Bits0.Comparable
    at all) *)
 let to_int x = Constant.to_int x
 let to_int32 x = Constant.to_int32 x
+let zero w = Bits0.create w
 let pp fmt t = Caml.Format.fprintf fmt "%s" (to_bstr t)
 
 module PP = Pretty_printer.Register (struct
