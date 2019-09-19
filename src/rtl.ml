@@ -1072,6 +1072,9 @@ end
 module Make (R : Rtl_internal) = struct
   let write blackbox io circ =
     let inputs, outputs = Circuit.inputs circ, Circuit.outputs circ in
+    let phantom_inputs =
+      List.map ~f:(fun (a, b) -> a, b, []) (Circuit.phantom_inputs circ)
+    in
     let signal_graph = Circuit.signal_graph circ in
     (* write signal declarations *)
     let is_internal s =
@@ -1081,7 +1084,10 @@ module Make (R : Rtl_internal) = struct
     in
     let internal_signals = Signal_graph.filter signal_graph ~f:is_internal in
     (* initialize the mangler *)
-    let nm = R.Names.init R.Names.reserved in
+    let nm =
+      (* reserved words and the names of phantom inputs. *)
+      R.Names.init (R.Names.reserved @ List.map phantom_inputs ~f:(fun (n, _, _) -> n))
+    in
     let add f nm x = List.fold x ~init:nm ~f:(fun nm x -> f x nm) in
     let nm = add R.Names.add_port nm inputs in
     let nm = add R.Names.add_port nm outputs in
@@ -1096,9 +1102,6 @@ module Make (R : Rtl_internal) = struct
         Array.to_list n)
     in
     let primary s = primary_name s, width s, attributes s in
-    let phantom_inputs =
-      List.map ~f:(fun (a, b) -> a, b, []) (Circuit.phantom_inputs circ)
-    in
     List.iter internal_signals ~f:(fun s -> R.check_signal s);
     R.header_and_ports
       ~io

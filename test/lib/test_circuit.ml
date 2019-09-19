@@ -329,6 +329,65 @@ let%expect_test "phantom inputs" =
         (output_ports (b))))) |}]
 ;;
 
+let%expect_test "phantom input aliases an internal name" =
+  let f () =
+    let a = input "a" 1 in
+    let b = ~:a -- "b" in
+    output "c" b
+  in
+  let circuit = Circuit.create_exn ~name:"test" [ f () ] in
+  Rtl.print Verilog circuit;
+  [%expect
+    {|
+    module test (
+        a,
+        c
+    );
+
+        input a;
+        output c;
+
+        /* signal declarations */
+        wire b;
+
+        /* logic */
+        assign b = ~ a;
+
+        /* aliases */
+
+        /* output assignments */
+        assign c = b;
+
+    endmodule |}];
+  (* Note that the internal name [b] is now mangled correctly *)
+  let circuit = Circuit.set_phantom_inputs circuit [ "b", 1 ] in
+  Rtl.print Verilog circuit;
+  [%expect
+    {|
+    module test (
+        a,
+        b,
+        c
+    );
+
+        input a;
+        input b;
+        output c;
+
+        /* signal declarations */
+        wire b_0;
+
+        /* logic */
+        assign b_0 = ~ a;
+
+        /* aliases */
+
+        /* output assignments */
+        assign c = b_0;
+
+    endmodule |}]
+;;
+
 let%expect_test "verify_clock_pins" =
   let circuit =
     let foo = input "foo" 1 in
