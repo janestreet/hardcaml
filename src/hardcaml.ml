@@ -1,4 +1,5 @@
 module Always = Always
+module Architecture = Architecture
 module Bits = Bits
 module Build_mode = Build_mode
 module Caller_id = Caller_id
