@@ -214,6 +214,45 @@ module type Empty = sig
   include S with type 'a t := 'a t
 end
 
+(** An enumerated type (generally a variant type with no arguments) which should derive
+    [compare, enumerate, sexp_of, variants]. *)
+module type Enum = sig
+  type t [@@deriving compare, enumerate, sexp_of]
+
+  module Variants : sig
+    val to_rank : t -> int
+  end
+end
+
+(** Functions to project an [Enum] type into and out of hardcaml bit vectors representated
+    as an interface. *)
+module type S_enum = sig
+  module Enum : Enum
+  include S
+
+  val of_enum : (module Comb.S with type t = 'a) -> Enum.t -> 'a t
+  val to_enum : Bits.t t -> Enum.t
+
+  val mux
+    :  (module Comb.S with type t = 'a)
+    -> default:'a
+    -> 'a t
+    -> (Enum.t * 'a) list
+    -> 'a
+
+  module For_testing : sig
+    val set : Bits.t ref t -> Enum.t -> unit
+    val get : Bits.t ref t -> Enum.t
+  end
+end
+
+(** Binary and onehot selectors for [Enums]. *)
+module type S_enums = sig
+  module Enum : Enum
+  module Binary : S_enum with module Enum := Enum
+  module One_hot : S_enum with module Enum := Enum
+end
+
 module type Interface = sig
   module type Pre = Pre
   module type S = S
@@ -236,4 +275,11 @@ module type Interface = sig
   end
 
   module Make (X : Pre) : S with type 'a t := 'a X.t
+
+  module type S_enum = S_enum
+  module type S_enums = S_enums
+
+  (** Constructs a hardcaml interface which represents hardware for the given [Enum] as an
+      absstract [Interface]. *)
+  module Make_enums (Enum : Enum) : S_enums with module Enum := Enum
 end

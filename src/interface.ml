@@ -243,6 +243,98 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   end
 end
 
+module Make_enums (Enum : Interface_intf.Enum) = struct
+  module Make_pre (M : sig
+      val t : string * int
+    end) =
+  struct
+    type 'a t = 'a [@@deriving sexp_of]
+
+    let to_list t = [ t ]
+    let map t ~f = f t
+    let map2 a b ~f = f a b
+    let iter a ~f = f a
+    let iter2 a b ~f = f a b
+    let t = M.t
+  end
+
+  let num_enums = List.length Enum.all
+
+  module Binary = struct
+    let width = Int.ceil_log2 (List.length Enum.all)
+
+    module Pre = Make_pre (struct
+        let t = "binary_variant", width
+      end)
+
+    include Pre
+    include Make (Pre)
+
+    let of_enum (type a) (module Comb : Comb.S with type t = a) enum =
+      Comb.consti ~width (Enum.Variants.to_rank enum)
+    ;;
+
+    let to_enum =
+      List.map Enum.all ~f:(fun variant -> Enum.Variants.to_rank variant, variant)
+      |> Map.of_alist_exn (module Int)
+    ;;
+
+    let to_enum t = Map.find_exn to_enum (Bits.to_int t)
+
+    let mux (type a) (module Comb : Comb.S with type t = a) ~(default : a) selector cases
+      =
+      let out_cases = Array.create ~len:num_enums default in
+      List.iter cases ~f:(fun (enum, value) ->
+        out_cases.(Enum.Variants.to_rank enum) <- value);
+      Comb.mux selector (Array.to_list out_cases)
+    ;;
+
+    module For_testing = struct
+      let set t enum = t := of_enum (module Bits) enum
+      let get t = to_enum !t
+    end
+  end
+
+  module One_hot = struct
+    let width = List.length Enum.all
+
+    module Pre = Make_pre (struct
+        let t = "ont_hot_variant", width
+      end)
+
+    include Pre
+    include Make (Pre)
+
+    let of_enum (type a) (module Comb : Comb.S with type t = a) enum =
+      Comb.consti ~width (1 lsl Enum.Variants.to_rank enum)
+    ;;
+
+    let to_enum =
+      List.map Enum.all ~f:(fun variant -> 1 lsl Enum.Variants.to_rank variant, variant)
+      |> Map.of_alist_exn (module Int)
+    ;;
+
+    let to_enum t = Map.find_exn to_enum (Bits.to_int t)
+
+    let mux (type a) (module Comb : Comb.S with type t = a) ~(default : a) selector cases
+      =
+      let out_cases = Array.create ~len:num_enums default in
+      List.iter cases ~f:(fun (enum, value) ->
+        out_cases.(Enum.Variants.to_rank enum) <- value);
+      List.map2_exn
+        (Comb.bits_lsb selector)
+        (Array.to_list out_cases)
+        ~f:(fun valid value -> { With_valid.valid; value })
+      |> Comb.onehot_select
+    ;;
+
+    module For_testing = struct
+      let set t enum = t := of_enum (module Bits) enum
+      let get t = to_enum !t
+    end
+  end
+end
+
 module Empty = struct
   type 'a t = None [@@deriving sexp_of]
 
