@@ -245,6 +245,23 @@ module type S = sig
   (** [sel_top s n] select top [n] bits of [s] *)
   val sel_top : t -> int -> t
 
+  (* Verilog-like addressing operators. These operators are less verbose than
+     the function counterparts. See IEEE 1800 Syntax 11-5. *)
+
+  (** [x.:[hi, lo]] == [select x hi lo] *)
+  val ( .:[] ) : t -> int * int -> t
+
+  (** [x.:+[lo, width]] == [select x (lo + width - 1) lo]. If [width] is [None] it selects
+      all remaining msbs of the vector ie [x.:+[lo,None]] == [drop_bottom x lo] *)
+  val ( .:+[] ) : t -> int * int option -> t
+
+  (** [x.:-[hi, width]] == [select x hi (hi - width + 1)]. If [hi] is [None] it defaults
+      to the msb of the vector ie [x.:-[None, width]] == [sel_top x width] *)
+  val ( .:-[] ) : t -> int option * int -> t
+
+  (** [x.(i)] == [bit x i] *)
+  val ( .:() ) : t -> int -> t
+
   (** [insert ~into:t x ~at_offset] insert [x] into [t] at given offet *)
   val insert : into:t -> t -> at_offset:int -> t
 

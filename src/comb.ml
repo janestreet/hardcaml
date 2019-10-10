@@ -306,6 +306,20 @@ module Make (Bits : Primitives) = struct
   let drop_top x n = select x (width x - 1 - n) 0
   let sel_bottom x n = select x (n - 1) 0
   let sel_top x n = select x (width x - 1) (width x - n)
+  let ( .:() ) x i = bit x i
+  let ( .:[] ) x (hi, lo) = select x hi lo
+
+  let ( .:+[] ) x (lsb, w) =
+    match w with
+    | None -> drop_bottom x lsb
+    | Some width -> select x (lsb + width - 1) lsb
+  ;;
+
+  let ( .:-[] ) x (msb, w) =
+    match msb with
+    | None -> sel_top x w
+    | Some msb -> select x msb (msb - w + 1)
+  ;;
 
   let[@cold] raise_insert_below_0 at_offset =
     raise_s
