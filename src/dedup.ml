@@ -56,7 +56,7 @@ let map_children signal ~f =
   | Signal.Op (s, op) -> Signal.Op (signal_id_map_children s ~f, op)
   | Signal.Wire (s, c) -> Signal.Wire (signal_id_map_children s ~f, ref (f !c))
   | Signal.Select (s, a, b) -> Signal.Select (signal_id_map_children s ~f, a, b)
-  | Signal.Multiport_mem _ | Signal.Reg _ -> signal
+  | Signal.Multiport_mem _ | Signal.Reg _ -> assert false
   | Signal.Mem_read_port (s, mem, r) ->
     Signal.Mem_read_port
       ( { s with s_id = Signal.new_id (); s_deps = List.map s.Signal.s_deps ~f }
@@ -153,7 +153,14 @@ let transform_sequential_signal canonical signal =
     in
     Signal.Multiport_mem
       ({ s with s_deps = List.map s.Signal.s_deps ~f:get_canonical }, size, write_ports)
-  | _ -> failwith "BUG: unexpected type"
+  | _ ->
+    let sexp_of_finite_signal signal =
+      Signal.sexp_of_signal_recursive ~depth:5 (signal : Signal.t)
+    in
+    raise_s
+      [%message
+        "Unexpected signal type. Only sequential signals are expected here"
+          (signal : finite_signal)]
 ;;
 
 let rec unwrap_wire s =
@@ -201,19 +208,21 @@ let canonicalize signals =
         make_canonical_signal canonical sequential_wires signal
       in
       let canonical_signal =
-        match Hashtbl.find canonical_by_hash my_hash with
+        let cannonical_signals_with_matching_hash =
+          Hashtbl.find_multi canonical_by_hash my_hash
+        in
+        match
+          List.find
+            cannonical_signals_with_matching_hash
+            ~f:(shallow_equal signal_with_canonical_children)
+        with
         | None ->
-          Hashtbl.add_exn
+          Hashtbl.add_multi
             canonical_by_hash
             ~key:my_hash
             ~data:signal_with_canonical_children;
           signal_with_canonical_children
-        | Some canonical_signal ->
-          if shallow_equal signal_with_canonical_children canonical_signal
-          then canonical_signal
-          else raise_s [%message "hash collision" (signal : Signal.t) ~here:[%here]]
-          (* this is not fatal, we could just ignore it by returning
-             [signal_with_canonical_children] here. *)
+        | Some canonical_signal -> canonical_signal
       in
       Hashtbl.add_exn canonical ~key:(Signal.uid signal) ~data:canonical_signal);
   Hashtbl.iter sequential_wires ~f:(fun (signal, wire) ->

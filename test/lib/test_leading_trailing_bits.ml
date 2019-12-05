@@ -11,7 +11,7 @@ let%expect_test "bits = 1, 2, 3, 4" =
   for bits = 1 to 4 do
     let test f =
       List.init (1 lsl bits) ~f:(fun i ->
-        let c = Bits.consti ~width:bits i in
+        let c = Bits.of_int ~width:bits i in
         c, f c |> Bits.to_int)
     in
     print_s

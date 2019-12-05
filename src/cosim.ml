@@ -236,7 +236,7 @@ let make_sim_obj ~server ~clocks ~resets ~inputs ~outputs =
     in
     List.iter2_exn outputs res ~f:(fun (n, v) (n', v') ->
       assert (String.equal n n');
-      v := Bits.const (legalise_value v'))
+      v := Bits.of_string (legalise_value v'))
   in
   (* reset update *)
   let resets_1 = List.map resets ~f:(fun (n, _) -> n, "1") in

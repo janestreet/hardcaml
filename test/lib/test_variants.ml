@@ -25,11 +25,11 @@ module Test (Enum : Hardcaml.Interface.S_enum with module Enum := Cases) = struc
         Enum.mux
           (module Bits)
           (Enum.of_enum (module Bits) selector)
-          ~default:(Bits.consti ~width:16 1)
-          [ C0, Bits.consti ~width:16 0
-          ; C2, Bits.consti ~width:16 2
-          ; C3, Bits.consti ~width:16 3
-          ; C4, Bits.consti ~width:16 4
+          ~default:(Bits.of_int ~width:16 1)
+          [ C0, Bits.of_int ~width:16 0
+          ; C2, Bits.of_int ~width:16 2
+          ; C3, Bits.of_int ~width:16 3
+          ; C4, Bits.of_int ~width:16 4
           ]
       in
       Core_kernel.print_s [%message (selector : Cases.t) (value : Bits.t)]);

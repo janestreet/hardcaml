@@ -346,10 +346,10 @@ module Make (SIM : Simulator) = struct
       | [] -> failwith "of_i32l"
       | [ h ] ->
         assert (w <= 32);
-        [ Bits.consti32 ~width:w h ]
+        [ Bits.of_int32 ~width:w h ]
       | h :: t ->
         assert (w > 32);
-        Bits.consti32 ~width:32 h :: f (w - 32) t
+        Bits.of_int32 ~width:32 h :: f (w - 32) t
     in
     Bits.concat_msb (f w x)
   ;;

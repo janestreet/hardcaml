@@ -44,7 +44,7 @@ module Middle = struct
     let (o2 : _ Inner.O.t) =
       Inner_inst.hierarchical ~scope ~name:"inner" Inner.create i
     in
-    { O.o = [| o1; o2 |]; x = Signal.consti ~width:1 0 -- "x" }
+    { O.o = [| o1; o2 |]; x = Signal.of_int ~width:1 0 -- "x" }
   ;;
 end
 

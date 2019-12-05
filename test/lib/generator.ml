@@ -14,12 +14,12 @@ let gen_bits_string width =
 
 let gen_const width =
   let%map s = gen_bits_string width in
-  const s
+  of_bit_string s
 ;;
 
 let gen_bits width =
   let%map s = gen_bits_string width in
-  Bits.const s
+  Bits.of_string s
 ;;
 
 let max_width = 200

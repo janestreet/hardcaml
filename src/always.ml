@@ -79,7 +79,7 @@ let ( <-- ) (a : Variable.t) b =
   Assign (a, b)
 ;;
 
-let ( <--. ) (a : Variable.t) b = a <-- Signal.consti ~width:(Signal.width a.value) b
+let ( <--. ) (a : Variable.t) b = a <-- Signal.of_int ~width:(Signal.width a.value) b
 let list_of_set s = Set.fold s ~init:[] ~f:(fun l e -> e :: l)
 
 let rec find_targets set statements =
@@ -193,13 +193,14 @@ module State_machine = struct
     let ls = Int.ceil_log2 nstates in
     let state_bits i =
       match encoding with
-      | Binary -> Signal.consti ~width:ls i
+      | Binary -> Signal.of_int ~width:ls i
       | Gray ->
-        Signal.constb (Bits.binary_to_gray (Bits.consti ~width:ls i) |> Bits.to_bstr)
+        Signal.of_bit_string
+          (Bits.binary_to_gray (Bits.of_int ~width:ls i) |> Bits.to_bstr)
       | Onehot ->
-        Signal.constb
+        Signal.of_bit_string
           Bits.(
-            select (binary_to_onehot (consti ~width:ls i)) (nstates - 1) 0 |> to_bstr)
+            select (binary_to_onehot (of_int ~width:ls i)) (nstates - 1) 0 |> to_bstr)
     in
     let states = List.mapi State.all ~f:(fun i s -> s, (i, state_bits i)) in
     let var =

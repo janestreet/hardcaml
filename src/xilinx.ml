@@ -121,7 +121,10 @@ module Unisim = struct
     let w = width sel in
     let w' = Int.to_string w in
     let init =
-      Int64.to_string v |> Bits.constd ~width:(1 lsl w) |> Bits.reverse |> Bits.to_string
+      Int64.to_string v
+      |> Bits.of_decimal_string ~width:(1 lsl w)
+      |> Bits.reverse
+      |> Bits.to_string
     in
     (Instantiation.create
        ()

@@ -268,14 +268,10 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
   ;;
 
   let move_port_attributes from_ to_ =
-    (* Wrap exceptions in case we have an empty signal. *)
-    try
-      let from_ = Signal.signal_id from_ in
-      let to_ = Signal.signal_id to_ in
-      to_.s_attributes <- from_.s_attributes;
-      from_.s_attributes <- []
-    with
-    | _ -> ()
+    Option.iter (Signal.signal_id from_) ~f:(fun from_ ->
+      Option.iter (Signal.signal_id to_) ~f:(fun to_ ->
+        to_.s_attributes <- from_.s_attributes;
+        from_.s_attributes <- []))
   ;;
 
   let create_exn =

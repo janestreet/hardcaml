@@ -9,7 +9,7 @@ let print_circuit c =
 let%expect_test "simple" =
   let dedup outputs = Circuit.create_exn ~name:"test" outputs |> Dedup.deduplicate in
   let open Signal in
-  let v = const "1111" +: const "1111" in
+  let v = of_string "1111" +: of_string "1111" in
   let c = dedup [ output "out" v ] in
   print_circuit c;
   [%expect
@@ -18,7 +18,10 @@ let%expect_test "simple" =
     Op[id:3 bits:4 names: deps:2,2] = add
     Const[id:2 bits:4 names: deps:] = 1111 |}];
   let v =
-    const "1111" +: const "1111" +: const "1110" +: (const "1111" +: const "1111")
+    of_string "1111"
+    +: of_string "1111"
+    +: of_string "1110"
+    +: (of_string "1111" +: of_string "1111")
   in
   let c = dedup [ output "out" v ] in
   print_circuit c;
@@ -40,11 +43,11 @@ let%expect_test "register" =
   let v =
     reg_fb
       (Reg_spec.create () ~clock)
-      (fun x -> x +: const "1111")
-      ~enable:(const "1")
+      (fun x -> x +: of_string "1111")
+      ~enable:(of_string "1")
       ~w:4
   in
-  let c = dedup [ output "out" (v +: const "1111") ] in
+  let c = dedup [ output "out" (v +: of_string "1111") ] in
   print_circuit c;
   (* Deduplication of the constant inside the register. Additionally we see that
      deduplication inserts additional wires between registers and combinatorial logic.
@@ -67,7 +70,7 @@ let%expect_test "register" =
 let%expect_test "wires" =
   let dedup outputs = Circuit.create_exn ~name:"test" outputs |> Dedup.deduplicate in
   let open Signal in
-  let v = const "1100" in
+  let v = of_string "1100" in
   let c = dedup [ output "out" (wireof (wireof (wireof (wireof v) -- "x"))) ] in
   print_circuit c;
   (* Unnamed wires are collapsed. *)
@@ -88,16 +91,16 @@ let%expect_test "memory" =
       16
       ~write_ports:
         [| { Signal.write_clock = clock
-           ; write_address = const "1100"
-           ; write_enable = const "1"
-           ; write_data = const "1100"
+           ; write_address = of_string "1100"
+           ; write_enable = of_string "1"
+           ; write_data = of_string "1100"
            }
         |]
-      ~read_addresses:[| const "1011"; const "1011" |]
+      ~read_addresses:[| of_string "1011"; of_string "1011" |]
   in
   let read_val_1 = v.(0) in
   let read_val_2 = v.(1) in
-  let c = dedup [ output "out" (read_val_1 +: read_val_2 +: const "1111") ] in
+  let c = dedup [ output "out" (read_val_1 +: read_val_2 +: of_string "1111") ] in
   (* Deduplication of memory_read_port. Notice that Mem_read_port directly contains
      Multiport_mem, not a wire to it and that Mem_read_port is also deduplicated. *)
   print_circuit c;

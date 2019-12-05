@@ -22,7 +22,7 @@ let%expect_test "[compare]" =
             ~_:(s1 : string)
             ~_:(s2 : string)
             "="
-            ~_:(compare (constb s1) (constb s2) : int)]);
+            ~_:(compare (of_bit_string s1) (of_bit_string s2) : int)]);
   [%expect
     {|
     (compare 0 0 = 0)
@@ -36,7 +36,7 @@ let%expect_test "[compare]" =
 let%expect_test "set of [Bits.t]s" =
   print_s
     [%sexp
-      (Set.of_list (module Bits) (List.map [ "0"; "1"; "01"; "11" ] ~f:constb)
+      (Set.of_list (module Bits) (List.map [ "0"; "1"; "01"; "11" ] ~f:of_bit_string)
        : Set.M(Bits).t)];
   [%expect {|
     (0 1 01 11) |}]
@@ -60,7 +60,7 @@ let%expect_test "[floor_log2], [popcount]" =
     ; String.make 63 '1'
     ]
     ~f:(fun s ->
-      let t = s |> Bits.const in
+      let t = s |> Bits.of_string in
       print_s
         [%message
           ""
@@ -98,7 +98,7 @@ let%expect_test "[floor_log2], [popcount]" =
      (floor_log2 (Ok 62))) |}]
 ;;
 
-let test_sexp_of_constb (module M : Hardcaml.Comb.S) =
+let test_sexp_of_bit_string (module M : Hardcaml.Comb.S) =
   List.iter
     [ "0"
     ; "1"
@@ -116,11 +116,11 @@ let test_sexp_of_constb (module M : Hardcaml.Comb.S) =
         [%message
           ""
             ~_:(s : string)
-            ~_:(Or_error.try_with (fun () -> M.constb s) : M.t Or_error.t)])
+            ~_:(Or_error.try_with (fun () -> M.of_bit_string s) : M.t Or_error.t)])
 ;;
 
-let%expect_test "[IntbitsList.constb]" =
-  test_sexp_of_constb (module IntbitsList);
+let%expect_test "[IntbitsList.of_bit_string]" =
+  test_sexp_of_bit_string (module IntbitsList);
   [%expect
     {|
     (0 (Ok 0))
@@ -138,8 +138,8 @@ let%expect_test "[IntbitsList.constb]" =
      (Ok 11111111111111111111111111111111111111111111111111111111111111111)) |}]
 ;;
 
-let%expect_test "[Bits.constb]" =
-  test_sexp_of_constb (module Bits);
+let%expect_test "[Bits.of_bit_string]" =
+  test_sexp_of_bit_string (module Bits);
   [%expect
     {|
     (0 (Ok 0))
@@ -276,8 +276,8 @@ module Make (R : Require) = struct
   module Ops (B1 : Comb.S) (B2 : Comb.S) = struct
     let brand min max = min + Random.int (max - min + 1)
     let srand b = Bits.(random ~width:b |> to_string)
-    let const1 s = B1.const s
-    let const2 s = B2.const s
+    let const1 s = B1.of_string s
+    let const2 s = B2.of_string s
     let bits_equal x y = String.equal (B1.to_bstr x) (B2.to_bstr y)
 
     let require ~error_message here eq =

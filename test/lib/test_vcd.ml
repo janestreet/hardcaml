@@ -18,8 +18,8 @@ let%expect_test "simple vcd file" =
   let a, b = S.in_port sim "a", S.in_port sim "b" in
   for i = 0 to 2 do
     for j = 0 to 2 do
-      a := Bits.consti ~width:8 (i * 10);
-      b := Bits.consti ~width:8 (j * 10);
+      a := Bits.of_int ~width:8 (i * 10);
+      b := Bits.of_int ~width:8 (j * 10);
       S.cycle sim
     done
   done;

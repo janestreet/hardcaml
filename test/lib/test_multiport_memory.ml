@@ -2,8 +2,8 @@ open! Import
 
 let write_port address_width data_width =
   { Signal.write_clock = Signal.gnd
-  ; write_address = Signal.consti ~width:address_width 0
-  ; write_data = Signal.consti ~width:data_width 0
+  ; write_address = Signal.of_int ~width:address_width 0
+  ; write_data = Signal.of_int ~width:data_width 0
   ; write_enable = Signal.gnd
   }
 ;;
@@ -13,7 +13,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 3 8 |]
-      ~read_addresses:[| Signal.consti ~width:3 0 |]);
+      ~read_addresses:[| Signal.of_int ~width:3 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] size is greater than what can be addressed by write port"
@@ -23,7 +23,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8 |]
-      ~read_addresses:[| Signal.consti ~width:3 0 |]);
+      ~read_addresses:[| Signal.of_int ~width:3 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] size is greater than what can be addressed by read port"
@@ -33,7 +33,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8 |]
-      ~read_addresses:[| Signal.consti ~width:5 0 |]);
+      ~read_addresses:[| Signal.of_int ~width:5 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] width of read and write addresses differ"
@@ -43,8 +43,8 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:
-        [| { (write_port 4 8) with write_clock = Signal.consti ~width:2 0 } |]
-      ~read_addresses:[| Signal.consti ~width:4 0 |]);
+        [| { (write_port 4 8) with write_clock = Signal.of_int ~width:2 0 } |]
+      ~read_addresses:[| Signal.of_int ~width:4 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] width of clock must be 1"
@@ -54,8 +54,8 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:
-        [| { (write_port 4 8) with write_enable = Signal.consti ~width:2 0 } |]
-      ~read_addresses:[| Signal.consti ~width:4 0 |]);
+        [| { (write_port 4 8) with write_enable = Signal.of_int ~width:2 0 } |]
+      ~read_addresses:[| Signal.of_int ~width:4 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] width of write enable must be 1"
@@ -65,7 +65,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[||]
-      ~read_addresses:[| Signal.consti ~width:4 0 |]);
+      ~read_addresses:[| Signal.of_int ~width:4 0 |]);
   [%expect {| "[Signal.multiport_memory] requires at least one write port" |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory 16 ~write_ports:[| write_port 4 8 |] ~read_addresses:[||]);
@@ -74,7 +74,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8 |]
-      ~read_addresses:[| Signal.consti ~width:4 0; Signal.consti ~width:5 0 |]);
+      ~read_addresses:[| Signal.of_int ~width:4 0; Signal.of_int ~width:5 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] width of read address is inconsistent"
@@ -85,7 +85,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8; write_port 5 8 |]
-      ~read_addresses:[| Signal.consti ~width:4 0 |]);
+      ~read_addresses:[| Signal.of_int ~width:4 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] width of write address is inconsistent"
@@ -96,7 +96,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8; write_port 4 16 |]
-      ~read_addresses:[| Signal.consti ~width:4 0 |]);
+      ~read_addresses:[| Signal.of_int ~width:4 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] width of write data is inconsistent"
@@ -111,7 +111,7 @@ let%expect_test "sexp" =
     Signal.multiport_memory
       32
       ~write_ports:[| write_port 5 12; write_port 5 12 |]
-      ~read_addresses:[| Signal.consti ~width:5 0; Signal.consti ~width:5 0 |]
+      ~read_addresses:[| Signal.of_int ~width:5 0; Signal.of_int ~width:5 0 |]
   in
   print_s [%message (memory : signal array)];
   [%expect
@@ -515,21 +515,21 @@ let%expect_test "simulation - write and read data on both ports" =
   Cyclesim.reset simulator;
   (* write on port 1 and 2 *)
   write_enable1 := Bits.vdd;
-  write_address1 := Bits.consti ~width:5 3;
-  write_data1 := Bits.consti ~width:15 100;
+  write_address1 := Bits.of_int ~width:5 3;
+  write_data1 := Bits.of_int ~width:15 100;
   Cyclesim.cycle simulator;
-  write_address1 := Bits.consti ~width:5 4;
-  write_data1 := Bits.consti ~width:15 640;
+  write_address1 := Bits.of_int ~width:5 4;
+  write_data1 := Bits.of_int ~width:15 640;
   Cyclesim.cycle simulator;
   write_enable1 := Bits.gnd;
   (* read on port 1 *)
   Cyclesim.cycle simulator;
-  read_address1 := Bits.consti ~width:5 3;
+  read_address1 := Bits.of_int ~width:5 3;
   read_enable1 := Bits.vdd;
   Cyclesim.cycle simulator;
   (* read on port 2 *)
   read_enable1 := Bits.gnd;
-  read_address2 := Bits.consti ~width:5 3;
+  read_address2 := Bits.of_int ~width:5 3;
   read_enable2 := Bits.vdd;
   Cyclesim.cycle simulator;
   read_enable2 := Bits.gnd;
@@ -537,8 +537,8 @@ let%expect_test "simulation - write and read data on both ports" =
   (* read on ports 1 and 2 *)
   read_enable1 := Bits.vdd;
   read_enable2 := Bits.vdd;
-  read_address1 := Bits.consti ~width:5 4;
-  read_address2 := Bits.consti ~width:5 4;
+  read_address1 := Bits.of_int ~width:5 4;
+  read_address2 := Bits.of_int ~width:5 4;
   Cyclesim.cycle simulator;
   read_enable1 := Bits.gnd;
   read_enable2 := Bits.gnd;
@@ -606,19 +606,19 @@ let%expect_test "simulation - write on both ports - highest indexed port wins" =
   let read_enable2 = Cyclesim.in_port simulator "read_enable2" in
   Cyclesim.reset simulator;
   write_enable1 := Bits.vdd;
-  write_address1 := Bits.consti ~width:5 9;
-  write_data1 := Bits.consti ~width:15 100;
+  write_address1 := Bits.of_int ~width:5 9;
+  write_data1 := Bits.of_int ~width:15 100;
   write_enable2 := Bits.vdd;
-  write_address2 := Bits.consti ~width:5 9;
-  write_data2 := Bits.consti ~width:15 200;
+  write_address2 := Bits.of_int ~width:5 9;
+  write_data2 := Bits.of_int ~width:15 200;
   Cyclesim.cycle simulator;
   write_enable1 := Bits.gnd;
   write_enable2 := Bits.gnd;
   Cyclesim.cycle simulator;
   read_enable1 := Bits.vdd;
-  read_address1 := Bits.consti ~width:5 9;
+  read_address1 := Bits.of_int ~width:5 9;
   read_enable2 := Bits.vdd;
-  read_address2 := Bits.consti ~width:5 9;
+  read_address2 := Bits.of_int ~width:5 9;
   Cyclesim.cycle simulator;
   read_enable1 := Bits.gnd;
   read_enable2 := Bits.gnd;
@@ -682,14 +682,14 @@ let%expect_test "simulation - demonstrate collision modes" =
     let read_enable1 = Cyclesim.in_port simulator "read_enable1" in
     Cyclesim.reset simulator;
     write_enable1 := Bits.vdd;
-    write_address1 := Bits.consti ~width:5 13;
-    write_data1 := Bits.consti ~width:15 10;
+    write_address1 := Bits.of_int ~width:5 13;
+    write_data1 := Bits.of_int ~width:15 10;
     Cyclesim.cycle simulator;
     write_enable1 := Bits.vdd;
-    write_address1 := Bits.consti ~width:5 13;
-    write_data1 := Bits.consti ~width:15 20;
+    write_address1 := Bits.of_int ~width:5 13;
+    write_data1 := Bits.of_int ~width:15 20;
     read_enable1 := Bits.vdd;
-    read_address1 := Bits.consti ~width:5 13;
+    read_address1 := Bits.of_int ~width:5 13;
     Cyclesim.cycle simulator;
     write_enable1 := Bits.gnd;
     read_enable1 := Bits.gnd;

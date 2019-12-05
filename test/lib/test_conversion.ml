@@ -7,7 +7,7 @@ type 'a signed_and_unsigned =
   }
 [@@deriving sexp_of]
 
-let bits ~f bits = List.init (1 lsl bits) ~f:(fun i -> consti ~width:bits i |> f)
+let bits ~f bits = List.init (1 lsl bits) ~f:(fun i -> of_int ~width:bits i |> f)
 let convert ~uint ~sint const = { signed = sint const; unsigned = uint const }
 
 let convert_bits ?(f = Fn.id) ~uint ~sint b =
@@ -20,8 +20,8 @@ let%expect_test "Bits.to_sint" =
   print_s
     [%message
       ""
-        ~should_be_minus_1:(Bits.to_sint (Bits.constb "1") : int)
-        ~should_be_minus_2:(Bits.to_sint (Bits.constb "10") : int)
+        ~should_be_minus_1:(Bits.to_sint (Bits.of_bit_string "1") : int)
+        ~should_be_minus_2:(Bits.to_sint (Bits.of_bit_string "10") : int)
         ~should_be_min_int:(Bits.to_sint Bits.(vdd @: zero 62) : int)
         ~should_be_:(Bits.to_sint Bits.(vdd @: zero 63) : int)];
   [%expect
@@ -247,7 +247,7 @@ let%expect_test "to_bstr" =
   print_s
     [%sexp
       (List.map
-         ~f:(fun c -> const c |> to_bstr)
+         ~f:(fun c -> of_string c |> to_bstr)
          [ "0"; "1"; "0000"; "1111"; "10011"; "1101000101010101011010" ]
        : string list)];
   [%expect {| (0 1 0000 1111 10011 1101000101010101011010) |}]

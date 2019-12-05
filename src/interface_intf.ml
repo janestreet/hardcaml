@@ -92,11 +92,14 @@ module type Comb = sig
   val assert_widths : t -> unit
 
   (** Each field is set to the constant integer value provided. *)
-  val const : int -> t
+  val of_int : int -> t
 
   (** [consts c] sets each field to the integer value in [c] using the declared field bit
       width. *)
-  val consts : int interface -> t
+  val of_ints : int interface -> t
+
+  val const : int -> t [@@deprecated "[since 2019-11] interface const"]
+  val consts : int interface -> t [@@deprecated "[since 2019-11] interface consts"]
 
   (** Pack interface into a vector. *)
   val pack : ?rev:bool -> t -> comb

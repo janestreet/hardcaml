@@ -62,14 +62,14 @@ let fill_then_empty (waves, sim) =
   let rec write i =
     if Bits.to_int !(outputs.full) = 0
     then (
-      inputs.d := Bits.consti ~width:32 ((i + 1) * 10);
+      inputs.d := Bits.of_int ~width:32 ((i + 1) * 10);
       Cyclesim.cycle sim;
       write (i + 1))
     else i
   in
   let wr_count = write 0 in
   inputs.wr := Bits.gnd;
-  inputs.d := Bits.consti ~width:32 0;
+  inputs.d := Bits.of_int ~width:32 0;
   Cyclesim.cycle sim;
   inputs.rd := Bits.vdd;
   for _ = 1 to wr_count do

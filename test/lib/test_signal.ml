@@ -71,7 +71,7 @@ let%expect_test "multiple assignment to a wire" =
 let%expect_test "wire width mismatch" =
   require_does_raise [%here] (fun () ->
     let w = wire 29 in
-    w <== consti ~width:17 3);
+    w <== of_int ~width:17 3);
   [%expect
     {|
     ("attempt to assign expression to wire of different width"
@@ -217,10 +217,10 @@ let%expect_test "invalid enable" =
 
 let%expect_test "insertion" =
   require_does_raise [%here] (fun () ->
-    insert ~into:(constb "111") (constb "00") ~at_offset:(-1));
+    insert ~into:(of_bit_string "111") (of_bit_string "00") ~at_offset:(-1));
   [%expect {| ("[insert] below bit 0" -1) |}];
   require_does_raise [%here] (fun () ->
-    insert ~into:(constb "111") (constb "00") ~at_offset:2);
+    insert ~into:(of_bit_string "111") (of_bit_string "00") ~at_offset:2);
   [%expect
     {|
     ("[insert] above msb of target"
@@ -232,13 +232,13 @@ let%expect_test "insertion" =
     print_s
       [%message
         "valid [insert]"
-          ~_:(insert ~into:(constb "111") (constb "00") ~at_offset:1 : t)]);
+          ~_:(insert ~into:(of_bit_string "111") (of_bit_string "00") ~at_offset:1 : t)]);
   [%expect {|
     ("valid [insert]" (cat (width 3) (arguments (0b00 select)))) |}]
 ;;
 
 let%expect_test "mux errors" =
-  require_does_raise [%here] (fun () -> mux vdd [ gnd; constb "10" ]);
+  require_does_raise [%here] (fun () -> mux vdd [ gnd; of_bit_string "10" ]);
   [%expect
     {|
     ("[mux] got inputs of different widths" (
@@ -257,7 +257,7 @@ let%expect_test "mux errors" =
       (maximum_expected 2)) |}];
   require_does_raise [%here] (fun () -> mux vdd [ gnd ]);
   [%expect {| ("[mux] got fewer than 2 inputs" (inputs_provided 1)) |}];
-  require_does_raise [%here] (fun () -> mux2 (constb "11") gnd vdd);
+  require_does_raise [%here] (fun () -> mux2 (of_bit_string "11") gnd vdd);
   [%expect {| "[mux] got select argument that is not one bit" |}]
 ;;
 

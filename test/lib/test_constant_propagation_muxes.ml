@@ -5,7 +5,7 @@ open Test_constant_propagation.Trace
 let sexp_of_signal = Test_constants.sexp_of_const_signal
 
 let%expect_test "[mux]" =
-  let sel = consti ~width:2 2 in
+  let sel = of_int ~width:2 2 in
   let width = 3 in
   for length = 0 to 5 do
     print_s
@@ -14,7 +14,7 @@ let%expect_test "[mux]" =
           (length : int)
           ~_:
             (try_with (fun () ->
-               mux sel (List.init length ~f:(fun i -> consti ~width i)))
+               mux sel (List.init length ~f:(fun i -> of_int ~width i)))
              : t Or_error.t)]
   done;
   [%expect
@@ -45,13 +45,13 @@ let%expect_test "[mux]" =
 ;;
 
 let%expect_test "mux" =
-  let data4 = List.map ~f:(consti ~width:5) [ 0; 10; 20; 30 ] in
+  let data4 = List.map ~f:(of_int ~width:5) [ 0; 10; 20; 30 ] in
   let mux = fn2 mux in
   print_s
     [%message
       "mux"
         ~_:
-          (List.init 4 ~f:(fun i -> mux (consti ~width:2 i) data4)
+          (List.init 4 ~f:(fun i -> mux (of_int ~width:2 i) data4)
            : (signal, signal list) fn2 list)];
   [%expect
     {|
@@ -86,9 +86,9 @@ let%expect_test "mux2" =
 let test_cases idx =
   let cases = fn3 cases in
   cases
-    (consti ~width:3 idx)
-    (consti ~width:5 11)
-    [ 3, consti ~width:5 0; 4, consti ~width:5 10; 6, consti ~width:5 20 ]
+    (of_int ~width:3 idx)
+    (of_int ~width:5 11)
+    [ 3, of_int ~width:5 0; 4, of_int ~width:5 10; 6, of_int ~width:5 20 ]
 ;;
 
 let%expect_test "cases default" =

@@ -282,8 +282,8 @@ module T = struct
 
   (* a few functions introduced a earlier for the multipliers *)
   let ( @: ) a b = concat_msb [ a; b ]
-  let consti bits n = words_of_int bits n, bits
-  let zero n = consti n 0
+  let of_int bits n = words_of_int bits n, bits
+  let zero n = of_int n 0
 
   let uresize x w =
     if width x = w
@@ -336,7 +336,7 @@ module T = struct
        [2;3;4] [2;3]
        [3;4;5] [3;4] *)
     let sums =
-      let ( * ) a b = consti (n * 2) (to_int a * to_int b) in
+      let ( * ) a b = of_int (n * 2) (to_int a * to_int b) in
       let rec map2 f a b =
         match a, b with
         | a' :: a'', b' :: b'' -> f a' b' :: map2 f a'' b''
@@ -428,8 +428,8 @@ module Mutable = struct
 
     let wire _ = empty
     let ( -- ) a _ = a
-    let vdd = const "1"
-    let gnd = const "0"
+    let vdd = of_bit_string "1"
+    let gnd = of_bit_string "0"
 
     let op2 op c a b =
       let width = width a in

@@ -103,8 +103,8 @@ module type Structural = sig
     -> unit
 
   val ( ==> ) : 'a -> 'b -> 'a * 'b
-  val const : string -> signal
-  val constz : int -> signal
+  val of_bit_string : string -> signal
+  val z : int -> signal
   val mux : signal -> signal list -> signal
   val concat_msb : signal list -> signal
   val select : signal -> int -> int -> signal

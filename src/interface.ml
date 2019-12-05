@@ -192,8 +192,10 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
                 (actual_width : int)])
     ;;
 
-    let const i = map port_widths ~f:(fun b -> Comb.consti ~width:b i)
-    let consts i = map2 port_widths i ~f:(fun width -> Comb.consti ~width)
+    let of_int i = map port_widths ~f:(fun b -> Comb.of_int ~width:b i)
+    let of_ints i = map2 port_widths i ~f:(fun width -> Comb.of_int ~width)
+    let const = of_int
+    let consts = of_ints
 
     let pack ?(rev = false) t =
       if rev then to_list t |> Comb.concat_msb else to_list_rev t |> Comb.concat_msb
@@ -271,7 +273,7 @@ module Make_enums (Enum : Interface_intf.Enum) = struct
     include Make (Pre)
 
     let of_enum (type a) (module Comb : Comb.S with type t = a) enum =
-      Comb.consti ~width (Enum.Variants.to_rank enum)
+      Comb.of_int ~width (Enum.Variants.to_rank enum)
     ;;
 
     let to_enum =
@@ -306,7 +308,7 @@ module Make_enums (Enum : Interface_intf.Enum) = struct
     include Make (Pre)
 
     let of_enum (type a) (module Comb : Comb.S with type t = a) enum =
-      Comb.consti ~width (1 lsl Enum.Variants.to_rank enum)
+      Comb.of_int ~width (1 lsl Enum.Variants.to_rank enum)
     ;;
 
     let to_enum =

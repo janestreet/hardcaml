@@ -5,18 +5,21 @@ let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
   let rec transitively_resolve (signal : Signal.t) =
     match signal with
     | Empty -> assert false
-    | Op (id, _)
-    | Const (id, _)
-    | Select (id, _, _)
-    | Reg (id, _)
-    | Mem (id, _, _, _)
-    | Multiport_mem (id, _, _)
-    | Mem_read_port (id, _, _)
-    | Inst (id, _, _) -> id
-    | Wire (id, reference) ->
-      (match !reference with
-       | Empty -> id
+    | Wire (signal_id, driver) ->
+      (match !driver with
+       | Empty -> signal_id
        | otherwise -> transitively_resolve otherwise)
+    | Op _
+    | Const _
+    | Select _
+    | Reg _
+    | Mem _
+    | Multiport_mem _
+    | Mem_read_port _
+    | Inst _ ->
+      (match Signal.signal_id signal with
+       | None -> assert false
+       | Some s -> s)
   in
   let clock_domains =
     Signal_graph.depth_first_search

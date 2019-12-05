@@ -7,7 +7,7 @@ open! Import
      let%expect_test "Top_of_stack" =
        Caller_id.set_mode Top_of_stack;
        require_does_raise [%here]
-         (fun () -> Signal.(consti ~width:1 0 +: consti ~width:2 0) |> ignore);
+         (fun () -> Signal.(of_int ~width:1 0 +: of_int ~width:2 0) |> ignore);
        [%expect {|
     ("[+:] got inputs of different widths"
       ((const
@@ -24,7 +24,7 @@ open! Import
      let%expect_test "Full" =
        Caller_id.set_mode Full_trace;
        require_does_raise [%here]
-         (fun () -> Signal.(consti ~width:1 0 +: consti ~width:2 0) |> ignore);
+         (fun () -> Signal.(of_int ~width:1 0 +: of_int ~width:2 0) |> ignore);
        [%expect {|
     ("[+:] got inputs of different widths"
       ((const

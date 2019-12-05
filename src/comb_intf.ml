@@ -137,32 +137,47 @@ module type S = sig
   val of_constant : Constant.t -> t
   val to_constant : t -> Constant.t
 
+
   (** convert binary string to constant *)
   val constb : string -> t
 
+  val of_bit_string : string -> t
+
   (** convert integer to constant *)
-  val consti : width:int -> int -> t
+  val of_int : width:int -> int -> t
 
-  val consti32 : width:int -> int32 -> t
-  val consti64 : width:int -> int64 -> t
+  val of_int32 : width:int -> int32 -> t
+  val of_int64 : width:int -> int64 -> t
 
-  (** convert unsigned hex string to constant *)
-  val consthu : width:int -> string -> t
-
-  (** convert signed hex string to constant *)
-  val consths : width:int -> string -> t
-
-  (** convert decimal string to constant*)
-  val constd : width:int -> string -> t
-
-  (** convert verilog style string to constant *)
-  val constv : string -> t
-
-  (** convert IntbitsList to constant *)
-  val constibl : int list -> t
+  (** convert hex string to a constant. If the target width is greater than the hex length
+      and [signedness] is [Signed] then the result is sign extended. Otherwise the result
+      is zero padded. *)
+  val of_hex
+    :  ?signedness:Constant.Signedness.t (** default is [Unsigned] *)
+    -> width:int
+    -> string
+    -> t
 
   (** convert verilog style or binary string to constant *)
-  val const : string -> t
+  val of_string : string -> t
+
+  (** convert IntbitsList to constant *)
+  val of_bit_list : int list -> t
+
+  val of_decimal_string : width:int -> string -> t
+
+  (** convert a [char] to an 8 bit constant *)
+  val of_char : char -> t
+
+  val constv : string -> t [@@deprecated "[since 2019-11] constv]"]
+  val consti : width:int -> int -> t [@@deprecated "[since 2019-11] consti]"]
+  val consti32 : width:int -> int32 -> t [@@deprecated "[since 2019-11] consti32]"]
+  val consti64 : width:int -> int64 -> t [@@deprecated "[since 2019-11] consti64]"]
+  val constibl : int list -> t [@@deprecated "[since 2019-11] constibl]"]
+  val consthu : width:int -> string -> t [@@deprecated "[since 2019-11] consthu]"]
+  val consths : width:int -> string -> t [@@deprecated "[since 2019-11] consths]"]
+  val const : string -> t [@@deprecated "[since 2019-11] const"]
+  val constd : width:int -> string -> t [@@deprecated "[since 2019-11] constd]"]
 
 
   (** [concat ts] concatenates a list of signals - the msb of the head of the list will
@@ -265,7 +280,6 @@ module type S = sig
   (** [insert ~into:t x ~at_offset] insert [x] into [t] at given offet *)
   val insert : into:t -> t -> at_offset:int -> t
 
-  (** *)
   val sel : t -> int * int -> t
 
   (** multiplexer.
@@ -421,6 +435,9 @@ module type S = sig
   val to_int64 : t -> int64
   val to_sint64 : t -> int64
 
+  (** Convert signal to a [char].  The signal must be 8 bits wide. *)
+  val to_char : t -> char
+
   (** create binary string from signal *)
   val to_bstr : t -> string
 
@@ -466,6 +483,8 @@ module type S = sig
       so in the general case [split_lsb] is not necessarily equivalent to
       [split_msb |> List.rev]. *)
   val split_msb : ?exact:bool (** default is [true] **) -> part_width:int -> t -> t list
+
+  val bswap : t -> t
 
   (** shift left logical *)
   val sll : t -> int -> t

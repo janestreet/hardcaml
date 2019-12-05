@@ -295,7 +295,7 @@ let const' b =
   Rtl_op (id (), String.length b, Constant b) >> add_sig
 ;;
 
-let const b =
+let of_bit_string b =
   match Map.find !const_map b with
   | Some x -> x
   | None ->
@@ -304,7 +304,7 @@ let const b =
     c
 ;;
 
-let constz w = const (String.init w ~f:(fun _ -> 'z'))
+let z w = of_bit_string (String.init w ~f:(fun _ -> 'z'))
 
 let check_readable l =
   let ok s = if not (is_readable s) then raise (Rtl_op_arg_not_readable s) in
@@ -476,8 +476,8 @@ module Base (C : Config) = struct
          | _ -> raise (Invalid_constant b)))
   ;;
 
-  let const = if structural_const then s_const else const
-  let of_constant c = Constant.to_binary_string c |> const
+  let const = if structural_const then s_const else of_bit_string
+  let of_constant c = Constant.to_binary_string c |> of_bit_string
   let ( +: ) = binop1 "add"
   let ( -: ) = binop1 "sub"
   let ( *: ) = binop2 "mulu"

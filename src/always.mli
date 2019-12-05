@@ -1,7 +1,7 @@
 (** [Always] is a DSL that lets one describe a circuit in the same style as a Verliog
     [always] block.
 
-    [if] and [switch] control constructs are provided.  ($==) is used for assignment.
+    [if] and [switch] control constructs are provided.  (<--) is used for assignment.
 
     Code is written as lists of assignments, if and control statements.
 
@@ -15,7 +15,7 @@
     assignment;
 
     {[
-      var $== exp;
+      var <-- exp;
     ]}
 
     if statements;
@@ -28,10 +28,10 @@
 
     {[
       switch condition [
-        consti 3 0 [ ... ];
-        consti 3 1 [ ... ];
-        consti 3 2 [ ... ];
-        consti 3 3 [ ... ];
+        of_int ~width:3 0, [ ... ];
+        of_int ~width:3 1, [ ... ];
+        of_int ~width:3 2, [ ... ];
+        of_int ~width:3 3, [ ... ];
       ]
     ]}
 
@@ -53,30 +53,30 @@
       let state = reg r_sync enable 2 in
       let a = wire 8 in
       compile [
-        if_ a#q ==: consti 8 4 [
-          a $== consti 8 2
+        if_ (a.value ==:. 4) [
+          a <-- of_int ~width:8 2
         ] [
-          switch (q state) [
-          (consti 2 0) [
-            a $==. 3;
-            state $== const 2 1;
+          switch state.value [
+          (of_int ~width:2 0) [
+            a <--. 3;
+            state <-- of_int ~width:2 1;
           ];
-          (consti 2 1) [
-            a $==. 2;
-            state $== const 2 2;
+          (of_int ~width:2 1) [
+            a <--. 2;
+            state <-- of_int ~width:2 2;
           ];
-          (consti 2 2) [
-            a $==. 1;
-            state $== const 2 3;
+          (of_int ~width:2 2) [
+            a <--. 1;
+            state <-- of_int ~width:2 3;
           ];
-          (consti 2 3) [
-            a $==. 0;
-            state $== const 2 4;
+          (of_int ~width:2 3) [
+            a <--. 0;
+            state <-- of_int ~width:2 4;
           ]
         ]
       ];
-      let state = state#q in
-      let a = a#q in
+      let state = state.value in
+      let a = a.value in
       ....
     v} *)
 

@@ -218,7 +218,7 @@ module Make (B : Comb.S) = struct
       let const ip fp f =
         let fp' = Float.of_int fp in
         let fp' = 2.0 ** fp' in
-        mk fp (B.consti ~width:(ip + fp) (Int.of_float (f *. fp')))
+        mk fp (B.of_int ~width:(ip + fp) (Int.of_float (f *. fp')))
       ;;
 
       (* basic arithmetic *)
@@ -496,7 +496,7 @@ module Make (B : Comb.S) = struct
       let const ip fp f =
         let fp' = Float.of_int fp in
         let fp' = 2.0 ** fp' in
-        mk fp (B.consti ~width:(ip + fp) (Int.of_float (f *. fp')))
+        mk fp (B.of_int ~width:(ip + fp) (Int.of_float (f *. fp')))
       ;;
 
       (* basic arithmetic *)

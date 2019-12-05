@@ -133,52 +133,45 @@ let is_empty = function
 
 let signal_id s =
   match s with
-  | Empty -> raise_s [%message "Cannot get [signal_id] from empty signal"]
-  | Const (s, _)
-  | Select (s, _, _)
-  | Reg (s, _)
-  | Mem (s, _, _, _)
-  | Multiport_mem (s, _, _)
-  | Mem_read_port (s, _, _)
-  | Wire (s, _)
-  | Inst (s, _, _)
-  | Op (s, _) -> s
+  | Empty -> None
+  | Const (signal_id, _)
+  | Select (signal_id, _, _)
+  | Reg (signal_id, _)
+  | Mem (signal_id, _, _, _)
+  | Multiport_mem (signal_id, _, _)
+  | Mem_read_port (signal_id, _, _)
+  | Wire (signal_id, _)
+  | Inst (signal_id, _, _)
+  | Op (signal_id, _) -> Some signal_id
+;;
+
+let signal_id_exn s =
+  match signal_id s with
+  | None -> raise_s [%message "Cannot get [signal_id] from empty signal"]
+  | Some s -> s
 ;;
 
 let uid s =
-  match s with
-  | Empty -> 0L
-  | _ -> (signal_id s).s_id
+  match signal_id s with
+  | None -> 0L
+  | Some s -> s.s_id
 ;;
 
 let deps s =
   match s with
   | Empty | Const _ -> []
-  | Select (s, _, _)
-  | Reg (s, _)
-  | Mem (s, _, _, _)
-  | Multiport_mem (s, _, _)
-  | Mem_read_port (s, _, _)
-  | Inst (s, _, _)
-  | Op (s, _) -> s.s_deps
-  | Wire (_, s) -> [ !s ]
+  | Wire (_, driver) -> [ !driver ]
+  | Select _ | Reg _ | Mem _ | Multiport_mem _ | Mem_read_port _ | Inst _ | Op _ ->
+    (signal_id_exn s).s_deps
 ;;
 
 let add_attribute signal attribute =
-  match signal with
-  | Empty ->
+  match signal_id signal with
+  | None ->
     raise_s
       [%message
         "attempt to add attribute to an empty signal" ~to_:(attribute : Rtl_attribute.t)]
-  | Const (s, _)
-  | Op (s, _)
-  | Reg (s, _)
-  | Select (s, _, _)
-  | Mem (s, _, _, _)
-  | Multiport_mem (s, _, _)
-  | Mem_read_port (s, _, _)
-  | Inst (s, _, _)
-  | Wire (s, _) ->
+  | Some s ->
     s.s_attributes <- attribute :: s.s_attributes;
     signal
 ;;
@@ -189,61 +182,29 @@ let add_attributes signal attributes =
 ;;
 
 let names s =
-  match s with
-  | Empty -> raise_s [%message "cannot get [names] from the empty signal"]
-  | Const (s, _)
-  | Select (s, _, _)
-  | Reg (s, _)
-  | Mem (s, _, _, _)
-  | Multiport_mem (s, _, _)
-  | Mem_read_port (s, _, _)
-  | Wire (s, _)
-  | Inst (s, _, _)
-  | Op (s, _) -> s.s_names
+  match signal_id s with
+  | None -> raise_s [%message "cannot get [names] from the empty signal"]
+  | Some s -> s.s_names
 ;;
 
 let attributes s =
-  match s with
-  | Empty -> raise_s [%message "cannot get [tag] from the empty signal"]
-  | Const (s, _)
-  | Select (s, _, _)
-  | Reg (s, _)
-  | Mem (s, _, _, _)
-  | Multiport_mem (s, _, _)
-  | Mem_read_port (s, _, _)
-  | Wire (s, _)
-  | Inst (s, _, _)
-  | Op (s, _) -> s.s_attributes
+  match signal_id s with
+  | None -> raise_s [%message "cannot get [tag] from the empty signal"]
+  | Some s -> s.s_attributes
 ;;
 
 let has_name t = not (List.is_empty (names t))
 
 let width s =
-  match s with
-  | Empty -> 0
-  | Const (s, _)
-  | Select (s, _, _)
-  | Reg (s, _)
-  | Mem (s, _, _, _)
-  | Multiport_mem (s, _, _)
-  | Mem_read_port (s, _, _)
-  | Wire (s, _)
-  | Inst (s, _, _)
-  | Op (s, _) -> s.s_width
+  match signal_id s with
+  | None -> 0
+  | Some s -> s.s_width
 ;;
 
 let caller_id s =
-  match s with
-  | Empty -> None
-  | Const (s, _)
-  | Select (s, _, _)
-  | Reg (s, _)
-  | Mem (s, _, _, _)
-  | Multiport_mem (s, _, _)
-  | Mem_read_port (s, _, _)
-  | Wire (s, _)
-  | Inst (s, _, _)
-  | Op (s, _) -> s.caller_id
+  match signal_id s with
+  | None -> None
+  | Some s -> s.caller_id
 ;;
 
 let is_reg = function
@@ -662,19 +623,11 @@ module Base = struct
   ;;
 
   let ( -- ) signal name =
-    match signal with
-    | Empty ->
+    match signal_id signal with
+    | None ->
       raise_s
         [%message "attempt to set the name of the empty signal" ~to_:(name : string)]
-    | Const (s, _)
-    | Op (s, _)
-    | Reg (s, _)
-    | Select (s, _, _)
-    | Mem (s, _, _, _)
-    | Multiport_mem (s, _, _)
-    | Mem_read_port (s, _, _)
-    | Inst (s, _, _)
-    | Wire (s, _) ->
+    | Some s ->
       s.s_names <- name :: s.s_names;
       signal
   ;;
@@ -784,11 +737,11 @@ module Const_prop = struct
     let cv s = const_value s
 
     let eqs s n =
-      let d = Bits.( ==: ) (cv s) (Bits.consti ~width:(width s) n) in
+      let d = Bits.( ==: ) (cv s) (Bits.of_int ~width:(width s) n) in
       Bits.to_int d = 1
     ;;
 
-    let cst b = const (Bits.to_string b)
+    let cst b = of_string (Bits.to_string b)
 
     let ( +: ) a b =
       match is_const a, is_const b with

@@ -119,7 +119,7 @@ module type Signal = sig
 
 
   (** returns the (private) signal_id.  For internal use only. *)
-  val signal_id : t -> signal_id
+  val signal_id : t -> signal_id option
 
   (** returns the unique id of the signal *)
   val uid : t -> Uid.t

@@ -154,10 +154,10 @@ module Make (Bits : Primitives) = struct
 
   (* constant generation *)
 
-  let[@cold] raise_constb_bad_char b =
+  let[@cold] raise_of_bit_string_bad_char b =
     raise_s
       [%message.omit_nil
-        "[constb] got invalid binary constant"
+        "[of_bit_string] got invalid binary constant"
           ~_:(b : string)
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
@@ -180,41 +180,36 @@ module Make (Bits : Primitives) = struct
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
-  let constb b =
+  let of_bit_string b =
     if String.length b = 0
     then raise_const_width_greater_than_zero (module String) (String.length b) b;
     String.iter b ~f:(function
       | '0' | '1' -> ()
-      | _ -> raise_constb_bad_char b);
+      | _ -> raise_of_bit_string_bad_char b);
     Bits.of_constant (Constant.of_binary_string b)
   ;;
 
-  let consti ~width v =
+  let of_int ~width v =
     if width <= 0 then raise_const_width_greater_than_zero (module Int) width v;
     of_constant (Constant.of_int ~width v)
   ;;
 
-  let consti32 ~width v =
+  let of_int32 ~width v =
     if width <= 0 then raise_const_width_greater_than_zero (module Int32) width v;
     of_constant (Constant.of_int32 ~width v)
   ;;
 
-  let consti64 ~width v =
+  let of_int64 ~width v =
     if width <= 0 then raise_const_width_greater_than_zero (module Int64) width v;
     of_constant (Constant.of_int64 ~width v)
   ;;
 
-  let consthu ~width v =
+  let of_hex ?(signedness = Constant.Signedness.Unsigned) ~width v =
     if width <= 0 then raise_const_width_greater_than_zero (module String) width v;
-    of_constant (Constant.of_hex_string ~signedness:Unsigned ~width v)
+    of_constant (Constant.of_hex_string ~signedness ~width v)
   ;;
 
-  let consths ~width v =
-    if width <= 0 then raise_const_width_greater_than_zero (module String) width v;
-    of_constant (Constant.of_hex_string ~signedness:Signed ~width v)
-  ;;
-
-  let constibl b =
+  let of_bit_list b =
     if List.length b = 0
     then
       raise_const_width_greater_than_zero
@@ -225,6 +220,15 @@ module Make (Bits : Primitives) = struct
         b;
     of_constant (Constant.of_bit_list b)
   ;;
+
+  let of_char c = of_int ~width:8 (Char.to_int c)
+  let constb = of_bit_string
+  let consti = of_int
+  let consti32 = of_int32
+  let consti64 = of_int64
+  let consthu = of_hex ~signedness:Unsigned
+  let consths = of_hex ~signedness:Signed
+  let constibl = of_bit_list
 
   let[@cold] raise_concat_empty s =
     raise_s
@@ -252,12 +256,12 @@ module Make (Bits : Primitives) = struct
   let ( @: ) a b = concat_msb [ a; b ]
   let concat_msb_e s = concat_msb (List.filter s ~f:(fun b -> not (Bits.is_empty b)))
   let concat_lsb_e s = concat_lsb (List.filter s ~f:(fun b -> not (Bits.is_empty b)))
-  let vdd = constb "1" -- "vdd"
-  let gnd = constb "0" -- "gnd"
+  let vdd = of_bit_string "1" -- "vdd"
+  let gnd = of_bit_string "0" -- "gnd"
   let is_vdd t = equal t vdd
   let is_gnd t = equal t gnd
-  let zero w = if w = 0 then empty else constb (String.init w ~f:(fun _ -> '0'))
-  let ones w = if w = 0 then empty else constb (String.init w ~f:(fun _ -> '1'))
+  let zero w = if w = 0 then empty else of_bit_string (String.init w ~f:(fun _ -> '0'))
+  let ones w = if w = 0 then empty else of_bit_string (String.init w ~f:(fun _ -> '1'))
 
   let one w =
     match w with
@@ -413,7 +417,7 @@ module Make (Bits : Primitives) = struct
   ;;
 
   let assert_width_one t msg = if not (width t = 1) then raise_width_not_one msg
-  let op_int_right op a b = op a (consti ~width:(width a) b)
+  let op_int_right op a b = op a (of_int ~width:(width a) b)
 
   let[@cold] raise_mux_too_many_inputs inputs_provided maximum_expected =
     raise_s
@@ -696,6 +700,16 @@ module Make (Bits : Primitives) = struct
 
   let split_msb ?exact ~part_width = split ?exact ~part_width ~sel:sel_top ~drop:drop_top
 
+  let bswap x =
+    let actual_width = width x in
+    if actual_width % 8 <> 0
+    then
+      raise_s
+        [%message
+          "bswap argument must be a multiple of 8 bits width" (actual_width : int)];
+    split_lsb ~exact:true ~part_width:8 x |> concat_msb
+  ;;
+
   let[@cold] raise_shift_negative op shift =
     raise_s
       [%message.omit_nil
@@ -819,7 +833,7 @@ module Make (Bits : Primitives) = struct
     let lmax = 1 lsl w in
     if lmax = max + 1
     then c +: one w
-    else mux2 (c ==: consti ~width:w max) (zero w) (c +: one w)
+    else mux2 (c ==: of_int ~width:w max) (zero w) (c +: one w)
   ;;
 
   let[@cold] raise_tree_invalid_arity () =
@@ -910,10 +924,10 @@ module Make (Bits : Primitives) = struct
   let leading_zeros_of_bits_list ?branching_factor d =
     let result_width = num_bits_to_represent (List.length d) in
     List.mapi d ~f:(fun i valid ->
-      { With_valid.valid; value = consti ~width:result_width i })
+      { With_valid.valid; value = of_int ~width:result_width i })
     |> priority_select_with_default
          ?branching_factor
-         ~default:(consti ~width:result_width (List.length d))
+         ~default:(of_int ~width:result_width (List.length d))
   ;;
 
   let leading_ones ?branching_factor t =
@@ -948,7 +962,7 @@ module Make (Bits : Primitives) = struct
     let result_width = max 1 (Int.ceil_log2 width) in
     { valid = t <>:. 0
     ; value =
-        consti ~width:result_width (width - 1) -: uresize leading_zeros result_width
+        of_int ~width:result_width (width - 1) -: uresize leading_zeros result_width
     }
   ;;
 
@@ -1006,47 +1020,48 @@ module Make (Bits : Primitives) = struct
     f b (msbs b)
   ;;
 
-  let[@cold] raise_constd_invalid_decimal_char v =
+  let[@cold] raise_of_decimal_string_invalid_decimal_char v =
     raise_s
       [%message.omit_nil
-        "[constd] got invalid decimal char"
+        "[of_decimal_string] got invalid decimal char"
           ~_:(v : char)
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
-  let[@cold] raise_constd_empty_string () =
+  let[@cold] raise_of_decimal_string_empty_string () =
     raise_s
       [%message.omit_nil
-        "[constd] got empty string" ~loc:(Caller_id.get () : Caller_id.t option)]
+        "[of_decimal_string] got empty string"
+          ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
   (* complex constant generators *)
-  let rec constd ~width:bits v =
+  let rec of_decimal_string ~width:bits v =
     let l = String.length v in
     let decimal v =
       match v with
-      | '0' -> consti ~width:4 0
-      | '1' -> consti ~width:4 1
-      | '2' -> consti ~width:4 2
-      | '3' -> consti ~width:4 3
-      | '4' -> consti ~width:4 4
-      | '5' -> consti ~width:4 5
-      | '6' -> consti ~width:4 6
-      | '7' -> consti ~width:4 7
-      | '8' -> consti ~width:4 8
-      | '9' -> consti ~width:4 9
-      | _ -> raise_constd_invalid_decimal_char v
+      | '0' -> of_int ~width:4 0
+      | '1' -> of_int ~width:4 1
+      | '2' -> of_int ~width:4 2
+      | '3' -> of_int ~width:4 3
+      | '4' -> of_int ~width:4 4
+      | '5' -> of_int ~width:4 5
+      | '6' -> of_int ~width:4 6
+      | '7' -> of_int ~width:4 7
+      | '8' -> of_int ~width:4 8
+      | '9' -> of_int ~width:4 9
+      | _ -> raise_of_decimal_string_invalid_decimal_char v
     in
     let ( +: ) a b =
       let w = max (width a) (width b) + 1 in
       let a, b = uresize a w, uresize b w in
       a +: b
     in
-    let ten = consti ~width:4 10 in
+    let ten = of_int ~width:4 10 in
     if l = 0
-    then raise_constd_empty_string ()
+    then raise_of_decimal_string_empty_string ()
     else if Char.equal v.[0] '-'
-    then zero bits -: constd ~width:bits (String.sub v ~pos:1 ~len:(l - 1))
+    then zero bits -: of_decimal_string ~width:bits (String.sub v ~pos:1 ~len:(l - 1))
     else (
       (* convert *)
       let rec sum i mulfac prod =
@@ -1054,42 +1069,42 @@ module Make (Bits : Primitives) = struct
         then prod
         else sum (i - 1) (mulfac *: ten) (prod +: (decimal v.[i] *: mulfac))
       in
-      uresize (sum (l - 1) (consti ~width:1 1) (consti ~width:1 0)) bits)
+      uresize (sum (l - 1) (of_int ~width:1 1) (of_int ~width:1 0)) bits)
   ;;
 
-  let[@cold] raise_constv_missing_tick s =
+  let[@cold] raise_of_verilog_format_missing_tick s =
     raise_s
       [%message.omit_nil
-        "[constv] missing [']"
+        "[of_verilog_format] missing [']"
           ~_:(s : string)
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
-  let[@cold] raise_constv_missing_count s =
+  let[@cold] raise_of_verilog_format_missing_count s =
     raise_s
       [%message.omit_nil
-        "[constv] missing bit count"
+        "[of_verilog_format] missing bit count"
           ~_:(s : string)
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
-  let[@cold] raise_constv_too_short s =
+  let[@cold] raise_of_verilog_format_too_short s =
     raise_s
       [%message.omit_nil
-        "[constv] value shorter than 2 characters"
+        "[of_verilog_format] value shorter than 2 characters"
           ~_:(s : string)
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
-  let[@cold] raise_constv_bad_control_char s =
+  let[@cold] raise_of_verilog_format_bad_control_char s =
     raise_s
       [%message.omit_nil
-        "[constv] bad control character"
+        "[of_verilog_format] bad control character"
           ~const:(s : string)
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
-  let constv s =
+  let of_verilog_format s =
     let slen, sval =
       let rec split2 n c s t =
         if Char.equal t.[n] c
@@ -1098,67 +1113,78 @@ module Make (Bits : Primitives) = struct
       in
       let s0, s1 =
         try split2 0 '\'' "" s with
-        | _ -> raise_constv_missing_tick s
+        | _ -> raise_of_verilog_format_missing_tick s
       in
-      if String.length s0 = 0 then raise_constv_missing_count s;
-      if String.length s1 < 2 then raise_constv_too_short s;
+      if String.length s0 = 0 then raise_of_verilog_format_missing_count s;
+      if String.length s1 < 2 then raise_of_verilog_format_too_short s;
       s0, s1
     in
     let len = Int.of_string slen in
     let ctrl = sval.[0] in
     let sval = String.sub sval ~pos:1 ~len:(String.length sval - 1) in
     match ctrl with
-    | 'd' -> constd ~width:len sval
-    | 'x' | 'h' -> consthu ~width:len sval
-    | 'X' | 'H' -> consths ~width:len sval
+    | 'd' -> of_decimal_string ~width:len sval
+    | 'x' | 'h' -> of_hex ~signedness:Unsigned ~width:len sval
+    | 'X' | 'H' -> of_hex ~signedness:Signed ~width:len sval
     | 'b' ->
       let slen = String.length sval in
       if slen < len
-      then constb (String.make (len - slen) '0' ^ sval)
+      then of_bit_string (String.make (len - slen) '0' ^ sval)
       else if slen > len
-      then constb (String.sub sval ~pos:(slen - len) ~len)
-      else constb sval
+      then of_bit_string (String.sub sval ~pos:(slen - len) ~len)
+      else of_bit_string sval
     | 'B' ->
       let slen = String.length sval in
       if slen < len
-      then constb (String.make (len - slen) sval.[0] ^ sval)
+      then of_bit_string (String.make (len - slen) sval.[0] ^ sval)
       else if slen > len
-      then constb (String.sub sval ~pos:(slen - len) ~len)
-      else constb sval
-    | _ -> raise_constv_bad_control_char s
+      then of_bit_string (String.sub sval ~pos:(slen - len) ~len)
+      else of_bit_string sval
+    | _ -> raise_of_verilog_format_bad_control_char s
   ;;
 
-  let[@cold] raise_const_convert_error const =
+  let[@cold] raise_of_string_convert_error const =
     raise_s
       [%message.omit_nil
-        "[const] could not convert constant"
+        "[of_string] could not convert constant"
           (const : string)
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
-  let const b =
+  let of_string b =
     let b =
       String.filter b ~f:(function
         | '_' -> false
         | _ -> true)
     in
     try
-      try constv b with
-      | _ -> constb b
+      try of_verilog_format b with
+      | _ -> of_bit_string b
     with
-    | _ -> raise_const_convert_error b
+    | _ -> raise_of_string_convert_error b
   ;;
+
+  let const = of_string
+  let constv = of_verilog_format
+  let constd = of_decimal_string
 
   let rec random ~width =
     if width <= 16
-    then consti ~width (Random.int (1 lsl width))
-    else consti ~width:16 (Random.int (1 lsl 16)) @: random ~width:(width - 16)
+    then of_int ~width (Random.int (1 lsl width))
+    else of_int ~width:16 (Random.int (1 lsl 16)) @: random ~width:(width - 16)
   ;;
 
   let to_int32 c = to_constant c |> Constant.to_int64 |> Int64.to_int32_trunc
   let to_sint32 c = sresize c Int32.num_bits |> to_constant |> Constant.to_int32
   let to_int64 c = to_constant c |> Constant.to_int64
   let to_sint64 c = sresize c Int64.num_bits |> to_constant |> Constant.to_int64
+
+  let to_char x =
+    let actual_width = width x in
+    if actual_width <> 8
+    then raise_s [%message "[to_char] signal must be 8 bits wide" (actual_width : int)];
+    Char.of_int_exn (to_int x)
+  ;;
 
   module type TypedMath = TypedMath with type t := t
 

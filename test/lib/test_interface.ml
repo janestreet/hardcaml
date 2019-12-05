@@ -22,7 +22,7 @@ let%expect_test "[equal]" =
 
 (* Functors are applying correctly wrt [Of_bits] and [Of_signal]. *)
 let%expect_test "bits and signals" =
-  let test (module C : I.Comb) = print_s [%sexp (C.const 10 : C.t)] in
+  let test (module C : I.Comb) = print_s [%sexp (C.of_int 10 : C.t)] in
   test (module I.Of_bits);
   [%expect {|
     ((x 1010)
@@ -186,16 +186,16 @@ let%expect_test "[wires]" =
        (data_in 0b0)))) |}]
 ;;
 
-let%expect_test "[const], [consts]" =
-  print_s [%sexp (I.Of_bits.const 0 : Bits.t I.t)];
+let%expect_test "[of_int], [of_ints]" =
+  print_s [%sexp (I.Of_bits.of_int 0 : Bits.t I.t)];
   [%expect {|
     ((x 0000)
      (y 00000000)) |}];
-  print_s [%sexp (I.Of_bits.const (-1) : Bits.t I.t)];
+  print_s [%sexp (I.Of_bits.of_int (-1) : Bits.t I.t)];
   [%expect {|
     ((x 1111)
      (y 11111111)) |}];
-  print_s [%sexp (I.Of_bits.consts { x = 3; y = 6 } : Bits.t I.t)];
+  print_s [%sexp (I.Of_bits.of_ints { x = 3; y = 6 } : Bits.t I.t)];
   [%expect {|
     ((x 0011)
      (y 00000110)) |}]
@@ -205,10 +205,10 @@ let%expect_test "[pack], [unpack]" =
   print_s
     [%sexp
       (I.Of_bits.pack
-         (I.map2 I.port_widths { x = -1; y = 0 } ~f:(fun width -> Bits.consti ~width))
+         (I.map2 I.port_widths { x = -1; y = 0 } ~f:(fun width -> Bits.of_int ~width))
        : Bits.t)];
   [%expect {| 000000001111 |}];
-  print_s [%sexp (I.Of_bits.(unpack (Bits.const "000000001111")) : Bits.t I.t)];
+  print_s [%sexp (I.Of_bits.(unpack (Bits.of_bit_string "000000001111")) : Bits.t I.t)];
   [%expect {|
     ((x 1111)
      (y 00000000)) |}];
@@ -217,10 +217,12 @@ let%expect_test "[pack], [unpack]" =
       (I.Of_bits.(
          pack
            ~rev:true
-           (I.map2 I.port_widths { x = -1; y = 0 } ~f:(fun width -> Bits.consti ~width)))
+           (I.map2 I.port_widths { x = -1; y = 0 } ~f:(fun width -> Bits.of_int ~width)))
        : Bits.t)];
   [%expect {| 111100000000 |}];
-  print_s [%sexp (I.Of_bits.(unpack ~rev:true (Bits.const "111100000000")) : Bits.t I.t)];
+  print_s
+    [%sexp
+      (I.Of_bits.(unpack ~rev:true (Bits.of_bit_string "111100000000")) : Bits.t I.t)];
   [%expect {|
     ((x 1111)
      (y 00000000)) |}]
@@ -249,9 +251,9 @@ let%expect_test "[of_interface_list], [to_interface_list]" =
 ;;
 
 let%expect_test "[mux]" =
-  let data = List.init 4 ~f:I.Of_bits.const in
+  let data = List.init 4 ~f:I.Of_bits.of_int in
   let results =
-    List.init 4 ~f:(fun sel -> I.Of_bits.mux (Bits.consti ~width:2 sel) data)
+    List.init 4 ~f:(fun sel -> I.Of_bits.mux (Bits.of_int ~width:2 sel) data)
   in
   print_s [%sexp (results : Bits.t I.t list)];
   [%expect
@@ -266,7 +268,7 @@ let%expect_test "[mux]" =
 ;;
 
 let%expect_test "concat" =
-  print_s [%sexp (I.Of_bits.(concat [ const 0; const (-1); const 0 ]) : Bits.t I.t)];
+  print_s [%sexp (I.Of_bits.(concat [ of_int 0; of_int (-1); of_int 0 ]) : Bits.t I.t)];
   [%expect {|
     ((x 000011110000)
      (y 000000001111111100000000)) |}];
@@ -275,7 +277,7 @@ let%expect_test "concat" =
 ;;
 
 let%expect_test "apply_names" =
-  print_s [%sexp (I.Of_signal.const 0 |> I.Of_signal.apply_names : Signal.t I.t)];
+  print_s [%sexp (I.Of_signal.of_int 0 |> I.Of_signal.apply_names : Signal.t I.t)];
   [%expect
     {|
     ((x (
@@ -289,7 +291,7 @@ let%expect_test "apply_names" =
        (width 8)
        (value 0b00000000)))) |}];
   print_s
-    [%sexp (I.Of_signal.const 0 |> I.Of_signal.apply_names ~prefix:"_" : Signal.t I.t)];
+    [%sexp (I.Of_signal.of_int 0 |> I.Of_signal.apply_names ~prefix:"_" : Signal.t I.t)];
   [%expect
     {|
     ((x (
@@ -303,7 +305,7 @@ let%expect_test "apply_names" =
        (width 8)
        (value 0b00000000)))) |}];
   print_s
-    [%sexp (I.Of_signal.const 0 |> I.Of_signal.apply_names ~suffix:"_" : Signal.t I.t)];
+    [%sexp (I.Of_signal.of_int 0 |> I.Of_signal.apply_names ~suffix:"_" : Signal.t I.t)];
   [%expect
     {|
     ((x (
@@ -320,10 +322,10 @@ let%expect_test "apply_names" =
 
 let%expect_test "assert_widths" =
   require_does_not_raise [%here] (fun () ->
-    I.Of_signal.const 0 |> I.Of_signal.assert_widths);
+    I.Of_signal.of_int 0 |> I.Of_signal.assert_widths);
   [%expect {||}];
   require_does_raise [%here] (fun () ->
-    I.Of_signal.const 0 |> I.map ~f:Signal.ue |> I.Of_signal.assert_widths);
+    I.Of_signal.of_int 0 |> I.map ~f:Signal.ue |> I.Of_signal.assert_widths);
   [%expect
     {|
     ("Port width mismatch in interface"

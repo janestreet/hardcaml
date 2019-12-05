@@ -1,27 +1,27 @@
 open! Import
 
 let%expect_test "IntbitsList" =
-  print_s IntbitsList.(consti ~width:8 127 |> sexp_of_t);
+  print_s IntbitsList.(of_int ~width:8 127 |> sexp_of_t);
   [%expect {| 01111111 |}]
 ;;
 
 let%expect_test "Bits" =
-  print_s Bits.(consti ~width:3 3 |> sexp_of_t);
+  print_s Bits.(of_int ~width:3 3 |> sexp_of_t);
   [%expect {| 011 |}]
 ;;
 
 let%expect_test "Bits" =
-  print_s Bits.(consti ~width:67 (-2) |> sexp_of_t);
+  print_s Bits.(of_int ~width:67 (-2) |> sexp_of_t);
   [%expect {| 1111111111111111111111111111111111111111111111111111111111111111110 |}]
 ;;
 
 let%expect_test "Mutable.ArraybitsInt" =
-  print_s Bits.Mutable.Comb.(consti ~width:13 294 |> sexp_of_t);
+  print_s Bits.Mutable.Comb.(of_int ~width:13 294 |> sexp_of_t);
   [%expect {| 0000100100110 |}]
 ;;
 
 let%expect_test "Mutable.ArraybitsInt" =
-  print_s Bits.Mutable.Comb.(consti ~width:19 (-30) |> sexp_of_t);
+  print_s Bits.Mutable.Comb.(of_int ~width:19 (-30) |> sexp_of_t);
   [%expect {| 1111111111111100010 |}]
 ;;
 
@@ -35,7 +35,7 @@ let%expect_test "empty" =
 ;;
 
 let%expect_test "simple constant" =
-  print_signal (consti ~width:2 2);
+  print_signal (of_int ~width:2 2);
   [%expect {|
     (const
       (width 2)
@@ -52,7 +52,7 @@ let%expect_test "named constant" =
 ;;
 
 let%expect_test "large constant" =
-  print_signal (consti ~width:9 0x123);
+  print_signal (of_int ~width:9 0x123);
   [%expect {|
     (const
       (width 9)
@@ -96,7 +96,7 @@ let%expect_test "multiple names in arg" =
 ;;
 
 let%expect_test "binary ops" =
-  let a, b = input "a" 4, const "1101" in
+  let a, b = input "a" 4, of_bit_string "1101" in
   print_signal (a +: b);
   print_signal (a -: b);
   print_signal (a *: b);
@@ -189,7 +189,7 @@ let%expect_test "printing at leaves - different types" =
 ;;
 
 let%expect_test "mux" =
-  print_signal (mux (input "sel" 2) (List.init 4 ~f:(consti ~width:16)));
+  print_signal (mux (input "sel" 2) (List.init 4 ~f:(of_int ~width:16)));
   [%expect
     {|
     (mux
@@ -199,7 +199,7 @@ let%expect_test "mux" =
 ;;
 
 let%expect_test "big mux" =
-  print_signal (mux (input "sel" 4) (List.init 16 ~f:(consti ~width:8)));
+  print_signal (mux (input "sel" 4) (List.init 16 ~f:(of_int ~width:8)));
   [%expect
     {|
     (mux
@@ -225,7 +225,7 @@ let%expect_test "big mux" =
 ;;
 
 let%expect_test "select" =
-  print_signal (select (consti ~width:4 2) 3 2);
+  print_signal (select (of_int ~width:4 2) 3 2);
   [%expect {|
     (select (width 2) (range (3 2)) (data_in 0b0010)) |}]
 ;;
@@ -390,7 +390,7 @@ module Structural_test (Base : Comb.Primitives with type t = Structural.signal) 
     let cat_o = mk_output "cat" 16 in
     let sel_o = mk_output "sel" 4 in
     let mux_o = mk_output "mux" 8 in
-    let const = consti ~width:8 123 in
+    let const = of_int ~width:8 123 in
     let sum = a +: b in
     let cat = a @: b in
     let sel = select a 3 0 in
