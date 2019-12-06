@@ -24,19 +24,21 @@ let create
   in
   let signal =
     Signal.Inst
-      ( Signal.make_id width deps
-      , Signal.new_id ()
-      , { inst_name = name
-        ; inst_instance =
-            (match instance with
-             | None -> "the_" ^ name
-             | Some i -> i)
-        ; inst_generics = parameters
-        ; inst_inputs = inputs
-        ; inst_outputs = outputs
-        ; inst_lib = lib
-        ; inst_arch = arch
-        } )
+      { signal_id = Signal.make_id width deps
+      ; extra_uid = Signal.new_id ()
+      ; instantiation =
+          { inst_name = name
+          ; inst_instance =
+              (match instance with
+               | None -> "the_" ^ name
+               | Some i -> i)
+          ; inst_generics = parameters
+          ; inst_inputs = inputs
+          ; inst_outputs = outputs
+          ; inst_lib = lib
+          ; inst_arch = arch
+          }
+      }
   in
   let find name =
     let w, o = List.Assoc.find_exn outputs name ~equal:String.equal in

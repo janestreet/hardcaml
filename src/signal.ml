@@ -11,10 +11,7 @@ module Signal_op = struct
     | Signal_or
     | Signal_xor
     | Signal_eq
-    | Signal_not
     | Signal_lt
-    | Signal_cat
-    | Signal_mux
   [@@deriving compare, sexp_of]
 
   let equal = [%compare.equal: t]
@@ -29,10 +26,7 @@ type signal_op = Signal_op.t =
   | Signal_or
   | Signal_xor
   | Signal_eq
-  | Signal_not
   | Signal_lt
-  | Signal_cat
-  | Signal_mux
 [@@deriving sexp_of, compare, hash]
 
 module Uid = struct
@@ -65,15 +59,52 @@ type signal_id =
 
 and t =
   | Empty
-  | Const of signal_id * Bits.t
-  | Op of signal_id * signal_op
-  | Wire of signal_id * t ref
-  | Select of signal_id * int * int
-  | Reg of signal_id * register
+  | Const of
+      { signal_id : signal_id
+      ; constant : Bits.t
+      }
+  | Op2 of
+      { signal_id : signal_id
+      ; op : signal_op
+      ; arg_a : t
+      ; arg_b : t
+      }
+  | Mux of
+      { signal_id : signal_id
+      ; select : t
+      ; cases : t list
+      }
+  | Cat of
+      { signal_id : signal_id
+      ; args : t list
+      }
+  | Not of
+      { signal_id : signal_id
+      ; arg : t
+      }
+  | Wire of
+      { signal_id : signal_id
+      ; driver : t ref
+      }
+  | Select of
+      { signal_id : signal_id
+      ; arg : t
+      ; high : int
+      ; low : int
+      }
+  | Reg of
+      { signal_id : signal_id
+      ; register : register
+      ; d : t
+      }
   | Mem of signal_id * Uid.t * register * memory
   | Multiport_mem of signal_id * int * write_port array
   | Mem_read_port of signal_id * t * t
-  | Inst of signal_id * Uid.t * instantiation
+  | Inst of
+      { signal_id : signal_id
+      ; extra_uid : Uid.t
+      ; instantiation : instantiation
+      }
 
 and write_port =
   { write_clock : t
@@ -134,15 +165,18 @@ let is_empty = function
 let signal_id s =
   match s with
   | Empty -> None
-  | Const (signal_id, _)
-  | Select (signal_id, _, _)
-  | Reg (signal_id, _)
+  | Const { signal_id; _ }
+  | Select { signal_id; _ }
+  | Reg { signal_id; _ }
   | Mem (signal_id, _, _, _)
   | Multiport_mem (signal_id, _, _)
   | Mem_read_port (signal_id, _, _)
-  | Wire (signal_id, _)
-  | Inst (signal_id, _, _)
-  | Op (signal_id, _) -> Some signal_id
+  | Wire { signal_id; _ }
+  | Inst { signal_id; _ }
+  | Op2 { signal_id; _ }
+  | Mux { signal_id; _ }
+  | Cat { signal_id; _ }
+  | Not { signal_id; _ } -> Some signal_id
 ;;
 
 let signal_id_exn s =
@@ -160,9 +194,17 @@ let uid s =
 let deps s =
   match s with
   | Empty | Const _ -> []
-  | Wire (_, driver) -> [ !driver ]
-  | Select _ | Reg _ | Mem _ | Multiport_mem _ | Mem_read_port _ | Inst _ | Op _ ->
-    (signal_id_exn s).s_deps
+  | Wire { driver; _ } -> [ !driver ]
+  | Select _
+  | Reg _
+  | Mem _
+  | Multiport_mem _
+  | Mem_read_port _
+  | Inst _
+  | Op2 _
+  | Not _
+  | Cat _
+  | Mux _ -> (signal_id_exn s).s_deps
 ;;
 
 let add_attribute signal attribute =
@@ -227,8 +269,23 @@ let is_wire = function
   | _ -> false
 ;;
 
-let is_op op = function
-  | Op (_, o) -> Signal_op.equal o op
+let is_op2 op = function
+  | Op2 { op = o; _ } -> Signal_op.equal o op
+  | _ -> false
+;;
+
+let is_cat = function
+  | Cat _ -> true
+  | _ -> false
+;;
+
+let is_mux = function
+  | Mux _ -> true
+  | _ -> false
+;;
+
+let is_not = function
+  | Not _ -> true
   | _ -> false
 ;;
 
@@ -282,10 +339,7 @@ let string_of_op = function
   | Signal_or -> "or"
   | Signal_xor -> "xor"
   | Signal_eq -> "eq"
-  | Signal_not -> "not"
   | Signal_lt -> "lt"
-  | Signal_cat -> "cat"
-  | Signal_mux -> "mux"
 ;;
 
 let to_string signal =
@@ -311,11 +365,14 @@ let to_string signal =
   in
   match signal with
   | Empty -> "Empty"
-  | Const (_, v) -> "Const[" ^ sid signal ^ "] = " ^ Bits.to_bstr v
-  | Op (_, o) -> "Op[" ^ sid signal ^ "] = " ^ string_of_op o
-  | Wire (_, d) -> "Wire[" ^ sid signal ^ "] -> " ^ Int64.to_string (uid !d)
-  | Select (_, h, l) ->
-    "Select[" ^ sid signal ^ "] " ^ Int.to_string h ^ ".." ^ Int.to_string l
+  | Const { constant; _ } -> "Const[" ^ sid signal ^ "] = " ^ Bits.to_bstr constant
+  | Op2 { op = o; _ } -> "Op[" ^ sid signal ^ "] = " ^ string_of_op o
+  | Not _ -> "Op[" ^ sid signal ^ "] = " ^ "not"
+  | Cat _ -> "Op[" ^ sid signal ^ "] = " ^ "cat"
+  | Mux _ -> "Op[" ^ sid signal ^ "] = " ^ "mux"
+  | Wire { driver; _ } -> "Wire[" ^ sid signal ^ "] -> " ^ Int64.to_string (uid !driver)
+  | Select { high; low; _ } ->
+    "Select[" ^ sid signal ^ "] " ^ Int.to_string high ^ ".." ^ Int.to_string low
   | Reg _ -> "Reg[" ^ sid signal ^ "]"
   | Mem _ -> "Mem[" ^ sid signal ^ "]"
   | Multiport_mem _ -> "Multiport_mem[" ^ sid signal ^ "]"
@@ -339,16 +396,17 @@ let structural_compare
       let typ () =
         match a, b with
         | Empty, Empty -> true
-        | Const (_, a), Const (_, b) -> Bits.equal a b
-        | Select (_, h0, l0), Select (_, h1, l1) -> h0 = h1 && l0 = l1
-        | Reg (_, _), Reg (_, _) -> true
+        | Const { constant = a; _ }, Const { constant = b; _ } -> Bits.equal a b
+        | Select { high = h0; low = l0; _ }, Select { high = h1; low = l1; _ } ->
+          h0 = h1 && l0 = l1
+        | Reg _, Reg _ -> true
         | Mem (_, _, _, m0), Mem (_, _, _, m1) -> m0.mem_size = m1.mem_size
         | Multiport_mem (_, mem_size0, _), Multiport_mem (_, mem_size1, _) ->
           mem_size0 = mem_size1
         | Mem_read_port _, Mem_read_port _ -> true
         (* XXX check if inputs have same names ? *)
-        | Wire (_, _), Wire (_, _) -> true
-        | Inst (_, _, i0), Inst (_, _, i1) ->
+        | Wire _, Wire _ -> true
+        | Inst { instantiation = i0; _ }, Inst { instantiation = i1; _ } ->
           String.equal i0.inst_name i1.inst_name
           (*i0.inst_instance=i1.inst_instance &&*)
           && [%compare.equal: Parameter.t list] i0.inst_generics i1.inst_generics
@@ -356,7 +414,8 @@ let structural_compare
                i0.inst_outputs
                i1.inst_outputs
         (* inst_inputs=??? *)
-        | Op (_, o0), Op (_, o1) -> Signal_op.equal o0 o1
+        | Op2 { op = o0; _ }, Op2 { op = o1; _ } -> Signal_op.equal o0 o1
+        | Not _, Not _ | Mux _, Mux _ | Cat _, Cat _ -> true
         | _ -> false
       in
       let wid () = width a = width b in
@@ -474,7 +533,10 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
     match signal with
     | Empty -> "empty"
     | Const _ -> "const"
-    | Op (_, op) -> string_of_op op
+    | Op2 { op; _ } -> string_of_op op
+    | Mux _ -> "mux"
+    | Not _ -> "not"
+    | Cat _ -> "cat"
     | Wire _ -> "wire"
     | Select _ -> "select"
     | Inst _ -> "instantiation"
@@ -487,7 +549,7 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
   then (
     match signal with
     | Empty -> [%message "empty"]
-    | Const (_, value) -> [%sexp (display_const value : string)]
+    | Const { constant; _ } -> [%sexp (display_const constant : string)]
     | _ ->
       (match names signal with
        | [] -> if show_uids then [%sexp (uid signal : Uid.t)] else [%sexp (tag : string)]
@@ -544,19 +606,21 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
     in
     match signal with
     | Empty -> create "empty"
-    | Const (_, value) -> create tag ~value:(display_const value)
-    | Op (_, Signal_mux) ->
+    | Const { constant; _ } -> create tag ~value:(display_const constant)
+    | Mux _ ->
       (match deps signal with
        | select :: data -> create tag ~select ~data
        | deps -> create "MUX IS BADLY FORMED" ~arguments:deps)
-    | Op _ -> create tag ~arguments:(deps signal)
-    | Wire (_, s) -> create tag ~data_in:!s
-    | Select (_, high, low) ->
+    | Cat _ -> create tag ~arguments:(deps signal)
+    | Not _ -> create tag ~arguments:(deps signal)
+    | Op2 _ -> create tag ~arguments:(deps signal)
+    | Wire { driver; _ } -> create tag ~data_in:!driver
+    | Select { high; low; _ } ->
       (match deps signal with
        | [ data_in ] -> create tag ~data_in ~range:(high, low)
        | deps -> create "SELECT IS BADLY FORMED" ~arguments:deps)
-    | Inst (_, _, instantiation) -> create tag ~instantiation
-    | Reg (_, register) ->
+    | Inst { instantiation; _ } -> create tag ~instantiation
+    | Reg { register; _ } ->
       (match deps signal with
        | data :: _ -> create tag ~register ~data_in:data
        | deps -> create "REGISTER IS BADLY FORMED" ~arguments:deps)
@@ -583,7 +647,7 @@ type signal = t [@@deriving sexp_of]
 let const_value =
   let sexp_of_signal = sexp_of_signal_recursive ~depth:1 in
   function
-  | Const (_, v) -> v
+  | Const { constant; _ } -> constant
   | signal ->
     raise_s
       [%message "cannot get the value of a non-constant signal" ~_:(signal : signal)]
@@ -597,7 +661,7 @@ module Base = struct
   let equal (t1 : t) t2 =
     match t1, t2 with
     | Empty, Empty -> true
-    | Const (_, c1), Const (_, c2) -> Bits.equal c1 c2
+    | Const { constant = c1; _ }, Const { constant = c2; _ } -> Bits.equal c1 c2
     | _ -> Uid.equal (uid t1) (uid t2)
   ;;
 
@@ -611,7 +675,7 @@ module Base = struct
     | _ -> false
   ;;
 
-  let of_bits b = Const (make_id (Bits.width b) [], b)
+  let of_bits constant = Const { signal_id = make_id (Bits.width constant) []; constant }
   let of_constant data = of_bits (Bits.of_constant data)
 
   let to_constant signal =
@@ -632,7 +696,9 @@ module Base = struct
       signal
   ;;
 
-  let op2 op len a b = Op (make_id len [ a; b ], op)
+  let op2 op len arg_a arg_b =
+    Op2 { signal_id = make_id len [ arg_a; arg_b ]; op; arg_a; arg_b }
+  ;;
 
   let concat_msb a =
     (* automatically concatenate successive constants *)
@@ -650,10 +716,13 @@ module Base = struct
     | [ a ] -> a
     | _ ->
       let len = List.fold a ~init:0 ~f:(fun acc a -> acc + width a) in
-      Op (make_id len a, Signal_cat)
+      Cat { signal_id = make_id len a; args = a }
   ;;
 
-  let select a hi lo = Select (make_id (hi - lo + 1) [ a ], hi, lo)
+  let select arg high low =
+    Select { signal_id = make_id (high - low + 1) [ arg ]; arg; high; low }
+  ;;
+
   let ( +: ) a b = op2 Signal_add (width a) a b
   let ( -: ) a b = op2 Signal_sub (width a) a b
   let ( *: ) a b = op2 Signal_mulu (width a + width b) a b
@@ -661,10 +730,17 @@ module Base = struct
   let ( &: ) a b = op2 Signal_and (width a) a b
   let ( |: ) a b = op2 Signal_or (width a) a b
   let ( ^: ) a b = op2 Signal_xor (width a) a b
-  let ( ~: ) a = Op (make_id (width a) [ a ], Signal_not)
+  let ( ~: ) a = Not { signal_id = make_id (width a) [ a ]; arg = a }
   let ( ==: ) a b = op2 Signal_eq 1 a b
   let ( <: ) a b = op2 Signal_lt 1 a b
-  let mux sel l = Op (make_id (width (List.hd_exn l)) (sel :: l), Signal_mux)
+
+  let mux select cases =
+    Mux
+      { signal_id = make_id (width (List.hd_exn cases)) (select :: cases)
+      ; select
+      ; cases
+      }
+  ;;
 end
 
 module Comb_make = Comb.Make
@@ -678,19 +754,19 @@ include (
   with type t := t)
 
 let is_vdd = function
-  | Const (_, b) when Bits.equal b Bits.vdd -> true
+  | Const { constant; _ } when Bits.equal constant Bits.vdd -> true
   | _ -> false
 ;;
 
 let is_gnd = function
-  | Const (_, b) when Bits.equal b Bits.gnd -> true
+  | Const { constant; _ } when Bits.equal constant Bits.gnd -> true
   | _ -> false
 ;;
 
 let ( <== ) a b =
   match a with
-  | Wire (_, d) ->
-    if not (is_empty !d)
+  | Wire { driver; _ } ->
+    if not (is_empty !driver)
     then
       raise_s
         [%message
@@ -706,7 +782,7 @@ let ( <== ) a b =
             ~expression_width:(width b : int)
             ~wire:(a : t)
             ~expression:(b : t)];
-    d := b
+    driver := b
   | _ ->
     raise_s
       [%message
@@ -714,7 +790,7 @@ let ( <== ) a b =
 ;;
 
 let assign = ( <== )
-let wire w = Wire (make_id w [], ref Empty)
+let wire w = Wire { signal_id = make_id w []; driver = ref Empty }
 
 let wireof s =
   let x = wire (width s) in
@@ -895,12 +971,12 @@ module Const_prop = struct
     include Comb_make (Base)
 
     let is_vdd = function
-      | Const (_, b) when Bits.equal b Bits.vdd -> true
+      | Const { constant; _ } when Bits.equal constant Bits.vdd -> true
       | _ -> false
     ;;
 
     let is_gnd = function
-      | Const (_, b) when Bits.equal b Bits.gnd -> true
+      | Const { constant; _ } when Bits.equal constant Bits.gnd -> true
       | _ -> false
     ;;
   end
@@ -1019,7 +1095,7 @@ let reg spec ~enable d =
     ; spec.reg_enable
     ]
   in
-  Reg (make_id (width d) (d :: deps), spec)
+  Reg { signal_id = make_id (width d) (d :: deps); register = spec; d }
 ;;
 
 let reg_fb spec ~enable ~w:width f =

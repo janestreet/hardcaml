@@ -594,7 +594,7 @@ module XSynthesize (X : S) (L : LutSize) = struct
 
   let transform find (signal : Signal.t) =
     match signal with
-    | Reg (_, r) ->
+    | Reg { register = r; d; _ } ->
       let find_uid x = Signal.uid x |> find in
       let r =
         { r with
@@ -636,7 +636,7 @@ module XSynthesize (X : S) (L : LutSize) = struct
         | Falling -> ~:(r.reg_clock)
         | Rising -> r.reg_clock
       in
-      let d = find_uid (List.nth_exn (Signal.deps signal) 0) in
+      let d = find_uid d in
       let ena, d =
         if is_empty r.reg_clear
         then r.reg_enable, d

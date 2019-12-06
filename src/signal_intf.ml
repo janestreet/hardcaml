@@ -15,10 +15,7 @@ module type Signal = sig
     | Signal_or
     | Signal_xor
     | Signal_eq
-    | Signal_not
     | Signal_lt
-    | Signal_cat
-    | Signal_mux
   [@@deriving sexp_of, compare, hash]
 
   module Uid : sig
@@ -52,15 +49,52 @@ module type Signal = sig
   (** main signal data type *)
   and t =
     | Empty
-    | Const of signal_id * Bits.t
-    | Op of signal_id * signal_op
-    | Wire of signal_id * t ref
-    | Select of signal_id * int * int
-    | Reg of signal_id * register
+    | Const of
+        { signal_id : signal_id
+        ; constant : Bits.t
+        }
+    | Op2 of
+        { signal_id : signal_id
+        ; op : signal_op
+        ; arg_a : t
+        ; arg_b : t
+        }
+    | Mux of
+        { signal_id : signal_id
+        ; select : t
+        ; cases : t list
+        }
+    | Cat of
+        { signal_id : signal_id
+        ; args : t list
+        }
+    | Not of
+        { signal_id : signal_id
+        ; arg : t
+        }
+    | Wire of
+        { signal_id : signal_id
+        ; driver : t ref
+        }
+    | Select of
+        { signal_id : signal_id
+        ; arg : t
+        ; high : int
+        ; low : int
+        }
+    | Reg of
+        { signal_id : signal_id
+        ; register : register
+        ; d : t
+        }
     | Mem of signal_id * Uid.t * register * memory
     | Multiport_mem of signal_id * int * write_port array
     | Mem_read_port of signal_id * t * t
-    | Inst of signal_id * Uid.t * instantiation
+    | Inst of
+        { signal_id : signal_id
+        ; extra_uid : Uid.t
+        ; instantiation : instantiation
+        }
 
   and write_port =
     { write_clock : t
@@ -163,7 +197,16 @@ module type Signal = sig
   val is_wire : t -> bool
 
   (** is the signal the given operator? *)
-  val is_op : signal_op -> t -> bool
+  val is_op2 : signal_op -> t -> bool
+
+  (** is the signal concatenation? *)
+  val is_cat : t -> bool
+
+  (** is the signal a multiplexer? *)
+  val is_mux : t -> bool
+
+  (** is the signal a not> *)
+  val is_not : t -> bool
 
   (** return the (binary) string representing a constants value *)
   val const_value : t -> Bits.t

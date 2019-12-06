@@ -12,6 +12,9 @@ module Structure_kind = struct
     | Empty
     | Const of Bits.t
     | Op of Signal.signal_op
+    | Mux
+    | Cat
+    | Not
     | Wire of string list
     | Select of int * int
     | Mem_read_port
@@ -24,15 +27,18 @@ end
 let structure_kind (signal : Signal.t) =
   match signal with
   | Signal.Empty -> Structure_kind.Empty
-  | Signal.Const (_, c) -> Structure_kind.Const c
-  | Signal.Op (_, op) -> Structure_kind.Op op
-  | Signal.Wire (_, _) -> Structure_kind.Wire (Signal.names signal)
-  | Signal.Select (_, a, b) -> Structure_kind.Select (a, b)
-  | Signal.Reg (_, _) -> Structure_kind.Sequential (Signal.uid signal)
+  | Signal.Const { constant; _ } -> Structure_kind.Const constant
+  | Signal.Op2 { op; _ } -> Structure_kind.Op op
+  | Signal.Mux _ -> Structure_kind.Mux
+  | Signal.Cat _ -> Structure_kind.Cat
+  | Signal.Not _ -> Structure_kind.Not
+  | Signal.Wire _ -> Structure_kind.Wire (Signal.names signal)
+  | Signal.Select { high; low; _ } -> Structure_kind.Select (high, low)
+  | Signal.Reg _ -> Structure_kind.Sequential (Signal.uid signal)
   | Signal.Mem (_, _, _, _) -> Structure_kind.Sequential (Signal.uid signal)
   | Signal.Multiport_mem (_, _, _) -> Structure_kind.Sequential (Signal.uid signal)
   | Signal.Mem_read_port (_, _, _) -> Structure_kind.Mem_read_port
-  | Signal.Inst (_, _, _) -> Structure_kind.Sequential (Signal.uid signal)
+  | Signal.Inst _ -> Structure_kind.Sequential (Signal.uid signal)
 ;;
 
 let children (signal : Signal.t) =
@@ -40,7 +46,7 @@ let children (signal : Signal.t) =
   | Structure_kind.Sequential _ -> []
   | _ ->
     (match signal with
-     | Wire (_, r) -> [ !r ]
+     | Wire { driver; _ } -> [ !driver ]
      | Mem_read_port (_, mem, r) -> [ mem; r ]
      | _ -> Signal.deps signal)
 ;;
@@ -52,10 +58,43 @@ let signal_id_map_children s ~f =
 let map_children signal ~f =
   match signal with
   | Signal.Empty -> signal
-  | Signal.Const (_, _) -> signal
-  | Signal.Op (s, op) -> Signal.Op (signal_id_map_children s ~f, op)
-  | Signal.Wire (s, c) -> Signal.Wire (signal_id_map_children s ~f, ref (f !c))
-  | Signal.Select (s, a, b) -> Signal.Select (signal_id_map_children s ~f, a, b)
+  | Signal.Const _ -> signal
+  | Signal.Op2 { signal_id; op; arg_a; arg_b } ->
+    let arg_a = f arg_a in
+    let arg_b = f arg_b in
+    Signal.Op2
+      { signal_id = { signal_id with s_id = Signal.new_id (); s_deps = [ arg_a; arg_b ] }
+      ; op
+      ; arg_a
+      ; arg_b
+      }
+  | Signal.Mux { signal_id; select; cases } ->
+    let select = f select in
+    let cases = List.map cases ~f in
+    Signal.Mux
+      { signal_id = { signal_id with s_id = Signal.new_id (); s_deps = select :: cases }
+      ; select
+      ; cases
+      }
+  | Signal.Cat { signal_id; args } ->
+    let args = List.map args ~f in
+    Signal.Cat
+      { signal_id = { signal_id with s_id = Signal.new_id (); s_deps = args }; args }
+  | Signal.Not { signal_id; arg } ->
+    let arg = f arg in
+    Signal.Not
+      { signal_id = { signal_id with s_id = Signal.new_id (); s_deps = [ arg ] }; arg }
+  | Signal.Wire { signal_id; driver } ->
+    Signal.Wire
+      { signal_id = signal_id_map_children signal_id ~f; driver = ref (f !driver) }
+  | Signal.Select { signal_id; arg; high; low } ->
+    let arg = f arg in
+    Signal.Select
+      { signal_id = { signal_id with s_id = Signal.new_id (); s_deps = [ arg ] }
+      ; arg
+      ; high
+      ; low
+      }
   | Signal.Multiport_mem _ | Signal.Reg _ -> assert false
   | Signal.Mem_read_port (s, mem, r) ->
     Signal.Mem_read_port
@@ -63,7 +102,7 @@ let map_children signal ~f =
       , f mem
       , f r )
   | Signal.Mem (_, _, _, _) -> failwith "Mem is unsupported"
-  | Signal.Inst (_, _, _) -> signal
+  | Signal.Inst _ -> signal
 ;;
 
 let find_by_signal_uid memo s = Hashtbl.find_exn memo (Signal.uid s)
@@ -94,7 +133,7 @@ let rec shallow_equal a b =
   Structure_kind.equal (structure_kind a) (structure_kind b)
   &&
   match a, b with
-  | Wire (_, r_a), Wire (_, r_b) ->
+  | Wire { driver = r_a; _ }, Wire { driver = r_b; _ } ->
     (* special case wires, due to special treatment of Mem_read_port... *)
     shallow_equal !r_a !r_b
   | _ ->
@@ -106,35 +145,51 @@ let rec shallow_equal a b =
 let transform_sequential_signal canonical signal =
   let get_canonical signal = Hashtbl.find_exn canonical (Signal.uid signal) in
   match signal with
-  | Signal.Reg (s, reg_info) ->
-    let { Signal.reg_clock
-        ; reg_clock_edge
-        ; reg_reset
-        ; reg_reset_edge
-        ; reg_reset_value
-        ; reg_clear
-        ; reg_clear_level
-        ; reg_clear_value
-        ; reg_enable
-        }
-      =
-      reg_info
+  | Signal.Reg
+      { signal_id
+      ; register =
+          { Signal.reg_clock
+          ; reg_clock_edge
+          ; reg_reset
+          ; reg_reset_edge
+          ; reg_reset_value
+          ; reg_clear
+          ; reg_clear_level
+          ; reg_clear_value
+          ; reg_enable
+          }
+      ; d
+      } ->
+    let d = get_canonical d in
+    let register =
+      { Signal.reg_clock = get_canonical reg_clock
+      ; reg_clock_edge
+      ; reg_reset = get_canonical reg_reset
+      ; reg_reset_edge
+      ; reg_reset_value = get_canonical reg_reset_value
+      ; reg_clear = get_canonical reg_clear
+      ; reg_clear_level
+      ; reg_clear_value = get_canonical reg_clear_value
+      ; reg_enable = get_canonical reg_enable
+      }
     in
     Signal.Reg
-      ( { s with
-          s_id = Signal.new_id ()
-        ; s_deps = List.map s.Signal.s_deps ~f:get_canonical
-        }
-      , { Signal.reg_clock = get_canonical reg_clock
-        ; reg_clock_edge
-        ; reg_reset = get_canonical reg_reset
-        ; reg_reset_edge
-        ; reg_reset_value = get_canonical reg_reset_value
-        ; reg_clear = get_canonical reg_clear
-        ; reg_clear_level
-        ; reg_clear_value = get_canonical reg_clear_value
-        ; reg_enable = get_canonical reg_enable
-        } )
+      { signal_id =
+          { signal_id with
+            s_id = Signal.new_id ()
+          ; s_deps =
+              [ d
+              ; register.reg_clock
+              ; register.reg_reset
+              ; register.reg_reset_value
+              ; register.reg_clear
+              ; register.reg_clear_value
+              ; register.reg_enable
+              ]
+          }
+      ; register
+      ; d
+      }
   | Signal.Multiport_mem (s, size, write_ports) ->
     let write_ports =
       Array.map
@@ -165,7 +220,7 @@ let transform_sequential_signal canonical signal =
 
 let rec unwrap_wire s =
   match s with
-  | Signal.Wire (_, r) when List.is_empty (Signal.names s) -> unwrap_wire !r
+  | Signal.Wire { driver; _ } when List.is_empty (Signal.names s) -> unwrap_wire !driver
   | _ -> s
 ;;
 
@@ -173,16 +228,16 @@ let fix_mem_read_ports signals =
   (* We wrap all sequential signals in wires. However, Mem_read_port expects to contain
      Multiport_mem and not Multiport_mem wrapped in wire. Rewrite the wire out. *)
   List.iter signals ~f:(function
-    | Signal.Wire (_, r) ->
+    | Signal.Wire { driver; _ } ->
       (* every Mem_read_port signal is pointed to by a single wire *)
-      (match !r with
-       | Signal.Mem_read_port (s, Wire (_, mem_ref), addr) ->
+      (match !driver with
+       | Signal.Mem_read_port (s, Wire { driver = mem_ref; _ }, addr) ->
          let mem =
            match unwrap_wire !mem_ref with
            | Signal.Multiport_mem (_, _, _) as unwrapped -> unwrapped
            | _ -> assert false
          in
-         r := Mem_read_port ({ s with s_deps = [ mem; addr ] }, mem, addr)
+         driver := Mem_read_port ({ s with s_deps = [ mem; addr ] }, mem, addr)
        | _ -> ())
     | _ -> ())
 ;;
@@ -190,7 +245,7 @@ let fix_mem_read_ports signals =
 let compress_wires signals =
   Signal_graph.create signals
   |> Signal_graph.iter ~f:(function
-    | Signal.Wire (_, r) -> r := unwrap_wire !r
+    | Signal.Wire { driver; _ } -> driver := unwrap_wire !driver
     | _ -> ())
 ;;
 

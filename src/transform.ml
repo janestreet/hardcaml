@@ -21,12 +21,11 @@ module MakePureCombTransform (B : MakePureCombTransform_arg) = struct
   type t = B.t
 
   let transform find signal =
-    let dep n = find (uid (List.nth_exn (deps signal) n)) in
     let find_uid x = uid x |> find in
     let new_signal =
       match signal with
-      | Op (_, op) ->
-        let op2 op = op (dep 0) (dep 1) in
+      | Op2 { signal_id = _; op; arg_a; arg_b } ->
+        let op2 op = op (find_uid arg_a) (find_uid arg_b) in
         (match op with
          | Signal_add -> op2 B.( +: )
          | Signal_sub -> op2 B.( -: )
@@ -36,21 +35,19 @@ module MakePureCombTransform (B : MakePureCombTransform_arg) = struct
          | Signal_or -> op2 B.( |: )
          | Signal_xor -> op2 B.( ^: )
          | Signal_eq -> op2 B.( ==: )
-         | Signal_not -> B.( ~: ) (dep 0)
-         | Signal_lt -> op2 B.( <: )
-         | Signal_cat -> B.concat_msb (deps signal |> List.map ~f:find_uid)
-         | Signal_mux ->
-           let sel = List.hd_exn (deps signal) |> find_uid in
-           let cases = List.tl_exn (deps signal) |> List.map ~f:find_uid in
-           B.mux sel cases)
+         | Signal_lt -> op2 B.( <: ))
+      | Not { signal_id = _; arg } -> B.( ~: ) (find_uid arg)
+      | Cat { signal_id = _; args } -> B.concat_msb (List.map args ~f:find_uid)
+      | Mux { signal_id = _; select; cases } ->
+        B.mux (find_uid select) (List.map cases ~f:find_uid)
       | Empty -> B.empty
-      | Wire (_, d) ->
+      | Wire { driver; _ } ->
         let w = B.wire (width signal) in
-        if not (is_empty !d) then B.( <== ) w (find_uid !d);
+        if not (is_empty !driver) then B.( <== ) w (find_uid !driver);
         w
-      | Const (_, b) -> B.of_constant (Bits.to_constant b)
-      | Select (_, h, l) -> B.select (dep 0) h l
-      | Reg (_, _) -> failwith "MakePureCombTransform: no registers"
+      | Const { constant; _ } -> B.of_constant (Bits.to_constant constant)
+      | Select { arg; high; low; _ } -> B.select (find_uid arg) high low
+      | Reg _ -> failwith "MakePureCombTransform: no registers"
       | Mem (_, _, _, _) -> failwith "MakePureCombTransform: no memories"
       | Multiport_mem (_, _, _) -> failwith "MakePureCombTransform: no memories"
       | Mem_read_port (_, _, _) -> failwith "MakePureCombTransform: no memories"
@@ -139,10 +136,10 @@ module MakePureCombTransform (B : MakePureCombTransform_arg) = struct
       let o = Map.find_exn id_to_sig uid' in
       let n = Map.find_exn map uid' in
       match o with
-      | Wire (_, d) ->
-        if not (is_empty !d)
+      | Wire { driver; _ } ->
+        if not (is_empty !driver)
         then (
-          let d = Map.find_exn map (uid !d) in
+          let d = Map.find_exn map (uid !driver) in
           B.(n <== d))
       | _ -> failwith "expecting a wire");
     (* find new outputs *)
@@ -167,8 +164,8 @@ module MakeCombTransform (B : Comb.Primitives with type t = Signal.t) = struct
     let find_uid x = uid x |> find in
     let new_signal =
       match signal with
-      | Op (_, op) ->
-        let op2 op = op (dep 0) (dep 1) in
+      | Op2 { signal_id = _; op; arg_a; arg_b } ->
+        let op2 op = op (find_uid arg_a) (find_uid arg_b) in
         (match op with
          | Signal_add -> op2 B.( +: )
          | Signal_sub -> op2 B.( -: )
@@ -178,32 +175,30 @@ module MakeCombTransform (B : Comb.Primitives with type t = Signal.t) = struct
          | Signal_or -> op2 B.( |: )
          | Signal_xor -> op2 B.( ^: )
          | Signal_eq -> op2 B.( ==: )
-         | Signal_not -> B.( ~: ) (dep 0)
-         | Signal_lt -> op2 B.( <: )
-         | Signal_cat -> B.concat_msb (deps signal |> List.map ~f:find_uid)
-         | Signal_mux ->
-           let sel = List.hd_exn (deps signal) |> find_uid in
-           let cases = List.tl_exn (deps signal) |> List.map ~f:find_uid in
-           B.mux sel cases)
+         | Signal_lt -> op2 B.( <: ))
+      | Not { signal_id = _; arg } -> B.( ~: ) (find_uid arg)
+      | Cat { signal_id = _; args } -> B.concat_msb (List.map args ~f:find_uid)
+      | Mux { signal_id = _; select; cases } ->
+        B.mux (find_uid select) (List.map cases ~f:find_uid)
       | Empty -> B.empty
-      | Wire (_, d) ->
+      | Wire { driver; _ } ->
         let w = Signal.wire (width signal) in
-        if not (is_empty !d) then Signal.( <== ) w (find_uid !d);
+        if not (is_empty !driver) then Signal.( <== ) w (find_uid !driver);
         w
-      | Const (_, b) -> B.of_constant (Bits.to_constant b)
-      | Select (_, h, l) -> B.select (dep 0) h l
-      | Reg (_, r) ->
+      | Const { constant; _ } -> B.of_constant (Bits.to_constant constant)
+      | Select { arg; high; low; _ } -> B.select (find_uid arg) high low
+      | Reg { register; d; _ } ->
         reg
           (Reg_spec.override
-             (Reg_spec.create ~clock:(find (uid r.reg_clock)) ())
-             ~reset_edge:r.reg_reset_edge
-             ~clear_level:r.reg_clear_level
-             ~reset:(find (uid r.reg_reset))
-             ~reset_to:(find (uid r.reg_reset_value))
-             ~clear:(find (uid r.reg_clear))
-             ~clear_to:(find (uid r.reg_clear_value)))
-          ~enable:(find (uid r.reg_enable))
-          (dep 0)
+             (Reg_spec.create ~clock:(find_uid register.reg_clock) ())
+             ~reset_edge:register.reg_reset_edge
+             ~clear_level:register.reg_clear_level
+             ~reset:(find_uid register.reg_reset)
+             ~reset_to:(find_uid register.reg_reset_value)
+             ~clear:(find_uid register.reg_clear)
+             ~clear_to:(find_uid register.reg_clear_value))
+          ~enable:(find_uid register.reg_enable)
+          (find_uid d)
       | Mem (_, _, r, m) ->
         let d' = dep 0 in
         let w' = dep 1 in
@@ -222,14 +217,16 @@ module MakeCombTransform (B : Comb.Primitives with type t = Signal.t) = struct
         failwith "Transform Multiport_mem"
       | Mem_read_port _ ->
         failwith "Transform Mem_read_port"
-      | Inst (_, _, i) ->
+      | Inst { instantiation; _ } ->
         let inputs =
-          List.map i.inst_inputs ~f:(fun (name, input) -> name, find (uid input))
+          List.map instantiation.inst_inputs ~f:(fun (name, input) ->
+            name, find (uid input))
         in
         Inst
-          ( make_id (width signal) (List.map inputs ~f:snd)
-          , new_id ()
-          , { i with inst_inputs = inputs } )
+          { signal_id = make_id (width signal) (List.map inputs ~f:snd)
+          ; extra_uid = new_id ()
+          ; instantiation = { instantiation with inst_inputs = inputs }
+          }
     in
     (* apply names *)
     if B.is_empty new_signal
@@ -315,10 +312,10 @@ let rewrite fn id_to_sig outputs =
     let o = Map.find_exn id_to_sig uid' in
     let n = Map.find_exn map uid' in
     match o with
-    | Wire (_, d) ->
-      if not (is_empty !d)
+    | Wire { driver; _ } ->
+      if not (is_empty !driver)
       then (
-        let d = Map.find_exn map (uid !d) in
+        let d = Map.find_exn map (uid !driver) in
         n <== d)
     | _ -> failwith "expecting a wire");
   (* find new outputs *)

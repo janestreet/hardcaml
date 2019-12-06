@@ -42,8 +42,8 @@ let inputs graph =
     depth_first_search graph ~init:[] ~f_before:(fun acc signal ->
       let open Signal in
       match signal with
-      | Wire (_, d) ->
-        if not (Signal.is_empty !d)
+      | Wire { driver; _ } ->
+        if not (Signal.is_empty !driver)
         then acc
         else (
           match names signal with
@@ -182,12 +182,6 @@ let normalize_uids t =
     ; write_data = new_signal write_port.write_data
     }
   in
-  let new_inst i =
-    { i with
-      inst_inputs =
-        List.map i.inst_inputs ~f:(fun (name, input) -> name, new_signal input)
-    }
-  in
   let rec rewrite_signal_upto_wires signal =
     match Hashtbl.find new_signal_by_old_uid (uid signal) with
     | Some x -> x
@@ -197,17 +191,89 @@ let normalize_uids t =
       let new_signal =
         match signal with
         | Empty -> Empty
-        | Const (id, b) -> Const (update_id id, b)
-        | Op (id, op) -> Op (update_id id, op)
-        | Select (id, h, l) -> Select (update_id id, h, l)
-        | Reg (id, r) -> Reg (update_id id, new_reg r)
+        | Const { signal_id; constant } ->
+          Const
+            { signal_id = { signal_id with s_id = fresh_id (); s_deps = [] }; constant }
+        | Op2 { signal_id = id; op; arg_a; arg_b } ->
+          let arg_a = rewrite_signal_upto_wires arg_a in
+          let arg_b = rewrite_signal_upto_wires arg_b in
+          Op2
+            { signal_id = { id with s_id = fresh_id (); s_deps = [ arg_a; arg_b ] }
+            ; op
+            ; arg_a
+            ; arg_b
+            }
+        | Mux { signal_id; select; cases } ->
+          let select = rewrite_signal_upto_wires select in
+          let cases = List.map cases ~f:rewrite_signal_upto_wires in
+          Mux
+            { signal_id = { signal_id with s_id = fresh_id (); s_deps = select :: cases }
+            ; select
+            ; cases
+            }
+        | Cat { signal_id; args } ->
+          let args = List.map args ~f:rewrite_signal_upto_wires in
+          Cat { signal_id = { signal_id with s_id = fresh_id (); s_deps = args }; args }
+        | Not { signal_id; arg } ->
+          let arg = rewrite_signal_upto_wires arg in
+          Not
+            { signal_id = { signal_id with s_id = fresh_id (); s_deps = [ arg ] }; arg }
+        | Select { signal_id; arg; high; low } ->
+          let arg = rewrite_signal_upto_wires arg in
+          Select
+            { signal_id = { signal_id with s_id = fresh_id (); s_deps = [ arg ] }
+            ; arg
+            ; high
+            ; low
+            }
+        | Reg { signal_id; register; d } ->
+          let d = rewrite_signal_upto_wires d in
+          let register =
+            { reg_clock = rewrite_signal_upto_wires register.reg_clock
+            ; reg_clock_edge = register.reg_clock_edge
+            ; reg_reset = rewrite_signal_upto_wires register.reg_reset
+            ; reg_reset_edge = register.reg_reset_edge
+            ; reg_reset_value = rewrite_signal_upto_wires register.reg_reset_value
+            ; reg_clear = rewrite_signal_upto_wires register.reg_clear
+            ; reg_clear_level = register.reg_clear_level
+            ; reg_clear_value = rewrite_signal_upto_wires register.reg_clear_value
+            ; reg_enable = rewrite_signal_upto_wires register.reg_enable
+            }
+          in
+          Reg
+            { signal_id =
+                { signal_id with
+                  s_id = fresh_id ()
+                ; s_deps =
+                    [ d
+                    ; register.reg_clock
+                    ; register.reg_reset
+                    ; register.reg_reset_value
+                    ; register.reg_clear
+                    ; register.reg_clear_value
+                    ; register.reg_enable
+                    ]
+                }
+            ; register
+            ; d
+            }
         | Mem (id, _, r, m) -> Mem (update_id id, fresh_id (), new_reg r, new_mem m)
         | Multiport_mem (id, mem_size, write_ports) ->
           Multiport_mem (update_id id, mem_size, Array.map write_ports ~f:new_write_port)
         | Mem_read_port (id, memory, read_address) ->
           Mem_read_port (update_id id, new_signal memory, new_signal read_address)
-        | Inst (id, _, i) -> Inst (update_id id, fresh_id (), new_inst i)
-        | Wire (_, _) -> not_expecting_a_wire signal
+        | Inst { signal_id; instantiation; _ } ->
+          let inputs =
+            List.map instantiation.inst_inputs ~f:(fun (name, input) ->
+              name, rewrite_signal_upto_wires input)
+          in
+          Inst
+            { signal_id =
+                { signal_id with s_id = fresh_id (); s_deps = List.map inputs ~f:snd }
+            ; extra_uid = fresh_id ()
+            ; instantiation = { instantiation with inst_inputs = inputs }
+            }
+        | Wire _ -> not_expecting_a_wire signal
       in
       add_mapping ~old_signal:signal ~new_signal;
       new_signal
@@ -220,21 +286,25 @@ let normalize_uids t =
       ~old_signal:old_wire
       ~new_signal:
         (match old_wire with
-         | Wire (id, _) -> Wire ({ id with s_id = fresh_id () }, ref Signal.empty)
+         | Wire { signal_id; _ } ->
+           Wire
+             { signal_id = { signal_id with s_id = fresh_id () }
+             ; driver = ref Signal.empty
+             }
          | _ -> expecting_a_wire old_wire));
   (* rewrite from every wire *)
   List.iter old_wires ~f:(function
-    | Wire (_, d) -> ignore (rewrite_signal_upto_wires !d : Signal.t)
+    | Wire { driver; _ } -> ignore (rewrite_signal_upto_wires !driver : Signal.t)
     | signal -> expecting_a_wire signal);
   (* re-attach wires *)
   List.iter old_wires ~f:(fun old_wire ->
     match old_wire with
-    | Wire (_, d) ->
-      if not (Signal.is_empty !d)
+    | Wire { driver; _ } ->
+      if not (Signal.is_empty !driver)
       then (
-        let new_d = new_signal !d in
+        let new_driver = new_signal !driver in
         let new_wire = new_signal old_wire in
-        Signal.(new_wire <== new_d))
+        Signal.(new_wire <== new_driver))
     | signal -> expecting_a_wire signal);
   List.map t ~f:new_signal
 ;;
@@ -285,7 +355,8 @@ let scheduling_deps (s : Signal.t) =
   | Mem_read_port (_, _, read_address) -> [ read_address ]
   | Reg _ -> []
   | Multiport_mem _ -> []
-  | Empty | Const _ | Op _ | Wire _ | Select _ | Inst _ -> Signal.deps s
+  | Empty | Const _ | Op2 _ | Mux _ | Cat _ | Not _ | Wire _ | Select _ | Inst _ ->
+    Signal.deps s
 ;;
 
 let last_layer_of_nodes ~is_input graph =

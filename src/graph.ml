@@ -146,14 +146,14 @@ let write_gdl
   in
   let is_rom s =
     match s with
-    | Op (_, Signal_mux) ->
+    | Mux _ ->
       List.fold (List.tl_exn (deps s)) ~init:true ~f:(fun b s -> b && is_const s)
     | _ -> false
   in
   let reg_deps s =
     match s with
-    | Reg (_, r) ->
-      (if clocks then [ r.reg_clock ] else []) @ [ List.hd_exn (deps s); r.reg_enable ]
+    | Reg { register = r; d; _ } ->
+      (if clocks then [ r.reg_clock ] else []) @ [ d; r.reg_enable ]
     | _ -> []
   in
   let mem_deps s =
@@ -173,9 +173,9 @@ let write_gdl
   let write_node s =
     match s with
     | Empty -> write_node ~label:"empty" s
-    | Const (_, c) ->
+    | Const { constant; _ } ->
       write_node
-        ~label:(Bits.to_constant c |> Constant.to_hex_string ~signedness:Unsigned)
+        ~label:(Bits.to_constant constant |> Constant.to_hex_string ~signedness:Unsigned)
         s
     | Wire _ ->
       if List.is_empty (Signal.names s)
@@ -185,9 +185,9 @@ let write_gdl
       else if is_output s
       then write_node ~textcolour:"red" s
       else write_node ~textcolour:"lightgrey" s
-    | Select (_, hi, lo) ->
-      write_node ~textcolour:"lightgrey" ~label:(sprintf "[%i:%i]" hi lo) s
-    | Op (_, op) ->
+    | Select { high; low; _ } ->
+      write_node ~textcolour:"lightgrey" ~label:(sprintf "[%i:%i]" high low) s
+    | Op2 { op; _ } ->
       (match op with
        | Signal_add -> write_node ~border:"solid" ~shape:"circle" ~label:"+" s
        | Signal_sub -> write_node ~border:"solid" ~shape:"circle" ~label:"-" s
@@ -197,15 +197,15 @@ let write_gdl
        | Signal_or -> write_node ~border:"solid" ~shape:"circle" ~label:"|" s
        | Signal_xor -> write_node ~border:"solid" ~shape:"circle" ~label:"^" s
        | Signal_eq -> write_node ~border:"solid" ~shape:"circle" ~label:"=" s
-       | Signal_not -> write_node ~border:"solid" ~shape:"circle" ~label:"~" s
-       | Signal_lt -> write_node ~border:"solid" ~shape:"circle" ~label:"<" s
-       | Signal_cat -> write_node ~border:"solid" ~shape:"trapeze" ~label:"cat" s
-       | Signal_mux ->
-         if is_rom s
-         then (
-           let els = List.length (deps s) - 1 in
-           write_node ~border:"solid" ~shape:"box" ~label:(sprintf "rom%i" els) s)
-         else write_node ~border:"solid" ~shape:"uptrapeze" ~label:"mux" s)
+       | Signal_lt -> write_node ~border:"solid" ~shape:"circle" ~label:"<" s)
+    | Not _ -> write_node ~border:"solid" ~shape:"circle" ~label:"~" s
+    | Mux _ ->
+      if is_rom s
+      then (
+        let els = List.length (deps s) - 1 in
+        write_node ~border:"solid" ~shape:"box" ~label:(sprintf "rom%i" els) s)
+      else write_node ~border:"solid" ~shape:"uptrapeze" ~label:"mux" s
+    | Cat _ -> write_node ~border:"solid" ~shape:"trapeze" ~label:"cat" s
     | Reg _ ->
       write_node
         ~bordercolour:"lightblue"
@@ -238,8 +238,8 @@ let write_gdl
         ~border:"solid"
         ~label:"mem_rdp"
         s
-    | Inst (_, _, i) ->
-      write_node ~border:"solid" ~label:(sprintf "inst\n%s" i.inst_name) s
+    | Inst { instantiation; _ } ->
+      write_node ~border:"solid" ~label:(sprintf "inst\n%s" instantiation.inst_name) s
   in
   (* specialised dependancies *)
   let deps s =

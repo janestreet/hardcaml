@@ -129,7 +129,7 @@ let derive_clocks_and_resets circuit =
   in
   let clocks_and_resets =
     List.map seq_elts ~f:(function
-      | Reg (_, r) -> [ r.reg_clock ], r.reg_reset
+      | Reg { register = r; _ } -> [ r.reg_clock ], r.reg_reset
       | Mem (_, _, r, _) -> [ r.reg_clock ], r.reg_reset
       | Multiport_mem (_, _, write_ports) ->
         ( Array.map write_ports ~f:(fun wr -> wr.write_clock) |> Array.to_list

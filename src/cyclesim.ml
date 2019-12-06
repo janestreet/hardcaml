@@ -84,7 +84,7 @@ let mangle_names reserved prefix circuit =
   let add_name map (signal : Signal.t) =
     match signal with
     | Mem (_, u, _, _) -> add_name (generated_name map u) signal
-    | Inst (_, u, _) -> add_name (generated_name map u) signal
+    | Inst { extra_uid; _ } -> add_name (generated_name map extra_uid) signal
     | _ -> add_name map signal
   in
   let name_map =
@@ -120,14 +120,16 @@ let get_internal_ports circuit ~is_internal_port =
     let open Signal in
     Int64.incr dangler_uid;
     Wire
-      ( { s_id = !dangler_uid
-        ; s_names = []
-        ; s_attributes = []
-        ; s_width
-        ; s_deps = []
-        ; caller_id = None
-        }
-      , ref Empty )
+      { signal_id =
+          { s_id = !dangler_uid
+          ; s_names = []
+          ; s_attributes = []
+          ; s_width
+          ; s_deps = []
+          ; caller_id = None
+          }
+      ; driver = ref Empty
+      }
   in
   List.map i ~f:(fun s ->
     let w = dangler (Signal.width s) in
@@ -175,7 +177,7 @@ let get_maps ~ref ~const ~zero ~bundle =
   let data_add map signal =
     let value =
       match (signal : Signal.t) with
-      | Const (_, v) -> const v
+      | Const { constant; _ } -> const constant
       | _ -> zero (Signal.width signal)
     in
     Map.set map ~key:(uid signal) ~data:(ref value)
@@ -515,19 +517,33 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
   let mutable_to_int x = Bits.Mutable.Comb.to_int x in
   (* compilation *)
   let compile signal =
-    let tgt = Map.find_exn data_map (uid signal) in
-    let deps =
-      List.map (Signal.deps signal) ~f:(fun signal ->
-        try Map.find_exn data_map (uid signal) with
-        | _ -> Bits.Mutable.empty)
+    let find_exn signal = Map.find_exn data_map (uid signal) in
+    let find_or_empty signal =
+      match Map.find data_map (uid signal) with
+      | None -> Bits.Mutable.empty
+      | Some bits -> bits
     in
+    let tgt = find_exn signal in
+    let deps = List.map (Signal.deps signal) ~f:find_or_empty in
     match signal with
     | Empty -> failwith "cant compile empty signal"
     | Const _ -> None
-    | Op (_, op) ->
+    | Not { arg; _ } -> Some (fun () -> Bits.Mutable.( ~: ) tgt (find_or_empty arg))
+    | Cat { args; _ } ->
+      Some (fun () -> Bits.Mutable.concat tgt (List.map args ~f:find_or_empty))
+    | Mux { select; cases; _ } ->
+      let sel = find_or_empty select in
+      let els = Array.of_list (List.map cases ~f:find_or_empty) in
+      let max = Array.length els - 1 in
+      Some
+        (fun () ->
+           let sel = mutable_to_int sel in
+           let sel = if sel > max then max else sel in
+           Bits.Mutable.copy ~dst:tgt ~src:els.(sel))
+    | Op2 { op; arg_a; arg_b; signal_id = _ } ->
       let op2 op =
-        let a = List.nth_exn deps 0 in
-        let b = List.nth_exn deps 1 in
+        let a = find_or_empty arg_a in
+        let b = find_or_empty arg_b in
         Some (fun () -> op tgt a b)
       in
       (match op with
@@ -539,29 +555,16 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
        | Signal_or -> op2 Bits.Mutable.( |: )
        | Signal_xor -> op2 Bits.Mutable.( ^: )
        | Signal_eq -> op2 Bits.Mutable.( ==: )
-       | Signal_not -> Some (fun () -> Bits.Mutable.( ~: ) tgt (List.hd_exn deps))
-       | Signal_lt -> op2 Bits.Mutable.( <: )
-       | Signal_cat -> Some (fun () -> Bits.Mutable.concat tgt deps)
-       | Signal_mux ->
-         (* tgt := Bits.Mutable.mux !(List.hd_exn deps) (List.map (!) (List.tl_exn deps)) *)
-         (* this optimisation makes a large performance difference *)
-         let sel = List.hd_exn deps in
-         let els = Array.of_list (List.tl_exn deps) in
-         let max = Array.length els - 1 in
-         Some
-           (fun () ->
-              let sel = mutable_to_int sel in
-              let sel = if sel > max then max else sel in
-              Bits.Mutable.copy ~dst:tgt ~src:els.(sel)))
+       | Signal_lt -> op2 Bits.Mutable.( <: ))
     | Wire _ ->
       let src = List.hd_exn deps in
       Some (fun () -> Bits.Mutable.copy ~dst:tgt ~src)
-    | Select (_, h, l) ->
-      let d = List.hd_exn deps in
-      Some (fun () -> Bits.Mutable.select tgt d h l)
-    | Reg (_, r) ->
+    | Select { arg; high; low; _ } ->
+      let d = find_or_empty arg in
+      Some (fun () -> Bits.Mutable.select tgt d high low)
+    | Reg { register = r; d; _ } ->
       let tgt = Map.find_exn reg_map (uid signal) in
-      let src = List.hd_exn deps in
+      let src = find_or_empty d in
       let clr =
         if not (Signal.is_empty r.reg_clear)
         then
@@ -612,7 +615,7 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
              | _ -> zero
            in
            Bits.Mutable.copy ~dst:tgt ~src:data)
-    | Inst (_, _, i) ->
+    | Inst { instantiation = i; _ } ->
       (match
          Combinational_ops_database.find combinational_ops_database ~name:i.inst_name
        with
@@ -632,7 +635,7 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
   in
   let compile_reg_update (signal : Signal.t) =
     match signal with
-    | Reg (_, _) ->
+    | Reg _ ->
       let tgt = Map.find_exn data_map (uid signal) in
       let src = Map.find_exn reg_map (uid signal) in
       fun () -> Bits.Mutable.copy ~dst:tgt ~src
@@ -672,7 +675,7 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
   in
   let compile_reset (signal : Signal.t) =
     match signal with
-    | Reg (_, r) ->
+    | Reg { register = r; _ } ->
       if not (Signal.is_empty r.reg_reset)
       then (
         let tgt0 = Map.find_exn data_map (uid signal) in

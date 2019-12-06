@@ -181,7 +181,7 @@ end = struct
   let add ?(u = none) s =
     let name =
       match (s : Signal.t) with
-      | Inst (_, _, inst) -> inst.inst_name
+      | Inst { instantiation; _ } -> instantiation.inst_name
       | _ -> "<not an instantiation>"
     in
     Some (Instantiation.Instantiation name :: u)
@@ -296,7 +296,17 @@ let rec create ?database circuit =
         { utilization with
           instantiations = Instantiations.add ?u:utilization.instantiations signal
         }
-      | Op (_, op) ->
+      | Not _ ->
+        { utilization with not_gates = Total_bits.add ?u:utilization.not_gates signal }
+      | Mux _ ->
+        { utilization with
+          multiplexers = Multiplexers.add ?u:utilization.multiplexers signal
+        }
+      | Cat _ ->
+        { utilization with
+          concatenation = Total_bits.add ?u:utilization.concatenation signal
+        }
+      | Op2 { op; _ } ->
         (match (op : Signal.signal_op) with
          | Signal_add ->
            { utilization with
@@ -322,8 +332,6 @@ let rec create ?database circuit =
            { utilization with or_gates = Total_bits.add ?u:utilization.or_gates signal }
          | Signal_xor ->
            { utilization with xor_gates = Total_bits.add ?u:utilization.xor_gates signal }
-         | Signal_not ->
-           { utilization with not_gates = Total_bits.add ?u:utilization.not_gates signal }
          | Signal_eq ->
            { utilization with
              equals = Total_and_max_bits.add ?u:utilization.equals signal
@@ -331,14 +339,6 @@ let rec create ?database circuit =
          | Signal_lt ->
            { utilization with
              comparators = Total_and_max_bits.add ?u:utilization.comparators signal
-           }
-         | Signal_cat ->
-           { utilization with
-             concatenation = Total_bits.add ?u:utilization.concatenation signal
-           }
-         | Signal_mux ->
-           { utilization with
-             multiplexers = Multiplexers.add ?u:utilization.multiplexers signal
            }))
   |> expand_submodules
 ;;
