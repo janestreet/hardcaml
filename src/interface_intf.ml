@@ -161,8 +161,10 @@ module type S = sig
     -> f:('a -> 'b -> 'c -> 'd -> 'e -> unit)
     -> unit
 
-  val fold : 'a t -> init:'b -> f:('b -> 'a -> 'b) -> 'b
-  val fold2 : 'a t -> 'b t -> init:'c -> f:('c -> 'a -> 'b -> 'c) -> 'c
+  val fold : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc) -> 'acc
+  val fold2 : 'a t -> 'b t -> init:'acc -> f:('acc -> 'a -> 'b -> 'acc) -> 'acc
+  val scan : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'b t
+  val scan2 : 'a t -> 'b t -> init:'acc -> f:('acc -> 'a -> 'b -> 'acc * 'c) -> 'c t
 
   (** Offset of each field within the interface.  The first field is placed at the least
       significant bit, unless the [rev] argument is true. *)

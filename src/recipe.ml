@@ -2,9 +2,6 @@ open! Import
 open Signal
 open! Recipe_intf
 
-let clock = input "clock" 1
-let enable = input "enable" 1
-
 type var = int
 type inp = Signal.t * Signal.t (* enable * value *)
 
@@ -14,19 +11,41 @@ type env =
   { freshId : var
   ; writerInps : inp list VMap.t
   ; outs : Signal.t VMap.t
+  ; clock : Signal.t
+  ; enable : Signal.t
   }
 
-type 'a recipe = Recipe of (Signal.t -> env -> Signal.t * env * 'a)
+type 'a t = Recipe of (Signal.t -> env -> Signal.t * env * 'a)
 
-let delay clear_to d =
+include Monad.Make (struct
+    type nonrec 'a t = 'a t
+
+    let return a = Recipe (fun start env -> start, env, a)
+
+    let bind (Recipe m) ~f =
+      Recipe
+        (fun start env ->
+           let fin0, env0, a = m start env in
+           let (Recipe f) = f a in
+           let fin1, env1, b = f fin0 env0 in
+           fin1, env1, b)
+    ;;
+
+    let map = `Define_using_bind
+  end)
+
+let delay ~env ~clear_to d =
+  let clock = env.clock in
+  let enable = env.enable in
   reg (Reg_spec.override (Reg_spec.create () ~clock) ~clear_to) ~enable d
 ;;
 
-let delayEn clear_to enable d =
+let delay_with_enable ~env ~clear_to ~enable d =
+  let clock = env.clock in
   reg (Reg_spec.override (Reg_spec.create () ~clock) ~clear_to) ~enable d
 ;;
 
-let delayFb clear_to f =
+let delayFb ~clock ~enable ~clear_to f =
   reg_fb
     (Reg_spec.override (Reg_spec.create () ~clock) ~clear_to)
     ~enable
@@ -34,35 +53,21 @@ let delayFb clear_to f =
     f
 ;;
 
-let setReset s r = delayFb gnd (fun q -> s |: q &: ~:r)
+let setReset ~clock ~enable s r =
+  delayFb ~clock ~enable ~clear_to:gnd (fun q -> s |: q &: ~:r)
+;;
 
-module Monad = struct
-  let return a = Recipe (fun start env -> start, env, a)
-
-  let bind (Recipe m) f =
-    Recipe
-      (fun start env ->
-         let fin0, env0, a = m start env in
-         let (Recipe f) = f a in
-         let fin1, env1, b = f fin0 env0 in
-         fin1, env1, b)
-  ;;
-
-  let ( >>= ) = bind
-  let ( >> ) m f = bind m (fun _ -> f)
-end
-
-open Monad
-
-let skip = Recipe (fun start env -> delay gnd start -- "skip_fin", env, ())
+let skip =
+  Recipe (fun start env -> delay ~env ~clear_to:gnd start -- "skip_fin", env, ())
+;;
 
 let rec wait = function
   | 0 -> return ()
-  | n -> skip >> wait (n - 1)
+  | n -> skip >>= fun _ -> wait (n - 1)
 ;;
 
-let gen_par_fin comb_fin fin' fin =
-  let fin = setReset fin' fin in
+let gen_par_fin ~clock ~enable ~comb_fin fin' fin =
+  let fin = setReset ~clock ~enable fin' fin in
   if comb_fin then fin' |: fin else fin
 ;;
 
@@ -72,7 +77,9 @@ let par2 ?(comb_fin = true) (Recipe p) (Recipe q) =
        let fin0, env0, a = p start env in
        let fin1, env1, b = q start env0 in
        let fin = wire 1 in
-       fin <== (gen_par_fin comb_fin fin0 fin &: gen_par_fin comb_fin fin1 fin);
+       fin
+       <== (gen_par_fin ~clock:env.clock ~enable:env.enable ~comb_fin fin0 fin
+            &: gen_par_fin ~clock:env.clock ~enable:env.enable ~comb_fin fin1 fin);
        fin, env1, (a, b))
 ;;
 
@@ -86,10 +93,14 @@ let par ?(comb_fin = true) r =
            let fin, env, a = r start env in
            fin :: finl, env, a :: al)
        in
-       let fin = wire 1 -- "par_fin" in
-       fin
-       <== reduce ~f:( &: ) (List.map finl ~f:(fun fin' -> gen_par_fin comb_fin fin' fin));
-       fin, env, List.rev al)
+       let par_fin = wire 1 -- "par_fin" in
+       let par_fin =
+         reduce
+           ~f:( &: )
+           (List.map finl ~f:(fun fin' ->
+              gen_par_fin ~clock:env.clock ~enable:env.enable ~comb_fin fin' par_fin))
+       in
+       par_fin, env, List.rev al)
 ;;
 
 let cond c (Recipe p) (Recipe q) =
@@ -110,11 +121,13 @@ let iter c (Recipe p) =
 ;;
 
 let forever p = iter vdd p
-let waitWhile a = iter a skip
-let waitUntil a = iter ~:a skip
+let wait_while a = iter a skip
+let wait_until a = iter ~:a skip
 
-let follow start (Recipe r) =
-  let initialEnv = { freshId = 0; writerInps = VMap.empty; outs = VMap.empty } in
+let follow ~clock ~enable start (Recipe r) =
+  let initialEnv =
+    { freshId = 0; writerInps = VMap.empty; outs = VMap.empty; enable; clock }
+  in
   let fin, env, a = r start initialEnv in
   (* connect writerInps to outs *)
   Map.iteri env.outs ~f:(fun ~key:v ~data:o ->
@@ -124,7 +137,7 @@ let follow start (Recipe r) =
       let value =
         reduce ~f:( |: ) (List.map inps ~f:(fun (e, v) -> mux2 e v (zero (width v))))
       in
-      o <== delayEn (zero (width o)) enable value
+      o <== delay_with_enable ~env ~clear_to:(zero (width o)) ~enable value
     with
     | _ ->
       (* this can lead to combinatorial loops, so perhaps an exception would be better
@@ -152,7 +165,7 @@ let addInps env al =
   { env with writerInps = Map.merge (ofList al) env.writerInps ~f:merge }
 ;;
 
-let newVar ?name n =
+let new_var ?name n =
   Recipe
     (fun start env ->
        let out =
@@ -164,20 +177,20 @@ let newVar ?name n =
        start, env', v)
 ;;
 
-let readVar v = Recipe (fun start env -> start, env, Map.find_exn env.outs v)
+let read_var v = Recipe (fun start env -> start, env, Map.find_exn env.outs v)
 
 let assign al =
   Recipe
     (fun start env ->
        let al' = List.map al ~f:(fun (a, b) -> a, [ start, b ]) in
-       delay gnd start, addInps env al', ())
+       delay ~env ~clear_to:gnd start, addInps env al', ())
 ;;
 
-let writeVar v a = assign [ v, a ]
-let modifyVar f v = readVar v >>= fun a -> writeVar v (f a)
-let rewriteVar f v w = readVar v >>= fun a -> writeVar w (f a)
+let write_var v a = assign [ v, a ]
+let modify_var f v = read_var v >>= fun a -> write_var v (f a)
+let rewrite_var f v w = read_var v >>= fun a -> write_var w (f a)
 
-module type Same = Same with type var := var with type 'a recipe := 'a recipe
+module type Same = Same with type var := var with type 'a recipe := 'a t
 
 module Same (X : Interface.Pre) = struct
   type 'a same = 'a X.t
@@ -190,16 +203,18 @@ module Same (X : Interface.Pre) = struct
   ;;
 
   let rewrite f a b = read a >>= fun x -> assign (szip b (f x))
-  let apply f a = rewrite f a a
+  let apply ~f a = rewrite f a a
   let set a b = rewrite (fun _ -> b) a a
-  let ifte f a p q = read a >>= fun b -> cond (f b) p q
-  let while_ f a p = read a >>= fun b -> iter (f b) p
+  let if_ f a ~then_ ~else_ = read a >>= fun b -> cond (f b) then_ else_
+  let while_ f a ~do_ = read a >>= fun b -> iter (f b) do_
 
-  let newVar () =
-    let mkvar n b l = newVar ~name:("newVar_" ^ n) b >>= fun v -> return ((n, v) :: l) in
+  let new_var () =
+    let mkvar n b l =
+      new_var ~name:("new_var_" ^ n) b >>= fun v -> return ((n, v) :: l)
+    in
     let rec f m l =
       match m, l with
-      | None, [] -> failwith "Same.newVar: no elements"
+      | None, [] -> failwith "Same.new_var: no elements"
       | None, (n, b) :: t -> f (Some (mkvar n b [])) t
       | Some m, (n, b) :: t -> f (Some (m >>= mkvar n b)) t
       | Some m, [] -> m

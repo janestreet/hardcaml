@@ -139,6 +139,16 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
 
   let fold2 a b ~init ~f = fold (zip a b) ~init ~f:(fun c (a, b) -> f c a b)
 
+  let scan a ~init ~f =
+    let acc = ref init in
+    map a ~f:(fun a ->
+      let acc', field = f !acc a in
+      acc := acc';
+      field)
+  ;;
+
+  let scan2 a b ~init ~f = scan (zip a b) ~init ~f:(fun c (a, b) -> f c a b)
+
   let offsets ?(rev = false) () =
     let rec loop fields ~offset =
       match fields with
