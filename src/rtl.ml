@@ -722,17 +722,34 @@ module VerilogCore : Rtl_internal = struct
       io (t8 ^ "#( " ^ generics ^ " )\n"));
     io (t8 ^ inst_name ^ "\n");
     (* ports *)
-    let in_ports = List.map i.inst_inputs ~f:(fun (n, s) -> assoc n (name s)) in
+    let write_port_reference ?indexes port_name signal =
+      try
+        match indexes with
+        | None -> assoc port_name (name signal)
+        | Some (hi, lo) ->
+          assoc
+            port_name
+            (name signal ^ "[" ^ Int.to_string hi ^ ":" ^ Int.to_string lo ^ "]")
+      with
+      | (exn : exn) ->
+        raise_s
+          [%message
+            "failed to connect instantiation port"
+              (inst_name : string)
+              (port_name : string)
+              (signal : Signal.t)
+              (indexes : (int * int) option)
+              (exn : exn)]
+    in
+    let in_ports = List.map i.inst_inputs ~f:(fun (n, s) -> write_port_reference n s) in
     let out_ports =
       if width s = 1
       then
         (* special case - 1 output of 1 bit *)
-        List.map i.inst_outputs ~f:(fun (n, _) -> assoc n (name s))
+        List.map i.inst_outputs ~f:(fun (n, _) -> write_port_reference n s)
       else
         List.map i.inst_outputs ~f:(fun (n, (w, l)) ->
-          assoc
-            n
-            (name s ^ "[" ^ Int.to_string (w + l - 1) ^ ":" ^ Int.to_string l ^ "]"))
+          write_port_reference n s ~indexes:(w + l - 1, l))
     in
     io (t8 ^ "( " ^ sep ", " (in_ports @ out_ports) ^ " );\n")
   ;;

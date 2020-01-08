@@ -106,3 +106,41 @@ let%expect_test "file IO" =
       (output ((language Verilog) (mode (In_directory /foo))))
       (exn (Sys_error "/foo/test.v: No such file or directory"))) |}]
 ;;
+
+let%expect_test "instantiation input is empty" =
+  require_does_raise [%here] (fun () ->
+    let a = Signal.empty in
+    let inst =
+      Instantiation.create () ~name:"example" ~inputs:[ "a", a ] ~outputs:[ "b", 1 ]
+    in
+    Circuit.create_exn ~name:"example" [ Signal.output "b" (inst#o "b") ]
+    |> Rtl.print Verilog);
+  [%expect
+    {|
+    module example (
+        b
+    );
+
+        output b;
+
+        /* signal declarations */
+        wire _3;
+
+        /* logic */
+        example
+            the_example
+    ("Error while writing circuit"
+      (circuit_name example)
+      (hierarchy_path (example))
+      (output ((language Verilog) (mode (To_channel <stdout>))))
+      (exn (
+        "failed to connect instantiation port"
+        (inst_name the_example)
+        (port_name a)
+        (signal    empty)
+        (indexes ())
+        (exn (
+          "[Rtl.SignalNameManager] internal error while looking up signal name"
+          (index      0)
+          (for_signal empty)))))) |}]
+;;
