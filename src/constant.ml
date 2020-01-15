@@ -20,8 +20,8 @@ external mask
 [@@noalloc]
 
 (* compiler intrinsics *)
-external unsafe_get : Bytes.t -> int -> int64 = "%caml_string_get64u"
-external unsafe_set : Bytes.t -> int -> int64 -> unit = "%caml_string_set64u"
+external unsafe_get : Bytes.t -> int -> int64 = "%caml_bytes_get64u"
+external unsafe_set : Bytes.t -> int -> int64 -> unit = "%caml_bytes_set64u"
 
 let unsafe_get b i = unsafe_get b (i lsl shift_bytes_to_words)
 let unsafe_set b i v = unsafe_set b (i lsl shift_bytes_to_words) v
