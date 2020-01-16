@@ -67,7 +67,7 @@ let%expect_test "reg loop (standard deps)" =
 (* Plug in the correct [deps] *)
 let deps (s : Signal.t) =
   match s with
-  | Mem (_, _, _, m) -> [ m.mem_read_address ]
+  | Mem { memory = m; _ } -> [ m.mem_read_address ]
   | Reg _ -> []
   | _ -> Signal.deps s
 ;;

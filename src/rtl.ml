@@ -497,13 +497,13 @@ module VerilogCore : Rtl_internal = struct
     let tag = print_attribute s in
     let open Names in
     match s with
-    | Mem (_, _, _, sp) ->
+    | Mem { memory = sp; _ } ->
       let b = Int.to_string (width s - 1) in
       let s = Int.to_string (sp.mem_size - 1) in
       io (tag ^ t4 ^ "reg [" ^ b ^ ":0] " ^ mem.arr ^ "[0:" ^ s ^ "];\n")
-    | Multiport_mem (_, mem_size, _) ->
+    | Multiport_mem { size; _ } ->
       let b = Int.to_string (width s - 1) in
-      let size = Int.to_string (mem_size - 1) in
+      let size = Int.to_string (size - 1) in
       io (tag ^ t4 ^ "reg [" ^ b ^ ":0] " ^ name s ^ "[0:" ^ size ^ "];\n")
     | _ -> raise_expected ~while_:"declaring memories" ~expected:"memory" ~got_signal:s
   ;;
@@ -623,8 +623,8 @@ module VerilogCore : Rtl_internal = struct
          ^ ":"
          ^ Int.to_string low
          ^ "];\n")
-    | Mem_read_port (_, mem, read_address) ->
-      io (t4 ^ "assign " ^ sn ^ " = " ^ name mem ^ "[" ^ name read_address ^ "];\n")
+    | Mem_read_port { memory; read_address; _ } ->
+      io (t4 ^ "assign " ^ sn ^ " = " ^ name memory ^ "[" ^ name read_address ^ "];\n")
     | Const _ -> ()
   ;;
 
@@ -669,7 +669,7 @@ module VerilogCore : Rtl_internal = struct
   let logic_mem2 io name _mem signal =
     let write_ports =
       match signal with
-      | Multiport_mem (_, _, write_ports) -> write_ports
+      | Multiport_mem { write_ports; _ } -> write_ports
       | _ -> raise_s [%message "Internal error - expecting Multiport_mem signal"]
     in
     Array.iter write_ports ~f:(fun write_port ->
@@ -871,7 +871,7 @@ module VhdlCore : Rtl_internal = struct
   let mem_decl io name mem s =
     let open Names in
     match s with
-    | Mem (_, _, _, sp) ->
+    | Mem { memory = sp; _ } ->
       let b = Int.to_string (width s - 1) in
       let sz = Int.to_string (sp.mem_size - 1) in
       (* need a sepatate ID for the array type *)
@@ -880,9 +880,9 @@ module VhdlCore : Rtl_internal = struct
       then io "std_logic;\n"
       else io ("std_logic_vector(" ^ b ^ " downto 0);\n");
       io (t4 ^ "signal " ^ mem.arr ^ " : " ^ mem.typ ^ ";\n")
-    | Multiport_mem (_, mem_size, _) ->
+    | Multiport_mem { size; _ } ->
       let b = Int.to_string (width s - 1) in
-      let sz = Int.to_string (mem_size - 1) in
+      let sz = Int.to_string (size - 1) in
       io (t4 ^ "type " ^ mem.typ ^ " is array (0 to " ^ sz ^ ") of ");
       if width s = 1
       then io "std_logic;\n"
@@ -976,12 +976,12 @@ module VhdlCore : Rtl_internal = struct
       in
       let sel = if width s = 1 then slv sel else sel in
       io (t4 ^ sn ^ " <= " ^ sel ^ ";\n")
-    | Mem_read_port (_, mem, read_address) ->
+    | Mem_read_port { memory; read_address; _ } ->
       io
         (t4
          ^ sn
          ^ " <= "
-         ^ name mem
+         ^ name memory
          ^ "(to_integer(hc_uns("
          ^ name read_address
          ^ ")));\n")
@@ -1017,7 +1017,7 @@ module VhdlCore : Rtl_internal = struct
     let to_integer s = "to_integer(" ^ Names.prefix ^ "uns(" ^ s ^ "))" in
     let write_ports =
       match signal with
-      | Multiport_mem (_, _, write_ports) -> write_ports
+      | Multiport_mem { write_ports; _ } -> write_ports
       | _ -> raise_s [%message "Internal error - expecting Multiport_mem signal"]
     in
     Array.iter write_ports ~f:(fun write_port ->
@@ -1171,7 +1171,7 @@ module Make (R : Rtl_internal) = struct
       io (t4 ^ R.comment "logic" ^ "\n");
       List.iter internal_signals ~f:(fun signal ->
         match signal with
-        | Mem (_, _, r, m) ->
+        | Mem { register = r; memory = m; _ } ->
           let mem = R.Names.mem_names nm signal in
           R.logic_mem io primary_name mem signal r m
         | Multiport_mem _ ->

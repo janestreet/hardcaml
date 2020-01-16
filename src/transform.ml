@@ -48,9 +48,9 @@ module MakePureCombTransform (B : MakePureCombTransform_arg) = struct
       | Const { constant; _ } -> B.of_constant (Bits.to_constant constant)
       | Select { arg; high; low; _ } -> B.select (find_uid arg) high low
       | Reg _ -> failwith "MakePureCombTransform: no registers"
-      | Mem (_, _, _, _) -> failwith "MakePureCombTransform: no memories"
-      | Multiport_mem (_, _, _) -> failwith "MakePureCombTransform: no memories"
-      | Mem_read_port (_, _, _) -> failwith "MakePureCombTransform: no memories"
+      | Mem _ -> failwith "MakePureCombTransform: no memories"
+      | Multiport_mem _ -> failwith "MakePureCombTransform: no memories"
+      | Mem_read_port _ -> failwith "MakePureCombTransform: no memories"
       | Inst _ -> failwith "MakePureCombTransform: no instantiations"
     in
     (* apply names *)
@@ -160,7 +160,6 @@ end
 
 module MakeCombTransform (B : Comb.Primitives with type t = Signal.t) = struct
   let transform find signal =
-    let dep n = find (uid (List.nth_exn (deps signal) n)) in
     let find_uid x = uid x |> find in
     let new_signal =
       match signal with
@@ -199,19 +198,15 @@ module MakeCombTransform (B : Comb.Primitives with type t = Signal.t) = struct
              ~clear_to:(find_uid register.reg_clear_value))
           ~enable:(find_uid register.reg_enable)
           (find_uid d)
-      | Mem (_, _, r, m) ->
-        let d' = dep 0 in
-        let w' = dep 1 in
-        let r' = dep 2 in
-        let we' = find_uid r.reg_enable in
+      | Mem { register = r; memory = m; _ } ->
         memory
           ~write_port:
-            { write_clock = find (uid r.reg_clock)
-            ; write_enable = we'
-            ; write_address = w'
-            ; write_data = d'
+            { write_clock = find_uid r.reg_clock
+            ; write_enable = find_uid r.reg_enable
+            ; write_address = find_uid m.mem_write_address
+            ; write_data = find_uid m.mem_write_data
             }
-          ~read_address:r'
+          ~read_address:(find_uid m.mem_read_address)
           m.mem_size
       | Multiport_mem _ ->
         failwith "Transform Multiport_mem"

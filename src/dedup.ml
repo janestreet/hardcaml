@@ -35,9 +35,9 @@ let structure_kind (signal : Signal.t) =
   | Signal.Wire _ -> Structure_kind.Wire (Signal.names signal)
   | Signal.Select { high; low; _ } -> Structure_kind.Select (high, low)
   | Signal.Reg _ -> Structure_kind.Sequential (Signal.uid signal)
-  | Signal.Mem (_, _, _, _) -> Structure_kind.Sequential (Signal.uid signal)
-  | Signal.Multiport_mem (_, _, _) -> Structure_kind.Sequential (Signal.uid signal)
-  | Signal.Mem_read_port (_, _, _) -> Structure_kind.Mem_read_port
+  | Signal.Mem _ -> Structure_kind.Sequential (Signal.uid signal)
+  | Signal.Multiport_mem _ -> Structure_kind.Sequential (Signal.uid signal)
+  | Signal.Mem_read_port _ -> Structure_kind.Mem_read_port
   | Signal.Inst _ -> Structure_kind.Sequential (Signal.uid signal)
 ;;
 
@@ -47,7 +47,7 @@ let children (signal : Signal.t) =
   | _ ->
     (match signal with
      | Wire { driver; _ } -> [ !driver ]
-     | Mem_read_port (_, mem, r) -> [ mem; r ]
+     | Mem_read_port { memory; read_address; _ } -> [ memory; read_address ]
      | _ -> Signal.deps signal)
 ;;
 
@@ -96,12 +96,17 @@ let map_children signal ~f =
       ; low
       }
   | Signal.Multiport_mem _ | Signal.Reg _ -> assert false
-  | Signal.Mem_read_port (s, mem, r) ->
+  | Signal.Mem_read_port { signal_id; memory; read_address } ->
     Signal.Mem_read_port
-      ( { s with s_id = Signal.new_id (); s_deps = List.map s.Signal.s_deps ~f }
-      , f mem
-      , f r )
-  | Signal.Mem (_, _, _, _) -> failwith "Mem is unsupported"
+      { signal_id =
+          { signal_id with
+            s_id = Signal.new_id ()
+          ; s_deps = List.map signal_id.Signal.s_deps ~f
+          }
+      ; memory = f memory
+      ; read_address = f read_address
+      }
+  | Signal.Mem _ -> failwith "Mem is unsupported"
   | Signal.Inst _ -> signal
 ;;
 
@@ -190,7 +195,7 @@ let transform_sequential_signal canonical signal =
       ; register
       ; d
       }
-  | Signal.Multiport_mem (s, size, write_ports) ->
+  | Signal.Multiport_mem { signal_id; size; write_ports } ->
     let write_ports =
       Array.map
         write_ports
@@ -207,7 +212,11 @@ let transform_sequential_signal canonical signal =
                })
     in
     Signal.Multiport_mem
-      ({ s with s_deps = List.map s.Signal.s_deps ~f:get_canonical }, size, write_ports)
+      { signal_id =
+          { signal_id with s_deps = List.map signal_id.Signal.s_deps ~f:get_canonical }
+      ; size
+      ; write_ports
+      }
   | _ ->
     let sexp_of_finite_signal signal =
       Signal.sexp_of_signal_recursive ~depth:5 (signal : Signal.t)
@@ -231,13 +240,19 @@ let fix_mem_read_ports signals =
     | Signal.Wire { driver; _ } ->
       (* every Mem_read_port signal is pointed to by a single wire *)
       (match !driver with
-       | Signal.Mem_read_port (s, Wire { driver = mem_ref; _ }, addr) ->
-         let mem =
+       | Signal.Mem_read_port
+           { signal_id; memory = Wire { driver = mem_ref; _ }; read_address } ->
+         let memory =
            match unwrap_wire !mem_ref with
-           | Signal.Multiport_mem (_, _, _) as unwrapped -> unwrapped
+           | Signal.Multiport_mem _ as unwrapped -> unwrapped
            | _ -> assert false
          in
-         driver := Mem_read_port ({ s with s_deps = [ mem; addr ] }, mem, addr)
+         driver
+         := Mem_read_port
+              { signal_id = { signal_id with s_deps = [ memory; read_address ] }
+              ; memory
+              ; read_address
+              }
        | _ -> ())
     | _ -> ())
 ;;

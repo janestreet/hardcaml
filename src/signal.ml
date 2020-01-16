@@ -97,9 +97,22 @@ and t =
       ; register : register
       ; d : t
       }
-  | Mem of signal_id * Uid.t * register * memory
-  | Multiport_mem of signal_id * int * write_port array
-  | Mem_read_port of signal_id * t * t
+  | Mem of
+      { signal_id : signal_id
+      ; extra_uid : Uid.t
+      ; register : register
+      ; memory : memory
+      }
+  | Multiport_mem of
+      { signal_id : signal_id
+      ; size : int
+      ; write_ports : write_port array
+      }
+  | Mem_read_port of
+      { signal_id : signal_id
+      ; memory : t
+      ; read_address : t
+      }
   | Inst of
       { signal_id : signal_id
       ; extra_uid : Uid.t
@@ -144,6 +157,7 @@ and memory =
   { mem_size : int
   ; mem_read_address : t
   ; mem_write_address : t
+  ; mem_write_data : t
   }
 
 and instantiation =
@@ -168,9 +182,9 @@ let signal_id s =
   | Const { signal_id; _ }
   | Select { signal_id; _ }
   | Reg { signal_id; _ }
-  | Mem (signal_id, _, _, _)
-  | Multiport_mem (signal_id, _, _)
-  | Mem_read_port (signal_id, _, _)
+  | Mem { signal_id; _ }
+  | Multiport_mem { signal_id; _ }
+  | Mem_read_port { signal_id; _ }
   | Wire { signal_id; _ }
   | Inst { signal_id; _ }
   | Op2 { signal_id; _ }
@@ -400,8 +414,8 @@ let structural_compare
         | Select { high = h0; low = l0; _ }, Select { high = h1; low = l1; _ } ->
           h0 = h1 && l0 = l1
         | Reg _, Reg _ -> true
-        | Mem (_, _, _, m0), Mem (_, _, _, m1) -> m0.mem_size = m1.mem_size
-        | Multiport_mem (_, mem_size0, _), Multiport_mem (_, mem_size1, _) ->
+        | Mem { memory = m0; _ }, Mem { memory = m1; _ } -> m0.mem_size = m1.mem_size
+        | Multiport_mem { size = mem_size0; _ }, Multiport_mem { size = mem_size1; _ } ->
           mem_size0 = mem_size1
         | Mem_read_port _, Mem_read_port _ -> true
         (* XXX check if inputs have same names ? *)
@@ -624,18 +638,19 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
       (match deps signal with
        | data :: _ -> create tag ~register ~data_in:data
        | deps -> create "REGISTER IS BADLY FORMED" ~arguments:deps)
-    | Mem (_, _, register, memory) ->
-      (match deps signal with
-       | data :: write_address :: read_address :: write_enable :: _ ->
-         create
-           tag
-           ~register
-           ~data_in:data
-           ~memory:(memory.mem_size, write_address, read_address, write_enable)
-       | deps -> create "MEMORY IS BADLY FORMED" ~arguments:deps)
-    | Multiport_mem (_, mem_size, write_ports) ->
+    | Mem { register; memory; _ } ->
+      create
+        tag
+        ~register
+        ~data_in:memory.mem_write_data
+        ~memory:
+          ( memory.mem_size
+          , memory.mem_write_address
+          , memory.mem_read_address
+          , register.reg_enable )
+    | Multiport_mem { size = mem_size; write_ports; _ } ->
       create tag ~multiport_memory:(mem_size, write_ports)
-    | Mem_read_port (_, memory, read_address) ->
+    | Mem_read_port { memory; read_address; _ } ->
       create tag ~mem_read_port:(memory, read_address))
 ;;
 
@@ -1113,7 +1128,7 @@ let memory size ~write_port ~read_address =
   let we = write_port.write_enable in
   let wa = write_port.write_address in
   let d = write_port.write_data in
-  if width we <> 1
+  if width write_port.write_enable <> 1
   then
     raise_s
       [%message
@@ -1128,7 +1143,7 @@ let memory size ~write_port ~read_address =
         "[Signal.memory] width of read and write addresses differ"
           ~write_address_width:(width wa : int)
           ~read_address_width:(width read_address : int)];
-  if size > 1 lsl width wa
+  if size > 1 lsl width write_port.write_address
   then
     raise_s
       [%message
@@ -1143,9 +1158,9 @@ let memory size ~write_port ~read_address =
   in
   let deps =
     [ d
-    ; wa
+    ; write_port.write_address
     ; read_address
-    ; we
+    ; write_port.write_enable
     ; spec.reg_clock
     ; spec.reg_reset
     ; spec.reg_reset_value
@@ -1155,10 +1170,16 @@ let memory size ~write_port ~read_address =
     ]
   in
   Mem
-    ( make_id (width d) deps
-    , new_id ()
-    , spec
-    , { mem_size = size; mem_write_address = wa; mem_read_address = read_address } )
+    { signal_id = make_id (width d) deps
+    ; extra_uid = new_id ()
+    ; register = spec
+    ; memory =
+        { mem_size = size
+        ; mem_write_address = wa
+        ; mem_read_address = read_address
+        ; mem_write_data = d
+        }
+    }
 ;;
 
 let multiport_memory ?name ?(attributes = []) size ~write_ports ~read_addresses =
@@ -1258,12 +1279,13 @@ let multiport_memory ?name ?(attributes = []) size ~write_ports ~read_addresses 
   in
   let mem =
     add_attributes
-      (Multiport_mem (make_id data_width deps, size, write_ports))
+      (Multiport_mem { signal_id = make_id data_width deps; size; write_ports })
       attributes
   in
   Option.iter name ~f:(fun name -> ignore (mem -- name : t));
   Array.map read_addresses ~f:(fun r ->
-    Mem_read_port (make_id data_width [ r; mem ], mem, r))
+    Mem_read_port
+      { signal_id = make_id data_width [ r; mem ]; memory = mem; read_address = r })
 ;;
 
 let ram_rbw ?attributes ~write_port ~read_port size =

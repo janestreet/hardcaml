@@ -83,7 +83,7 @@ let mangle_names reserved prefix circuit =
   (* add special case for memories and instantiations *)
   let add_name map (signal : Signal.t) =
     match signal with
-    | Mem (_, u, _, _) -> add_name (generated_name map u) signal
+    | Mem { extra_uid; _ } -> add_name (generated_name map extra_uid) signal
     | Inst { extra_uid; _ } -> add_name (generated_name map extra_uid) signal
     | _ -> add_name map signal
   in
@@ -193,7 +193,7 @@ let get_maps ~ref ~const ~zero ~bundle =
   let reg_map = List.fold bundle.regs ~init:Signal.Uid_map.empty ~f:reg_add in
   let mem_add map (signal : Signal.t) =
     match signal with
-    | Mem (_, _, _, { mem_size; _ }) | Multiport_mem (_, mem_size, _) ->
+    | Mem { memory = { mem_size; _ }; _ } | Multiport_mem { size = mem_size; _ } ->
       let mem = Array.init mem_size ~f:(fun _ -> zero (Signal.width signal)) in
       Map.set map ~key:(uid signal) ~data:mem
     | _ -> failwith "Expecting memory"
@@ -596,7 +596,7 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
               then Bits.Mutable.copy ~dst:tgt ~src:v
               else if mutable_to_int e = 1
               then Bits.Mutable.copy ~dst:tgt ~src))
-    | Mem (_, _, _, m) ->
+    | Mem { memory = m; _ } ->
       let mem = Map.find_exn mem_map (uid signal) in
       let addr = Map.find_exn data_map (uid m.mem_read_address) in
       Some
@@ -604,8 +604,8 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
            try Bits.Mutable.copy ~dst:tgt ~src:mem.(mutable_to_int addr) with
            | _ -> Bits.Mutable.copy ~dst:tgt ~src:(zero (Signal.width signal)))
     | Multiport_mem _ -> None
-    | Mem_read_port (_, mem, read_address) ->
-      let mem = Map.find_exn mem_map (uid mem) in
+    | Mem_read_port { memory; read_address; _ } ->
+      let mem = Map.find_exn mem_map (uid memory) in
       let addr = Map.find_exn data_map (uid read_address) in
       let zero = Bits.Mutable.create (Signal.width signal) in
       Some
@@ -643,11 +643,11 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
   in
   let compile_mem_update (signal : Signal.t) =
     match signal with
-    | Mem (_, _, r, m) ->
+    | Mem { register = r; memory = m; _ } ->
       let mem = Map.find_exn mem_map (uid signal) in
       let we = Map.find_exn data_map (uid r.reg_enable) in
       let w = Map.find_exn data_map (uid m.mem_write_address) in
-      let d = Map.find_exn data_map (uid (List.hd_exn (Signal.deps signal))) in
+      let d = Map.find_exn data_map (uid m.mem_write_data) in
       fun () ->
         (* XXX memories can have resets/clear etc as well *)
         if mutable_to_int we = 1
@@ -657,7 +657,7 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
           then (*Printf.printf "memory write out of bounds %i/%i\n" w m.mem_size*)
             ()
           else Bits.Mutable.copy ~dst:mem.(w) ~src:d)
-    | Multiport_mem (_, mem_size, write_ports) ->
+    | Multiport_mem { size; write_ports; _ } ->
       let mem = Map.find_exn mem_map (uid signal) in
       let f (write_port : Signal.write_port) =
         let we = Map.find_exn data_map (uid write_port.write_enable) in
@@ -667,7 +667,7 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
           if mutable_to_int we = 1
           then (
             let w = mutable_to_int w in
-            if w >= mem_size then () else Bits.Mutable.copy ~dst:mem.(w) ~src:d)
+            if w >= size then () else Bits.Mutable.copy ~dst:mem.(w) ~src:d)
       in
       let write_ports = Array.map write_ports ~f in
       fun () -> Array.iter write_ports ~f:(fun f -> f ())

@@ -30,10 +30,10 @@ let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
       ~init:Signal.Uid_map.empty
       ~f_before:(fun unchanged signal ->
         match signal with
-        | Mem (_, _, r, _) | Reg { register = r; _ } ->
+        | Mem { register = r; _ } | Reg { register = r; _ } ->
           let clock_domain = transitively_resolve r.reg_clock in
           Map.add_multi unchanged ~key:clock_domain.s_id ~data:(clock_domain, signal)
-        | Multiport_mem (_, _, write_ports) ->
+        | Multiport_mem { write_ports; _ } ->
           Array.fold write_ports ~init:unchanged ~f:(fun acc port ->
             let clock_domain = transitively_resolve port.write_clock in
             Map.add_multi acc ~key:clock_domain.s_id ~data:(clock_domain, signal))

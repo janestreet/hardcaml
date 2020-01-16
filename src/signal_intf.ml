@@ -87,9 +87,22 @@ module type Signal = sig
         ; register : register
         ; d : t
         }
-    | Mem of signal_id * Uid.t * register * memory
-    | Multiport_mem of signal_id * int * write_port array
-    | Mem_read_port of signal_id * t * t
+    | Mem of
+        { signal_id : signal_id
+        ; extra_uid : Uid.t
+        ; register : register
+        ; memory : memory
+        }
+    | Multiport_mem of
+        { signal_id : signal_id
+        ; size : int
+        ; write_ports : write_port array
+        }
+    | Mem_read_port of
+        { signal_id : signal_id
+        ; memory : t
+        ; read_address : t
+        }
     | Inst of
         { signal_id : signal_id
         ; extra_uid : Uid.t
@@ -135,6 +148,7 @@ module type Signal = sig
     { mem_size : int
     ; mem_read_address : t
     ; mem_write_address : t
+    ; mem_write_data : t
     }
 
   and instantiation =

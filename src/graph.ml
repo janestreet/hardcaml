@@ -158,9 +158,9 @@ let write_gdl
   in
   let mem_deps s =
     match s with
-    | Mem (_, _, r, m) ->
-      [ List.hd_exn (deps s); r.reg_enable; m.mem_read_address; m.mem_write_address ]
-    | Multiport_mem (_, _, write_ports) ->
+    | Mem { register = r; memory = m; _ } ->
+      [ m.mem_write_data; r.reg_enable; m.mem_read_address; m.mem_write_address ]
+    | Multiport_mem { write_ports; _ } ->
       Array.map write_ports ~f:(fun wr ->
         [ wr.write_clock; wr.write_enable; wr.write_address; wr.write_data ])
       |> Array.to_list
@@ -214,7 +214,7 @@ let write_gdl
         ~border:"solid"
         ~label:"reg"
         s
-    | Mem (_, _, _, m) ->
+    | Mem { memory = m; _ } ->
       write_node
         ~bordercolour:"lightblue"
         ~textcolour:"white"
@@ -222,13 +222,13 @@ let write_gdl
         ~border:"solid"
         ~label:(sprintf "mem%i" m.mem_size)
         s
-    | Multiport_mem (_, mem_size, _) ->
+    | Multiport_mem { size; _ } ->
       write_node
         ~bordercolour:"lightblue"
         ~textcolour:"white"
         ~colour:"black"
         ~border:"solid"
-        ~label:(sprintf "mem%i" mem_size)
+        ~label:(sprintf "mem%i" size)
         s
     | Mem_read_port _ ->
       write_node

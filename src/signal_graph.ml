@@ -173,6 +173,7 @@ let normalize_uids t =
     { mem_size = m.mem_size
     ; mem_read_address = new_signal m.mem_read_address
     ; mem_write_address = new_signal m.mem_write_address
+    ; mem_write_data = new_signal m.mem_write_data
     }
   in
   let new_write_port write_port =
@@ -257,11 +258,25 @@ let normalize_uids t =
             ; register
             ; d
             }
-        | Mem (id, _, r, m) -> Mem (update_id id, fresh_id (), new_reg r, new_mem m)
-        | Multiport_mem (id, mem_size, write_ports) ->
-          Multiport_mem (update_id id, mem_size, Array.map write_ports ~f:new_write_port)
-        | Mem_read_port (id, memory, read_address) ->
-          Mem_read_port (update_id id, new_signal memory, new_signal read_address)
+        | Mem { signal_id; extra_uid = _; register; memory } ->
+          Mem
+            { signal_id = update_id signal_id
+            ; extra_uid = fresh_id ()
+            ; register = new_reg register
+            ; memory = new_mem memory
+            }
+        | Multiport_mem { signal_id = id; size; write_ports } ->
+          Multiport_mem
+            { signal_id = update_id id
+            ; size
+            ; write_ports = Array.map write_ports ~f:new_write_port
+            }
+        | Mem_read_port { signal_id = id; memory; read_address } ->
+          Mem_read_port
+            { signal_id = update_id id
+            ; memory = new_signal memory
+            ; read_address = new_signal read_address
+            }
         | Inst { signal_id; instantiation; _ } ->
           let inputs =
             List.map instantiation.inst_inputs ~f:(fun (name, input) ->
@@ -351,8 +366,8 @@ let topological_sort ?(deps = Signal.deps) (graph : t) =
 
 let scheduling_deps (s : Signal.t) =
   match s with
-  | Mem (_, _, _, m) -> [ m.mem_read_address ]
-  | Mem_read_port (_, _, read_address) -> [ read_address ]
+  | Mem { memory; _ } -> [ memory.mem_read_address ]
+  | Mem_read_port { read_address; _ } -> [ read_address ]
   | Reg _ -> []
   | Multiport_mem _ -> []
   | Empty | Const _ | Op2 _ | Mux _ | Cat _ | Not _ | Wire _ | Select _ | Inst _ ->
