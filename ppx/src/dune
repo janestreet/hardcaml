@@ -1,0 +1,4 @@
+(library (name ppx_deriving_hardcaml0)
+ (public_name hardcaml.ppx_deriving_hardcaml0) (kind ppx_deriver)
+ (libraries base compiler-libs.common ppx_sexp_conv ppxlib)
+ (ppx_runtime_libraries) (preprocess (pps ppxlib.metaquot -no-check)))

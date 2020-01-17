@@ -1,33 +1,7 @@
 open! Import
 open Signal
 
-
-type t =
-  { q : Signal.t
-  ; full : Signal.t
-  ; empty : Signal.t
-  ; nearly_full : Signal.t
-  ; nearly_empty : Signal.t
-  ; used : Signal.t
-  }
-[@@deriving sexp_of]
-
-type create_fifo =
-  ?nearly_empty:int (** default is [1] **)
-  -> ?nearly_full:int (** default is [depth-1] **)
-  -> ?overflow_check:bool (** default is [true] *)
-  -> ?reset:Signal.t (** default is [empty] **)
-  -> ?underflow_check:bool (** default is [true] *)
-  -> ?ram_attributes:Rtl_attribute.t list (** default is blockram *)
-  -> ?scope:Scope.t
-  -> unit
-  -> capacity:int
-  -> clock:Signal.t
-  -> clear:Signal.t
-  -> wr:Signal.t
-  -> d:Signal.t
-  -> rd:Signal.t
-  -> t
+include Fifo_intf.T
 
 (* Generates wbr memory with explicit collision detection to gurantee [wbr] behaviour.
    Despite what's suggested by Vivado's BRAM documentation, [write_first] are not
@@ -50,6 +24,15 @@ let ram_wbr_safe capacity ~write_port ~read_port ~ram_attributes =
        ~enable:read_port.read_enable
        write_port.write_data)
     (ram_rbw capacity ~attributes:ram_attributes ~write_port ~read_port)
+;;
+
+let capacity_and_used_bits showahead ram_capacity =
+  (* to be consistent with Vivado's FIFO implementation, when instantiating a fwft FIFO,
+     it's actual capacity is one more due to the additional register in the prefetch
+     buffer register. *)
+  let actual_capacity = if showahead then ram_capacity + 1 else ram_capacity in
+  let used_bits = num_bits_to_represent actual_capacity in
+  actual_capacity, used_bits
 ;;
 
 let create
@@ -82,14 +65,7 @@ let create
   let reg_spec = Reg_spec.create ~clock ~clear ~reset () in
   let reg ?clear_to ~enable d = reg (Reg_spec.override reg_spec ?clear_to) ~enable d in
   let abits = address_bits_for ram_capacity in
-  let actual_capacity =
-    (* to be consistent with Vivado's FIFO implementation, when instantiating a fwft FIFO,
-       it's actual capacity is added by one due to the additional register in the prefetch
-       buffer register.
-    *)
-    if showahead then ram_capacity + 1 else ram_capacity
-  in
-  let ubits = num_bits_to_represent actual_capacity in
+  let actual_capacity, used_bits = capacity_and_used_bits showahead ram_capacity in
   (* get nearly full/empty levels *)
   let nearly_full =
     match nearly_full with
@@ -103,7 +79,7 @@ let create
   (* read or write, but not both *)
   let enable = rd ^: wr in
   (* fill level of fifo *)
-  let used = wire ubits in
+  let used = wire used_bits in
   let used_next =
     mux2 enable (mux2 rd (used -:. 1) (used +:. 1)) used
     (* read+write, or none *)
@@ -306,3 +282,70 @@ let create_showahead_with_extra_reg
   dout_valid <== reg spec ~enable:(will_update_dout |: rd) will_update_dout;
   { fifo with q = dout; empty }
 ;;
+
+module type Config = Fifo_intf.Config
+
+module With_interface (Config : Config) = struct
+  let _actual_capacity, used_bits =
+    capacity_and_used_bits Config.showahead Config.capacity
+  ;;
+
+  module I = struct
+    type 'a t =
+      { clock : 'a
+      ; clear : 'a
+      ; wr : 'a
+      ; d : 'a [@bits Config.data_width]
+      ; rd : 'a
+      }
+    [@@deriving sexp_of, hardcaml]
+  end
+
+  module O = struct
+    type nonrec 'a t = 'a t
+
+    include Interface.Make (struct
+        include Fifo_intf.T
+
+        let t = { t with q = "q", Config.data_width; used = "used", used_bits }
+      end)
+  end
+
+  let create_fn
+        ?nearly_empty
+        ?nearly_full
+        ?overflow_check
+        ?reset
+        ?underflow_check
+        ?ram_attributes
+        ?scope
+        ~f
+        (i : _ I.t)
+    =
+    f
+      ?nearly_empty
+      ?nearly_full
+      ?overflow_check
+      ?reset
+      ?underflow_check
+      ?ram_attributes
+      ?scope
+      ()
+      ~capacity:Config.capacity
+      ~clock:i.clock
+      ~clear:i.clear
+      ~wr:i.wr
+      ~d:i.d
+      ~rd:i.rd
+  ;;
+
+  let classic ?(extra_reg = false) =
+    match extra_reg, Config.showahead with
+    | false, false -> create_fn ~f:(create ~showahead:false)
+    | true, false -> create_fn ~f:create_classic_with_extra_reg
+    | false, true -> create_fn ~f:create_showahead_from_classic
+    | true, true -> create_fn ~f:create_showahead_with_extra_reg
+  ;;
+
+  let create = create_fn ~f:(create ~showahead:Config.showahead)
+end
