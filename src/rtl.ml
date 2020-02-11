@@ -126,7 +126,6 @@ module type SignalNameManager = sig
     ; inst_labels : string Uid_map.t
     }
 
-  val prefix : string
   val reserved : string list
   val init : string list -> name_map
   val add_port : Signal.t -> name_map -> name_map

@@ -356,22 +356,6 @@ module Base (C : Config) = struct
   let wire = mk_wire
   let ( -- ) a _ = a
 
-  let lazy_const name =
-    lazy
-      (let x = wire 1 in
-       inst (prefix ^ name) ~o:[ "o" ==> x ];
-       x)
-  ;;
-
-  let vdd = lazy_const "vdd"
-  let gnd = lazy_const "gnd"
-  let z = lazy_const "z"
-
-  let list_of_string s =
-    let a = Array.init (String.length s) ~f:(String.get s) in
-    Array.to_list a
-  ;;
-
   let binop0 name a b =
     if width a <> width b then raise (Binop_arg_widths_different name);
     let o = wire 1 in
@@ -466,17 +450,6 @@ module Base (C : Config) = struct
   ;;
 
   let mux = if structural_mux then s_mux else mux
-
-  let s_const b =
-    concat_msb
-      (List.map (list_of_string b) ~f:(function
-         | '0' -> Lazy.force gnd
-         | '1' -> Lazy.force vdd
-         | 'z' -> Lazy.force z
-         | _ -> raise (Invalid_constant b)))
-  ;;
-
-  let const = if structural_const then s_const else of_bit_string
   let of_constant c = Constant.to_binary_string c |> of_bit_string
   let ( +: ) = binop1 "add"
   let ( -: ) = binop1 "sub"
