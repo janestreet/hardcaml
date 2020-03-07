@@ -13,15 +13,20 @@
 
 open! Import
 
-module type Pre = sig
+module type Pre_partial = sig
   type 'a t [@@deriving sexp_of]
 
-  val t : (string * int) t
   val iter : 'a t -> f:('a -> unit) -> unit
   val iter2 : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
   val map : 'a t -> f:('a -> 'b) -> 'b t
   val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
   val to_list : 'a t -> 'a list
+end
+
+module type Pre = sig
+  include Pre_partial
+
+  val t : (string * int) t
 end
 
 module type Ast = sig
@@ -259,6 +264,7 @@ module type S_enums = sig
 end
 
 module type Interface = sig
+  module type Pre_partial = Pre_partial
   module type Pre = Pre
   module type S = S
   module type Ast = Ast

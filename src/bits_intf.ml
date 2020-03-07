@@ -33,7 +33,6 @@ module type Bits = sig
 
     val get_word : t -> int -> int64
     val set_word : t -> int -> int64 -> unit
-
     val to_bits : t -> bits
     val of_constant : Constant.t -> t
     val to_constant : t -> Constant.t

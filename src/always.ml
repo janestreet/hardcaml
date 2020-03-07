@@ -190,7 +190,7 @@ module State_machine = struct
     end
     in
     let nstates = List.length State.all in
-    let ls = Int.ceil_log2 nstates in
+    let ls = if nstates = 1 then 1 else Int.ceil_log2 nstates in
     let state_bits i =
       match encoding with
       | Binary -> Signal.of_int ~width:ls i
@@ -198,9 +198,9 @@ module State_machine = struct
         Signal.of_bit_string
           (Bits.binary_to_gray (Bits.of_int ~width:ls i) |> Bits.to_bstr)
       | Onehot ->
+        let nstates' = if nstates = 1 then 1 else nstates - 1 in
         Signal.of_bit_string
-          Bits.(
-            select (binary_to_onehot (of_int ~width:ls i)) (nstates - 1) 0 |> to_bstr)
+          Bits.(select (binary_to_onehot (of_int ~width:ls i)) nstates' 0 |> to_bstr)
     in
     let states = List.mapi State.all ~f:(fun i s -> s, (i, state_bits i)) in
     let var =

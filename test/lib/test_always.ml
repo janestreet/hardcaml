@@ -25,6 +25,18 @@ module State = struct
   let all = [ 1; 3; 5 ]
 end
 
+let%expect_test "single state State_machine compiles" =
+  let module State = struct
+    type t = int [@@deriving compare, sexp_of]
+
+    let all = [ 1 ]
+  end
+  in
+  let sm = State_machine.create (module State) reg_spec ~enable in
+  require_does_not_raise [%here] (fun () ->
+    compile [ sm.switch ~default:[] [ 1, [ sm.set_next 1 ] ] ])
+;;
+
 let%expect_test "[Reg.State_machine.create]" =
   let sm () = State_machine.create (module State) reg_spec ~enable in
   let bad_case (state : _ State_machine.t) = state.switch [ 1, []; 2, []; 6, [] ] in

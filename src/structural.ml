@@ -670,7 +670,9 @@ let write_verilog os circuit =
               ; List.map t ~f:(fun (n, s) -> "    ." ^ n ^ "(" ^ name s ^ ")")
               ]));
       os "\n  );\n"
-    | _ ->  raise Caml.Not_found
+    | _ ->
+      (* This should never be raised *)
+      raise_s [%message "Expecting an instantiation"]
   in
   List.iter inst ~f:write_inst;
   os "endmodule\n"

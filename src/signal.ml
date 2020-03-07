@@ -434,24 +434,27 @@ let structural_compare
       in
       let wid () = width a = width b in
       let names () =
+        let names_or_empty = function
+          | Empty -> []
+          | s -> names s
+        in
         if check_names
-        then (
-          try [%compare.equal: string list] (names a) (names b) with
-          | _ -> true)
+        then [%compare.equal: string list] (names_or_empty a) (names_or_empty b)
         else true
       in
       let deps () =
         if check_deps
         then (
-          try
-            List.fold2_exn (deps a) (deps b) ~init:(set, true) ~f:(fun (set, b) x y ->
+          match
+            List.fold2 (deps a) (deps b) ~init:(set, true) ~f:(fun (set, b) x y ->
               if b
               then (
                 let set, b' = structural_compare set x y in
                 set, b && b')
               else set, b)
           with
-          | _ -> set, false)
+          | Ok b -> b
+          | Unequal_lengths -> set, false)
         else set, false
       in
       if typ () && wid () && names () then deps () else set, false)

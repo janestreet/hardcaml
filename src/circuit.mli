@@ -1,6 +1,5 @@
 (** Creation and manipulation of hardware circuits *)
 
-
 open! Import
 
 (** circuit data structure *)
@@ -20,7 +19,6 @@ type 'a with_create_options =
   ?detect_combinational_loops:bool (** default is [true] *)
   -> ?normalize_uids:bool (** default is [true] *)
   -> 'a
-
 
 (** create circuit data structure  *)
 val create_exn : (name:string -> Signal.t list -> t) with_create_options

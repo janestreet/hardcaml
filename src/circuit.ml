@@ -144,7 +144,6 @@ let set_phantom_inputs circuit phantom_inputs =
 ;;
 
 let with_name t ~name = { t with name }
-
 let uid_equal a b = Int64.equal (Signal.uid a) (Signal.uid b)
 let is_input t signal = List.mem t.inputs signal ~equal:uid_equal
 let is_output t signal = List.mem t.outputs signal ~equal:uid_equal
@@ -155,32 +154,41 @@ let signal_map c = c.signal_by_uid
 
 let structural_compare ?check_names c0 c1 =
   (* Number of inputs and outputs match *)
-  try
-    List.length (outputs c0) = List.length (outputs c1)
-    && List.length (inputs c0) = List.length (inputs c1)
-    (* outputs, including names, are the same *)
-    && List.fold2_exn (outputs c0) (outputs c1) ~init:true ~f:(fun b o0 o1 ->
-      b
-      && [%compare.equal: string list] (Signal.names o0) (Signal.names o1)
-      && Signal.width o0 = Signal.width o1)
-    (* inputs, including names, are the same *)
-    && List.fold2_exn (inputs c0) (inputs c1) ~init:true ~f:(fun b i0 i1 ->
-      b
-      && [%compare.equal: string list] (Signal.names i0) (Signal.names i1)
-      && Signal.width i0 = Signal.width i1)
-    && (* check full structural comparision from each output *)
+  let num_ports_match which_ports =
+    List.length (which_ports c0) = List.length (which_ports c1)
+  in
+  (* Name and width (and implicitly, order) of ports match *)
+  let ports_match which_ports =
+    let names_or_empty = function
+      | Signal.Empty -> []
+      | s -> Signal.names s
+    in
+    match
+      List.fold2 (which_ports c0) (which_ports c1) ~init:true ~f:(fun b p0 p1 ->
+        b
+        && [%compare.equal: string list] (names_or_empty p0) (names_or_empty p1)
+        && Signal.width p0 = Signal.width p1)
+    with
+    | Ok ok -> ok
+    | Unequal_lengths -> false
+  in
+  let recurse_into_circuit () =
     snd
       (List.fold2_exn
          (outputs c0)
          (outputs c1)
          ~init:(Uid_set.empty, true)
          ~f:(fun (set, b) s t ->
-           let set, b' =
-             Signal.structural_compare ?check_names ~initial_deps:set s t
-           in
+           let set, b' = Signal.structural_compare ?check_names ~initial_deps:set s t in
            set, b && b'))
-  with
-  | Not_found_s _ | Caml.Not_found -> false
+  in
+  num_ports_match inputs
+  && num_ports_match outputs
+  (* outputs, including names, are the same *)
+  && ports_match outputs
+  && ports_match inputs
+  && (* check full structural comparision from each output *)
+  recurse_into_circuit ()
 ;;
 
 module Port_checks = struct
