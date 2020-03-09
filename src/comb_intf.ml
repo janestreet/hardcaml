@@ -280,8 +280,6 @@ module type S = sig
   (** [insert ~into:t x ~at_offset] insert [x] into [t] at given offet *)
   val insert : into:t -> t -> at_offset:int -> t
 
-  val sel : t -> int * int -> t
-
   (** multiplexer.
 
       [let m = mux sel inputs in ...]
@@ -305,13 +303,6 @@ module type S = sig
   val mux2 : t -> t -> t -> t
 
   val mux_init : t -> int -> f:(int -> t) -> t
-
-
-  (** case mux *)
-  val cases : t -> t -> (int * t) list -> t
-
-  (** match mux *)
-  val matches : ?resize:(t -> int -> t) -> ?default:t -> t -> (int * t) list -> t
 
   (** logical and *)
   val ( &: ) : t -> t -> t

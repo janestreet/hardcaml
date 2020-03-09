@@ -57,28 +57,16 @@ let%expect_test "Port name clashes with reserved name" =
           (data_in x)))))) |}]
 ;;
 
-let%expect_test "SignalNameManager internal error" =
+let%expect_test "output wire is width 0 (or empty)" =
+  (* The exception is raised by the [output] function. *)
   require_does_raise [%here] (fun () -> rtl_write_null [ output "x" (empty +: empty) ]);
   [%expect
     {|
-    module test (
-        x
-    );
-
-        output [-1:0] x;
-
-        /* signal declarations */
-        wire [-1:0] _2;
-
-        /* logic */
-    ("Error while writing circuit"
-      (circuit_name test)
-      (hierarchy_path (test))
-      (output ((language Verilog) (mode (To_channel <stdout>))))
-      (exn (
-        "[Rtl.SignalNameManager] internal error while looking up signal name"
-        (index      0)
-        (for_signal empty)))) |}]
+    ("width of wire was specified as 0" (
+      wire (
+        wire
+        (width   0)
+        (data_in empty)))) |}]
 ;;
 
 let%expect_test "file IO" =

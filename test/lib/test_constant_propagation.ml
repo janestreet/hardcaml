@@ -430,13 +430,13 @@ let%expect_test "binary_to_gray" =
   let binary_to_gray = fn1 binary_to_gray in
   print_s
     [%message
-      "binart_to_gray"
+      "binary_to_gray"
         ~_:
           (List.init 8 ~f:(fun i -> binary_to_gray (of_int ~width:3 i))
            : signal fn1 list)];
   [%expect
     {|
-    (binart_to_gray (
+    (binary_to_gray (
       (3'b000 = 3'b000)
       (3'b001 = 3'b001)
       (3'b010 = 3'b011)
@@ -449,7 +449,7 @@ let%expect_test "binary_to_gray" =
 
 let%expect_test "[binary_to_gray] and [gray_to_binary] are inverses" =
   let num_tests = ref 0 in
-  iter_all_inputs ~min_width:2 ~max_width:5 ~f:(fun input ->
+  iter_all_inputs ~min_width:1 ~max_width:5 ~f:(fun input ->
     incr num_tests;
     let output = binary_to_gray (gray_to_binary input) in
     require
@@ -457,7 +457,7 @@ let%expect_test "[binary_to_gray] and [gray_to_binary] are inverses" =
       (Sexp.equal [%sexp (input : signal)] [%sexp (output : signal)])
       ~if_false_then_print_s:(lazy [%message (input : signal) (output : signal)]));
   print_s [%sexp (!num_tests : int)];
-  [%expect {| 60 |}]
+  [%expect {| 62 |}]
 ;;
 
 let%expect_test "[uresize 0]" =

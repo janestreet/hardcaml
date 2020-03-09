@@ -119,14 +119,14 @@ module Make_primitives (Gates : Gates) = struct
   ;;
 end
 
-module Make (Bits : Primitives) = struct
-  type t = Bits.t
+module Make (Prims : Primitives) = struct
+  type t = Prims.t
 
-  let equal = Bits.equal
-  let empty = Bits.empty
-  let is_empty = Bits.is_empty
-  let ( -- ) a b = Bits.( -- ) a b
-  let width = Bits.width
+  let equal = Prims.equal
+  let empty = Prims.empty
+  let is_empty = Prims.is_empty
+  let ( -- ) a b = Prims.( -- ) a b
+  let width = Prims.width
 
 
   let[@cold] raise_arg_greater_than_zero fn x =
@@ -149,8 +149,8 @@ module Make (Bits : Primitives) = struct
     | x -> 1 + num_bits_to_represent (x / 2)
   ;;
 
-  let of_constant = Bits.of_constant
-  let to_constant = Bits.to_constant
+  let of_constant = Prims.of_constant
+  let to_constant = Prims.to_constant
 
   (* constant generation *)
 
@@ -186,7 +186,7 @@ module Make (Bits : Primitives) = struct
     String.iter b ~f:(function
       | '0' | '1' -> ()
       | _ -> raise_of_bit_string_bad_char b);
-    Bits.of_constant (Constant.of_binary_string b)
+    Prims.of_constant (Constant.of_binary_string b)
   ;;
 
   let of_int ~width v =
@@ -234,7 +234,7 @@ module Make (Bits : Primitives) = struct
     raise_s
       [%message.omit_nil
         "[concat] got [empty] input"
-          ~_:(s : Bits.t list)
+          ~_:(s : Prims.t list)
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
@@ -249,13 +249,13 @@ module Make (Bits : Primitives) = struct
   let concat_msb s =
     List.iter s ~f:(concat_check_not_empty s);
     if List.is_empty s then raise_concat_empty_list ();
-    Bits.concat_msb s
+    Prims.concat_msb s
   ;;
 
   let concat_lsb s = concat_msb (List.rev s)
   let ( @: ) a b = concat_msb [ a; b ]
-  let concat_msb_e s = concat_msb (List.filter s ~f:(fun b -> not (Bits.is_empty b)))
-  let concat_lsb_e s = concat_lsb (List.filter s ~f:(fun b -> not (Bits.is_empty b)))
+  let concat_msb_e s = concat_msb (List.filter s ~f:(fun b -> not (Prims.is_empty b)))
+  let concat_lsb_e s = concat_lsb (List.filter s ~f:(fun b -> not (Prims.is_empty b)))
   let vdd = of_bit_string "1" -- "vdd"
   let gnd = of_bit_string "0" -- "gnd"
   let is_vdd t = equal t vdd
@@ -293,12 +293,12 @@ module Make (Bits : Primitives) = struct
     if hi < lo then raise_select_hi_lo hi lo;
     if hi >= width a || lo >= width a || hi < 0 || lo < 0
     then raise_select_out_of_bounds a hi lo;
-    if lo = 0 && hi = width a - 1 then a else Bits.select a hi lo
+    if lo = 0 && hi = width a - 1 then a else Prims.select a hi lo
   ;;
 
   let select_e a hi lo =
     try select a hi lo with
-    | _ -> Bits.empty
+    | _ -> Prims.empty
   ;;
 
   let msb a = select a (width a - 1) (width a - 1)
@@ -359,8 +359,6 @@ module Make (Bits : Primitives) = struct
     else select t (wt - 1) (wf + at_offset) @: f @: select t (at_offset - 1) 0
   ;;
 
-  let sel x (h, l) = select x h l
-
   let[@cold] raise_assert_widths_same_not_empty function_ =
     raise_s
       [%message.omit_nil
@@ -376,7 +374,7 @@ module Make (Bits : Primitives) = struct
           ~_:
             (String.concat [ "["; function_; "] got inputs of different widths" ]
              : string)
-          ~_:(inputs : Bits.t list)
+          ~_:(inputs : Prims.t list)
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
@@ -401,7 +399,7 @@ module Make (Bits : Primitives) = struct
           ~_:
             (String.concat [ "["; function_; "] got inputs of different widths" ]
              : string)
-          ~_:(inputs : Bits.t list)
+          ~_:(inputs : Prims.t list)
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
@@ -443,7 +441,7 @@ module Make (Bits : Primitives) = struct
     assert_widths_same "mux" l;
     if els > max_els then raise_mux_too_many_inputs els max_els;
     if els < 2 then raise_mux_too_few_inputs els;
-    Bits.mux sel l
+    Prims.mux sel l
   ;;
 
   let mux2 sel a b =
@@ -453,98 +451,23 @@ module Make (Bits : Primitives) = struct
 
   let mux_init sel n ~f = mux sel (Array.to_list (Array.init n ~f))
 
-  let cases sel default l =
-    let max = 1 + List.fold l ~init:0 ~f:(fun acc (i, _) -> max i acc) in
-    let a = Array.create ~len:max default in
-    List.iter l ~f:(fun (i, x) -> a.(i) <- x);
-    if 1 lsl width sel = max
-    then mux sel (Array.to_list a)
-    else mux sel (Array.to_list a @ [ default ])
-  ;;
-
-  let[@cold] raise_matches_cases_not_unique () =
-    raise_s
-      [%message.omit_nil
-        "[matches] cases must be unique" ~loc:(Caller_id.get () : Caller_id.t option)]
-  ;;
-
-  let matches ?(resize = fun s _ -> s) ?default sel cases =
-    (* sort cases *)
-    let cases = List.sort cases ~compare:(fun (a, _) (b, _) -> compare a b) in
-    (* check cases are unique *)
-    let check_unique_cases cases =
-      let add s (i, _) = Set.add s i in
-      let s = List.fold cases ~init:(Set.empty (module Int)) ~f:add in
-      if Set.length s <> List.length cases then raise_matches_cases_not_unique ()
-    in
-    check_unique_cases cases;
-    (* resize cases and default *)
-    let w = List.fold cases ~init:0 ~f:(fun w (_, d) -> max w (width d)) in
-    let w, default =
-      match default with
-      | None -> w, zero w
-      | Some d ->
-        let w = max w (width d) in
-        w, resize d w
-    in
-    let cases = List.map cases ~f:(fun (c, d) -> c, resize d w) in
-    (* filter cases that cannot be indexed by sel *)
-    let out_of_range_cases sgn sel cases =
-      let w = width sel in
-      let min, max, msk =
-        if sgn
-        then (
-          let w = 1 lsl (w - 1) in
-          -w, w - 1, (w lsl 1) - 1)
-        else (
-          let w = 1 lsl w in
-          0, w - 1, w - 1)
-      in
-      List.map ~f:(fun (x, y) -> x land msk, y)
-      @@ List.filter cases ~f:(fun (x, _) -> x >= min && x <= max)
-    in
-    let sgn = fst @@ List.hd_exn cases < 0 in
-    let cases = out_of_range_cases sgn sel cases in
-    (* generate mux tree *)
-    let rec f sel c def =
-      match width sel, c with
-      | 0, [] -> def
-      | 0, (0, d) :: _ -> d
-      | 0, _ -> def
-      | _, [] -> def
-      | _ ->
-        let e, o = List.partition_tf c ~f:(fun (i, _) -> i land 1 = 0) in
-        let e, o =
-          let shift (a, b) = a lsr 1, b in
-          List.map e ~f:shift, List.map o ~f:shift
-        in
-        let sel2 = lsb sel in
-        let sel =
-          try msbs sel with
-          | _ -> empty
-        in
-        mux2 sel2 (f sel o def) (f sel e def)
-    in
-    f sel cases default
-  ;;
-
   (* logical *)
   let ( &: ) a b =
     assert_operator_widths_same "&:" a b;
-    Bits.( &: ) a b
+    Prims.( &: ) a b
   ;;
 
   let ( |: ) a b =
     assert_operator_widths_same "|:" a b;
-    Bits.( |: ) a b
+    Prims.( |: ) a b
   ;;
 
   let ( ^: ) a b =
     assert_operator_widths_same "^:" a b;
-    Bits.( ^: ) a b
+    Prims.( ^: ) a b
   ;;
 
-  let ( ~: ) = Bits.( ~: )
+  let ( ~: ) = Prims.( ~: )
   let ( &:. ) a b = op_int_right ( &: ) a b
   let ( |:. ) a b = op_int_right ( |: ) a b
   let ( ^:. ) a b = op_int_right ( ^: ) a b
@@ -552,24 +475,24 @@ module Make (Bits : Primitives) = struct
   (* arithmetic *)
   let ( +: ) a b =
     assert_operator_widths_same "+:" a b;
-    Bits.( +: ) a b
+    Prims.( +: ) a b
   ;;
 
   let ( -: ) a b =
     assert_operator_widths_same "-:" a b;
-    Bits.( -: ) a b
+    Prims.( -: ) a b
   ;;
 
   let ( +:. ) a b = op_int_right ( +: ) a b
   let ( -:. ) a b = op_int_right ( -: ) a b
   let negate a = zero (width a) -: a
-  let ( *: ) = Bits.( *: )
-  let ( *+ ) = Bits.( *+ )
+  let ( *: ) = Prims.( *: )
+  let ( *+ ) = Prims.( *+ )
 
   (* comparison *)
   let ( ==: ) a b =
     assert_operator_widths_same "==:" a b;
-    Bits.( ==: ) a b
+    Prims.( ==: ) a b
   ;;
 
   let ( <>: ) a b =
@@ -579,7 +502,7 @@ module Make (Bits : Primitives) = struct
 
   let ( <: ) a b =
     assert_operator_widths_same "<:" a b;
-    Bits.( <: ) a b
+    Prims.( <: ) a b
   ;;
 
   let lt = ( <: )
@@ -617,10 +540,10 @@ module Make (Bits : Primitives) = struct
   let ( >+. ) a b = op_int_right ( >+ ) a b
   let ( <=+. ) a b = op_int_right ( <=+ ) a b
   let ( >=+. ) a b = op_int_right ( >=+ ) a b
-  let to_string a = Bits.to_string a
+  let to_string a = Prims.to_string a
   let to_int a = to_constant a |> Constant.to_int
   let to_bstr a = to_constant a |> Constant.to_binary_string
-  let sexp_of_t = Bits.sexp_of_t
+  let sexp_of_t = Prims.sexp_of_t
   let bits_lsb s = List.init (width s) ~f:(bit s)
   let bits_msb s = bits_lsb s |> List.rev
   let to_array b = Array.of_list (bits_lsb b)
@@ -979,10 +902,9 @@ module Make (Bits : Primitives) = struct
       | [] -> []
       | [ a ] -> [ a; ~:a ]
       | a :: b ->
-        let b1 = build b in
-        let l2 = List.map b1 ~f:(( &: ) ~:a) in
-        let b2 = build b in
-        let l1 = List.map b2 ~f:(( &: ) a) in
+        let b = build b in
+        let l2 = List.map b ~f:(( &: ) ~:a) in
+        let l1 = List.map b ~f:(( &: ) a) in
         l1 @ l2
     in
     concat_msb (build (bits_msb s))
@@ -1009,15 +931,26 @@ module Make (Bits : Primitives) = struct
     concat_lsb (f 0)
   ;;
 
-  let binary_to_gray b = b ^: srl b 1
+  let binary_to_gray b =
+    if width b < 1
+    then raise_s [%message "[binary_to_gray] width < 1"]
+    else if width b = 1
+    then b
+    else b ^: srl b 1
+  ;;
 
   let gray_to_binary b =
-    let ue x = uresize x (width b) in
-    let rec f b mask =
-      let b = b ^: ue mask in
-      if width mask = 1 then b else f b (msbs mask)
-    in
-    f b (msbs b)
+    if width b < 1
+    then raise_s [%message "[gray_to_binary] width < 1"]
+    else if width b = 1
+    then b
+    else (
+      let ue x = uresize x (width b) in
+      let rec f b mask =
+        let b = b ^: ue mask in
+        if width mask = 1 then b else f b (msbs mask)
+      in
+      f b (msbs b))
   ;;
 
   let[@cold] raise_of_decimal_string_invalid_decimal_char v =

@@ -807,8 +807,18 @@ let ( <== ) a b =
         "attempt to assign non-wire" ~assignment_target:(a : t) ~expression:(b : t)]
 ;;
 
+let[@cold] raise_wire_width_0 wire =
+  (* print the wire as well - this is potentially helpful if [caller_id]s are enabled.  *)
+  raise_s [%message "width of wire was specified as 0" (wire : t)]
+;;
+
 let assign = ( <== )
-let wire w = Wire { signal_id = make_id w []; driver = ref Empty }
+
+let wire w =
+  let wire = Wire { signal_id = make_id w []; driver = ref Empty } in
+  if w = 0 then raise_wire_width_0 wire;
+  wire
+;;
 
 let wireof s =
   let x = wire (width s) in
