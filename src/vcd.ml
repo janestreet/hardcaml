@@ -125,7 +125,7 @@ let wrap os sim =
     osl "0!";
     time := !time + vcdcycle
   in
-  Private.modify sim [ After, Reset, write_reset; After, Seq, write_cycle ]
+  Private.modify sim [ After, Reset, write_reset; After, At_clock_edge, write_cycle ]
 ;;
 
 module Gtkwave = struct

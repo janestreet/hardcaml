@@ -310,7 +310,9 @@ let%expect_test "mod_counter should raise" =
     mod_counter ~max:8 (of_string "101"));
   [%expect
     {|
-    "did not raise" |}]
+    ("mod counter limit is great than max counter value"
+     (limit     8)
+     (max_value 7)) |}]
 ;;
 
 let%expect_test "mod_counter" =

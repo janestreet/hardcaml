@@ -251,9 +251,9 @@ type ('i, 'o) t =
   ; outputs_before_clock_edge : 'o
   ; reset : task
   ; cycle_check : task
-  ; cycle_comb0 : task
-  ; cycle_seq : task
-  ; cycle_comb1 : task
+  ; cycle_before_clock_edge : task
+  ; cycle_at_clock_edge : task
+  ; cycle_after_clock_edge : task
   ; lookup_signal : Signal.Uid.t -> Bits.t ref
   ; lookup_reg : Signal.Uid.t -> Bits.t ref
   }
@@ -279,9 +279,9 @@ module Private = struct
         ~internal_ports
         ~reset
         ~cycle_check
-        ~cycle_comb0
-        ~cycle_seq
-        ~cycle_comb1
+        ~cycle_before_clock_edge
+        ~cycle_at_clock_edge
+        ~cycle_after_clock_edge
         ~lookup_signal
         ~lookup_reg
     =
@@ -294,9 +294,9 @@ module Private = struct
     ; outputs_after_clock_edge = out_ports_after_clock_edge
     ; reset
     ; cycle_check
-    ; cycle_comb0
-    ; cycle_seq
-    ; cycle_comb1
+    ; cycle_before_clock_edge
+    ; cycle_at_clock_edge
+    ; cycle_after_clock_edge
     ; lookup_signal
     ; lookup_reg
     }
@@ -306,9 +306,9 @@ module Private = struct
     type t =
       | Reset
       | Check
-      | Comb0
-      | Seq
-      | Comb1
+      | Before_clock_edge
+      | At_clock_edge
+      | After_clock_edge
     [@@deriving sexp_of]
   end
 
@@ -328,9 +328,11 @@ module Private = struct
       match step with
       | Reset -> { t with reset = apply t.reset }
       | Check -> { t with cycle_check = apply t.cycle_check }
-      | Comb0 -> { t with cycle_comb0 = apply t.cycle_comb0 }
-      | Seq -> { t with cycle_seq = apply t.cycle_seq }
-      | Comb1 -> { t with cycle_comb1 = apply t.cycle_comb1 })
+      | Before_clock_edge ->
+        { t with cycle_before_clock_edge = apply t.cycle_before_clock_edge }
+      | At_clock_edge -> { t with cycle_at_clock_edge = apply t.cycle_at_clock_edge }
+      | After_clock_edge ->
+        { t with cycle_after_clock_edge = apply t.cycle_after_clock_edge })
   ;;
 
   let coerce sim ~to_input ~to_output =
@@ -343,16 +345,16 @@ module Private = struct
 end
 
 let cycle_check sim = sim.cycle_check ()
-let cycle_comb0 sim = sim.cycle_comb0 ()
-let cycle_seq sim = sim.cycle_seq ()
-let cycle_comb1 sim = sim.cycle_comb1 ()
+let cycle_before_clock_edge sim = sim.cycle_before_clock_edge ()
+let cycle_at_clock_edge sim = sim.cycle_at_clock_edge ()
+let cycle_after_clock_edge sim = sim.cycle_after_clock_edge ()
 let reset sim = sim.reset ()
 
 let cycle sim =
   cycle_check sim;
-  cycle_comb0 sim;
-  cycle_seq sim;
-  cycle_comb1 sim
+  cycle_before_clock_edge sim;
+  cycle_at_clock_edge sim;
+  cycle_after_clock_edge sim
 ;;
 
 let in_port sim name =
@@ -480,17 +482,17 @@ let combine ?(port_sets_may_differ = false) ?(on_error = default_on_error) s0 s1
     copy_in_ports ();
     s1.cycle_check ()
   in
-  let cycle_comb0 () =
-    s0.cycle_comb0 ();
-    s1.cycle_comb0 ()
+  let cycle_before_clock_edge () =
+    s0.cycle_before_clock_edge ();
+    s1.cycle_before_clock_edge ()
   in
-  let cycle_seq () =
-    s0.cycle_seq ();
-    s1.cycle_seq ()
+  let cycle_at_clock_edge () =
+    s0.cycle_at_clock_edge ();
+    s1.cycle_at_clock_edge ()
   in
-  let cycle_comb1 () =
-    s0.cycle_comb1 ();
-    s1.cycle_comb1 ();
+  let cycle_after_clock_edge () =
+    s0.cycle_after_clock_edge ();
+    s1.cycle_after_clock_edge ();
     check_out_ports ();
     incr_cycle ()
   in
@@ -498,7 +500,13 @@ let combine ?(port_sets_may_differ = false) ?(on_error = default_on_error) s0 s1
     s0.reset ();
     s1.reset ()
   in
-  { s0 with reset; cycle_check; cycle_comb0; cycle_seq; cycle_comb1 }
+  { s0 with
+    reset
+  ; cycle_check
+  ; cycle_before_clock_edge
+  ; cycle_at_clock_edge
+  ; cycle_after_clock_edge
+  }
 ;;
 
 let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) circuit =
@@ -708,7 +716,7 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
   let tasks_check = List.map bundle.inputs ~f:check_input in
   let tasks_comb = filter_none (List.map bundle.schedule ~f:compile_and_tag) in
   let tasks_regs = filter_none (List.map bundle.regs ~f:compile) in
-  let tasks_seq =
+  let tasks_at_clock_edge =
     List.map bundle.mems ~f:compile_mem_update
     @ List.map bundle.regs ~f:compile_reg_update
   in
@@ -782,9 +790,9 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
   let out_ports_after_clock_edge, out_ports_task = out_ports_ref out_ports in
   let internal_ports, internal_ports_task = out_ports_ref internal_ports in
   let optimize_last_layer = true in
-  let tasks_comb0 = List.map tasks_comb ~f:snd in
-  let tasks_comb1 =
-    if optimize_last_layer then tasks_comb_last_layer () else tasks_comb0
+  let tasks_before_clock_edge = List.map tasks_comb ~f:snd in
+  let tasks_after_clock_edge =
+    if optimize_last_layer then tasks_comb_last_layer () else tasks_before_clock_edge
   in
   { in_ports
   ; out_ports_after_clock_edge
@@ -794,15 +802,15 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
   ; outputs_after_clock_edge = out_ports_after_clock_edge
   ; outputs_before_clock_edge = out_ports_before_clock_edge
   ; cycle_check = task tasks_check
-  ; cycle_comb0 =
+  ; cycle_before_clock_edge =
       tasks
         [ [ in_ports_task ]
-        ; tasks_comb0
+        ; tasks_before_clock_edge
         ; tasks_regs
         ; [ out_ports_before_clock_edge_task; internal_ports_task ]
         ]
-  ; cycle_seq = task tasks_seq
-  ; cycle_comb1 = tasks [ tasks_comb1; [ out_ports_task ] ]
+  ; cycle_at_clock_edge = task tasks_at_clock_edge
+  ; cycle_after_clock_edge = tasks [ tasks_after_clock_edge; [ out_ports_task ] ]
   ; reset = task resets
   ; lookup_signal
   ; lookup_reg

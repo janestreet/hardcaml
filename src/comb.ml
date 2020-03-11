@@ -751,10 +751,20 @@ module Make (Prims : Primitives) = struct
   let ( &&: ) a b = reduce ~f:( |: ) (bits_msb a) &: reduce ~f:( |: ) (bits_msb b)
   let reverse a = concat_msb (bits_lsb a)
 
+  let[@cold] raise_mod_counter_limit limit max_value =
+    raise_s
+      [%message
+        "mod counter limit is great than max counter value"
+          (limit : int)
+          (max_value : int)]
+  ;;
+
   let mod_counter ~max c =
     let w = width c in
-    let lmax = 1 lsl w in
-    if lmax = max + 1
+    let counter_max_value = (1 lsl w) - 1 in
+    if max > counter_max_value
+    then raise_mod_counter_limit max counter_max_value
+    else if counter_max_value = max
     then c +: one w
     else mux2 (c ==: of_int ~width:w max) (zero w) (c +: one w)
   ;;

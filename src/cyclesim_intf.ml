@@ -28,18 +28,17 @@ module type Cyclesim = sig
   (** advance by 1 clock cycle (check->comb->seq->comb) *)
   val cycle : _ t -> unit
 
-
   (** check inputs are valid before a simulation cycle *)
   val cycle_check : _ t -> unit
 
-  (** update combinatorial logic before sequential logic *)
-  val cycle_comb0 : _ t -> unit
+  (** update combinatorial logic before clock edge and relative to new inputs. *)
+  val cycle_before_clock_edge : _ t -> unit
 
-  (** update sequential logic *)
-  val cycle_seq : _ t -> unit
+  (** update sequential logic - registers and memories. *)
+  val cycle_at_clock_edge : _ t -> unit
 
-  (** update combinatorial logic after sequential logic *)
-  val cycle_comb1 : _ t -> unit
+  (** update combinatorial logic after clock edge *)
+  val cycle_after_clock_edge : _ t -> unit
 
   (** reset simulator *)
   val reset : _ t -> unit
@@ -127,9 +126,9 @@ module type Cyclesim = sig
       -> internal_ports:Port_list.t
       -> reset:task
       -> cycle_check:task
-      -> cycle_comb0:task
-      -> cycle_seq:task
-      -> cycle_comb1:task
+      -> cycle_before_clock_edge:task
+      -> cycle_at_clock_edge:task
+      -> cycle_after_clock_edge:task
       -> lookup_signal:(Signal.Uid.t -> Bits.t ref)
       -> lookup_reg:(Signal.Uid.t -> Bits.t ref)
       -> t_port_list
@@ -138,9 +137,9 @@ module type Cyclesim = sig
       type t =
         | Reset
         | Check
-        | Comb0
-        | Seq
-        | Comb1
+        | Before_clock_edge
+        | At_clock_edge
+        | After_clock_edge
       [@@deriving sexp_of]
     end
 

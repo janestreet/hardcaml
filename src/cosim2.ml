@@ -447,9 +447,10 @@ module Make (SIM : Simulator) = struct
       ~internal_ports:[]
       ~reset:freset
       ~cycle_check:(fun () -> ())
-      ~cycle_comb0:fcycle
-      ~cycle_seq:(fun () -> ())
-      ~cycle_comb1:(fun () -> ())
+      ~cycle_before_clock_edge:
+        fcycle
+      ~cycle_at_clock_edge:(fun () -> ())
+      ~cycle_after_clock_edge:(fun () -> ())
       ~lookup_signal:(fun _ -> failwith "sim_lookup_signal not implemented")
       ~lookup_reg:(fun _ -> failwith "sim_lookup_reg not implemented")
   ;;
