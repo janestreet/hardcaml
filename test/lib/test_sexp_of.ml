@@ -26,6 +26,7 @@ let%expect_test "Mutable.ArraybitsInt" =
 ;;
 
 open Signal
+open Signal.Unoptimized (* so that primitives are print as defined. *)
 
 let print_signal signal = print_s [%sexp (signal : Signal.t)]
 

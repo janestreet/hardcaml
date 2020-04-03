@@ -208,8 +208,8 @@ let%expect_test "of_decimal_string error" =
 ;;
 
 let%expect_test "of_string" =
+  let raw_of_string = app1 Signal.Unoptimized.of_string in
   let of_string = app1 of_string in
-  let const_prop_of_string = app1 Signal.Const_prop.Comb.of_string in
   print_s
     [%message
       "verilog style constant conversion"
@@ -221,13 +221,13 @@ let%expect_test "of_string" =
            ]
            : string const_function list)
         ~decimal:
-          ([ const_prop_of_string "16'd65535"; const_prop_of_string "17'd65536" ]
-           : string const_function list)
+          ([ of_string "16'd65535"; of_string "17'd65536" ] : string const_function list)
         ~hex:
           ([ of_string "5'h4"; of_string "5'h8"; of_string "5'H4"; of_string "5'H8" ]
            : string const_function list)
         ~decimal_requires_constant_propagates:
-          ([ of_string "16'd65535"; of_string "17'd65536" ] : string const_function list)];
+          ([ raw_of_string "16'd65535"; raw_of_string "17'd65536" ]
+           : string const_function list)];
   [%expect
     {|
     ("verilog style constant conversion"

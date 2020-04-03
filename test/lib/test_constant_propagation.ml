@@ -1,5 +1,5 @@
 open! Import
-open Signal.Const_prop.Comb
+open Signal
 
 let iter_all_inputs ~min_width ~max_width ~f =
   for width = min_width to max_width do

@@ -233,8 +233,12 @@ let%expect_test "insertion" =
       [%message
         "valid [insert]"
           ~_:(insert ~into:(of_bit_string "111") (of_bit_string "00") ~at_offset:1 : t)]);
-  [%expect {|
-    ("valid [insert]" (cat (width 3) (arguments (0b00 select)))) |}]
+  [%expect
+    {|
+    ("valid [insert]" (
+      const
+      (width 3)
+      (value 0b001))) |}]
 ;;
 
 let%expect_test "mux errors" =

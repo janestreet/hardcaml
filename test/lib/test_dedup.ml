@@ -1,5 +1,7 @@
 open Core
 open Hardcaml
+open Signal
+open Signal.Unoptimized
 
 let print_circuit c =
   Circuit.signal_graph c
@@ -8,7 +10,6 @@ let print_circuit c =
 
 let%expect_test "simple" =
   let dedup outputs = Circuit.create_exn ~name:"test" outputs |> Dedup.deduplicate in
-  let open Signal in
   let v = of_string "1111" +: of_string "1111" in
   let c = dedup [ output "out" v ] in
   print_circuit c;
@@ -38,7 +39,6 @@ let%expect_test "simple" =
 
 let%expect_test "register" =
   let dedup outputs = Circuit.create_exn ~name:"test" outputs |> Dedup.deduplicate in
-  let open Signal in
   let clock = input "clock" 1 in
   let v =
     reg_fb
@@ -69,7 +69,6 @@ let%expect_test "register" =
 
 let%expect_test "wires" =
   let dedup outputs = Circuit.create_exn ~name:"test" outputs |> Dedup.deduplicate in
-  let open Signal in
   let v = of_string "1100" in
   let c = dedup [ output "out" (wireof (wireof (wireof (wireof v) -- "x"))) ] in
   print_circuit c;
@@ -83,7 +82,6 @@ let%expect_test "wires" =
 
 let%expect_test "memory" =
   let dedup outputs = Circuit.create_exn ~name:"test" outputs |> Dedup.deduplicate in
-  let open Signal in
   let clock = input "clock" 1 in
   let v =
     multiport_memory

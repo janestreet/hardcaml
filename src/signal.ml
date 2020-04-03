@@ -762,24 +762,7 @@ module Base = struct
 end
 
 module Comb_make = Comb.Make
-module Comb = Comb.Make (Base)
-
-include (
-  Comb :
-    module type of struct
-    include Comb
-  end
-  with type t := t)
-
-let is_vdd = function
-  | Const { constant; _ } when Bits.equal constant Bits.vdd -> true
-  | _ -> false
-;;
-
-let is_gnd = function
-  | Const { constant; _ } when Bits.equal constant Bits.gnd -> true
-  | _ -> false
-;;
+module Unoptimized = Comb.Make (Base)
 
 let ( <== ) a b =
   match a with
@@ -826,17 +809,17 @@ let wireof s =
   x
 ;;
 
-let input name width = wire width -- name
+let input name width = Unoptimized.( -- ) (wire width) name
 
 let output name s =
-  let w = wire (width s) -- name in
+  let w = Unoptimized.( -- ) (wire (width s)) name in
   w <== s;
   w
 ;;
 
 module Const_prop = struct
   module Base = struct
-    include Comb
+    include Unoptimized
 
     let cv s = const_value s
 
@@ -1009,6 +992,8 @@ module Const_prop = struct
     ;;
   end
 end
+
+include (Const_prop.Comb : module type of Const_prop.Comb with type t := t)
 
 let reg_empty =
   { reg_clock = empty

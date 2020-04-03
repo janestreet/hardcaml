@@ -254,12 +254,15 @@ module type Signal = sig
     -> t
     -> Sexp.t
 
-  module Const_prop : sig
-    module Comb : Comb.S with type t := t
-  end
+  (** Combinatorial signal API. This API automatically performs constant propogations
+      (eg: replacing (a + 1 + 5) with (a + 6)). This reduces the amount of work that needs
+      to be done during simulation by simply reducing the number of simulation nodes.
 
-  (** Combinatorial signal API *)
-  include Comb.S with type t := t
+      To use raw signals, ie: keeping the simulation nodes as described, use [Raw]
+      below.
+  *)
+  include
+    Comb.S with type t := t
 
   (** creates an unassigned wire *)
   val wire : int -> t
@@ -277,6 +280,9 @@ module type Signal = sig
 
   (** creates an output *)
   val output : string -> t -> t
+
+  (** Comb logic API without constant propogation optimizations. *)
+  module Unoptimized : Comb.S with type t = t
 
   (** [Reg_spec_] is a register specification.  It is named [Reg_spec_] rather than
       [Reg_spec] so that people consistently use the name [Hardcaml.Reg_spec] rather

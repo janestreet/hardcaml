@@ -1,5 +1,5 @@
 open! Import
-open Signal.Const_prop.Comb
+open Signal
 open Test_constant_propagation.Trace
 
 let%expect_test "and" =

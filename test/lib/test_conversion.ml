@@ -1,5 +1,5 @@
 open! Import
-open Signal.Const_prop.Comb
+open Signal
 
 type 'a signed_and_unsigned =
   { unsigned : 'a
