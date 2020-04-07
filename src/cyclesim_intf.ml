@@ -1,5 +1,3 @@
-(** Cycle accurate simulator *)
-
 open! Import
 
 module type Cyclesim = sig

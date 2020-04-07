@@ -1,4 +1,5 @@
 (** A database which holds a collection of circuits, indexed by a unique circuit name.
+
     The database is used to map occurrences of instantiations within a Hardcaml circuit to
     an implementation.  This can then be used to generate an RTL module hierarchy.
     Structurally identical circuits may be indentified and the implementation shared. *)

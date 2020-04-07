@@ -1,4 +1,5 @@
 (** Representation of variable width Constants and conversion to/from OCaml types. *)
+
 open! Import
 
 type t = Bits0.t [@@deriving compare, sexp_of]

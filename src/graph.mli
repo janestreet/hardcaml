@@ -1,4 +1,4 @@
-(** Write circuit as graph.  Currently works quite well with aisee3; www.aisee.com *)
+(** Write circuit as graph. *)
 
 open! Import
 

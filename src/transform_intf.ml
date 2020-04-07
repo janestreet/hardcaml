@@ -1,5 +1,3 @@
-(** {2 transform circuits to a different representation} *)
-
 open! Import
 
 module type MakePureCombTransform_arg = sig

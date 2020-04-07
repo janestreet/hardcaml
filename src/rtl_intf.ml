@@ -1,4 +1,3 @@
-(** VHDL and Verilog netlist generation *)
 open! Import
 
 module type Rtl = sig

@@ -1,5 +1,3 @@
-(** Floating point operations for simulation. *)
-
 open! Import
 
 module type Real = sig

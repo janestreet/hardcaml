@@ -1,3 +1,6 @@
+(** Allow a hardcaml circuit to be defined as a hierarchy of modules, rather than just a
+    single flat module. *)
+
 open! Import
 
 module With_interface (I : Interface.S) (O : Interface.S) : sig

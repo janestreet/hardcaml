@@ -1,3 +1,8 @@
+(** Random access memories described using RTL inference.
+
+    Can be specified with arbitrary numbers of read and write ports, though in reality
+    only up to 1 of each can be inferred by a synthesizer. *)
+
 open! Import
 
 module Collision_mode : sig

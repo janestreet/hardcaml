@@ -1,15 +1,3 @@
-(** Fixed point arithmetic.
-
-    {[
-      (* select bits type *)
-      module F = Fixed.Make (Bits)
-      (* select Signed/Unsigned fixed type, and overflow and rounding mode. *)
-      module S = F.Signed.Make (struct
-          let round = F.Signed.Round.tie_to_nearest_even
-          let overflow = F.Signed.Overflow.saturate
-        end)
-    ]} *)
-
 open! Import
 
 module type Round = sig

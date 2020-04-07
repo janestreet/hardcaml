@@ -1,6 +1,3 @@
-(** Simplified Hardcaml API that includes tri-states - used for toplevel module
-    generation. *)
-
 module type Config = sig
   val structural_const : bool
   val structural_mux : bool

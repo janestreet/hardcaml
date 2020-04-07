@@ -1,4 +1,4 @@
-(** Icarus Verilog Cosimulation interface *)
+(** Icarus Verilog Cosimulation interface (DEPRECATED) *)
 
 open! Import
 

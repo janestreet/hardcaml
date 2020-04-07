@@ -1,3 +1,5 @@
+(** Specification of a signals level - high or low. *)
+
 type t =
   | High
   | Low

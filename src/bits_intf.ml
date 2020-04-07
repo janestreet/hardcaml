@@ -1,6 +1,3 @@
-(** A [Bits.t] is an immutable finite sequence of bits.  It can also be viewed as an
-    non-negative integer. *)
-
 open! Import
 
 module type Bits = sig

@@ -1,9 +1,3 @@
-(** Combinational API.
-
-    In operators, a trailing colon [:] indicates that the operator treats the bits as
-    unsigned or that sign doesn't matter, while a trailing plus [+] indicates that
-    the operator treats the bits as signed twos-complement. *)
-
 open! Import
 
 (** Various functions that build a tree-structured circuit take an optional

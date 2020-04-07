@@ -1,1 +1,3 @@
-include Cyclesim_intf.Cyclesim
+(** Cycle accurate simulator *)
+
+include Cyclesim_intf.Cyclesim (** @inline *)

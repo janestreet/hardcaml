@@ -1,4 +1,5 @@
-(** Design rule checks. *)
+(** Simple circuit analsysis passes for common issues. *)
+
 open! Import
 
 (** Raises if there exists a seqential element (register or memory) whose clock input pin

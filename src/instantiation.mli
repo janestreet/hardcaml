@@ -1,3 +1,7 @@
+(** Instantiation of sub-modules.
+
+    For use with generated RTL when we want to reference some non-hardcaml modules. *)
+
 open! Import
 
 type instobj = < i : string -> Signal.t ; o : string -> Signal.t >

@@ -16,6 +16,7 @@
 
     [instantiations] are recursively processed if present in an optional
     [Circuit_database.t]. *)
+
 open! Import
 
 type t [@@deriving sexp_of]

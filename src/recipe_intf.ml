@@ -1,9 +1,3 @@
-(** Hardware generation in an imperative style.
-
-    This module is undergoing significant rewriting and refactoring, and subject to many
-    breaking changes.
-*)
-
 open! Import
 
 (* This allows the creation of sequential hardware designs using [if], [while] and

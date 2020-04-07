@@ -1,3 +1,8 @@
+(** Scopes control the process of hierarchical circuit generation.
+
+    They track a circuit database of instantiated modules, and a scheme for managing the
+    naming of signals within the design. *)
+
 open! Import
 
 module Path : sig

@@ -39,7 +39,6 @@ module T = struct
       create_params
 end
 
-(** Synchronous FIFO with optional [showahead] functionality and pipelining stages. *)
 module type S = sig
   include module type of T with type 'a t = 'a T.t
 

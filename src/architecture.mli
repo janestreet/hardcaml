@@ -1,6 +1,6 @@
-(** Architecture selection.
+(** Hardware architecture specification. *)
 
-    This type is for use in hardware designs where we may have a number of different
+(** This type is for use in hardware designs where we may have a number of different
     implementations, and the choice of which is best depends on the use case. *)
 type t =
   | Small (** Smallest size *)
