@@ -609,6 +609,8 @@ module type Comb = sig
   module type Primitives = Primitives
   module type S = S
 
+  type nonrec 'a optional_branching_factor = 'a optional_branching_factor
+
   module Make_primitives (Gates : Gates) : Primitives with type t = Gates.t
 
   (** Generates the full combinational API *)

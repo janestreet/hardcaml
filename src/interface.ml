@@ -225,6 +225,50 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     let mux s l = map ~f:(Comb.mux s) (of_interface_list l)
     let mux2 s h l = mux s [ l; h ]
     let concat l = map ~f:Comb.concat_msb (of_interface_list l)
+
+    let distribute_valids (ts : (comb, t) With_valid.t2 list) =
+      List.map ts ~f:(fun { valid; value } ->
+        map value ~f:(fun value -> { With_valid.valid; value }))
+    ;;
+
+    let collect_valids (t : comb With_valid.t X.t) =
+      { With_valid.valid =
+          (match to_list t with
+           | { valid; _ } :: _ -> valid
+           | [] -> raise_s [%message "[priority_select] interface has no fields"])
+      ; value = map t ~f:(fun { valid = _; value } -> value)
+      }
+    ;;
+
+    let priority_select ?branching_factor (ts : (comb, t) With_valid.t2 list)
+      : (comb, t) With_valid.t2
+      =
+      if List.is_empty ts
+      then raise_s [%message "[priority_select] requires at least one input"];
+      let ts = distribute_valids ts in
+      let t = map (of_interface_list ts) ~f:(Comb.priority_select ?branching_factor) in
+      collect_valids t
+    ;;
+
+    let priority_select_with_default
+          ?branching_factor
+          (ts : (comb, t) With_valid.t2 list)
+          ~(default : t)
+      =
+      if List.is_empty ts
+      then
+        raise_s [%message "[priority_select_with_default] requires at least one input"];
+      let ts = distribute_valids ts in
+      map2 (of_interface_list ts) default ~f:(fun t default ->
+        Comb.priority_select_with_default ?branching_factor t ~default)
+    ;;
+
+    let onehot_select ?branching_factor (ts : (comb, t) With_valid.t2 list) =
+      if List.is_empty ts
+      then raise_s [%message "[onehot_select] requires at least one input"];
+      let ts = distribute_valids ts in
+      map (of_interface_list ts) ~f:(fun t -> Comb.onehot_select ?branching_factor t)
+    ;;
   end
 
   module type Comb = Comb with type 'a interface := 'a t

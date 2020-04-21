@@ -3,7 +3,7 @@
 open! Import
 
 (** Test function called to check a result and provide an error message.  In expect tests,
-    this is a thin wrapper around [Expect_test_helpers_kernel.require].  In long-running
+    this is a thin wrapper around [Expect_test_helpers_core.require].  In long-running
     regression tests in ../regression, this prints to a log. *)
 module type Require = sig
   val require : Source_code_position.t -> bool -> error_message:Sexp.t Lazy.t -> unit

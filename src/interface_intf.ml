@@ -106,6 +106,15 @@ module type Comb = sig
 
   (** Concatenate a list of interfaces. *)
   val concat : t list -> t
+
+  val priority_select
+    : ((comb, t) With_valid.t2 list -> (comb, t) With_valid.t2)
+        Comb.optional_branching_factor
+
+  val priority_select_with_default
+    : ((comb, t) With_valid.t2 list -> default:t -> t) Comb.optional_branching_factor
+
+  val onehot_select : ((comb, t) With_valid.t2 list -> t) Comb.optional_branching_factor
 end
 
 module type S = sig

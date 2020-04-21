@@ -333,3 +333,124 @@ let%expect_test "assert_widths" =
       (expected_width 4)
       (actual_width   5)) |}]
 ;;
+
+let priority_sel_tests =
+  let x = I.Of_bits.of_ints { x = 1; y = 2 } in
+  let y = I.Of_bits.of_ints { x = 3; y = 4 } in
+  (* tests for 0, 1, and 2 case selects *)
+  [| [| [] |]
+   ; [| [ { With_valid.valid = Bits.gnd; value = x } ]
+      ; [ { With_valid.valid = Bits.vdd; value = y } ]
+     |]
+   ; [| [ { With_valid.valid = Bits.gnd; value = x }
+        ; { With_valid.valid = Bits.gnd; value = y }
+        ]
+      ; [ { With_valid.valid = Bits.vdd; value = x }
+        ; { With_valid.valid = Bits.gnd; value = y }
+        ]
+      ; [ { With_valid.valid = Bits.gnd; value = x }
+        ; { With_valid.valid = Bits.vdd; value = y }
+        ]
+      ; [ { With_valid.valid = Bits.vdd; value = x }
+        ; { With_valid.valid = Bits.vdd; value = y }
+        ]
+     |]
+  |]
+;;
+
+let%expect_test "priority_select" =
+  require_does_raise [%here] (fun () ->
+    ignore
+      (I.Of_bits.(priority_select priority_sel_tests.(0).(0))
+       : (Bits.t, Bits.t I.t) With_valid.t2));
+  [%expect {| "[priority_select] requires at least one input" |}];
+  Array.iter priority_sel_tests.(1) ~f:(fun test ->
+    print_s
+      [%sexp (I.Of_bits.(priority_select test) : (Bits.t, Bits.t I.t) With_valid.t2)]);
+  [%expect
+    {|
+    ((valid 0)
+     (value (
+       (x 0001)
+       (y 00000010))))
+    ((valid 1)
+     (value (
+       (x 0011)
+       (y 00000100)))) |}];
+  Array.iter priority_sel_tests.(2) ~f:(fun test ->
+    print_s
+      [%sexp (I.Of_bits.(priority_select test) : (Bits.t, Bits.t I.t) With_valid.t2)]);
+  [%expect
+    {|
+    ((valid 0)
+     (value (
+       (x 0011)
+       (y 00000100))))
+    ((valid 1)
+     (value (
+       (x 0001)
+       (y 00000010))))
+    ((valid 1)
+     (value (
+       (x 0011)
+       (y 00000100))))
+    ((valid 1)
+     (value (
+       (x 0001)
+       (y 00000010)))) |}]
+;;
+
+let%expect_test "priority_select_with_default" =
+  let default = I.Of_bits.of_ints { x = 5; y = 6 } in
+  require_does_raise [%here] (fun () ->
+    ignore
+      (I.Of_bits.(priority_select_with_default ~default priority_sel_tests.(0).(0))
+       : Bits.t I.t));
+  [%expect {| "[priority_select_with_default] requires at least one input" |}];
+  Array.iter priority_sel_tests.(1) ~f:(fun test ->
+    print_s
+      [%sexp (I.Of_bits.(priority_select_with_default ~default test) : Bits.t I.t)]);
+  [%expect {|
+    ((x 0101)
+     (y 00000110))
+    ((x 0011)
+     (y 00000100)) |}];
+  Array.iter priority_sel_tests.(2) ~f:(fun test ->
+    print_s
+      [%sexp (I.Of_bits.(priority_select_with_default ~default test) : Bits.t I.t)]);
+  [%expect
+    {|
+    ((x 0101)
+     (y 00000110))
+    ((x 0001)
+     (y 00000010))
+    ((x 0011)
+     (y 00000100))
+    ((x 0001)
+     (y 00000010)) |}]
+;;
+
+let%expect_test "onehot_select" =
+  require_does_raise [%here] (fun () ->
+    ignore (I.Of_bits.(onehot_select priority_sel_tests.(0).(0)) : Bits.t I.t));
+  [%expect {| "[onehot_select] requires at least one input" |}];
+  Array.iter priority_sel_tests.(1) ~f:(fun test ->
+    print_s [%sexp (I.Of_bits.(onehot_select test) : Bits.t I.t)]);
+  [%expect {|
+    ((x 0000)
+     (y 00000000))
+    ((x 0011)
+     (y 00000100)) |}];
+  Array.iter priority_sel_tests.(2) ~f:(fun test ->
+    print_s [%sexp (I.Of_bits.(onehot_select test) : Bits.t I.t)]);
+  [%expect
+    {|
+    ((x 0000)
+     (y 00000000))
+    ((x 0001)
+     (y 00000010))
+    ((x 0011)
+     (y 00000100))
+    ((x 0011)
+     (y 00000110)) |}]
+;;

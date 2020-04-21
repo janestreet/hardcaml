@@ -3,11 +3,13 @@
 
 open! Import
 
-type 'a t =
-  { valid : 'a
-  ; value : 'a
+type ('valid, 'value) t2 =
+  { valid : 'valid
+  ; value : 'value
   }
 [@@deriving sexp_of]
+
+type 'a t = ('a, 'a) t2 [@@deriving sexp_of]
 
 val map : 'a t -> f:('a -> 'b) -> 'b t
 val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t

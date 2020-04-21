@@ -253,7 +253,7 @@ let%expect_test "generate hierarchy exn" =
 ;;
 
 open Async
-open Expect_test_helpers
+open Expect_test_helpers_async
 
 let%expect_test "To_file" =
   let%bind () =

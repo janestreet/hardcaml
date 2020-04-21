@@ -1,5 +1,5 @@
 include Base
-include Expect_test_helpers_kernel
+include Expect_test_helpers_core
 include Hardcaml
 module Command = Core.Command
 module Waves = Hardcaml_waveterm
