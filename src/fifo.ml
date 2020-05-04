@@ -2,6 +2,7 @@ open! Import
 open Signal
 
 include Fifo_intf.T
+module Kinded_fifo = Fifo_intf.Kinded_fifo
 
 (* Generates wbr memory with explicit collision detection to gurantee [wbr] behaviour.
    Despite what's suggested by Vivado's BRAM documentation, [write_first] are not
@@ -188,6 +189,29 @@ let create_classic_with_extra_reg
   }
 ;;
 
+let showahead_fifo_of_classic_fifo
+      (create_fifo :
+         capacity:int
+       -> write_clock:Signal.t
+       -> read_clock:Signal.t
+       -> clear:Signal.t
+       -> wr:Signal.t
+       -> d:Signal.t
+       -> rd:Signal.t
+       -> (Signal.t, [ `Classic ]) Kinded_fifo.t)
+  =
+  Staged.stage (fun ~capacity ~write_clock ~read_clock ~clear ~wr ~d ~rd ->
+    let spec = Reg_spec.create ~clock:read_clock ~clear () in
+    let fifo_rd_en = wire 1 in
+    let (Classic fifo) =
+      create_fifo ~capacity ~write_clock ~read_clock ~clear ~wr ~d ~rd:fifo_rd_en
+    in
+    let dout_valid = reg spec ~enable:(fifo_rd_en |: rd) fifo_rd_en in
+    let empty = ~:dout_valid in
+    fifo_rd_en <== (~:(fifo.empty) &: (~:dout_valid |: rd));
+    Kinded_fifo.Showahead { fifo with empty })
+;;
+
 let create_showahead_from_classic
       ?nearly_empty
       ?nearly_full
@@ -197,16 +221,9 @@ let create_showahead_from_classic
       ?ram_attributes
       ?scope
       ()
-      ~capacity
-      ~clock
-      ~clear
-      ~wr
-      ~d
-      ~rd
   =
-  let spec = Reg_spec.create ~clock ~clear () in
-  let fifo_rd_en = wire 1 in
-  let fifo =
+  let create_fifo ~capacity ~write_clock ~read_clock ~clear ~wr ~d ~rd =
+    assert (Signal.equal write_clock read_clock);
     create
       ~showahead:false
       ?nearly_empty
@@ -218,16 +235,21 @@ let create_showahead_from_classic
       ?scope
       ()
       ~capacity
-      ~clock
+      ~clock:write_clock
       ~clear
       ~wr
       ~d
-      ~rd:fifo_rd_en
+      ~rd
+    |> Kinded_fifo.Classic
   in
-  let dout_valid = reg spec ~enable:(fifo_rd_en |: rd) fifo_rd_en in
-  let empty = ~:dout_valid in
-  fifo_rd_en <== (~:(fifo.empty) &: (~:dout_valid |: rd));
-  { fifo with empty }
+  let create_showahead_fifo =
+    Staged.unstage (showahead_fifo_of_classic_fifo create_fifo)
+  in
+  fun ~capacity ~clock ~clear ~wr ~d ~rd ->
+    let write_clock = clock in
+    let read_clock = clock in
+    match create_showahead_fifo ~capacity ~write_clock ~read_clock ~clear ~wr ~d ~rd with
+    | Kinded_fifo.Showahead fifo -> fifo
 ;;
 
 let create_showahead_with_extra_reg

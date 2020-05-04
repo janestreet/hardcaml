@@ -39,8 +39,37 @@ module T = struct
       create_params
 end
 
+module Kinded_fifo = struct
+  type ('a, 'b) t =
+    | Classic : 'a T.t -> ('a, [ `Classic ]) t
+    | Showahead : 'a T.t -> ('a, [ `Showahead ]) t
+
+  type 'a packed = T : ('a, 'b) t -> 'a packed
+
+  type create_classic =
+    capacity:int
+    -> write_clock:Signal.t
+    -> read_clock:Signal.t
+    -> clear:Signal.t
+    -> wr:Signal.t
+    -> d:Signal.t
+    -> rd:Signal.t
+    -> (Signal.t, [ `Classic ]) t
+
+  type create_showahead =
+    capacity:int
+    -> write_clock:Signal.t
+    -> read_clock:Signal.t
+    -> clear:Signal.t
+    -> wr:Signal.t
+    -> d:Signal.t
+    -> rd:Signal.t
+    -> (Signal.t, [ `Showahead ]) t
+end
+
 module type S = sig
   include module type of T with type 'a t = 'a T.t
+  module Kinded_fifo = Kinded_fifo
 
   (** {4 Base RTL FIFO} *)
 
@@ -71,6 +100,12 @@ module type S = sig
       The [used] output indicates the number of elements currently in the FIFO. *)
   val create : ?showahead:bool (** default is [false] *) -> T.create_fifo
 
+
+  (** {3 Functions to derive fifo architectures from other architecetures.} *)
+
+  val showahead_fifo_of_classic_fifo
+    :  Kinded_fifo.create_classic
+    -> Kinded_fifo.create_showahead Staged.t
 
   (** {3 Derived FIFO architectures.} *)
 
