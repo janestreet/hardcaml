@@ -1,6 +1,9 @@
 #include <stdint.h>
 #include <inttypes.h>
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
+#else
 #include <alloca.h>
+#endif
 #include <string.h>
 #include <caml/mlvalues.h>
 #include <caml/alloc.h>
