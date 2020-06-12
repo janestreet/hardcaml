@@ -5,7 +5,7 @@ module T = struct
     { width : int
     ; data : Bytes.t
     }
-  [@@deriving compare, sexp_of]
+  [@@deriving compare, sexp]
 end
 
 include T

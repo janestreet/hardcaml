@@ -2,7 +2,7 @@
 
 open! Import
 
-type t = Bits0.t [@@deriving compare, sexp_of]
+type t = Bits0.t [@@deriving compare, sexp]
 
 module Signedness : sig
   type t =
