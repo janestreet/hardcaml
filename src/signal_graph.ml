@@ -361,7 +361,8 @@ let topological_sort ?(deps = Signal.deps) (graph : t) =
       , List.map (deps to_) ~f:(fun from -> { Topological_sort.Edge.from; to_ })
         @ edges ))
   in
-  Topological_sort.sort (module Node) nodes edges |> Or_error.ok_exn
+  Topological_sort.sort (module Node) ~what:Nodes_and_edge_endpoints ~nodes ~edges
+  |> Or_error.ok_exn
 ;;
 
 let scheduling_deps (s : Signal.t) =
