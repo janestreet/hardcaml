@@ -419,6 +419,7 @@ module type S = sig
   val to_sint32 : t -> int32
   val to_int64 : t -> int64
   val to_sint64 : t -> int64
+  val to_bool : t -> bool
 
   (** Convert signal to a [char].  The signal must be 8 bits wide. *)
   val to_char : t -> char

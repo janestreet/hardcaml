@@ -1122,6 +1122,12 @@ module Make (Prims : Primitives) = struct
   let to_int64 c = to_constant c |> Constant.to_int64
   let to_sint64 c = sresize c Int64.num_bits |> to_constant |> Constant.to_int64
 
+  let to_bool c =
+    if width c <> 1
+    then raise_s [%message "Cannot convert a multi-bit value to a bool" (c : t)];
+    to_int c <> 0
+  ;;
+
   let to_char x =
     let actual_width = width x in
     if actual_width <> 8
