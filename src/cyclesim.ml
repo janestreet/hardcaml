@@ -509,6 +509,18 @@ let combine ?(port_sets_may_differ = false) ?(on_error = default_on_error) s0 s1
   }
 ;;
 
+let[@cold] raise_input_port_width_mismatch port_name src dst =
+  let got_width = Bits.width src in
+  let expected_width = Bits.Mutable.width dst in
+  raise_s
+    [%message
+      "Simulation input width mismatch"
+        (port_name : string)
+        (src : Bits.t)
+        (expected_width : int)
+        (got_width : int)]
+;;
+
 let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) circuit =
   (* add internally traced nodes *)
   let internal_ports = get_internal_ports circuit ~is_internal_port in
@@ -770,7 +782,9 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
       List.map in_ports ~f:(fun (n, b) -> n, ref (Bits.zero (Bits.Mutable.width b)))
     in
     let t () =
-      List.iter2_exn in_ports i ~f:(fun (_, tgt) (_, src) ->
+      List.iter2_exn in_ports i ~f:(fun (_, tgt) (name, src) ->
+        if Bits.width !src <> Bits.Mutable.width tgt
+        then raise_input_port_width_mismatch name !src tgt;
         Bits.Mutable.copy_bits ~dst:tgt ~src:!src)
     in
     i, t

@@ -38,18 +38,17 @@ let wrap ~capacity ~(create_fn : Fifo.create_fifo) (i : _ I.t) =
 ;;
 
 let display_rules =
-  Waves.Display_rules.(
-    [ I.map I.port_names ~f:(Rule.port_name_is ~wave_format:(Bit_or Unsigned_int))
+  Waves.Display_rule.(
+    [ I.map I.port_names ~f:(port_name_is ~wave_format:(Bit_or Unsigned_int))
       |> I.to_list
-    ; O.map O.port_names ~f:(Rule.port_name_is ~wave_format:(Bit_or Unsigned_int))
+    ; O.map O.port_names ~f:(port_name_is ~wave_format:(Bit_or Unsigned_int))
       |> O.to_list
-    ; [ Rule.port_name_matches
+    ; [ port_name_matches
           Re.Posix.(re ".*" |> compile)
           ~wave_format:(Bit_or Unsigned_int)
       ]
     ]
-    |> List.concat
-    |> Waves.Display_rules.of_list)
+    |> List.concat)
 ;;
 
 let fill_then_empty (waves, sim) =
