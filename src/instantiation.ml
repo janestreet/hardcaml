@@ -51,8 +51,11 @@ let create
   end
 ;;
 
-module With_interface (I : Interface.S) (O : Interface.S) = struct
+module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = struct
   let create ?lib ?arch ?instance ?parameters ~name inputs =
+    let inputs =
+      List.map2_exn I.Names_and_widths.t (I.to_list inputs) ~f:(fun (n, _) s -> n, s)
+    in
     let t =
       create
         ()
@@ -61,9 +64,18 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
         ?instance
         ?parameters
         ~name
-        ~inputs:(I.to_list (I.map2 I.t inputs ~f:(fun (n, _) s -> n, s)))
-        ~outputs:(O.to_list O.t)
+        ~inputs
+        ~outputs:O.Names_and_widths.t
     in
-    O.map O.t ~f:(fun (n, _) -> t#o n)
+    List.map O.Names_and_widths.port_names ~f:(fun name -> name, t#o name) |> O.of_alist
   ;;
 end
+
+let create_with_interface
+      (type i o)
+      (module I : Interface.S_Of_signal with type Of_signal.t = i)
+      (module O : Interface.S_Of_signal with type Of_signal.t = o)
+  =
+  let module I = With_interface (I) (O) in
+  I.create
+;;

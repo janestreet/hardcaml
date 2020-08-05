@@ -105,6 +105,16 @@ module Port_checks : sig
     (** Input and output port sets agree, and their widths are the same. *)
 end
 
+val create_with_interface
+  :  (module Interface.S_Of_signal with type Of_signal.t = 'i)
+  -> (module Interface.S_Of_signal with type Of_signal.t = 'o)
+  -> (?port_checks:Port_checks.t (** Default is [Relaxed]. *)
+      -> ?add_phantom_inputs:bool (** Default is [true]. *)
+      -> name:string
+      -> ('i -> 'o)
+      -> t)
+       with_create_options
+
 module With_interface (I : Interface.S) (O : Interface.S) : sig
   type create = Signal.t Interface.Create_fn(I)(O).t
 

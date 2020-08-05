@@ -72,13 +72,10 @@ module type Ast = sig
   type t = Ast.t [@@deriving sexp_of]
 end
 
-module type Comb = sig
-  type 'a interface
+(** Monomorphic combinatorial operations on Hardcaml interfaces. *)
+module type Comb_monomorphic = sig
   type comb
-  type t = comb interface [@@deriving sexp_of]
-
-  (** Actual bit widths of each field. *)
-  val widths : t -> int interface
+  type t [@@deriving sexp_of]
 
   (** Raise if the widths of [t] do not match those specified in the interface. *)
   val assert_widths : t -> unit
@@ -86,12 +83,7 @@ module type Comb = sig
   (** Each field is set to the constant integer value provided. *)
   val of_int : int -> t
 
-  (** [consts c] sets each field to the integer value in [c] using the declared field bit
-      width. *)
-  val of_ints : int interface -> t
-
   val const : int -> t [@@deprecated "[since 2019-11] interface const"]
-  val consts : int interface -> t [@@deprecated "[since 2019-11] interface consts"]
 
   (** Pack interface into a vector. *)
   val pack : ?rev:bool -> t -> comb
@@ -115,6 +107,61 @@ module type Comb = sig
     : ((comb, t) With_valid.t2 list -> default:t -> t) Comb.optional_branching_factor
 
   val onehot_select : ((comb, t) With_valid.t2 list -> t) Comb.optional_branching_factor
+end
+
+module type Comb = sig
+  type 'a interface
+  type comb
+  type t = comb interface [@@deriving sexp_of]
+
+  include Comb_monomorphic with type t := comb interface and type comb := comb
+
+  (** Actual bit widths of each field. *)
+  val widths : t -> int interface
+
+  (** [consts c] sets each field to the integer value in [c] using the declared field bit
+      width. *)
+  val of_ints : int interface -> t
+
+  val consts : int interface -> t [@@deprecated "[since 2019-11] interface consts"]
+end
+
+module type Names_and_widths = sig
+  val t : (string * int) list
+  val port_names : string list
+  val port_widths : int list
+end
+
+module type Of_signal_functions = sig
+  type t
+
+  (** Create a wire for each field.  If [named] is true then wires are given the RTL field
+      name.  If [from] is provided the wire is attached to each given field in [from]. *)
+  val wires
+    :  ?named:bool (** default is [false]. *)
+    -> ?from:t (** No default *)
+    -> unit
+    -> t
+
+  val assign : t -> t -> unit
+  val ( <== ) : t -> t -> unit
+
+  (** [inputs t] is [wires () ~named:true]. *)
+  val inputs : unit -> t
+
+  (** [outputs t] is [wires () ~from:t ~named:true]. *)
+  val outputs : t -> t
+
+  (** Apply name to field of the interface. Add [prefix] and [suffix] if specified. *)
+  val apply_names
+    :  ?prefix:string (** Default is [""] *)
+    -> ?suffix:string (** Default is [""] *)
+    -> ?naming_op:(Signal.t -> string -> Signal.t) (** Default is [Signal.(--)] *)
+    -> t
+    -> t
+
+  (** Checks the port widths of the signals in the interface. Raises if they mismatch. *)
+  val validate : t -> unit
 end
 
 module type S = sig
@@ -186,32 +233,46 @@ module type S = sig
 
   module Of_signal : sig
     include Comb with type comb = Signal.t
-
-    (** Create a wire for each field.  If [named] is true then wires are given the RTL field
-        name.  If [from] is provided the wire is attached to each given field in [from]. *)
-    val wires
-      :  ?named:bool (** default is [false]. *)
-      -> ?from:t (** No default *)
-      -> unit
-      -> t
-
-    val assign : t -> t -> unit
-    val ( <== ) : t -> t -> unit
-
-    (** [inputs t] is [wires () ~named:true]. *)
-    val inputs : unit -> t
-
-    (** [outputs t] is [wires () ~from:t ~named:true]. *)
-    val outputs : t -> t
-
-    (** Apply name to field of the interface. Add [prefix] and [suffix] if specified. *)
-    val apply_names
-      :  ?prefix:string (** Default is [""] *)
-      -> ?suffix:string (** Default is [""] *)
-      -> ?naming_op:(comb -> string -> comb) (** Default is [Signal.(--)] *)
-      -> t
-      -> t
+    include Of_signal_functions with type t := t
   end
+
+  module Names_and_widths : Names_and_widths
+end
+
+(** Monomorphic functions on Hardcaml interfaces. Note that a functor (or a function)
+    accepting a argument on this monomorphic module type will type check successfully
+    against [S] above, since [S] more general than the monomorphic type below.
+*)
+module type S_monomorphic = sig
+  type a
+  type t
+
+  val iter : t -> f:(a -> unit) -> unit
+  val iter2 : t -> t -> f:(a -> a -> unit) -> unit
+  val map : t -> f:(a -> a) -> t
+  val map2 : t -> t -> f:(a -> a -> a) -> t
+  val to_list : t -> a list
+  val to_alist : t -> (string * a) list
+  val of_alist : (string * a) list -> t
+  val map3 : t -> t -> t -> f:(a -> a -> a -> a) -> t
+  val map4 : t -> t -> t -> t -> f:(a -> a -> a -> a -> a) -> t
+  val map5 : t -> t -> t -> t -> t -> f:(a -> a -> a -> a -> a -> a) -> t
+  val iter3 : t -> t -> t -> f:(a -> a -> a -> unit) -> unit
+  val iter4 : t -> t -> t -> t -> f:(a -> a -> a -> a -> unit) -> unit
+  val iter5 : t -> t -> t -> t -> t -> f:(a -> a -> a -> a -> a -> unit) -> unit
+  val fold : t -> init:'acc -> f:('acc -> a -> 'acc) -> 'acc
+  val fold2 : t -> t -> init:'acc -> f:('acc -> a -> a -> 'acc) -> 'acc
+
+  module Names_and_widths : Names_and_widths
+end
+
+module type S_Of_signal = sig
+  module Of_signal : sig
+    include Comb_monomorphic with type comb := Signal.t
+    include Of_signal_functions with type t := t
+  end
+
+  include S_monomorphic with type t := Of_signal.t and type a := Signal.t
 end
 
 module type Empty = sig
@@ -263,6 +324,7 @@ module type Interface = sig
   module type Pre_partial = Pre_partial
   module type Pre = Pre
   module type S = S
+  module type S_Of_signal = S_Of_signal
   module type Ast = Ast
   module type Empty = Empty
 
@@ -289,4 +351,10 @@ module type Interface = sig
   (** Constructs a hardcaml interface which represents hardware for the given [Enum] as an
       absstract [Interface]. *)
   module Make_enums (Enum : Enum) : S_enums with module Enum := Enum
+
+  (** Recreate a Hardcaml Interface with the same type, but different port names / widths. *)
+  module Update
+      (Pre : Pre) (M : sig
+                     val t : (string * int) Pre.t
+                   end) : S with type 'a t = 'a Pre.t
 end

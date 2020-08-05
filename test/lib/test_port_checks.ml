@@ -81,8 +81,8 @@ let%expect_test "output width does not match" =
   require_does_raise [%here] (fun () -> circuit Port_sets_and_widths);
   [%expect
     {|
-    ("Output port widths do not match"
-      (expected ((x 1)))
-      (got      ((x 2)))
-      (circuit ((name foo) (input_ports (b a)) (output_ports (x))))) |}]
+    ("Interface validation failed!"
+      (port_name    x)
+      (port_width   1)
+      (signal_width 2)) |}]
 ;;

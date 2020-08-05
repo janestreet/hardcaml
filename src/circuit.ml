@@ -198,8 +198,8 @@ module Port_checks = struct
     | Port_sets_and_widths
 end
 
-module With_interface (I : Interface.S) (O : Interface.S) = struct
-  type create = Signal.t Interface.Create_fn(I)(O).t
+module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = struct
+  type create = I.Of_signal.t -> O.Of_signal.t
 
   let check_io_port_sets_match circuit =
     let actual_ports ports =
@@ -214,10 +214,10 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
     in
     let actual_output_ports = outputs circuit |> actual_ports in
     let expected_input_ports =
-      I.port_names |> I.to_list |> Set.of_list (module String)
+      I.Names_and_widths.port_names |> Set.of_list (module String)
     in
     let expected_output_ports =
-      O.port_names |> O.to_list |> Set.of_list (module String)
+      O.Names_and_widths.port_names |> Set.of_list (module String)
     in
     let check direction actual_ports expected_ports =
       let expected_but_not_in_circuit = Set.diff expected_ports actual_ports in
@@ -242,7 +242,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
   let check_widths_match circuit =
     let port s =
       match Signal.names s with
-      | [ name ] -> name, Signal.width s
+      | [ name ] -> name, s
       | _ ->
         raise_s
           [%message
@@ -250,24 +250,8 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
              port name(s)"
               (circuit : Summary.t)]
     in
-    let inputs = inputs circuit |> List.map ~f:port |> I.of_alist in
-    let outputs = outputs circuit |> List.map ~f:port |> O.of_alist in
-    if not (I.equal Int.equal inputs I.port_widths)
-    then
-      raise_s
-        [%message
-          "Input port widths do not match"
-            ~expected:(I.port_widths : int I.t)
-            ~got:(inputs : int I.t)
-            (circuit : Summary.t)];
-    if not (O.equal Int.equal outputs O.port_widths)
-    then
-      raise_s
-        [%message
-          "Output port widths do not match"
-            ~expected:(O.port_widths : int O.t)
-            ~got:(outputs : int O.t)
-            (circuit : Summary.t)]
+    I.Of_signal.validate (inputs circuit |> List.map ~f:port |> I.of_alist);
+    O.Of_signal.validate (outputs circuit |> List.map ~f:port |> O.of_alist)
   ;;
 
   let check_io_port_sets_and_widths_match circuit =
@@ -290,11 +274,16 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
         ~name
         logic
         ->
-          let circuit_inputs = I.map I.t ~f:(fun (n, b) -> Signal.input n b) in
+          let circuit_inputs =
+            List.map I.Names_and_widths.t ~f:(fun (n, b) -> n, Signal.input n b)
+            |> I.of_alist
+          in
           let inputs = I.map circuit_inputs ~f:Signal.wireof in
           let outputs = logic inputs in
           let circuit_outputs =
-            O.map2 O.t outputs ~f:(fun (n, _) s -> Signal.output n s)
+            List.map2_exn O.Names_and_widths.port_names (O.to_list outputs) ~f:(fun n s ->
+              n, Signal.output n s)
+            |> O.of_alist
           in
           I.iter2 inputs circuit_inputs ~f:move_port_attributes;
           O.iter2 outputs circuit_outputs ~f:move_port_attributes;
@@ -307,7 +296,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
           in
           let circuit =
             if add_phantom_inputs
-            then set_phantom_inputs circuit (I.to_list I.t)
+            then set_phantom_inputs circuit I.Names_and_widths.t
             else circuit
           in
           (match port_checks with
@@ -317,3 +306,12 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
           circuit)
   ;;
 end
+
+let create_with_interface
+      (type i o)
+      (module I : Interface.S_Of_signal with type Of_signal.t = i)
+      (module O : Interface.S_Of_signal with type Of_signal.t = o)
+  =
+  let module C = With_interface (I) (O) in
+  C.create_exn
+;;

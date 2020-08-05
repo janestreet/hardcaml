@@ -18,7 +18,6 @@ module Design_rule_checks = Design_rule_checks
 module Dedup = Dedup
 module Edge = Edge
 module Fifo = Fifo
-module Fixed = Fixed
 module Graph = Graph
 module Hierarchy = Hierarchy
 module IntbitsList = IntbitsList

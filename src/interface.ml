@@ -296,6 +296,25 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     let apply_names ?(prefix = "") ?(suffix = "") ?(naming_op = Signal.( -- )) t =
       map2 t port_names ~f:(fun s n -> naming_op s (prefix ^ n ^ suffix))
     ;;
+
+    let validate t =
+      iter3 port_names port_widths t ~f:(fun port_name port_width signal ->
+        if Signal.width signal <> port_width
+        then (
+          let signal_width = Signal.width signal in
+          raise_s
+            [%message
+              "Interface validation failed!"
+                (port_name : string)
+                (port_width : int)
+                (signal_width : int)]))
+    ;;
+  end
+
+  module Names_and_widths = struct
+    let t = to_list t
+    let port_names = to_list port_names
+    let port_widths = to_list port_widths
   end
 end
 
@@ -389,6 +408,21 @@ module Make_enums (Enum : Interface_intf.Enum) = struct
       let get t = to_enum !t
     end
   end
+end
+
+module Update
+    (Pre : Interface_intf.Pre) (M : sig
+                                  val t : (string * int) Pre.t
+                                end) =
+struct
+  module T = struct
+    include Pre
+
+    let t = M.t
+  end
+
+  include (T : Interface_intf.Pre with type 'a t = 'a T.t)
+  include Make (T)
 end
 
 module Empty = struct
