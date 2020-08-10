@@ -177,13 +177,13 @@ let create_instantiation_test =
       ]
   in
   let inst hdl a =
-    (Instantiation.create
-       ()
-       ~name:("test_parameters_" ^ hdl)
-       ~parameters
-       ~inputs:[ "a", a ]
-       ~outputs:[ "b", 2 ])
-    #o
+    Map.find_exn
+      (Instantiation.create
+         ()
+         ~name:("test_parameters_" ^ hdl)
+         ~parameters
+         ~inputs:[ "a", a ]
+         ~outputs:[ "b", 2 ])
       "b"
     |> Signal.output ("b_" ^ hdl)
   in

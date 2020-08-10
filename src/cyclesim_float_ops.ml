@@ -13,37 +13,48 @@ module Width = struct
     | W32 -> 32
     | W64 -> 64
   ;;
-
-  let float_of_bits t bits =
-    match t with
-    | W32 -> bits |> Bits.to_int32 |> Int32.float_of_bits
-    | W64 -> bits |> Bits.to_int64 |> Int64.float_of_bits
-  ;;
-
-  let bits_of_float t float =
-    match t with
-    | W32 -> Bits.of_int32 ~width:32 (Int32.bits_of_float float)
-    | W64 -> Bits.of_int64 ~width:64 (Int64.bits_of_float float)
-  ;;
 end
 
-let op2 op name width =
-  let create_fn = function
-    | [ x; y ] ->
-      let x, y = Width.float_of_bits width x, Width.float_of_bits width y in
-      [ Width.bits_of_float width (op x y) ]
-    | _ -> raise_s [%message "operation requires 2 arguments" (name : string)]
+let op2 op name (width : Width.t) =
+  let create_fn i o =
+    match i, o with
+    | [ x; y ], [ z ] ->
+      let x = Bits.Mutable.get_word x 0 in
+      let y = Bits.Mutable.get_word y 0 in
+      (match width with
+       | W32 ->
+         let x = Int32.of_int64_trunc x |> Int32.float_of_bits in
+         let y = Int32.of_int64_trunc y |> Int32.float_of_bits in
+         let z' = op x y |> Int32.bits_of_float |> Int64.of_int32_exn in
+         Bits.Mutable.set_word z 0 Int64.(z' land 0xFFFF_FFFFL)
+       | W64 ->
+         let x = Int64.float_of_bits x in
+         let y = Int64.float_of_bits y in
+         let z' = op x y |> Int64.bits_of_float in
+         Bits.Mutable.set_word z 0 z')
+    | _ ->
+      raise_s [%message "operation requires 2 arguments and 1 result" (name : string)]
   in
   let w = Width.num_bits width in
   Combinational_op.create () ~name ~input_widths:[ w; w ] ~output_widths:[ w ] ~create_fn
 ;;
 
-let op1 op name width =
-  let create_fn = function
-    | [ x ] ->
-      let x = Width.float_of_bits width x in
-      [ Width.bits_of_float width (op x) ]
-    | _ -> raise_s [%message "Float operation requires 1 argument" (name : string)]
+let op1 op name (width : Width.t) =
+  let create_fn i o =
+    match i, o with
+    | [ x ], [ z ] ->
+      let x = Bits.Mutable.get_word x 0 in
+      (match width with
+       | W32 ->
+         let x = Int32.of_int64_trunc x |> Int32.float_of_bits in
+         let z' = op x |> Int32.bits_of_float |> Int64.of_int32_exn in
+         Bits.Mutable.set_word z 0 Int64.(z' land 0xFFFF_FFFFL)
+       | W64 ->
+         let x = Int64.float_of_bits x in
+         let z' = op x |> Int64.bits_of_float in
+         Bits.Mutable.set_word z 0 z')
+    | _ ->
+      raise_s [%message "operation requires 1 arguments and 1 result" (name : string)]
   in
   let w = Width.num_bits width in
   Combinational_op.create () ~name ~input_widths:[ w ] ~output_widths:[ w ] ~create_fn

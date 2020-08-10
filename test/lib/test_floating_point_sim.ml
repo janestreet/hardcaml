@@ -115,36 +115,16 @@ let sim combinational_ops_database (op1 : op1 list) (op2 : op2 list) args =
 let%expect_test "floating point operations in simulation" =
   let module Fops = Cyclesim_float_ops in
   let op1s : op1 list =
-    [ { name = "exp"
-      ; fop = Float.exp
-      ; hwop32 = Fops.Float.exp
-      ; hwop64 = Fops.Double.exp
-      }
-    ; { name = "log"
-      ; fop = Float.log
-      ; hwop32 = Fops.Float.log
-      ; hwop64 = Fops.Double.log
-      }
+    [ { name = "exp"; fop = Float.exp; hwop32 = Fops.Float.exp; hwop64 = Fops.Double.exp }
+    ; { name = "log"; fop = Float.log; hwop32 = Fops.Float.log; hwop64 = Fops.Double.log }
     ; { name = "log10"
       ; fop = Float.log10
       ; hwop32 = Fops.Float.log10
       ; hwop64 = Fops.Double.log10
       }
-    ; { name = "cos"
-      ; fop = Float.cos
-      ; hwop32 = Fops.Float.cos
-      ; hwop64 = Fops.Double.cos
-      }
-    ; { name = "sin"
-      ; fop = Float.sin
-      ; hwop32 = Fops.Float.sin
-      ; hwop64 = Fops.Double.sin
-      }
-    ; { name = "tan"
-      ; fop = Float.tan
-      ; hwop32 = Fops.Float.tan
-      ; hwop64 = Fops.Double.tan
-      }
+    ; { name = "cos"; fop = Float.cos; hwop32 = Fops.Float.cos; hwop64 = Fops.Double.cos }
+    ; { name = "sin"; fop = Float.sin; hwop32 = Fops.Float.sin; hwop64 = Fops.Double.sin }
+    ; { name = "tan"; fop = Float.tan; hwop32 = Fops.Float.tan; hwop64 = Fops.Double.tan }
     ; { name = "acos"
       ; fop = Float.acos
       ; hwop32 = Fops.Float.acos
@@ -185,11 +165,7 @@ let%expect_test "floating point operations in simulation" =
       ; hwop32 = Fops.Float.floor
       ; hwop64 = Fops.Double.floor
       }
-    ; { name = "abs"
-      ; fop = Float.abs
-      ; hwop32 = Fops.Float.abs
-      ; hwop64 = Fops.Double.abs
-      }
+    ; { name = "abs"; fop = Float.abs; hwop32 = Fops.Float.abs; hwop64 = Fops.Double.abs }
     ]
   in
   let op2s : op2 list =
@@ -234,8 +210,7 @@ let%expect_test "floating point operations in simulation" =
     Combinational_ops_database.concat [ Fops.Float.database; Fops.Double.database ]
   in
   print_s
-    [%sexp
-      (sim database op1s op2s [ 0., 0.; 1.5, 2.3; -0.7, 3.4 ] : all_op_results list)];
+    [%sexp (sim database op1s op2s [ 0., 0.; 1.5, 2.3; -0.7, 3.4 ] : all_op_results list)];
   [%expect
     {|
     (((arg_a 0)

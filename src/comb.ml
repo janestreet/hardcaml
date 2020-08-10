@@ -71,7 +71,7 @@ module Make_primitives (Gates : Gates) = struct
         ~f:(fun (i, acc) b ->
           let acc = concat_msb_e [ msb acc; acc ] in
           let a = concat_msb_e [ msb a; a; repeat gnd i ] in
-          i + 1, (if i = last then (-:) else (+:)) acc (a &: repeat b (width a)))
+          i + 1, (if i = last then ( -: ) else ( +: )) acc (a &: repeat b (width a)))
     in
     r
   ;;
@@ -208,6 +208,13 @@ module Make (Prims : Primitives) = struct
     if width <= 0 then raise_const_width_greater_than_zero (module String) width v;
     of_constant (Constant.of_hex_string ~signedness ~width v)
   ;;
+
+  let of_octal ?(signedness = Constant.Signedness.Unsigned) ~width v =
+    if width <= 0 then raise_const_width_greater_than_zero (module String) width v;
+    of_constant (Constant.of_octal_string ~signedness ~width v)
+  ;;
+
+  let of_z ~width v = of_constant (Constant.of_z ~width v)
 
   let of_bit_list b =
     if List.length b = 0
@@ -894,8 +901,7 @@ module Make (Prims : Primitives) = struct
     let leading_zeros = leading_zeros t ?branching_factor in
     let result_width = max 1 (Int.ceil_log2 width) in
     { valid = t <>:. 0
-    ; value =
-        of_int ~width:result_width (width - 1) -: uresize leading_zeros result_width
+    ; value = of_int ~width:result_width (width - 1) -: uresize leading_zeros result_width
     }
   ;;
 
@@ -963,14 +969,6 @@ module Make (Prims : Primitives) = struct
       f b (msbs b))
   ;;
 
-  let[@cold] raise_of_decimal_string_invalid_decimal_char v =
-    raise_s
-      [%message.omit_nil
-        "[of_decimal_string] got invalid decimal char"
-          ~_:(v : char)
-          ~loc:(Caller_id.get () : Caller_id.t option)]
-  ;;
-
   let[@cold] raise_of_decimal_string_empty_string () =
     raise_s
       [%message.omit_nil
@@ -979,40 +977,10 @@ module Make (Prims : Primitives) = struct
   ;;
 
   (* complex constant generators *)
-  let rec of_decimal_string ~width:bits v =
-    let l = String.length v in
-    let decimal v =
-      match v with
-      | '0' -> of_int ~width:4 0
-      | '1' -> of_int ~width:4 1
-      | '2' -> of_int ~width:4 2
-      | '3' -> of_int ~width:4 3
-      | '4' -> of_int ~width:4 4
-      | '5' -> of_int ~width:4 5
-      | '6' -> of_int ~width:4 6
-      | '7' -> of_int ~width:4 7
-      | '8' -> of_int ~width:4 8
-      | '9' -> of_int ~width:4 9
-      | _ -> raise_of_decimal_string_invalid_decimal_char v
-    in
-    let ( +: ) a b =
-      let w = max (width a) (width b) + 1 in
-      let a, b = uresize a w, uresize b w in
-      a +: b
-    in
-    let ten = of_int ~width:4 10 in
-    if l = 0
+  let of_decimal_string ~width v =
+    if String.is_empty v
     then raise_of_decimal_string_empty_string ()
-    else if Char.equal v.[0] '-'
-    then zero bits -: of_decimal_string ~width:bits (String.sub v ~pos:1 ~len:(l - 1))
-    else (
-      (* convert *)
-      let rec sum i mulfac prod =
-        if i < 0
-        then prod
-        else sum (i - 1) (mulfac *: ten) (prod +: (decimal v.[i] *: mulfac))
-      in
-      uresize (sum (l - 1) (of_int ~width:1 1) (of_int ~width:1 0)) bits)
+    else of_z ~width (Zarith.Z.of_string v)
   ;;
 
   let[@cold] raise_of_verilog_format_missing_tick s =
@@ -1069,6 +1037,8 @@ module Make (Prims : Primitives) = struct
     | 'd' -> of_decimal_string ~width:len sval
     | 'x' | 'h' -> of_hex ~signedness:Unsigned ~width:len sval
     | 'X' | 'H' -> of_hex ~signedness:Signed ~width:len sval
+    | 'o' -> of_octal ~signedness:Unsigned ~width:len sval
+    | 'O' -> of_octal ~signedness:Signed ~width:len sval
     | 'b' ->
       let slen = String.length sval in
       if slen < len

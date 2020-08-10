@@ -23,13 +23,13 @@ module type Signal = sig
     include Equal.S with type t := t
   end
 
-  module Uid_map : Map.S with module Key := Uid
-
   module Uid_set : sig
     type t = Set.M(Uid).t [@@deriving sexp_of]
 
     val empty : t
   end
+
+  module Uid_map : module type of Map.M (Uid)
 
   (** internal structure for tracking signals *)
   type signal_id =
@@ -259,8 +259,7 @@ module type Signal = sig
       To use raw signals, ie: keeping the simulation nodes as described, use [Raw]
       below.
   *)
-  include
-    Comb.S with type t := t
+  include Comb.S with type t := t
 
   (** creates an unassigned wire *)
   val wire : int -> t

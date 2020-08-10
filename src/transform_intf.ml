@@ -15,7 +15,13 @@ module type Transform = sig
     type t
 
     val transform : t transform_fn'
-    val rewrite : t transform_fn' -> Signal.t Signal.Uid_map.t -> Signal.t list -> t list
+
+    val rewrite
+      :  t transform_fn'
+      -> Signal.t Map.M(Signal.Uid).t
+      -> Signal.t list
+      -> t list
+
     val rewrite_signals : t transform_fn' -> Signal.t list -> t list
   end
 

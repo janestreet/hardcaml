@@ -9,8 +9,7 @@ module Mode = struct
 end
 
 let mode =
-  ref
-    (if Base.Exported_for_specific_uses.am_testing then Mode.Disabled else Top_of_stack)
+  ref (if Base.Exported_for_specific_uses.am_testing then Mode.Disabled else Top_of_stack)
 ;;
 
 let set_mode m = mode := m
@@ -60,9 +59,7 @@ let get ?(skip = []) () =
       with
       | None -> None
       | Some loc ->
-        if List.mem ~equal:String.equal skip loc.filename
-        then top (pos + 1)
-        else Some loc)
+        if List.mem ~equal:String.equal skip loc.filename then top (pos + 1) else Some loc)
   in
   let rec full pos =
     if pos = len

@@ -35,7 +35,7 @@ CAMLprim value hardcaml_bits_mask(intnat width, value vdst) {
 }
 
 CAMLprim value hardcaml_bits_mask_bc(value width, value vdst) {
-  return hardcaml_bits_mask(Val_int(width), vdst);
+  return hardcaml_bits_mask(Int_val(width), vdst);
 }
 
 /* Add two multiword [Bits.t].  The widths of the arguments and results are the same.
@@ -113,12 +113,12 @@ static uint64_t sign_mask(int width, uint64_t *a) {
   return is_negative ? ((uint64_t) 0xFFFFFFFFFFFFFFFF) << bit : 0;
 }
 
-/* Multiword unsigned multiplication done 32 bits per iteration. 
+/* Multiword unsigned multiplication done 32 bits per iteration.
  *
  * This is obfuscated due to a direct translation from Fortran.
  *
  * [w] is the destination, and [u], [v] are inputs with corresponding lengths
- * [m], [n]. 
+ * [m], [n].
  * */
 static void mulu(uint32_t *w, uint32_t *u, uint32_t *v, int m, int n)
 { uint64_t k, t; int i, j;
@@ -136,7 +136,7 @@ static void mulu(uint32_t *w, uint32_t *u, uint32_t *v, int m, int n)
 }
 
 /* Multiword signed multiplication - corrects the unsigned result. Inputs must
- * be sign extended to 32 bits. 
+ * be sign extended to 32 bits.
  *
  * Arguments are the same as [mulu].
  * */
@@ -247,7 +247,7 @@ CAMLprim value hardcaml_bits_smul(value dst, value a, value b,
   hardcaml_bits_smul_i((uint64_t *) String_val(dst),
                        (uint64_t *) String_val(a),
                        (uint64_t *) String_val(b),
-                       width_a, 
+                       width_a,
                        width_b);
   return Val_unit;
 }

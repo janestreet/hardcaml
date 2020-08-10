@@ -4,61 +4,7 @@ include (
     include Base
   end
   with module Filename := Caml.Filename
-  with module Int := Base.Int
-  with module Int32 := Base.Int32
-  with module Int64 := Base.Int64
-  with module Map := Base.Map
-  (* we want the [Map] from [map.ml] *)
-  with module Marshal := Caml.Marshal
-  with module Nativeint := Base.Nativeint)
-
-module Int = struct
-  include Base.Int
-
-  let add = ( + )
-  let logand = ( land )
-  let lognot = lnot
-  let logor = ( lor )
-  let logxor = ( lxor )
-  let mul = ( * )
-  let sub = ( - )
-end
-
-module Int32 = struct
-  include Base.Int32
-
-  let add = ( + )
-  let logand = ( land )
-  let lognot = lnot
-  let logor = ( lor )
-  let logxor = ( lxor )
-  let mul = ( * )
-  let sub = ( - )
-end
-
-module Int64 = struct
-  include Base.Int64
-
-  let add = ( + )
-  let logand = ( land )
-  let lognot = lnot
-  let logor = ( lor )
-  let logxor = ( lxor )
-  let mul = ( * )
-  let sub = ( - )
-end
-
-module Nativeint = struct
-  include Base.Nativeint
-
-  let add = ( + )
-  let logand = ( land )
-  let lognot = lnot
-  let logor = ( lor )
-  let logxor = ( lxor )
-  let mul = ( * )
-  let sub = ( - )
-end
+  with module Marshal := Caml.Marshal)
 
 let ( ** ) = Caml.( ** )
 let ( @@ ) = Caml.( @@ )

@@ -200,9 +200,72 @@ let%expect_test "of_hex" =
           (104 876543210fedcba9876543210) 104'h0876543210fedcba9876543210)))) |}]
 ;;
 
+let%expect_test "of_octal" =
+  let of_octalu = app2 (of_octal ~signedness:Unsigned) in
+  let of_octals = app2 (of_octal ~signedness:Signed) in
+  let sexp_of_signed_and_unsigned (signed, unsigned) =
+    [%message
+      "of_octal"
+        (signed : (int * string) const_function)
+        (unsigned : (int * string) const_function)]
+  in
+  let of_octal w h = of_octals w h, of_octalu w h in
+  let octal = "01234567" in
+  let octalstr len = String.init len ~f:(fun i -> octal.[(len - i - 1) % 8]) in
+  print_s
+    [%message
+      "octal string to signal conversion"
+        ~_:(of_octal 1 "7" : signed_and_unsigned)
+        ~_:(of_octal 2 "7" : signed_and_unsigned)
+        ~_:(of_octal 3 "7" : signed_and_unsigned)
+        ~_:(of_octal 4 "7" : signed_and_unsigned)
+        ~_:(of_octal 5 "7" : signed_and_unsigned)
+        ~_:(of_octal 6 "7" : signed_and_unsigned)
+        ~_:(of_octal 16 @@ octalstr 4 : signed_and_unsigned)
+        ~_:(of_octal 17 @@ octalstr 4 : signed_and_unsigned)
+        ~_:(of_octal 100 @@ octalstr 27 : signed_and_unsigned)
+        ~_:(of_octal 104 @@ octalstr 28 : signed_and_unsigned)];
+  [%expect
+    {|
+    ("octal string to signal conversion"
+      (of_octal
+        (signed   ((1 7) 1'b1))
+        (unsigned ((1 7) 1'b1)))
+      (of_octal
+        (signed   ((2 7) 2'b11))
+        (unsigned ((2 7) 2'b11)))
+      (of_octal
+        (signed   ((3 7) 3'b111))
+        (unsigned ((3 7) 3'b111)))
+      (of_octal
+        (signed   ((4 7) 4'b1111))
+        (unsigned ((4 7) 4'b0111)))
+      (of_octal
+        (signed   ((5 7) 5'b11111))
+        (unsigned ((5 7) 5'b00111)))
+      (of_octal
+        (signed   ((6 7) 6'b111111))
+        (unsigned ((6 7) 6'b000111)))
+      (of_octal
+        (signed   ((16 3210) 16'h0688))
+        (unsigned ((16 3210) 16'h0688)))
+      (of_octal
+        (signed   ((17 3210) 17'h00688))
+        (unsigned ((17 3210) 17'h00688)))
+      (of_octal
+        (signed ((100 210765432107654321076543210) 100'h0000088fac688fac688fac688))
+        (unsigned (
+          (100 210765432107654321076543210) 100'h0000088fac688fac688fac688)))
+      (of_octal
+        (signed (
+          (104 3210765432107654321076543210) 104'h00000688fac688fac688fac688))
+        (unsigned (
+          (104 3210765432107654321076543210) 104'h00000688fac688fac688fac688)))) |}]
+;;
+
 let%expect_test "of_decimal_string error" =
   require_does_raise [%here] (fun () -> of_decimal_string ~width:10 "a");
-  [%expect {| ("[of_decimal_string] got invalid decimal char" a) |}];
+  [%expect {| (Invalid_argument "Z.of_substring_base: invalid digit") |}];
   require_does_raise [%here] (fun () -> of_decimal_string ~width:10 "");
   [%expect {| "[of_decimal_string] got empty string" |}]
 ;;
@@ -225,8 +288,12 @@ let%expect_test "of_string" =
         ~hex:
           ([ of_string "5'h4"; of_string "5'h8"; of_string "5'H4"; of_string "5'H8" ]
            : string const_function list)
-        ~decimal_requires_constant_propagates:
-          ([ raw_of_string "16'd65535"; raw_of_string "17'd65536" ]
+        ~decimal:
+          ([ raw_of_string "16'd65535"
+           ; raw_of_string "17'd65536"
+           ; raw_of_string "4'd-1"
+           ; raw_of_string "20'd-247223"
+           ]
            : string const_function list)];
   [%expect
     {|
@@ -244,13 +311,11 @@ let%expect_test "of_string" =
         (5'h8 5'b01000)
         (5'H4 5'b00100)
         (5'H8 5'b11000)))
-      (decimal_requires_constant_propagates (
-        (16'd65535 (
-          "Not a constant" (
-            signal (select (width 16) (range (15 0)) (data_in add)))))
-        (17'd65536 (
-          "Not a constant" (
-            signal (select (width 17) (range (16 0)) (data_in add)))))))) |}];
+      (decimal (
+        (16'd65535   16'hffff)
+        (17'd65536   17'h10000)
+        (4'd-1       4'b1111)
+        (20'd-247223 20'hc3a49)))) |}];
   require_does_raise [%here] (fun () -> of_string "2323");
   [%expect {| ("[of_string] could not convert constant" (const 2323)) |}];
   require_does_raise [%here] (fun () -> of_string "'");
@@ -343,6 +408,18 @@ let%expect_test "widths must be greater than zero" =
      (width 0)
      (const 0)) |}];
   require_does_raise [%here] (fun () -> of_hex ~signedness:Signed ~width:0 "0");
+  [%expect
+    {|
+    ("Width of constant must be greater than zero"
+     (width 0)
+     (const 0)) |}];
+  require_does_raise [%here] (fun () -> of_octal ~width:0 "0");
+  [%expect
+    {|
+    ("Width of constant must be greater than zero"
+     (width 0)
+     (const 0)) |}];
+  require_does_raise [%here] (fun () -> of_octal ~signedness:Signed ~width:0 "0");
   [%expect
     {|
     ("Width of constant must be greater than zero"

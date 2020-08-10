@@ -240,8 +240,7 @@ let%expect_test "[of_interface_list], [to_interface_list]" =
   [%expect {|
     ((x (10  20  30))
      (y (100 200 300))) |}];
-  require_does_raise [%here] (fun () ->
-    I.to_interface_list { I.x = [ 1 ]; y = [ 2; 3 ] });
+  require_does_raise [%here] (fun () -> I.to_interface_list { I.x = [ 1 ]; y = [ 2; 3 ] });
   [%expect
     {|
     ("[Interface_extended.to_interface_list] field list lengths must be the same"

@@ -159,8 +159,7 @@ let get_schedule circuit internal_ports =
   let schedule =
     if List.is_empty outputs
     then []
-    else
-      Signal_graph.topological_sort ~deps:scheduling_deps (Signal_graph.create outputs)
+    else Signal_graph.topological_sort ~deps:scheduling_deps (Signal_graph.create outputs)
   in
   let schedule_set =
     List.concat [ internal_ports; mems; remaining ]
@@ -182,7 +181,7 @@ let get_maps ~ref ~const ~zero ~bundle =
     in
     Map.set map ~key:(uid signal) ~data:(ref value)
   in
-  let data_map = Signal.Uid_map.empty in
+  let data_map = Map.empty (module Signal.Uid) in
   let data_map = List.fold bundle.ready ~init:data_map ~f:data_add in
   let data_map = List.fold bundle.internal_ports ~init:data_map ~f:data_add in
   let data_map = List.fold bundle.mems ~init:data_map ~f:data_add in
@@ -190,7 +189,7 @@ let get_maps ~ref ~const ~zero ~bundle =
   let reg_add map signal =
     Map.set map ~key:(uid signal) ~data:(ref (zero (Signal.width signal)))
   in
-  let reg_map = List.fold bundle.regs ~init:Signal.Uid_map.empty ~f:reg_add in
+  let reg_map = List.fold bundle.regs ~init:(Map.empty (module Signal.Uid)) ~f:reg_add in
   let mem_add map (signal : Signal.t) =
     match signal with
     | Mem { memory = { mem_size; _ }; _ } | Multiport_mem { size = mem_size; _ } ->
@@ -198,7 +197,7 @@ let get_maps ~ref ~const ~zero ~bundle =
       Map.set map ~key:(uid signal) ~data:mem
     | _ -> failwith "Expecting memory"
   in
-  let mem_map = List.fold bundle.mems ~init:Signal.Uid_map.empty ~f:mem_add in
+  let mem_map = List.fold bundle.mems ~init:(Map.empty (module Signal.Uid)) ~f:mem_add in
   data_map, reg_map, mem_map
 ;;
 
@@ -644,7 +643,7 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
            [%message
              "Instantiation not supported in simulation" ~name:(i.inst_name : string)]
        | Some op ->
-         let f = Combinational_op.create_fn_mutable op in
+         let f = Combinational_op.create_fn op in
          let outputs =
            List.map i.inst_outputs ~f:(fun (_, (b, _)) -> Bits.Mutable.create b)
          in
@@ -790,9 +789,7 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
     i, t
   in
   let out_ports_ref ports =
-    let p =
-      List.map ports ~f:(fun (n, s) -> n, ref (Bits.zero (Bits.Mutable.width s)))
-    in
+    let p = List.map ports ~f:(fun (n, s) -> n, ref (Bits.zero (Bits.Mutable.width s))) in
     let task () =
       List.iter2_exn p ports ~f:(fun (_, rf) (_, v) -> rf := Bits.Mutable.to_bits v)
     in

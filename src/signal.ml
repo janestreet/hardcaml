@@ -40,7 +40,7 @@ module Uid = struct
   let equal = [%compare.equal: t]
 end
 
-module Uid_map = Map.Make (Uid)
+module Uid_map = Map.M (Uid)
 
 module Uid_set = struct
   type t = Set.M(Uid).t [@@deriving sexp_of]
@@ -327,7 +327,7 @@ let new_id, reset_id =
   let id = ref 1L in
   let new_id () =
     let x = !id in
-    id := Int64.add !id 1L;
+    id := Int64.( + ) !id 1L;
     x
   in
   let reset_id () = id := 1L in
@@ -424,9 +424,7 @@ let structural_compare
           String.equal i0.inst_name i1.inst_name
           (*i0.inst_instance=i1.inst_instance &&*)
           && [%compare.equal: Parameter.t list] i0.inst_generics i1.inst_generics
-          && [%compare.equal: (string * (int * int)) list]
-               i0.inst_outputs
-               i1.inst_outputs
+          && [%compare.equal: (string * (int * int)) list] i0.inst_outputs i1.inst_outputs
         (* inst_inputs=??? *)
         | Op2 { op = o0; _ }, Op2 { op = o1; _ } -> Signal_op.equal o0 o1
         | Not _, Not _ | Mux _, Mux _ | Cat _, Cat _ -> true
@@ -576,9 +574,7 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
     let sexp_of_next = sexp_of_signal_recursive ~show_uids ~depth:(depth - 1) in
     let sexp_of_instantiation = sexp_of_instantiation_recursive ~show_uids ~depth in
     let sexp_of_memory = sexp_of_memory_recursive ~show_uids ~depth in
-    let sexp_of_multiport_memory =
-      sexp_of_multiport_memory_recursive ~show_uids ~depth
-    in
+    let sexp_of_multiport_memory = sexp_of_multiport_memory_recursive ~show_uids ~depth in
     let sexp_of_mem_read_port = sexp_of_mem_read_port_recursive ~show_uids ~depth in
     let sexp_of_register = sexp_of_register_recursive ~show_uids ~depth in
     let uid = if show_uids then Some (uid signal) else None in
@@ -700,8 +696,7 @@ module Base = struct
     if is_const signal
     then Bits.to_constant (const_value signal)
     else
-      raise_s
-        [%message "cannot use [to_constant] on non-constant signal" ~_:(signal : t)]
+      raise_s [%message "cannot use [to_constant] on non-constant signal" ~_:(signal : t)]
   ;;
 
   let ( -- ) signal name =
@@ -754,10 +749,7 @@ module Base = struct
 
   let mux select cases =
     Mux
-      { signal_id = make_id (width (List.hd_exn cases)) (select :: cases)
-      ; select
-      ; cases
-      }
+      { signal_id = make_id (width (List.hd_exn cases)) (select :: cases); select; cases }
   ;;
 end
 

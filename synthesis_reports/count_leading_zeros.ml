@@ -66,8 +66,7 @@ let command =
            let bits = bits
          end)
        in
-       let module Synth =
-         Synth.Command.With_interface (Clz.With_regs.I_with_clock) (Clz.O)
+       let module Synth = Synth.Command.With_interface (Clz.With_regs.I_with_clock) (Clz.O)
        in
        Synth.run ~name:"count_leading_zeros" ~flags Clz.create)
 ;;

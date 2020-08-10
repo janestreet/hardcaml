@@ -4,8 +4,7 @@ open Signal
 let test o =
   print_s
     [%sexp
-      (Signal_graph.create o |> Signal_graph.detect_combinational_loops
-       : unit Or_error.t)]
+      (Signal_graph.create o |> Signal_graph.detect_combinational_loops : unit Or_error.t)]
 ;;
 
 let%expect_test "no loop" =
@@ -100,9 +99,7 @@ let%expect_test "combinational loop in 2nd arg" =
 ;;
 
 let%expect_test "loop through register" =
-  let a =
-    Signal.reg_fb (Reg_spec.create () ~clock) ~enable:vdd ~w:2 (fun d -> d +:. 1)
-  in
+  let a = Signal.reg_fb (Reg_spec.create () ~clock) ~enable:vdd ~w:2 (fun d -> d +:. 1) in
   test [ a ];
   [%expect {|
     (Ok ()) |}]
@@ -205,7 +202,7 @@ let%expect_test "looping memory" =
 let%expect_test "looping instantiation" =
   let w = wire 1 in
   let x = Instantiation.create () ~name:"foo" ~inputs:[ "a", w ] ~outputs:[ "b", 1 ] in
-  let b = x#o "b" in
+  let b = Map.find_exn x "b" in
   w <== b;
   test [ b ];
   [%expect {| (Ok ()) |}]

@@ -256,8 +256,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
           ~(default : t)
       =
       if List.is_empty ts
-      then
-        raise_s [%message "[priority_select_with_default] requires at least one input"];
+      then raise_s [%message "[priority_select_with_default] requires at least one input"];
       let ts = distribute_valids ts in
       map2 (of_interface_list ts) default ~f:(fun t default ->
         Comb.priority_select_with_default ?branching_factor t ~default)
@@ -356,8 +355,7 @@ module Make_enums (Enum : Interface_intf.Enum) = struct
 
     let to_enum t = Map.find_exn to_enum (Bits.to_int t)
 
-    let mux (type a) (module Comb : Comb.S with type t = a) ~(default : a) selector cases
-      =
+    let mux (type a) (module Comb : Comb.S with type t = a) ~(default : a) selector cases =
       let out_cases = Array.create ~len:num_enums default in
       List.iter cases ~f:(fun (enum, value) ->
         out_cases.(Enum.Variants.to_rank enum) <- value);
@@ -391,8 +389,7 @@ module Make_enums (Enum : Interface_intf.Enum) = struct
 
     let to_enum t = Map.find_exn to_enum (Bits.to_int t)
 
-    let mux (type a) (module Comb : Comb.S with type t = a) ~(default : a) selector cases
-      =
+    let mux (type a) (module Comb : Comb.S with type t = a) ~(default : a) selector cases =
       let out_cases = Array.create ~len:num_enums default in
       List.iter cases ~f:(fun (enum, value) ->
         out_cases.(Enum.Variants.to_rank enum) <- value);

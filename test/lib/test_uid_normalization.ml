@@ -26,18 +26,14 @@ let design () =
     memory
       4
       ~write_port:
-        { write_clock = clock
-        ; write_enable = bit a 1
-        ; write_address = b
-        ; write_data = a
-        }
+        { write_clock = clock; write_enable = bit a 1; write_address = b; write_data = a }
       ~read_address:a
   in
   let w = wireof a in
   let reg_spec = Reg_spec.create () ~clock ~clear in
   [ output "c" (reg reg_spec ~enable:vdd (a +: b))
   ; output "d" (mux2 vdd a b)
-  ; output "e" (x#o "c" |: x#o "d" |: x#o "e")
+  ; output "e" (Map.find_exn x "c" |: Map.find_exn x "d" |: Map.find_exn x "e")
   ; output "f" m
   ; output "g" m
   ; output "h" w

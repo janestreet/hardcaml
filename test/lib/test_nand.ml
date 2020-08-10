@@ -52,12 +52,12 @@ module Asic_nand = Comb.Make (Comb.Make_primitives (Make_nand_gates (struct
 
                                                       let nand a b =
                                                         assert (Bits.width a = Bits.width b);
-                                                        (Instantiation.create
-                                                           ()
-                                                           ~name:"nand"
-                                                           ~inputs:[ "a", a; "b", b ]
-                                                           ~outputs:[ "c", Bits.width a ])
-                                                        #o
+                                                        Map.find_exn
+                                                          (Instantiation.create
+                                                             ()
+                                                             ~name:"nand"
+                                                             ~inputs:[ "a", a; "b", b ]
+                                                             ~outputs:[ "c", Bits.width a ])
                                                           "c"
                                                       ;;
                                                     end)))
@@ -304,13 +304,13 @@ module Fpga_nand = Comb.Make (Comb.Make_primitives (Make_nand_gates (struct
                                                       open Signal
 
                                                       let nand_lut a b =
-                                                        (Instantiation.create
-                                                           ()
-                                                           ~name:"LUT2"
-                                                           ~parameters:[ Parameter.create ~name:"INIT" ~value:(String "1110") ]
-                                                           ~inputs:[ "I", a @: b ]
-                                                           ~outputs:[ "O", 1 ])
-                                                        #o
+                                                        Map.find_exn
+                                                          (Instantiation.create
+                                                             ()
+                                                             ~name:"LUT2"
+                                                             ~parameters:[ Parameter.create ~name:"INIT" ~value:(String "1110") ]
+                                                             ~inputs:[ "I", a @: b ]
+                                                             ~outputs:[ "O", 1 ])
                                                           "O"
                                                       ;;
 

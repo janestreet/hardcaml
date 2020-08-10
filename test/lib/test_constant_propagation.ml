@@ -413,8 +413,7 @@ let%expect_test "gray_to_binary" =
     [%message
       "gray_to_binary"
         ~_:
-          (List.init 8 ~f:(fun i -> gray_to_binary (of_int ~width:3 i))
-           : signal fn1 list)];
+          (List.init 8 ~f:(fun i -> gray_to_binary (of_int ~width:3 i)) : signal fn1 list)];
   [%expect
     {|
     (gray_to_binary (
@@ -434,8 +433,7 @@ let%expect_test "binary_to_gray" =
     [%message
       "binary_to_gray"
         ~_:
-          (List.init 8 ~f:(fun i -> binary_to_gray (of_int ~width:3 i))
-           : signal fn1 list)];
+          (List.init 8 ~f:(fun i -> binary_to_gray (of_int ~width:3 i)) : signal fn1 list)];
   [%expect
     {|
     (binary_to_gray (

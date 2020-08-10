@@ -184,9 +184,7 @@ let test_with_default ~branching_factor ~case_count =
           "="
           ~_:
             (cases index
-             |> Bits.priority_select_with_default
-                  ~branching_factor
-                  ~default:(Bits.ones 8)
+             |> Bits.priority_select_with_default ~branching_factor ~default:(Bits.ones 8)
              |> Bits.to_int
              : int)]
   done

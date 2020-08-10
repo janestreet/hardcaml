@@ -9,7 +9,7 @@ let instantiation_circuit =
      let inst =
        Instantiation.create () ~name:"example" ~inputs:[ "a", a ] ~outputs:[ "b", 1 ]
      in
-     Circuit.create_exn ~name:"example" [ Signal.output "b" (inst#o "b") ])
+     Circuit.create_exn ~name:"example" [ Signal.output "b" (Map.find_exn inst "b") ])
 ;;
 
 let%expect_test "Intstantiation in Verilog with single bit output" =
@@ -102,7 +102,9 @@ let instantiation_circuit =
      in
      Circuit.create_exn
        ~name:"example"
-       [ Signal.output "c" (inst#o "c"); Signal.output "d" (inst#o "d") ])
+       [ Signal.output "c" (Map.find_exn inst "c")
+       ; Signal.output "d" (Map.find_exn inst "d")
+       ])
 ;;
 
 let%expect_test "Intstantiation in Verilog with multiple inputs and outputs" =

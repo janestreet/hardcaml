@@ -278,8 +278,7 @@ let%expect_test "reg r_sync" =
 ;;
 
 let%expect_test "reg r_full" =
-  print_signal
-    (reg (Reg_spec.create () ~clock ~clear ~reset) ~enable:empty (input "a" 1));
+  print_signal (reg (Reg_spec.create () ~clock ~clear ~reset) ~enable:empty (input "a" 1));
   [%expect
     {|
     (register
@@ -344,18 +343,18 @@ let%expect_test "test depth" =
 let%expect_test "test instantiation" =
   Signal.sexp_of_signal_recursive
     ~depth:2
-    ((Instantiation.create
-        ()
-        ~name:"module_name"
-        ~parameters:
-          [ Parameter.create ~name:"int_param" ~value:(Int 1)
-          ; Parameter.create ~name:"string_param" ~value:(String "string_value")
-          ; Parameter.create ~name:"bool_param" ~value:(Bool true)
-          ; Parameter.create ~name:"float_param" ~value:(Real 1.2)
-          ]
-        ~inputs:[ "i1", input "a" 3; "i2", input "b" 2 ]
-        ~outputs:[ "o1", 4; "o2", 3 ])
-     #o
+    (Map.find_exn
+       (Instantiation.create
+          ()
+          ~name:"module_name"
+          ~parameters:
+            [ Parameter.create ~name:"int_param" ~value:(Int 1)
+            ; Parameter.create ~name:"string_param" ~value:(String "string_value")
+            ; Parameter.create ~name:"bool_param" ~value:(Bool true)
+            ; Parameter.create ~name:"float_param" ~value:(Real 1.2)
+            ]
+          ~inputs:[ "i1", input "a" 3; "i2", input "b" 2 ]
+          ~outputs:[ "o1", 4; "o2", 3 ])
        "o2")
   |> print_s;
   [%expect

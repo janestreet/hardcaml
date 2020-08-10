@@ -86,8 +86,7 @@ module Multiplexers = struct
              Map.add_exn
                u.multiplexers
                ~key
-               ~data:
-                 { max_instance_bits = number_of_data_elements; total_bits; count = 1 }
+               ~data:{ max_instance_bits = number_of_data_elements; total_bits; count = 1 }
            | Some data ->
              Map.set
                u.multiplexers

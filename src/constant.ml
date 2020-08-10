@@ -234,29 +234,40 @@ let of_z ~width z =
   init ~width ~data:c
 ;;
 
-let of_hex_string ~signedness ~width h =
-  let to_binary ~(signedness : Signedness.t) ~width t =
+let of_pow2_string ~(signedness : Signedness.t) ~width ~pow2 h =
+  let to_binary t =
     let len = String.length t in
-    let len4 = len * 4 in
-    let rec make_string i =
-      if i = 0
-      then ""
-      else
-        make_string (i - 1)
-        ^ (of_int ~width:4 (int_of_hex_char t.[i - 1]) |> to_binary_string)
+    let len_pow = len * pow2 in
+    let rec make_string = function
+      | 0 -> ""
+      | i ->
+        let c = t.[i - 1] in
+        let digit =
+          match c with
+          | '0' .. '9' -> Char.to_int c - char_zero
+          | 'A' .. 'Z' -> Char.to_int c - char_A + 10
+          | 'a' .. 'z' -> Char.to_int c - char_a + 10
+          | _ -> raise_s [%message "Invalid numeric char" ~_:(c : char)]
+        in
+        if digit >= Int.O.(2 ** pow2)
+        then raise_s [%message "Invalid numeric char" ~_:(c : char)];
+        make_string (i - 1) ^ (of_int ~width:pow2 digit |> to_binary_string)
     in
     let result = make_string len in
-    if width < len4
-    then String.sub result ~pos:(len4 - width) ~len:width
+    if width < len_pow
+    then String.sub result ~pos:(len_pow - width) ~len:width
     else
-      String.init (width - len4) ~f:(fun _ ->
+      String.init (width - len_pow) ~f:(fun _ ->
         match signedness with
         | Signed -> result.[0]
         | Unsigned -> '0')
       ^ result
   in
-  to_binary ~signedness ~width h |> of_binary_string
+  to_binary h |> of_binary_string
 ;;
+
+let of_hex_string ~signedness ~width h = of_pow2_string ~signedness ~width ~pow2:4 h
+let of_octal_string ~signedness ~width h = of_pow2_string ~signedness ~width ~pow2:3 h
 
 module type Bit = sig
   type t

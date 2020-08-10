@@ -7,7 +7,7 @@ let%expect_test "no outputs" =
       ~name:"no_outputs"
       ~input_widths:[]
       ~output_widths:[]
-      ~create_fn:(fun _ -> []));
+      ~create_fn:(fun _ _ -> ()));
   [%expect {|
     "[Combinational_op]s require at least one output" |}]
 ;;
@@ -20,7 +20,7 @@ let%expect_test "no inputs" =
          ~name:"no_inputs"
          ~input_widths:[]
          ~output_widths:[ 1 ]
-         ~create_fn:(fun _ -> [])
+         ~create_fn:(fun _ _ -> ())
        : Combinational_op.t));
   [%expect {| |}]
 ;;
@@ -32,7 +32,7 @@ let%expect_test "bad output width" =
       ~name:"bad_width"
       ~input_widths:[ 1 ]
       ~output_widths:[ 0 ]
-      ~create_fn:(fun _ -> []));
+      ~create_fn:(fun _ _ -> ()));
   [%expect {| ("[Combinational_op] output width <=0" (width 0)) |}]
 ;;
 
@@ -43,7 +43,7 @@ let%expect_test "bad input width" =
       ~name:"bad_width"
       ~input_widths:[ 0 ]
       ~output_widths:[ 1 ]
-      ~create_fn:(fun _ -> []));
+      ~create_fn:(fun _ _ -> ()));
   [%expect {| ("[Combinational_op] input width <=0" (width 0)) |}]
 ;;
 
@@ -54,7 +54,7 @@ let%expect_test "names must be unique in database" =
       ~name:"foo"
       ~input_widths:[ 1 ]
       ~output_widths:[ 1 ]
-      ~create_fn:(fun a -> a)
+      ~create_fn:(fun _ _ -> ())
   in
   let database = Combinational_ops_database.create () in
   Combinational_ops_database.insert database op;
@@ -69,15 +69,16 @@ let%expect_test "names must be unique in database" =
 
 let num_bits = 8
 
-let create_op () =
+let create_op_functional () =
   Combinational_op.create
     ()
     ~name:"add_sub"
     ~input_widths:[ num_bits; num_bits ]
     ~output_widths:[ num_bits; num_bits ]
-    ~create_fn:(function
-      | [ a; b ] -> Bits.[ a +: b; a -: b ]
-      | _ -> raise_s [%message "invalid arguments"])
+    ~create_fn:
+      (Combinational_op.create_fn_of_bits (function
+         | [ a; b ] -> Bits.[ a +: b; a -: b ]
+         | _ -> raise_s [%message "invalid arguments"]))
 ;;
 
 let create_op_mutable () =
@@ -86,7 +87,7 @@ let create_op_mutable () =
     ~name:"add_sub_mutable"
     ~input_widths:[ num_bits; num_bits ]
     ~output_widths:[ num_bits; num_bits ]
-    ~create_fn_mutable:(fun i o ->
+    ~create_fn:(fun i o ->
       match i, o with
       | [ a; b ], [ c; d ] ->
         Bits.Mutable.( +: ) c a b;
@@ -96,7 +97,7 @@ let create_op_mutable () =
 
 let%expect_test "sexp_of" =
   let database = Combinational_ops_database.create () in
-  Combinational_ops_database.insert database (create_op ());
+  Combinational_ops_database.insert database (create_op_functional ());
   Combinational_ops_database.insert database (create_op_mutable ());
   print_s [%sexp (database : Combinational_ops_database.t)];
   [%expect
@@ -105,16 +106,14 @@ let%expect_test "sexp_of" =
       by_name (
         (add_sub (
           (name add_sub)
-          (input_widths      (8       8))
-          (output_widths     (8       8))
-          (create_fn         (Native  <opaque>))
-          (create_fn_mutable (Derived <opaque>))))
+          (input_widths  (8 8))
+          (output_widths (8 8))
+          (create_fn <opaque>)))
         (add_sub_mutable (
           (name add_sub_mutable)
-          (input_widths      (8       8))
-          (output_widths     (8       8))
-          (create_fn         (Derived <opaque>))
-          (create_fn_mutable (Native  <opaque>))))))) |}]
+          (input_widths  (8 8))
+          (output_widths (8 8))
+          (create_fn <opaque>)))))) |}]
 ;;
 
 let create_circuit create_op () =
@@ -129,7 +128,7 @@ let create_circuit create_op () =
 ;;
 
 let create_circuit_mutable = create_circuit create_op_mutable
-let create_circuit = create_circuit create_op
+let create_circuit = create_circuit create_op_functional
 
 let%expect_test "internal representation" =
   let _, circuit = create_circuit () in

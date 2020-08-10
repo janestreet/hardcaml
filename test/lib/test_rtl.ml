@@ -101,7 +101,7 @@ let%expect_test "instantiation input is empty" =
     let inst =
       Instantiation.create () ~name:"example" ~inputs:[ "a", a ] ~outputs:[ "b", 1 ]
     in
-    Circuit.create_exn ~name:"example" [ Signal.output "b" (inst#o "b") ]
+    Circuit.create_exn ~name:"example" [ Signal.output "b" (Map.find_exn inst "b") ]
     |> Rtl.print Verilog);
   [%expect
     {|

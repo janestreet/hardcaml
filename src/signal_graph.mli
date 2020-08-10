@@ -55,14 +55,14 @@ val normalize_uids : t -> t
 val fan_out_map
   :  ?deps:(Signal.t -> Signal.t list)
   -> t
-  -> Signal.Uid_set.t Signal.Uid_map.t
+  -> Signal.Uid_set.t Map.M(Signal.Uid).t
 
 (** Fan-in of each signal in the signal graph.  The fan-in of a signal is the set of
     signals that drive it.*)
 val fan_in_map
   :  ?deps:(Signal.t -> Signal.t list)
   -> t
-  -> Signal.Uid_set.t Signal.Uid_map.t
+  -> Signal.Uid_set.t Map.M(Signal.Uid).t
 
 (** [topological_sort t] sorts the signals in [t] so that all the signals in [deps s]
     occur before [s]. *)

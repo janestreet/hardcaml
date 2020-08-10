@@ -5,7 +5,7 @@ open! Recipe_intf
 type var = int
 type inp = Signal.t * Signal.t (* enable * value *)
 
-module VMap = Map.Make (Int)
+module VMap = Map.M (Int)
 
 type env =
   { freshId : var
@@ -57,9 +57,7 @@ let setReset ~clock ~enable s r =
   delayFb ~clock ~enable ~clear_to:gnd (fun q -> s |: q &: ~:r)
 ;;
 
-let skip =
-  Recipe (fun start env -> delay ~env ~clear_to:gnd start -- "skip_fin", env, ())
-;;
+let skip = Recipe (fun start env -> delay ~env ~clear_to:gnd start -- "skip_fin", env, ())
 
 let rec wait = function
   | 0 -> return ()
@@ -126,7 +124,12 @@ let wait_until a = iter ~:a skip
 
 let follow ~clock ~enable start (Recipe r) =
   let initialEnv =
-    { freshId = 0; writerInps = VMap.empty; outs = VMap.empty; enable; clock }
+    { freshId = 0
+    ; writerInps = Map.empty (module Int)
+    ; outs = Map.empty (module Int)
+    ; enable
+    ; clock
+    }
   in
   let fin, env, a = r start initialEnv in
   (* connect writerInps to outs *)
@@ -154,7 +157,10 @@ let createVar env a =
 ;;
 
 let ofList al =
-  List.fold al ~init:VMap.empty ~f:(fun m (k, v) -> Map.set m ~key:k ~data:v)
+  List.fold
+    al
+    ~init:(Map.empty (module Int))
+    ~f:(fun m (k, v) -> Map.set m ~key:k ~data:v)
 ;;
 
 let addInps env al =

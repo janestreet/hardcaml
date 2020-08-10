@@ -1,7 +1,5 @@
 open! Import
 
-type instobj = < i : string -> Signal.t ; o : string -> Signal.t >
-
 let create
       ?(lib = "work")
       ?(arch = "rtl")
@@ -40,15 +38,9 @@ let create
           }
       }
   in
-  let find name =
-    let w, o = List.Assoc.find_exn outputs name ~equal:String.equal in
-    Signal.select signal (o + w - 1) o
-  in
-  object
-    method i name = List.Assoc.find_exn inputs name ~equal:String.equal
-
-    method o name = find name
-  end
+  List.map outputs ~f:(fun (name, (width, offset)) ->
+    name, Signal.select signal (offset + width - 1) offset)
+  |> Map.of_alist_exn (module String)
 ;;
 
 module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = struct
@@ -67,7 +59,8 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
         ~inputs
         ~outputs:O.Names_and_widths.t
     in
-    List.map O.Names_and_widths.port_names ~f:(fun name -> name, t#o name) |> O.of_alist
+    List.map O.Names_and_widths.port_names ~f:(fun name -> name, Map.find_exn t name)
+    |> O.of_alist
   ;;
 end
 

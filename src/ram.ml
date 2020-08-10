@@ -57,10 +57,7 @@ let if_write_before_read_mode ~collision_mode (r : Read_port.t array) =
   | Read_before_write -> Array.map r ~f:(fun r -> r.read_address)
 ;;
 
-let if_read_before_write_mode
-      ~collision_mode
-      (r : Read_port.t array)
-      (q : Signal.t array)
+let if_read_before_write_mode ~collision_mode (r : Read_port.t array) (q : Signal.t array)
   =
   match (collision_mode : Collision_mode.t) with
   | Write_before_read -> q

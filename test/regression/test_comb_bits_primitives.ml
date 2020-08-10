@@ -15,8 +15,7 @@ let command =
          (required Bits_module.arg_type)
          ~doc:
            ("MODULE bits implementation to test: "
-            ^ String.concat ~sep:", " (List.map Bits_module.all ~f:Bits_module.short_name)
-           )
+            ^ String.concat ~sep:", " (List.map Bits_module.all ~f:Bits_module.short_name))
      and bits_ref =
        flag
          "-bits-ref"

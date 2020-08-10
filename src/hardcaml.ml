@@ -10,8 +10,6 @@ module Comb = Comb
 module Combinational_op = Combinational_op
 module Combinational_ops_database = Combinational_ops_database
 module Constant = Constant
-module Cosim = Cosim
-module Cosim2 = Cosim2
 module Cyclesim = Cyclesim
 module Cyclesim_float_ops = Cyclesim_float_ops
 module Design_rule_checks = Design_rule_checks
@@ -41,7 +39,6 @@ module Structural = Structural
 module Transform = Transform
 module Vcd = Vcd
 module With_valid = With_valid
-module Xilinx = Xilinx
 
 (** These are exposed for code that does [@@deriving sexp_of, hardcaml]. *)
 let sexp_of_array = Base.sexp_of_array

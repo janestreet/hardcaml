@@ -197,8 +197,7 @@ module T = struct
     let cmp = ref 0 in
     let set_cmp a b =
       if !cmp = 0
-      then
-        if Int.compare a b > 0 then cmp := 1 else if Int.compare a b < 0 then cmp := -1
+      then if Int.compare a b > 0 then cmp := 1 else if Int.compare a b < 0 then cmp := -1
     in
     iterback
       (fun a b ->
@@ -642,11 +641,7 @@ module Mutable = struct
       let empty = T.empty
       let is_empty = T.is_empty
       let width = T.width
-
-      let of_constant c =
-        Constant.to_binary_string c |> abits_int_of_bstr, Constant.width c
-      ;;
-
+      let of_constant c = Constant.to_binary_string c |> abits_int_of_bstr, Constant.width c
       let to_constant (b, width) = bstr_of_abits_int ~width b |> Constant.of_binary_string
 
       let concat_msb l =

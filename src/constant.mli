@@ -69,6 +69,9 @@ val of_z : width:int -> Zarith.Z.t -> t
 (** Create from a hex encoded string. *)
 val of_hex_string : signedness:Signedness.t -> width:int -> string -> t
 
+(** Create from an octal encoded string. *)
+val of_octal_string : signedness:Signedness.t -> width:int -> string -> t
+
 (** Utility conversion functions to/from hex chars *)
 val int_of_hex_char : char -> int
 

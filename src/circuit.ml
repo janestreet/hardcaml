@@ -4,18 +4,20 @@
    in a circuit are assigned, and hence cannot be changed. *)
 
 open! Import
-module Uid_map = Signal.Uid_map
 module Uid_set = Signal.Uid_set
 
 module Signal_map = struct
-  type t = Signal.t Uid_map.t [@@deriving sexp_of]
+  type t = Signal.t Map.M(Signal.Uid).t [@@deriving sexp_of]
 
   let create graph =
     let add_signal map signal =
       let uid = Signal.uid signal in
       Map.add_exn map ~key:uid ~data:signal
     in
-    Signal_graph.depth_first_search graph ~init:Uid_map.empty ~f_before:add_signal
+    Signal_graph.depth_first_search
+      graph
+      ~init:(Map.empty (module Signal.Uid))
+      ~f_before:add_signal
   ;;
 end
 
@@ -29,8 +31,8 @@ type t =
   (* [fan_in] and [fan_out] are lazily computed.  One might worry that this would interact
      poorly with signals, which have some mutable components (e.g. wires).  But those have
      already been set by the time a circuit is created, so a circuit is not mutable. *)
-  ; fan_out : Signal.Uid_set.t Signal.Uid_map.t Lazy.t
-  ; fan_in : Signal.Uid_set.t Signal.Uid_map.t Lazy.t
+  ; fan_out : Signal.Uid_set.t Map.M(Signal.Uid).t Lazy.t
+  ; fan_in : Signal.Uid_set.t Map.M(Signal.Uid).t Lazy.t
   }
 [@@deriving fields, sexp_of]
 
@@ -68,11 +70,7 @@ let call_with_create_options
   t ?detect_combinational_loops ?normalize_uids
 ;;
 
-let create_exn
-      ?(detect_combinational_loops = true)
-      ?(normalize_uids = true)
-      ~name
-      outputs
+let create_exn ?(detect_combinational_loops = true) ?(normalize_uids = true) ~name outputs
   =
   let signal_graph = Signal_graph.create outputs in
   (* check that all outputs are assigned wires with 1 name *)
@@ -127,9 +125,7 @@ let set_phantom_inputs circuit phantom_inputs =
   end
   in
   let inputs = List.map circuit.inputs ~f:Port.of_signal |> Set.of_list (module Port) in
-  let outputs =
-    List.map circuit.outputs ~f:Port.of_signal |> Set.of_list (module Port)
-  in
+  let outputs = List.map circuit.outputs ~f:Port.of_signal |> Set.of_list (module Port) in
   let phantom = Set.of_list (module Port) phantom_inputs in
   let phantom_inputs = Set.diff phantom inputs in
   if not (Set.is_empty (Set.inter phantom_inputs outputs))
@@ -246,8 +242,8 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
       | _ ->
         raise_s
           [%message
-            "[Circuit.With_interface.check_widths_match] Unexpected error - invalid \
-             port name(s)"
+            "[Circuit.With_interface.check_widths_match] Unexpected error - invalid port \
+             name(s)"
               (circuit : Summary.t)]
     in
     I.Of_signal.validate (inputs circuit |> List.map ~f:port |> I.of_alist);

@@ -13,8 +13,7 @@ let%expect_test "[mux]" =
         ""
           (length : int)
           ~_:
-            (try_with (fun () ->
-               mux sel (List.init length ~f:(fun i -> of_int ~width i)))
+            (try_with (fun () -> mux sel (List.init length ~f:(fun i -> of_int ~width i)))
              : t Or_error.t)]
   done;
   [%expect

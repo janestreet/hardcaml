@@ -9,7 +9,7 @@ module type TransformFn' = sig
   type t
 
   val transform : t transform_fn'
-  val rewrite : t transform_fn' -> Signal.t Uid_map.t -> Signal.t list -> t list
+  val rewrite : t transform_fn' -> Signal.t Map.M(Uid).t -> Signal.t list -> t list
   val rewrite_signals : t transform_fn' -> Signal.t list -> t list
 end
 
@@ -106,13 +106,16 @@ module MakePureCombTransform (B : MakePureCombTransform_arg) = struct
        constants, but the wires must be done this way to break combinatorial
        dependancies. *)
     let map : B.t Uid_map.t =
-      Set.fold ready_set ~init:Uid_map.empty ~f:(fun map uid ->
-        let signal = find uid in
-        match signal with
-        | Wire _ ->
-          Map.set map ~key:uid ~data:(copy_names signal (B.wire (width signal)))
-        (*| Const _ -> Map.set uid signal map*)
-        | _ -> failwith "unexpected signal")
+      Set.fold
+        ready_set
+        ~init:(Map.empty (module Uid))
+        ~f:(fun map uid ->
+          let signal = find uid in
+          match signal with
+          | Wire _ ->
+            Map.set map ~key:uid ~data:(copy_names signal (B.wire (width signal)))
+          (*| Const _ -> Map.set uid signal map*)
+          | _ -> failwith "unexpected signal")
     in
     (* now recursively rewrite nodes as they become ready *)
     let rec rewrite map ready remaining =
@@ -151,7 +154,7 @@ module MakePureCombTransform (B : MakePureCombTransform_arg) = struct
     let id_to_sig =
       Signal_graph.depth_first_search
         (Signal_graph.create signals)
-        ~init:Uid_map.empty
+        ~init:(Map.empty (module Uid))
         ~f_before:(fun map signal -> Map.add_exn map ~key:(uid signal) ~data:signal)
     in
     rewrite fn id_to_sig signals
@@ -278,12 +281,15 @@ let rewrite fn id_to_sig outputs =
   (* Copy the wires and constants.  We potentially dont need to do this for the constants,
      but the wires must be done this way to break combinatorial dependancies. *)
   let map =
-    Set.fold ready_set ~init:Uid_map.empty ~f:(fun map uid ->
-      let signal = find uid in
-      match signal with
-      | Wire _ -> Map.set map ~key:uid ~data:(copy_names signal (wire (width signal)))
-      (*| Const _ -> Map.set uid signal map*)
-      | _ -> failwith "unexpected signal")
+    Set.fold
+      ready_set
+      ~init:(Map.empty (module Uid))
+      ~f:(fun map uid ->
+        let signal = find uid in
+        match signal with
+        | Wire _ -> Map.set map ~key:uid ~data:(copy_names signal (wire (width signal)))
+        (*| Const _ -> Map.set uid signal map*)
+        | _ -> failwith "unexpected signal")
   in
   (* now recursively rewrite nodes as they become ready *)
   let rec rewrite map ready remaining =
@@ -322,7 +328,7 @@ let rewrite_signals fn signals =
   let id_to_sig =
     Signal_graph.depth_first_search
       (Signal_graph.create signals)
-      ~init:Uid_map.empty
+      ~init:(Map.empty (module Uid))
       ~f_before:(fun map signal -> Map.add_exn map ~key:(uid signal) ~data:signal)
   in
   rewrite fn id_to_sig signals

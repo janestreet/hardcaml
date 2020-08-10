@@ -262,8 +262,7 @@ let is_readwrite = function
 ;;
 
 let is_connected = function
-  | Module_output (_, _, _, con) | Internal_wire (_, _, con) ->
-    not (signal_is_empty !con)
+  | Module_output (_, _, _, con) | Internal_wire (_, _, con) -> not (signal_is_empty !con)
   | Module_tristate (_, _, _, cons) | Internal_triwire (_, _, cons) ->
     not (List.is_empty !cons)
   | _ -> true

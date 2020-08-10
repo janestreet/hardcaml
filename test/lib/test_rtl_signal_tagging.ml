@@ -1,14 +1,10 @@
 open! Import
 open Signal
 
-let rtl_write_null lang outputs =
-  Rtl.print lang (Circuit.create_exn ~name:"test" outputs)
-;;
+let rtl_write_null lang outputs = Rtl.print lang (Circuit.create_exn ~name:"test" outputs)
 
 let output =
-  let a =
-    add_attribute (wire 4 -- "a") (Rtl_attribute.create "baz" ~value:(Bool true))
-  in
+  let a = add_attribute (wire 4 -- "a") (Rtl_attribute.create "baz" ~value:(Bool true)) in
   let b =
     add_attribute
       (add_attribute (wire 4 -- "b") (Rtl_attribute.create "bar" ~value:(Int 10)))

@@ -39,13 +39,9 @@ let wrap ~capacity ~(create_fn : Fifo.create_fifo) (i : _ I.t) =
 
 let display_rules =
   Waves.Display_rule.(
-    [ I.map I.port_names ~f:(port_name_is ~wave_format:(Bit_or Unsigned_int))
-      |> I.to_list
-    ; O.map O.port_names ~f:(port_name_is ~wave_format:(Bit_or Unsigned_int))
-      |> O.to_list
-    ; [ port_name_matches
-          Re.Posix.(re ".*" |> compile)
-          ~wave_format:(Bit_or Unsigned_int)
+    [ I.map I.port_names ~f:(port_name_is ~wave_format:(Bit_or Unsigned_int)) |> I.to_list
+    ; O.map O.port_names ~f:(port_name_is ~wave_format:(Bit_or Unsigned_int)) |> O.to_list
+    ; [ port_name_matches Re.Posix.(re ".*" |> compile) ~wave_format:(Bit_or Unsigned_int)
       ]
     ]
     |> List.concat)

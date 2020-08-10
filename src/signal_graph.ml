@@ -154,7 +154,7 @@ let normalize_uids t =
   (* uid generation (note; 1L and up, 0L reserved for empty) *)
   let id = ref 0L in
   let fresh_id () =
-    id := Int64.add !id 1L;
+    id := Int64.( + ) !id 1L;
     !id
   in
   let new_reg r =
@@ -217,8 +217,7 @@ let normalize_uids t =
           Cat { signal_id = { signal_id with s_id = fresh_id (); s_deps = args }; args }
         | Not { signal_id; arg } ->
           let arg = rewrite_signal_upto_wires arg in
-          Not
-            { signal_id = { signal_id with s_id = fresh_id (); s_deps = [ arg ] }; arg }
+          Not { signal_id = { signal_id with s_id = fresh_id (); s_deps = [ arg ] }; arg }
         | Select { signal_id; arg; high; low } ->
           let arg = rewrite_signal_upto_wires arg in
           Select
@@ -340,10 +339,13 @@ let fan_out_map ?(deps = Signal.deps) t =
 ;;
 
 let fan_in_map ?(deps = Signal.deps) t =
-  depth_first_search t ~init:Signal.Uid_map.empty ~f_before:(fun map signal ->
-    List.map (deps signal) ~f:Signal.uid
-    |> Set.of_list (module Signal.Uid)
-    |> fun data -> Map.set map ~key:(Signal.uid signal) ~data)
+  depth_first_search
+    t
+    ~init:(Map.empty (module Signal.Uid))
+    ~f_before:(fun map signal ->
+      List.map (deps signal) ~f:Signal.uid
+      |> Set.of_list (module Signal.Uid)
+      |> fun data -> Map.set map ~key:(Signal.uid signal) ~data)
 ;;
 
 let topological_sort ?(deps = Signal.deps) (graph : t) =
@@ -358,8 +360,8 @@ let topological_sort ?(deps = Signal.deps) (graph : t) =
   let nodes, edges =
     fold graph ~init:([], []) ~f:(fun (nodes, edges) to_ ->
       ( to_ :: nodes
-      , List.map (deps to_) ~f:(fun from -> { Topological_sort.Edge.from; to_ })
-        @ edges ))
+      , List.map (deps to_) ~f:(fun from -> { Topological_sort.Edge.from; to_ }) @ edges
+      ))
   in
   Topological_sort.sort (module Node) ~what:Nodes_and_edge_endpoints ~nodes ~edges
   |> Or_error.ok_exn
@@ -415,6 +417,5 @@ let last_layer_of_nodes ~is_input graph =
   (* Drop nodes not in the final layer. That will track back to an input or constant but
      not be affected by a register or memory. *)
   Map.to_alist in_layer
-  |> List.filter_map ~f:(fun (uid, is_in_layer) ->
-    if is_in_layer then Some uid else None)
+  |> List.filter_map ~f:(fun (uid, is_in_layer) -> if is_in_layer then Some uid else None)
 ;;

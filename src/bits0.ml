@@ -19,11 +19,7 @@ let width_mask = 0b11_1111
 let words_of_width width = (width + bits_per_word - 1) lsr log_bits_per_word
 let words t = words_of_width t.width
 let width t = t.width
-
-let create_bytes width =
-  Bytes.make (words_of_width width lsl shift_bytes_to_words) '\000'
-;;
-
+let create_bytes width = Bytes.make (words_of_width width lsl shift_bytes_to_words) '\000'
 let create width = { width; data = create_bytes width }
 let init ~width ~data = { width; data }
 let empty = create 0

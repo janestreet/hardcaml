@@ -170,10 +170,8 @@ let%expect_test "mem loop, including read address, which isn't allowed" =
    [Combinational_op]s which don't allow cycles. *)
 let%expect_test "Instantiation loop - not allowed." =
   let w = Signal.wire 1 in
-  let inst =
-    Instantiation.create () ~name:"foo" ~inputs:[ "a", w ] ~outputs:[ "b", 1 ]
-  in
-  Signal.(w <== inst#o "b");
+  let inst = Instantiation.create () ~name:"foo" ~inputs:[ "a", w ] ~outputs:[ "b", 1 ] in
+  Signal.(w <== Map.find_exn inst "b");
   require_does_raise [%here] (fun () ->
     Signal_graph.topological_sort ~deps (Signal_graph.create [ w ]));
   [%expect {|

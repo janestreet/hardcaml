@@ -146,8 +146,7 @@ let write_gdl
   in
   let is_rom s =
     match s with
-    | Mux _ ->
-      List.fold (List.tl_exn (deps s)) ~init:true ~f:(fun b s -> b && is_const s)
+    | Mux _ -> List.fold (List.tl_exn (deps s)) ~init:true ~f:(fun b s -> b && is_const s)
     | _ -> false
   in
   let reg_deps s =

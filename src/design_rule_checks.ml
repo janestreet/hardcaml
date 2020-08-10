@@ -27,7 +27,7 @@ let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
   let clock_domains =
     Signal_graph.depth_first_search
       (Circuit.signal_graph t)
-      ~init:Signal.Uid_map.empty
+      ~init:(Map.empty (module Signal.Uid))
       ~f_before:(fun unchanged signal ->
         match signal with
         | Mem { register = r; _ } | Reg { register = r; _ } ->

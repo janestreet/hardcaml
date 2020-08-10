@@ -152,6 +152,18 @@ module type S = sig
     -> string
     -> t
 
+  (** convert octal string to a constant. If the target width is greater than the octal length
+      and [signedness] is [Signed] then the result is sign extended. Otherwise the result
+      is zero padded. *)
+  val of_octal
+    :  ?signedness:Constant.Signedness.t (** default is [Unsigned] *)
+    -> width:int
+    -> string
+    -> t
+
+  (** Convert an arbitrarily wide integer value to a constant. *)
+  val of_z : width:int -> Zarith.Z.t -> t
+
   (** convert verilog style or binary string to constant *)
   val of_string : string -> t
 

@@ -61,8 +61,7 @@ let create
   if Signal.is_empty clear && Signal.is_empty reset
   then
     raise_s
-      [%message
-        "[Fifo.create] requires either a synchronous clear or asynchronous reset"];
+      [%message "[Fifo.create] requires either a synchronous clear or asynchronous reset"];
   let reg_spec = Reg_spec.create ~clock ~clear ~reset () in
   let reg ?clear_to ~enable d = reg (Reg_spec.override reg_spec ?clear_to) ~enable d in
   let abits = address_bits_for ram_capacity in
@@ -114,11 +113,7 @@ let create
           ~ram_attributes
           ram_capacity
           ~write_port:
-            { write_clock = clock
-            ; write_enable = wr
-            ; write_address = wa
-            ; write_data = d
-            }
+            { write_clock = clock; write_enable = wr; write_address = wa; write_data = d }
           ~read_port:{ read_clock = clock; read_enable = vdd; read_address = ra }
       in
       let bypass_cond = empty &: wr |: (used_is_one &: wr &: rd) in

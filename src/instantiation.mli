@@ -4,8 +4,6 @@
 
 open! Import
 
-type instobj = < i : string -> Signal.t ; o : string -> Signal.t >
-
 val create
   :  ?lib:string
   -> ?arch:string
@@ -15,7 +13,7 @@ val create
   -> name:string
   -> inputs:(string * Signal.t) list
   -> outputs:(string * int) list
-  -> instobj
+  -> Signal.t Map.M(String).t
 
 module With_interface (I : Interface.S) (O : Interface.S) : sig
   (** Instantiate an RTL design with the given input and output interface. *)

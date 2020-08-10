@@ -109,8 +109,7 @@ module type SignalNaming = sig
 end
 
 module type SignalNameManager = sig
-  module UI : Map.Key with type t = Signal.Uid.t * int
-  module SMap : Map.S with module Key := UI
+  module UI : Comparator.S with type t = Signal.Uid.t * int
 
   type mem_names =
     { arr : string
@@ -121,7 +120,7 @@ module type SignalNameManager = sig
 
   type name_map =
     { mangler : Mangler.t
-    ; signals : string SMap.t
+    ; signals : string Map.M(UI).t
     ; mem : mem_names Uid_map.t
     ; inst_labels : string Uid_map.t
     }
@@ -142,8 +141,6 @@ module SignalNameManager (S : SignalNaming) () = struct
     include (val Comparator.make ~compare ~sexp_of_t)
   end
 
-  module SMap = Map.Make (UI)
-
   let prefix = S.prefix
   let reserved = S.reserved
 
@@ -157,9 +154,9 @@ module SignalNameManager (S : SignalNaming) () = struct
 
   type name_map =
     { mangler : Mangler.t
-    ; signals : string SMap.t
-    ; mem : mem_names Uid_map.t
-    ; inst_labels : string Uid_map.t
+    ; signals : string Map.M(UI).t
+    ; mem : mem_names Map.M(Uid).t
+    ; inst_labels : string Map.M(Uid).t
     }
   [@@deriving sexp_of]
 
@@ -194,7 +191,11 @@ module SignalNameManager (S : SignalNaming) () = struct
   let init resv =
     let mangler = Mangler.create ~case_sensitive:S.case_sensitive in
     Mangler.add_identifiers_exn mangler resv;
-    { mangler; signals = SMap.empty; mem = Uid_map.empty; inst_labels = Uid_map.empty }
+    { mangler
+    ; signals = Map.empty (module UI)
+    ; mem = Map.empty (module Uid)
+    ; inst_labels = Map.empty (module Uid)
+    }
   ;;
 
   (* Add port names, but ensure they are unique and legal and throw and error if not. *)
@@ -364,9 +365,7 @@ module Process = struct
     in
     (* reset and clock *)
     let clock e =
-      if clock
-      then If (register.reg_clock, Edge register.reg_clock_edge, e, Empty)
-      else e
+      if clock then If (register.reg_clock, Edge register.reg_clock_edge, e, Empty) else e
     in
     let e =
       if is_empty register.reg_reset
@@ -1003,8 +1002,7 @@ module VhdlCore : Rtl_internal = struct
       else (
         (* some reset/clear clause *)
         let i = mem.t2 in
-        io
-          (tab ^ "for " ^ i ^ " in 0 to " ^ Int.to_string (sp.mem_size - 1) ^ " loop\n");
+        io (tab ^ "for " ^ i ^ " in 0 to " ^ Int.to_string (sp.mem_size - 1) ^ " loop\n");
         io (tab ^ t4 ^ mem.arr ^ "(" ^ i ^ ") <= " ^ name d ^ ";\n");
         io (tab ^ "end loop;\n")));
     (* read *)
@@ -1363,9 +1361,7 @@ let output ?output_mode ?database ?(blackbox = Blackbox.None) language circuit =
     Signal_graph.iter (Circuit.signal_graph circuit) ~f:(fun signal ->
       match signal with
       | Inst { instantiation; _ } ->
-        (match
-           Circuit_database.find database ~mangled_name:instantiation.inst_name
-         with
+        (match Circuit_database.find database ~mangled_name:instantiation.inst_name with
          | None ->
            (* No hardcaml implementation available.  Downstream tooling will provide the
               implmentation. *)
@@ -1377,10 +1373,5 @@ let output ?output_mode ?database ?(blackbox = Blackbox.None) language circuit =
 ;;
 
 let print ?database ?blackbox language circuit =
-  output
-    ~output_mode:(To_channel Out_channel.stdout)
-    ?database
-    ?blackbox
-    language
-    circuit
+  output ~output_mode:(To_channel Out_channel.stdout) ?database ?blackbox language circuit
 ;;
