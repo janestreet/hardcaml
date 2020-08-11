@@ -18,6 +18,7 @@ type t [@@deriving sexp_of]
 type 'a with_create_options =
   ?detect_combinational_loops:bool (** default is [true] *)
   -> ?normalize_uids:bool (** default is [true] *)
+  -> ?assertions:Assertion_manager.t
   -> 'a
 
 (** create circuit data structure  *)
@@ -57,6 +58,8 @@ val phantom_inputs : t -> (string * int) list
 module Signal_map : sig
   type t = Signal.t Signal.Uid_map.t [@@deriving sexp_of]
 end
+
+val assertions : t -> Signal.t Map.M(String).t
 
 (** Get map of [uid]s to [Signal.t]s. *)
 val signal_map : t -> Signal_map.t

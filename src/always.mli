@@ -82,9 +82,6 @@
 
 open! Import
 
-type t [@@deriving sexp_of]
-type always = t
-
 (** The type of variables in guarded assignments.  Variables may be asychronous
     [wire]s, or synchronous [reg]s.  The current value of the variable may be
     accessed through the [value] field below. *)
@@ -107,6 +104,13 @@ module Variable : sig
   val pipeline : depth:int -> Reg_spec.t -> enable:Signal.t -> width:int -> t
 end
 
+type t = private
+  | Assign of Variable.t * Signal.t
+  | If of Signal.t * t list * t list
+  | Switch of Signal.t * (Signal.t * t list) list
+[@@deriving sexp_of]
+
+type always = t
 type 'a case = 'a * t list
 type 'a cases = 'a case list
 
@@ -133,6 +137,9 @@ val ( <-- ) : Variable.t -> Signal.t -> t
 
 (** assignment with an integer constant - width is inferred *)
 val ( <--. ) : Variable.t -> int -> t
+
+(** add an assertion to the scope's assertion manager *)
+val assert_signal : Scope.t -> string -> Signal.t -> t
 
 module State_machine : sig
   type 'a t =

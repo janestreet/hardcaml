@@ -64,6 +64,15 @@ module type Cyclesim = sig
   val lookup_signal : _ t -> Signal.Uid.t -> Bits.t ref
   val lookup_reg : _ t -> Signal.Uid.t -> Bits.t ref
 
+  module Violated_or_not : sig
+    type t =
+      | Violated of int list (* cycles on which assertion was violated *)
+      | Not_violated
+    [@@deriving sexp_of]
+  end
+
+  val results_of_assertions : _ t -> Violated_or_not.t Map.M(String).t
+
   type 'a with_create_options =
     ?is_internal_port:(Signal.t -> bool)
     -> ?combinational_ops_database:Combinational_ops_database.t
@@ -129,6 +138,7 @@ module type Cyclesim = sig
       -> cycle_after_clock_edge:task
       -> lookup_signal:(Signal.Uid.t -> Bits.t ref)
       -> lookup_reg:(Signal.Uid.t -> Bits.t ref)
+      -> assertions:Signal.t Map.M(String).t
       -> t_port_list
 
     module Step : sig

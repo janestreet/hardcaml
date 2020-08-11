@@ -1,5 +1,6 @@
 module Always = Always
 module Architecture = Architecture
+module Assertion_manager = Assertion_manager
 module Bits = Bits
 module Build_mode = Build_mode
 module Caller_id = Caller_id

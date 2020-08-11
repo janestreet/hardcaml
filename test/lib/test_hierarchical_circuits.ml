@@ -333,7 +333,8 @@ let%expect_test "To_file" =
         /* output assignments */
         assign b = _4;
 
-    endmodule |}]
+    endmodule |}];
+  return ()
 ;;
 
 let%expect_test "In_directory" =
@@ -473,5 +474,6 @@ let%expect_test "In_directory" =
         -- output assignments
         b <= hc_4;
 
-    end architecture; |}]
+    end architecture; |}];
+  return ()
 ;;

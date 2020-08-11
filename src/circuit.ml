@@ -33,6 +33,7 @@ type t =
      already been set by the time a circuit is created, so a circuit is not mutable. *)
   ; fan_out : Signal.Uid_set.t Map.M(Signal.Uid).t Lazy.t
   ; fan_in : Signal.Uid_set.t Map.M(Signal.Uid).t Lazy.t
+  ; assertions : Signal.t Map.M(String).t
   }
 [@@deriving fields, sexp_of]
 
@@ -49,29 +50,60 @@ module Summary = struct
 end
 
 type 'a with_create_options =
-  ?detect_combinational_loops:bool -> ?normalize_uids:bool -> 'a
+  ?detect_combinational_loops:bool
+  -> ?normalize_uids:bool
+  -> ?assertions:Assertion_manager.t
+  -> 'a
 
 module Create_options = struct
   type t =
     { detect_combinational_loops : bool option
     ; normalize_uids : bool option
+    ; assertions : Assertion_manager.t option
     }
   [@@deriving sexp_of]
 end
 
-let with_create_options f ?detect_combinational_loops ?normalize_uids =
-  f { Create_options.detect_combinational_loops; normalize_uids }
+let with_create_options f ?detect_combinational_loops ?normalize_uids ?assertions =
+  f { Create_options.detect_combinational_loops; normalize_uids; assertions }
 ;;
 
 let call_with_create_options
       t
-      { Create_options.detect_combinational_loops; normalize_uids }
+      { Create_options.detect_combinational_loops; normalize_uids; assertions }
   =
-  t ?detect_combinational_loops ?normalize_uids
+  t ?detect_combinational_loops ?normalize_uids ?assertions
 ;;
 
-let create_exn ?(detect_combinational_loops = true) ?(normalize_uids = true) ~name outputs
+let create_exn
+      ?(detect_combinational_loops = true)
+      ?(normalize_uids = true)
+      ?assertions
+      ~name
+      outputs
   =
+  let assertions =
+    match assertions with
+    | Some assertions -> Assertion_manager.finalize assertions
+    | None -> Map.empty (module String)
+  in
+  let output_names =
+    List.concat_map outputs ~f:(fun signal ->
+      if Signal.is_empty signal then [] else Signal.names signal)
+    |> Set.of_list (module String)
+  in
+  (* We have to filter out the assertions that are already in the output because they are
+     from [Cyclesim_with_properties.With_interface.create]
+
+     We add the assertions as output to make sure they show up on the waveform and their signals
+     are not optimized away *)
+  let output_assertions =
+    assertions
+    |> Map.to_alist
+    |> List.filter ~f:(fun (n, _) -> not (Set.mem output_names n))
+    |> List.map ~f:(fun (n, s) -> Signal.output n s)
+  in
+  let outputs = outputs @ output_assertions in
   let signal_graph = Signal_graph.create outputs in
   (* check that all outputs are assigned wires with 1 name *)
   ignore (ok_exn (Signal_graph.outputs ~validate:true signal_graph) : Signal.t list);
@@ -83,6 +115,17 @@ let create_exn ?(detect_combinational_loops = true) ?(normalize_uids = true) ~na
   let outputs = Signal_graph.outputs signal_graph |> ok_exn in
   (* get inputs checking that they are valid *)
   let inputs = ok_exn (Signal_graph.inputs signal_graph) in
+  (* update the assertions map to the new normalized signals *)
+  let assertions =
+    Signal_graph.fold signal_graph ~init:assertions ~f:(fun assertions signal ->
+      if Signal.is_empty signal
+      then assertions
+      else
+        List.fold (Signal.names signal) ~init:assertions ~f:(fun assertions name ->
+          Map.change assertions name ~f:(function
+            | Some _ -> Some signal
+            | None -> None)))
+  in
   (* check for combinational loops *)
   if detect_combinational_loops
   then ok_exn (Signal_graph.detect_combinational_loops signal_graph);
@@ -95,6 +138,7 @@ let create_exn ?(detect_combinational_loops = true) ?(normalize_uids = true) ~na
   ; signal_graph
   ; fan_out = lazy (Signal_graph.fan_out_map signal_graph)
   ; fan_in = lazy (Signal_graph.fan_in_map signal_graph)
+  ; assertions
   }
 ;;
 
@@ -147,6 +191,7 @@ let find_signal_exn t uid = Map.find_exn t.signal_by_uid uid
 let fan_out_map t = Lazy.force t.fan_out
 let fan_in_map t = Lazy.force t.fan_in
 let signal_map c = c.signal_by_uid
+let assertions t = t.assertions
 
 let structural_compare ?check_names c0 c1 =
   (* Number of inputs and outputs match *)

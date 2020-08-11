@@ -73,10 +73,17 @@ let ( <-- ) (a : Variable.t) b =
     raise_s
       [%message
         "attempt to assign expression to [Always.variable] of different width"
+          ~variable_name:(Signal.names a.value : string list)
           ~guared_variable_width:(Signal.width a.value : int)
           ~expression_width:(Signal.width b : int)
           ~expression:(b : Signal.t)];
   Assign (a, b)
+;;
+
+let assert_signal scope asn_name asn =
+  let asn_var = Variable.wire ~default:(Signal.one 1) in
+  Scope.add_assertion scope asn_name (Variable.value asn_var);
+  asn_var <-- asn
 ;;
 
 let ( <--. ) (a : Variable.t) b = a <-- Signal.of_int ~width:(Signal.width a.value) b

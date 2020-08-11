@@ -78,3 +78,9 @@ val name : ?sep:string -> t -> string -> string
       (* ... more code ... *)
     ]} *)
 val naming : ?sep:string -> t -> Signal.t -> string -> Signal.t
+
+val add_assertion : t -> string -> Signal.t -> unit
+
+(* [assertion_manager t] returns the {!Assertion_manager.t} associated with [t]. Note
+   that assertion managers are shared among {!sub_scope}s. *)
+val assertion_manager : t -> Assertion_manager.t

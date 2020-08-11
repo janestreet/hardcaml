@@ -9,6 +9,7 @@ let%expect_test "guarded assignment width mistmatch" =
   [%expect
     {|
     ("attempt to assign expression to [Always.variable] of different width"
+     (variable_name ())
      (guared_variable_width 1)
      (expression_width      2)
      (expression (

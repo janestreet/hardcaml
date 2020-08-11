@@ -23,6 +23,7 @@ type t =
   ; circuit_database : (Circuit_database.t[@sexp.opaque])
   ; flatten_design : bool
   ; naming_scheme : Naming_scheme.t
+  ; assertion_manager : Assertion_manager.t
   }
 [@@deriving fields, sexp_of]
 
@@ -43,6 +44,7 @@ let create ?(flatten_design = false) ?naming_scheme ?name () =
   ; circuit_database = Circuit_database.create ()
   ; flatten_design
   ; naming_scheme
+  ; assertion_manager = Assertion_manager.create ()
   }
 ;;
 
@@ -67,3 +69,10 @@ let name ?(sep = "$") scope n =
 ;;
 
 let naming ?sep scope s n = Signal.( -- ) s (name ?sep scope n)
+
+let add_assertion scope asn_name asn =
+  let asn_name = name scope asn_name in
+  Assertion_manager.add scope.assertion_manager asn_name asn
+;;
+
+let assertion_manager scope = scope.assertion_manager

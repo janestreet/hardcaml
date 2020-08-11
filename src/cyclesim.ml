@@ -255,6 +255,8 @@ type ('i, 'o) t =
   ; cycle_after_clock_edge : task
   ; lookup_signal : Signal.Uid.t -> Bits.t ref
   ; lookup_reg : Signal.Uid.t -> Bits.t ref
+  ; assertions : Signal.t Map.M(String).t
+  ; violated_assertions : int list Hashtbl.M(String).t
   }
 [@@deriving fields]
 
@@ -264,6 +266,20 @@ let sexp_of_t sexp_of_i sexp_of_o t =
       ~inputs:(t.inputs : i)
       ~outputs_before_clock_edge:(t.outputs_before_clock_edge : o)
       ~outputs_after_clock_edge:(t.outputs_after_clock_edge : o)]
+;;
+
+module Violated_or_not = struct
+  type t =
+    | Violated of int list
+    | Not_violated
+  [@@deriving sexp_of]
+end
+
+let results_of_assertions t =
+  Map.mapi t.assertions ~f:(fun ~key ~data:_ ->
+    match Hashtbl.find t.violated_assertions key with
+    | Some cycles -> Violated_or_not.Violated (List.rev cycles)
+    | None -> Violated_or_not.Not_violated)
 ;;
 
 type t_port_list = (Port_list.t, Port_list.t) t
@@ -283,6 +299,7 @@ module Private = struct
         ~cycle_after_clock_edge
         ~lookup_signal
         ~lookup_reg
+        ~assertions
     =
     { in_ports
     ; out_ports_before_clock_edge
@@ -298,6 +315,8 @@ module Private = struct
     ; cycle_after_clock_edge
     ; lookup_signal
     ; lookup_reg
+    ; assertions
+    ; violated_assertions = Hashtbl.create (module String)
     }
   ;;
 
@@ -522,6 +541,7 @@ let[@cold] raise_input_port_width_mismatch port_name src dst =
 
 let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) circuit =
   (* add internally traced nodes *)
+  let assertions = Circuit.assertions circuit in
   let internal_ports = get_internal_ports circuit ~is_internal_port in
   let bundle = get_schedule circuit internal_ports in
   (* build maps *)
@@ -770,6 +790,19 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
   in
   let lookup_signal uid = ref (Map.find_exn data_map uid |> Bits.Mutable.to_bits) in
   let lookup_reg uid = ref (Map.find_exn reg_map uid |> Bits.Mutable.to_bits) in
+  let violated_assertions = Hashtbl.create (module String) in
+  let cycle_no = ref 0 in
+  let check_assertions_task () =
+    Map.iteri assertions ~f:(fun ~key ~data ->
+      let asn_value = lookup_signal (Signal.uid data) in
+      if Bits.is_gnd !asn_value
+      then Hashtbl.add_multi violated_assertions ~key ~data:!cycle_no);
+    cycle_no := !cycle_no + 1
+  in
+  let clear_violated_assertions_task () =
+    Hashtbl.clear violated_assertions;
+    cycle_no := 0
+  in
   (* simulator structure *)
   let task tasks () = List.iter tasks ~f:(fun f -> f ()) in
   let tasks tasks =
@@ -819,12 +852,15 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
         ; tasks_before_clock_edge
         ; tasks_regs
         ; [ out_ports_before_clock_edge_task; internal_ports_task ]
+        ; [ check_assertions_task ]
         ]
   ; cycle_at_clock_edge = task tasks_at_clock_edge
   ; cycle_after_clock_edge = tasks [ tasks_after_clock_edge; [ out_ports_task ] ]
-  ; reset = task resets
+  ; reset = tasks [ resets; [ clear_violated_assertions_task ] ]
   ; lookup_signal
   ; lookup_reg
+  ; assertions
+  ; violated_assertions
   }
 ;;
 
