@@ -6,7 +6,7 @@ type t = private
   { width : int
   ; data : Bytes.t
   }
-[@@deriving compare, sexp]
+[@@deriving compare, sexp, bin_io]
 
 module Comparable : Comparable.S with type t := t
 

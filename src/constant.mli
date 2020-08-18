@@ -2,7 +2,7 @@
 
 open! Import
 
-type t = Bits0.t [@@deriving compare, sexp]
+type t = Bits0.t [@@deriving compare, sexp, bin_io]
 
 module Signedness : sig
   type t =

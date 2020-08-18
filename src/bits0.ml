@@ -1,11 +1,13 @@
 open! Import
 
 module T = struct
+  open Bin_prot.Std
+
   type t =
     { width : int
-    ; data : Bytes.t
+    ; data : bytes
     }
-  [@@deriving compare, sexp]
+  [@@deriving compare, sexp, bin_io]
 end
 
 include T
