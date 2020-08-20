@@ -6,9 +6,6 @@ module Port_list = struct
   type t = (string * Bits.t ref) list [@@deriving sexp_of]
 end
 
-exception Failure of string
-
-let failwith str = raise (Failure str)
 let uid = Signal.uid
 let names = Signal.names
 
@@ -172,14 +169,14 @@ let get_schedule circuit internal_ports =
   { schedule; internal_ports; regs; mems; consts; inputs; remaining; ready }
 ;;
 
-let get_maps ~ref ~const ~zero ~bundle =
+let get_maps ~const ~zero ~bundle =
   let data_add map signal =
     let value =
       match (signal : Signal.t) with
       | Const { constant; _ } -> const constant
       | _ -> zero (Signal.width signal)
     in
-    Map.set map ~key:(uid signal) ~data:(ref value)
+    Map.set map ~key:(uid signal) ~data:value
   in
   let data_map = Map.empty (module Signal.Uid) in
   let data_map = List.fold bundle.ready ~init:data_map ~f:data_add in
@@ -187,7 +184,7 @@ let get_maps ~ref ~const ~zero ~bundle =
   let data_map = List.fold bundle.mems ~init:data_map ~f:data_add in
   let data_map = List.fold bundle.remaining ~init:data_map ~f:data_add in
   let reg_add map signal =
-    Map.set map ~key:(uid signal) ~data:(ref (zero (Signal.width signal)))
+    Map.set map ~key:(uid signal) ~data:(zero (Signal.width signal))
   in
   let reg_map = List.fold bundle.regs ~init:(Map.empty (module Signal.Uid)) ~f:reg_add in
   let mem_add map (signal : Signal.t) =
@@ -195,47 +192,38 @@ let get_maps ~ref ~const ~zero ~bundle =
     | Mem { memory = { mem_size; _ }; _ } | Multiport_mem { size = mem_size; _ } ->
       let mem = Array.init mem_size ~f:(fun _ -> zero (Signal.width signal)) in
       Map.set map ~key:(uid signal) ~data:mem
-    | _ -> failwith "Expecting memory"
+    | _ -> raise_s [%message "Expecting memory"]
   in
   let mem_map = List.fold bundle.mems ~init:(Map.empty (module Signal.Uid)) ~f:mem_add in
   data_map, reg_map, mem_map
 ;;
 
-let filter_none l =
-  let l = List.filter l ~f:Option.is_some in
-  List.map l ~f:(function
-    | Some x -> x
-    | _ -> failwith "error")
-;;
-
 module Io_ports = struct
   type 'a t =
     { in_ports : 'a
-    ; out_ports_before_clock_edge : 'a
-    ; out_ports_after_clock_edge : 'a
+    ; out_ports : 'a
     ; internal_ports : 'a
     }
 end
 
-let io_ports ~copy circuit data_map internal_ports : _ Io_ports.t =
+let io_ports circuit data_map internal_ports : _ Io_ports.t =
   (* list of input ports *)
   let in_ports =
     List.map (Circuit.inputs circuit) ~f:(fun signal ->
       List.hd_exn (names signal), Map.find_exn data_map (uid signal))
   in
   (* list of output ports *)
-  let out_ports_after_clock_edge =
+  let out_ports =
     List.map (Circuit.outputs circuit) ~f:(fun signal ->
       List.hd_exn (names signal), Map.find_exn data_map (uid signal))
   in
-  let out_ports_before_clock_edge = List.map out_ports_after_clock_edge ~f:copy in
   let internal_ports =
     List.concat
     @@ List.map internal_ports ~f:(fun signal ->
       List.map (names signal) ~f:(fun name ->
         name, Map.find_exn data_map (uid signal)))
   in
-  { in_ports; out_ports_after_clock_edge; out_ports_before_clock_edge; internal_ports }
+  { in_ports; out_ports; internal_ports }
 ;;
 
 type task = unit -> unit
@@ -377,17 +365,17 @@ let cycle sim =
 
 let in_port sim name =
   try List.Assoc.find_exn sim.in_ports name ~equal:String.equal with
-  | _ -> failwith ("couldn't find input port " ^ name)
+  | _ -> raise_s [%message "Couldn't find input port" name]
 ;;
 
 let out_port_after_clock_edge sim name =
   try List.Assoc.find_exn sim.out_ports_after_clock_edge name ~equal:String.equal with
-  | _ -> failwith ("cound't find output port " ^ name)
+  | _ -> raise_s [%message "Couldn't find output port" name]
 ;;
 
 let out_port_before_clock_edge sim name =
   try List.Assoc.find_exn sim.out_ports_before_clock_edge name ~equal:String.equal with
-  | _ -> failwith ("cound't find output port " ^ name)
+  | _ -> raise_s [%message "Couldn't find output port" name]
 ;;
 
 let out_port ?(clock_edge = Side.After) t name =
@@ -547,11 +535,7 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
   (* build maps *)
   let zero n = Bits.Mutable.of_constant (Constant.of_int ~width:n 0) in
   let data_map, reg_map, mem_map =
-    get_maps
-      ~ref:(fun x -> x)
-      ~const:(fun c -> Bits.Mutable.of_constant (Bits.to_constant c))
-      ~zero
-      ~bundle
+    get_maps ~const:(fun c -> Bits.Mutable.of_constant (Bits.to_constant c)) ~zero ~bundle
   in
   let mutable_to_int x = Bits.Mutable.Comb.to_int x in
   (* compilation *)
@@ -565,42 +549,65 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
     let tgt = find_exn signal in
     let deps = List.map (Signal.deps signal) ~f:find_or_empty in
     match signal with
-    | Empty -> failwith "cant compile empty signal"
+    | Empty -> raise_s [%message "Can't compile empty signal"]
     | Const _ -> None
-    | Not { arg; _ } -> Some (fun () -> Bits.Mutable.( ~: ) tgt (find_or_empty arg))
+    | Not { arg; _ } ->
+      let arg = find_or_empty arg in
+      let not_ () = Bits.Mutable.( ~: ) tgt arg in
+      Some not_
     | Cat { args; _ } ->
-      Some (fun () -> Bits.Mutable.concat tgt (List.map args ~f:find_or_empty))
+      let args = List.map args ~f:find_or_empty in
+      let cat () = Bits.Mutable.concat tgt args in
+      Some cat
     | Mux { select; cases; _ } ->
       let sel = find_or_empty select in
       let els = Array.of_list (List.map cases ~f:find_or_empty) in
       let max = Array.length els - 1 in
-      Some
-        (fun () ->
-           let sel = mutable_to_int sel in
-           let sel = if sel > max then max else sel in
-           Bits.Mutable.copy ~dst:tgt ~src:els.(sel))
-    | Op2 { op; arg_a; arg_b; signal_id = _ } ->
-      let op2 op =
-        let a = find_or_empty arg_a in
-        let b = find_or_empty arg_b in
-        Some (fun () -> op tgt a b)
+      let mux () =
+        let sel = mutable_to_int sel in
+        let sel = if sel > max then max else sel in
+        Bits.Mutable.copy ~dst:tgt ~src:els.(sel)
       in
+      Some mux
+    | Op2 { op; arg_a; arg_b; signal_id = _ } ->
+      let a = find_or_empty arg_a in
+      let b = find_or_empty arg_b in
       (match op with
-       | Signal_add -> op2 Bits.Mutable.( +: )
-       | Signal_sub -> op2 Bits.Mutable.( -: )
-       | Signal_mulu -> op2 Bits.Mutable.( *: )
-       | Signal_muls -> op2 Bits.Mutable.( *+ )
-       | Signal_and -> op2 Bits.Mutable.( &: )
-       | Signal_or -> op2 Bits.Mutable.( |: )
-       | Signal_xor -> op2 Bits.Mutable.( ^: )
-       | Signal_eq -> op2 Bits.Mutable.( ==: )
-       | Signal_lt -> op2 Bits.Mutable.( <: ))
+       | Signal_add ->
+         let add () = Bits.Mutable.( +: ) tgt a b in
+         Some add
+       | Signal_sub ->
+         let sub () = Bits.Mutable.( -: ) tgt a b in
+         Some sub
+       | Signal_mulu ->
+         let mulu () = Bits.Mutable.( *: ) tgt a b in
+         Some mulu
+       | Signal_muls ->
+         let muls () = Bits.Mutable.( *+ ) tgt a b in
+         Some muls
+       | Signal_and ->
+         let and_ () = Bits.Mutable.( &: ) tgt a b in
+         Some and_
+       | Signal_or ->
+         let or_ () = Bits.Mutable.( |: ) tgt a b in
+         Some or_
+       | Signal_xor ->
+         let xor_ () = Bits.Mutable.( ^: ) tgt a b in
+         Some xor_
+       | Signal_eq ->
+         let eq () = Bits.Mutable.( ==: ) tgt a b in
+         Some eq
+       | Signal_lt ->
+         let lt () = Bits.Mutable.( <: ) tgt a b in
+         Some lt)
     | Wire _ ->
       let src = List.hd_exn deps in
-      Some (fun () -> Bits.Mutable.copy ~dst:tgt ~src)
+      let wire () = Bits.Mutable.copy ~dst:tgt ~src in
+      Some wire
     | Select { arg; high; low; _ } ->
       let d = find_or_empty arg in
-      Some (fun () -> Bits.Mutable.select tgt d high low)
+      let sel () = Bits.Mutable.select tgt d high low in
+      Some sel
     | Reg { register = r; d; _ } ->
       let tgt = Map.find_exn reg_map (uid signal) in
       let src = find_or_empty d in
@@ -619,41 +626,48 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
         else None
       in
       (match clr, ena with
-       | None, None -> Some (fun () -> Bits.Mutable.copy ~dst:tgt ~src)
+       | None, None ->
+         let reg () = Bits.Mutable.copy ~dst:tgt ~src in
+         Some reg
        | Some (c, v, l), None ->
-         Some
-           (fun () ->
-              if mutable_to_int c = l
-              then Bits.Mutable.copy ~dst:tgt ~src:v
-              else Bits.Mutable.copy ~dst:tgt ~src)
+         let regc () =
+           if mutable_to_int c = l
+           then Bits.Mutable.copy ~dst:tgt ~src:v
+           else Bits.Mutable.copy ~dst:tgt ~src
+         in
+         Some regc
        | None, Some e ->
-         Some (fun () -> if mutable_to_int e = 1 then Bits.Mutable.copy ~dst:tgt ~src)
+         let rege () = if mutable_to_int e = 1 then Bits.Mutable.copy ~dst:tgt ~src in
+         Some rege
        | Some (c, v, l), Some e ->
-         Some
-           (fun () ->
-              if mutable_to_int c = l
-              then Bits.Mutable.copy ~dst:tgt ~src:v
-              else if mutable_to_int e = 1
-              then Bits.Mutable.copy ~dst:tgt ~src))
+         let regce () =
+           if mutable_to_int c = l
+           then Bits.Mutable.copy ~dst:tgt ~src:v
+           else if mutable_to_int e = 1
+           then Bits.Mutable.copy ~dst:tgt ~src
+         in
+         Some regce)
     | Mem { memory = m; _ } ->
       let mem = Map.find_exn mem_map (uid signal) in
       let addr = Map.find_exn data_map (uid m.mem_read_address) in
-      Some
-        (fun () ->
-           try Bits.Mutable.copy ~dst:tgt ~src:mem.(mutable_to_int addr) with
-           | _ -> Bits.Mutable.copy ~dst:tgt ~src:(zero (Signal.width signal)))
+      let mem () =
+        try Bits.Mutable.copy ~dst:tgt ~src:mem.(mutable_to_int addr) with
+        | _ -> Bits.Mutable.copy ~dst:tgt ~src:(zero (Signal.width signal))
+      in
+      Some mem
     | Multiport_mem _ -> None
     | Mem_read_port { memory; read_address; _ } ->
       let mem = Map.find_exn mem_map (uid memory) in
       let addr = Map.find_exn data_map (uid read_address) in
       let zero = Bits.Mutable.create (Signal.width signal) in
-      Some
-        (fun () ->
-           let data =
-             try mem.(mutable_to_int addr) with
-             | _ -> zero
-           in
-           Bits.Mutable.copy ~dst:tgt ~src:data)
+      let mem_read () =
+        let data =
+          try mem.(mutable_to_int addr) with
+          | _ -> zero
+        in
+        Bits.Mutable.copy ~dst:tgt ~src:data
+      in
+      Some mem_read
     | Inst { instantiation = i; _ } ->
       (match
          Combinational_ops_database.find combinational_ops_database ~name:i.inst_name
@@ -667,18 +681,20 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
          let outputs =
            List.map i.inst_outputs ~f:(fun (_, (b, _)) -> Bits.Mutable.create b)
          in
-         Some
-           (fun () ->
-              f deps outputs;
-              Bits.Mutable.concat tgt (List.rev outputs)))
+         let inst () =
+           f deps outputs;
+           Bits.Mutable.concat tgt (List.rev outputs)
+         in
+         Some inst)
   in
   let compile_reg_update (signal : Signal.t) =
     match signal with
     | Reg _ ->
       let tgt = Map.find_exn data_map (uid signal) in
       let src = Map.find_exn reg_map (uid signal) in
-      fun () -> Bits.Mutable.copy ~dst:tgt ~src
-    | _ -> failwith "error while compiling reg update"
+      let reg_upd () = Bits.Mutable.copy ~dst:tgt ~src in
+      reg_upd
+    | _ -> raise_s [%message "[compile_reg_update] expecting register"]
   in
   let compile_mem_update (signal : Signal.t) =
     match signal with
@@ -687,7 +703,7 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
       let we = Map.find_exn data_map (uid r.reg_enable) in
       let w = Map.find_exn data_map (uid m.mem_write_address) in
       let d = Map.find_exn data_map (uid m.mem_write_data) in
-      fun () ->
+      let mem_upd () =
         (* XXX memories can have resets/clear etc as well *)
         if mutable_to_int we = 1
         then (
@@ -696,21 +712,26 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
           then (*Printf.printf "memory write out of bounds %i/%i\n" w m.mem_size*)
             ()
           else Bits.Mutable.copy ~dst:mem.(w) ~src:d)
+      in
+      mem_upd
     | Multiport_mem { size; write_ports; _ } ->
       let mem = Map.find_exn mem_map (uid signal) in
-      let f (write_port : Signal.write_port) =
+      let multi_mem_wr (write_port : Signal.write_port) =
         let we = Map.find_exn data_map (uid write_port.write_enable) in
         let w = Map.find_exn data_map (uid write_port.write_address) in
         let d = Map.find_exn data_map (uid write_port.write_data) in
-        fun () ->
+        let multi_mem_wr () =
           if mutable_to_int we = 1
           then (
             let w = mutable_to_int w in
             if w >= size then () else Bits.Mutable.copy ~dst:mem.(w) ~src:d)
+        in
+        multi_mem_wr
       in
-      let write_ports = Array.map write_ports ~f in
-      fun () -> Array.iter write_ports ~f:(fun f -> f ())
-    | _ -> failwith "error while compiling mem update"
+      let write_ports = Array.map write_ports ~f:multi_mem_wr in
+      let multi_mem_wr_ports () = Array.iter write_ports ~f:(fun f -> f ()) in
+      multi_mem_wr_ports
+    | _ -> raise_s [%message "[compile_mem_update] expecting memory"]
   in
   let compile_reset (signal : Signal.t) =
     match signal with
@@ -720,33 +741,36 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
         let tgt0 = Map.find_exn data_map (uid signal) in
         let tgt1 = Map.find_exn reg_map (uid signal) in
         let value = Map.find_exn data_map (uid r.reg_reset_value) in
-        Some
-          (fun () ->
-             Bits.Mutable.copy ~dst:tgt0 ~src:value;
-             Bits.Mutable.copy ~dst:tgt1 ~src:value))
+        let reg_reset () =
+          Bits.Mutable.copy ~dst:tgt0 ~src:value;
+          Bits.Mutable.copy ~dst:tgt1 ~src:value
+        in
+        Some reg_reset)
       else None
-    | _ -> failwith "Only registers should have a reset"
+    | _ -> raise_s [%message "[compile_reset] only registers should have a reset"]
   in
   let check_input signal =
     let signal_width = Signal.width signal in
     let name = List.hd_exn (names signal) in
     let tgt = Map.find_exn data_map (uid signal) in
-    fun () ->
+    let check_input () =
       let data_width = Bits.Mutable.width tgt in
       if data_width <> signal_width
       then
-        failwith
-          (Printf.sprintf
-             "'%s' has width %i but should be of width %i"
-             name
-             data_width
-             signal_width)
+        raise_s
+          [%message
+            "Input port assigned invalid width"
+              name
+              (data_width : int)
+              (signal_width : int)]
+    in
+    check_input
   in
   let compile_and_tag s = Option.map (compile s) ~f:(fun t -> uid s, t) in
   (* compile the task list *)
   let tasks_check = List.map bundle.inputs ~f:check_input in
-  let tasks_comb = filter_none (List.map bundle.schedule ~f:compile_and_tag) in
-  let tasks_regs = filter_none (List.map bundle.regs ~f:compile) in
+  let tasks_comb = List.filter_opt (List.map bundle.schedule ~f:compile_and_tag) in
+  let tasks_regs = List.filter_opt (List.map bundle.regs ~f:compile) in
   let tasks_at_clock_edge =
     List.map bundle.mems ~f:compile_mem_update
     @ List.map bundle.regs ~f:compile_reg_update
@@ -778,15 +802,15 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
       in
       raise_s
         [%message
-          "[Cyclesim.create] Last layer did not compile correctly."
+          "[Cyclesim.create] Last layer did not compile correctly"
             (diff : (Signal.Uid.t * Signal.t option) list)])
   in
   (* reset *)
-  let resets = filter_none (List.map bundle.regs ~f:compile_reset) in
+  let resets = List.filter_opt (List.map bundle.regs ~f:compile_reset) in
   (* Note; in the functional simulator the out ports before/after the clock edge are the
      same here. *)
-  let { Io_ports.in_ports; out_ports_after_clock_edge = out_ports; internal_ports; _ } =
-    io_ports ~copy:Fn.id circuit data_map internal_ports
+  let { Io_ports.in_ports; out_ports; internal_ports } =
+    io_ports circuit data_map internal_ports
   in
   let lookup_signal uid = ref (Map.find_exn data_map uid |> Bits.Mutable.to_bits) in
   let lookup_reg uid = ref (Map.find_exn reg_map uid |> Bits.Mutable.to_bits) in
@@ -813,20 +837,20 @@ let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) 
     let i =
       List.map in_ports ~f:(fun (n, b) -> n, ref (Bits.zero (Bits.Mutable.width b)))
     in
-    let t () =
+    let copy_in_ports () =
       List.iter2_exn in_ports i ~f:(fun (_, tgt) (name, src) ->
         if Bits.width !src <> Bits.Mutable.width tgt
         then raise_input_port_width_mismatch name !src tgt;
         Bits.Mutable.copy_bits ~dst:tgt ~src:!src)
     in
-    i, t
+    i, copy_in_ports
   in
   let out_ports_ref ports =
     let p = List.map ports ~f:(fun (n, s) -> n, ref (Bits.zero (Bits.Mutable.width s))) in
-    let task () =
+    let copy_out_ports () =
       List.iter2_exn p ports ~f:(fun (_, rf) (_, v) -> rf := Bits.Mutable.to_bits v)
     in
-    p, task
+    p, copy_out_ports
   in
   let out_ports_before_clock_edge, out_ports_before_clock_edge_task =
     out_ports_ref out_ports
