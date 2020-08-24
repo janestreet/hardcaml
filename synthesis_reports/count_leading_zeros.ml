@@ -1,5 +1,5 @@
 open! Core
-module Synth = Hardcaml_synthesis_reports
+module Synth = Hardcaml_xilinx_reports
 
 module Make (Bits : sig
     val bits : int
@@ -30,7 +30,7 @@ struct
     { O.count = leading_zeros_pow2 i.data }
   ;;
 
-  module With_regs = Hardcaml_synthesis_reports.Wrap_with_registers.Make (I) (O)
+  module With_regs = Hardcaml_xilinx_reports.Wrap_with_registers.Make (I) (O)
 
   let create scope (i : _ With_regs.I_with_clock.t) =
     { O.count =
@@ -58,7 +58,7 @@ let command =
     ~summary:"count leading zeros logic"
     (let open Command.Let_syntax in
      let%map_open () = return ()
-     and flags = Hardcaml_synthesis_reports.Command.Command_flags.flags
+     and flags = Hardcaml_xilinx_reports.Command.Command_flags.flags
      and bits = flag "bits" (required int) ~doc:"BITS Number of input bits" in
      fun () ->
        let module Clz =
