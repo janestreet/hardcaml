@@ -312,6 +312,7 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
       (fun create_options
         ?(port_checks = Port_checks.Relaxed)
         ?(add_phantom_inputs = true)
+        ?(modify_outputs = Fn.id)
         ~name
         logic
         ->
@@ -333,7 +334,7 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
               create_exn
               create_options
               ~name
-              (O.to_list circuit_outputs)
+              (modify_outputs (O.to_list circuit_outputs))
           in
           let circuit =
             if add_phantom_inputs

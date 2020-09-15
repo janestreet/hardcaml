@@ -175,7 +175,12 @@ module Primitive_op = struct
   [@@deriving enumerate, sexp_of]
 
   let name t = [%sexp (t : t)] |> Sexp.to_string |> String.lowercase
-  let arg_type = Command.Arg_type.of_alist_exn (List.map all ~f:(fun t -> name t, t))
+
+  let arg_type =
+    Command.Arg_type.of_alist_exn
+      ~list_values_in_help:false
+      (List.map all ~f:(fun t -> name t, t))
+  ;;
 end
 
 module Bits_module = struct
@@ -242,7 +247,9 @@ module Bits_module = struct
   let sexp_of_t t = sexp_of_bits_module (select t)
 
   let arg_type =
-    Command.Arg_type.of_alist_exn (List.map all ~f:(fun t -> short_name t, t))
+    Command.Arg_type.of_alist_exn
+      ~list_values_in_help:false
+      (List.map all ~f:(fun t -> short_name t, t))
   ;;
 end
 

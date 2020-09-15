@@ -113,6 +113,7 @@ val create_with_interface
   -> (module Interface.S_Of_signal with type Of_signal.t = 'o)
   -> (?port_checks:Port_checks.t (** Default is [Relaxed]. *)
       -> ?add_phantom_inputs:bool (** Default is [true]. *)
+      -> ?modify_outputs:(Signal.t list -> Signal.t list)
       -> name:string
       -> ('i -> 'o)
       -> t)
@@ -126,6 +127,7 @@ module With_interface (I : Interface.S) (O : Interface.S) : sig
   val create_exn
     : (?port_checks:Port_checks.t (** Default is [Relaxed]. *)
        -> ?add_phantom_inputs:bool (** Default is [true]. *)
+       -> ?modify_outputs:(Signal.t list -> Signal.t list)
        -> name:string
        -> create
        -> t)

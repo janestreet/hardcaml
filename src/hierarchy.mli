@@ -8,6 +8,7 @@ val hierarchical
   -> (module Interface.S_Of_signal with type Of_signal.t = 'o)
   -> (?port_checks:Circuit.Port_checks.t
       -> ?add_phantom_inputs:bool
+      -> ?modify_outputs:(Signal.t list -> Signal.t list)
       -> ?instance:string
       -> scope:Scope.t
       -> name:string
@@ -23,6 +24,7 @@ module With_interface (I : Interface.S) (O : Interface.S) : sig
   val create
     : (?port_checks:Circuit.Port_checks.t
        -> ?add_phantom_inputs:bool
+       -> ?modify_outputs:(Signal.t list -> Signal.t list)
        -> ?instance:string
        -> Circuit_database.t
        -> name:string
@@ -31,11 +33,13 @@ module With_interface (I : Interface.S) (O : Interface.S) : sig
         Circuit.with_create_options
 end
 
-(** Support for hierarchically structured Hardcaml designs.  We extend the standard
-    [Interface.Create_fn] pattern so that the creation function also takes a [Scope.t]
-    argument.  This allows scoping of signal naming and automatic recording of the
-    design in a [Circuit_database.t].  Top level options allow construction of a flat
-    or modular design as required for simulation or syntheis. *)
+(** Support for hierarchically structured Hardcaml designs. We extend the standard
+    [Interface.Create_fn] pattern so that the create function also takes a [Scope.t]
+    argument. This allows scoping of signal names and automatic recording of the design
+    in a [Circuit_database.t].
+
+    The scope argument controls construction of a flat or modular design as required for
+    simulation or syntheis. *)
 module In_scope (I : Interface.S) (O : Interface.S) : sig
   type create = Scope.t -> Signal.t Interface.Create_fn(I)(O).t
 
@@ -53,11 +57,13 @@ module In_scope (I : Interface.S) (O : Interface.S) : sig
       parent design.
 
       The [instance] parameter can be used to specify the instantiation and scope name, if
-      provided.  Otherwise [name] is used as the scope name, and the instantiation name is
-      derived automatically. *)
+      provided. Otherwise [name] is used as the scope name, and the instantiation name is
+      derived automatically. [name]s are mangled so they form unique hierarchical paths to
+      each instantiatiated design. *)
   val hierarchical
     : (?port_checks:Circuit.Port_checks.t
        -> ?add_phantom_inputs:bool
+       -> ?modify_outputs:(Signal.t list -> Signal.t list)
        -> ?instance:string
        -> scope:Scope.t
        -> name:string

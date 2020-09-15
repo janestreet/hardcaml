@@ -1,27 +1,12 @@
 open! Import
 
 module type Cyclesim = sig
-  module Port_list : sig
-    type t = (string * Bits.t ref) list [@@deriving sexp_of]
-  end
+  module Port_list = Cyclesim0.Port_list
 
   (** base type of the cycle based simulators *)
   type ('i, 'o) t
 
   type t_port_list = (Port_list.t, Port_list.t) t
-
-  (** Specialised signal dependencies that define a graph that breaks cycles through
-      sequential elements.  This is done by removing the input edges of registers and
-      memories (excluding the read address, since hardcaml memories are read
-      asynchronously).
-
-      Instantiations do not allow cycles from output to input ports, which is a valid
-      assumption for the simulator, but not in general.
-
-      Note that all signals in the graph cannot be reached from just the outputs of a
-      circuit using these dependencies.  The (discarded) inputs to all registers and
-      memories must also be included. *)
-  val scheduling_deps : Signal.t -> Signal.t list
 
   (** advance by 1 clock cycle (check->comb->seq->comb) *)
   val cycle : _ t -> unit
@@ -81,16 +66,7 @@ module type Cyclesim = sig
   (** construct a simulator from a circuit *)
   val create : (Circuit.t -> t_port_list) with_create_options
 
-  module Combine_error : sig
-    type t =
-      { cycle_no : int
-      ; clock_edge : Side.t
-      ; port_name : string
-      ; value0 : Bits.t
-      ; value1 : Bits.t
-      }
-    [@@deriving sexp_of]
-  end
+  module Combine_error = Cyclesim_combine.Combine_error
 
   (** Combine 2 simulators.  The inputs are set on the 1st simulator and copied to the
       2nd.  Outputs are checked and [on_error] is called if a difference is found.  By
@@ -114,6 +90,7 @@ module type Cyclesim = sig
     val create
       : (?port_checks:Circuit.Port_checks.t
          -> ?add_phantom_inputs:bool
+         -> ?modify_outputs:(Signal.t list -> Signal.t list)
          -> Circuit.With_interface(I)(O).create
          -> t)
           with_create_options
@@ -123,40 +100,9 @@ module type Cyclesim = sig
     val coerce : t_port_list -> t
   end
 
-  module Private : sig
-    type task = unit -> unit
-
-    val create
-      :  in_ports:Port_list.t
-      -> out_ports_before_clock_edge:Port_list.t
-      -> out_ports_after_clock_edge:Port_list.t
-      -> internal_ports:Port_list.t
-      -> reset:task
-      -> cycle_check:task
-      -> cycle_before_clock_edge:task
-      -> cycle_at_clock_edge:task
-      -> cycle_after_clock_edge:task
-      -> lookup_signal:(Signal.Uid.t -> Bits.t ref)
-      -> lookup_reg:(Signal.Uid.t -> Bits.t ref)
-      -> assertions:Signal.t Map.M(String).t
-      -> t_port_list
-
-    module Step : sig
-      type t =
-        | Reset
-        | Check
-        | Before_clock_edge
-        | At_clock_edge
-        | After_clock_edge
-      [@@deriving sexp_of]
-    end
-
-    val modify : ('i, 'o) t -> (Side.t * Step.t * task) list -> ('i, 'o) t
-
-    val coerce
-      :  (Port_list.t, Port_list.t) t
-      -> to_input:(Port_list.t -> 'i)
-      -> to_output:(Port_list.t -> 'o)
-      -> ('i, 'o) t
-  end
+  module Private :
+    Cyclesim0.Private
+    with type ('i, 'o) t := ('i, 'o) t
+     and type port_list = Port_list.t
+     and type t_port_list := t_port_list
 end

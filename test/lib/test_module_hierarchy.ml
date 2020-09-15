@@ -135,23 +135,23 @@ let%expect_test "flattened" =
 
         /* signal declarations */
         wire the_middle$x = 1'b0;
-        wire inner$a;
+        wire inner_0$a;
         wire _5;
         wire _8;
-        wire inner$a_0;
+        wire inner$a;
 
         /* logic */
-        assign inner$a = ~ _8;
+        assign inner_0$a = ~ _8;
         assign _5 = b;
         assign _8 = a;
-        assign inner$a_0 = ~ _8;
+        assign inner$a = ~ _8;
 
         /* aliases */
 
         /* output assignments */
-        assign c0 = inner$a_0;
+        assign c0 = inner$a;
         assign d0 = _5;
-        assign c1 = inner$a;
+        assign c1 = inner_0$a;
         assign d1 = _5;
         assign x = the_middle$x;
 
@@ -179,23 +179,23 @@ let%expect_test "flattened" =
 
         /* signal declarations */
         wire outer$the_middle$x = 1'b0;
-        wire outer$the_middle$inner$a;
+        wire outer$the_middle$inner_0$a;
         wire _5;
         wire _8;
-        wire outer$the_middle$inner$a_0;
+        wire outer$the_middle$inner$a;
 
         /* logic */
-        assign outer$the_middle$inner$a = ~ _8;
+        assign outer$the_middle$inner_0$a = ~ _8;
         assign _5 = b;
         assign _8 = a;
-        assign outer$the_middle$inner$a_0 = ~ _8;
+        assign outer$the_middle$inner$a = ~ _8;
 
         /* aliases */
 
         /* output assignments */
-        assign c0 = outer$the_middle$inner$a_0;
+        assign c0 = outer$the_middle$inner$a;
         assign d0 = _5;
-        assign c1 = outer$the_middle$inner$a;
+        assign c1 = outer$the_middle$inner_0$a;
         assign d1 = _5;
         assign x = outer$the_middle$x;
 
@@ -274,7 +274,7 @@ let%expect_test "hierarchical" =
           /* logic */
           assign _13 = _12[1:1];
           inner
-              the_inner
+              inner_0
               ( .a(_8), .b(_5), .d(_12[1:1]), .c(_12[0:0]) );
           assign _14 = _12[0:0];
           assign _5 = b;
@@ -359,17 +359,17 @@ let%expect_test "hierarchical" =
         /* signal declarations */
         wire _2;
         wire _5;
-        wire inner$a;
+        wire inner_0$a;
 
         /* logic */
         assign _2 = b;
         assign _5 = a;
-        assign inner$a = ~ _5;
+        assign inner_0$a = ~ _5;
 
         /* aliases */
 
         /* output assignments */
-        assign c = inner$a;
+        assign c = inner_0$a;
         assign d = _2;
 
     endmodule
@@ -403,7 +403,7 @@ let%expect_test "hierarchical" =
         /* logic */
         assign _13 = _12[1:1];
         inner
-            the_inner
+            inner_0
             ( .a(_8), .b(_5), .d(_12[1:1]), .c(_12[0:0]) );
         assign _14 = _12[0:0];
         assign _5 = b;
@@ -488,17 +488,17 @@ let%expect_test "hierarchical" =
         /* signal declarations */
         wire _2;
         wire _5;
-        wire outer$the_middle$inner$a;
+        wire outer$the_middle$inner_0$a;
 
         /* logic */
         assign _2 = b;
         assign _5 = a;
-        assign outer$the_middle$inner$a = ~ _5;
+        assign outer$the_middle$inner_0$a = ~ _5;
 
         /* aliases */
 
         /* output assignments */
-        assign c = outer$the_middle$inner$a;
+        assign c = outer$the_middle$inner_0$a;
         assign d = _2;
 
     endmodule
@@ -532,7 +532,7 @@ let%expect_test "hierarchical" =
         /* logic */
         assign _13 = _12[1:1];
         inner
-            the_inner
+            inner_0
             ( .a(_8), .b(_5), .d(_12[1:1]), .c(_12[0:0]) );
         assign _14 = _12[0:0];
         assign _5 = b;

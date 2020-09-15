@@ -22,12 +22,18 @@ type t =
   ; name_path : Path.t
   ; circuit_database : (Circuit_database.t[@sexp.opaque])
   ; flatten_design : bool
+  ; trace_properties : bool
   ; naming_scheme : Naming_scheme.t
   ; assertion_manager : Assertion_manager.t
+  ; instantiation_mangler : Mangler.t
+  ; property_manager : Property_manager.t
   }
 [@@deriving fields, sexp_of]
 
-let create ?(flatten_design = false) ?naming_scheme ?name () =
+(* Choose whether mangling of instantiation names is case sensitive or not. *)
+let case_sensitive = false
+
+let create ?(flatten_design = false) ?(trace_properties = false) ?naming_scheme ?name () =
   let naming_scheme =
     match (naming_scheme : Naming_scheme.t option) with
     | Some naming_scheme -> naming_scheme
@@ -43,12 +49,16 @@ let create ?(flatten_design = false) ?naming_scheme ?name () =
   ; name_path = path
   ; circuit_database = Circuit_database.create ()
   ; flatten_design
+  ; trace_properties
   ; naming_scheme
   ; assertion_manager = Assertion_manager.create ()
+  ; instantiation_mangler = Mangler.create ~case_sensitive
+  ; property_manager = Property_manager.create ()
   }
 ;;
 
 let sub_scope scope name =
+  let name = Mangler.mangle scope.instantiation_mangler name in
   { scope with
     path = Path.push scope.path name
   ; name_path =
@@ -56,6 +66,7 @@ let sub_scope scope name =
        | Full_path -> Path.push scope.path name
        | Local_path -> Path.push (Path.create ()) name
        | No_path -> Path.create ())
+  ; instantiation_mangler = Mangler.create ~case_sensitive
   }
 ;;
 
@@ -68,11 +79,24 @@ let name ?(sep = "$") scope n =
     path ^ sep ^ n
 ;;
 
+let instance (scope : t) = List.hd scope.path
 let naming ?sep scope s n = Signal.( -- ) s (name ?sep scope n)
 
 let add_assertion scope asn_name asn =
-  let asn_name = name scope asn_name in
-  Assertion_manager.add scope.assertion_manager asn_name asn
+  if not scope.trace_properties
+  then ()
+  else (
+    let asn_name = name scope asn_name in
+    Assertion_manager.add scope.assertion_manager asn_name asn)
+;;
+
+let add_ltl_property scope property_name property =
+  if not scope.trace_properties
+  then ()
+  else (
+    let property_name = name scope property_name in
+    Property_manager.add_ltl scope.property_manager property_name property)
 ;;
 
 let assertion_manager scope = scope.assertion_manager
+let property_manager scope = scope.property_manager

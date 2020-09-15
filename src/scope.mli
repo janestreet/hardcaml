@@ -14,11 +14,15 @@ end
 
 (** Control of name generation in a hierarchy of modules. The position of a module within
     a hierarchy is determined by a path which leads back to the (single) top most parent
-    module. Signal names may be pre-pended with some represtation of that path.
+    module. Signal names may be pre-pended with some representation of that path.
 
     - [No_path]    - Nothing is added to the name.
     - [Local_path] - Only the name of the enclosing module is added to the name.
-    - [Full_path]  - The full path is included in the name *)
+    - [Full_path]  - The full path is included in the name
+
+    Generally hierarchical names are taken from the circuit name, though it is possible to
+    specify a different instantiation name. These names are mangled so they are unique
+    within each scope. *)
 module Naming_scheme : sig
   type t =
     | Full_path
@@ -30,19 +34,18 @@ end
 type t [@@deriving sexp_of]
 
 (** [create ?flatten_design ?naming_scheme ?name ()] creates a new scope. If
-    [flatten_design] is [true], then all module instantions are inlined. Names
-    for wires are determiend by [naming_scheme]. *)
+    [flatten_design] is [true], then all module instantions are inlined. Names for wires
+    are determined by [naming_scheme]. *)
 val create
   :  ?flatten_design:bool (** default [false] *)
+  -> ?trace_properties:bool (** default [false *)
   -> ?naming_scheme:Naming_scheme.t
-  (** default [Full_path] when
-      [flatten_design] is [true] and
-      [No_path] otherwise. *)
+  (** defaults to [Full_path] when [flatten_design] is [true] and [No_path] otherwise. *)
   -> ?name:string
   -> unit
   -> t
 
-(** [sub_scope t label] returns a new scope with [label] appended to its
+(** [sub_scope t label] returns a new scope with (mangled) [label] appended to its
     hierarchical path *)
 val sub_scope : t -> string -> t
 
@@ -66,6 +69,10 @@ val naming_scheme : t -> Naming_scheme.t
     heirarchical name (default is [$]). *)
 val name : ?sep:string -> t -> string -> string
 
+(** Return the current (mangled) instance name. The top level module has no instance name,
+    so returns [None]. *)
+val instance : t -> string option
+
 (** Creates a hierarchical name, built with [name], and applies it to the signal.
 
     This is typically used as a partial application to construct a new signal
@@ -73,14 +80,14 @@ val name : ?sep:string -> t -> string -> string
 
     {[
       let (--) = naming scope in
-      (* ... other code ... *)
       let named_signal = some_signal -- "data" in
-      (* ... more code ... *)
     ]} *)
 val naming : ?sep:string -> t -> Signal.t -> string -> Signal.t
 
 val add_assertion : t -> string -> Signal.t -> unit
+val add_ltl_property : t -> string -> Property.LTL.path -> unit
 
 (* [assertion_manager t] returns the {!Assertion_manager.t} associated with [t]. Note
    that assertion managers are shared among {!sub_scope}s. *)
 val assertion_manager : t -> Assertion_manager.t
+val property_manager : t -> Property_manager.t
