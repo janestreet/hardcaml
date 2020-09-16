@@ -61,6 +61,9 @@ val circuit_database : t -> Circuit_database.t
     instantiations. *)
 val flatten_design : t -> bool
 
+(** [trace_properties t] returns true when tracing of ltl properties is enabled *)
+val trace_properties : t -> bool
+
 (** [naming_scheme t] returns the {!Naming.t} that [t] was constructed with. *)
 val naming_scheme : t -> Naming_scheme.t
 
@@ -83,6 +86,10 @@ val instance : t -> string option
       let named_signal = some_signal -- "data" in
     ]} *)
 val naming : ?sep:string -> t -> Signal.t -> string -> Signal.t
+
+(** Creates an atomic proposition for use in an LTL formula,
+    naming the AP with the scope's name and the provided string argument *)
+val make_ltl_ap : t -> string -> Signal.t -> Property.LTL.path
 
 val add_assertion : t -> string -> Signal.t -> unit
 val add_ltl_property : t -> string -> Property.LTL.path -> unit

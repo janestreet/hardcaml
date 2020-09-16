@@ -90,6 +90,12 @@ let add_assertion scope asn_name asn =
     Assertion_manager.add scope.assertion_manager asn_name asn)
 ;;
 
+let make_ltl_ap scope name signal =
+  let wire = Signal.wireof signal in
+  let wire = naming scope wire ("ap$" ^ name) in
+  Property.LTL.p wire
+;;
+
 let add_ltl_property scope property_name property =
   if not scope.trace_properties
   then ()
