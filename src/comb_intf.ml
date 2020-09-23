@@ -537,6 +537,15 @@ module type S = sig
       generated and overflow arithmetic used instead.  If *)
   val mod_counter : max:int -> t -> t
 
+  (** [compute_arity ~steps num_values] computes the tree arity required to reduce
+      [num_values] in [steps].  [steps<=0] raises. *)
+  val compute_arity : steps:int -> int -> int
+
+  (** [compute_tree_branches ~steps num_values] returns a list of length [steps] of
+      branching factors required to reduce [num_values]. This tends to produce a slightly
+      more balanced sequence than just applying [compute_arity] at every step. *)
+  val compute_tree_branches : steps:int -> int -> int list
+
   (** [tree ~arity ~f input] creates a tree of operations.  The arity of the operator is
       configurable.  [tree] raises if [input = []]. *)
   val tree : arity:int -> f:('a list -> 'a) -> 'a list -> 'a

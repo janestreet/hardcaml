@@ -776,6 +776,32 @@ module Make (Prims : Primitives) = struct
     else mux2 (c ==: of_int ~width:w max) (zero w) (c +: one w)
   ;;
 
+  let compute_arity ~steps num_leaves =
+    let rec croot root =
+      if Int.pow root steps >= num_leaves then root else croot (root + 1)
+    in
+    if steps <= 0
+    then raise_s [%message "[compute_arity] number of steps must be > 0"]
+    else if steps = 1
+    then num_leaves
+    else if num_leaves = 1
+    then 1
+    else max 1 (croot 2)
+  ;;
+
+  let rec compute_tree_branches ~steps num =
+    if num = 0
+    then []
+    else (
+      match steps with
+      | 0 -> []
+      | 1 -> [ num ]
+      | _ ->
+        let branches = compute_arity ~steps num in
+        branches
+        :: compute_tree_branches ~steps:(steps - 1) ((num + branches - 1) / branches))
+  ;;
+
   let[@cold] raise_tree_invalid_arity () =
     raise_s
       [%message.omit_nil
