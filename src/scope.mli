@@ -8,7 +8,8 @@ open! Import
 module Path : sig
   type t [@@deriving sexp_of]
 
-  val to_string : ?sep:string (** defaults to ["$"] *) -> t -> string
+  val default_path_seperator : string
+  val to_string : ?sep:string -> t -> string
   val to_list : t -> string list
 end
 
@@ -38,7 +39,8 @@ type t [@@deriving sexp_of]
     are determined by [naming_scheme]. *)
 val create
   :  ?flatten_design:bool (** default [false] *)
-  -> ?trace_properties:bool (** default [false *)
+  -> ?auto_label_hierarchical_ports:bool (** default [false] *)
+  -> ?trace_properties:bool (** default [false] *)
   -> ?naming_scheme:Naming_scheme.t
   (** defaults to [Full_path] when [flatten_design] is [true] and [No_path] otherwise. *)
   -> ?name:string
@@ -60,6 +62,13 @@ val circuit_database : t -> Circuit_database.t
 (** [flatten_design t] returns true when HardCaml will inline all module
     instantiations. *)
 val flatten_design : t -> bool
+
+(** [auto_label_hierarical_ports t] returns true when Hardcaml will add names to input and
+    outputs ports of each hierarchical module.
+
+    This is useful with the interactive waveform viewer. The port names are prefixed with
+    [i$] and [o$] and will be arranged in a tree view automactically. *)
+val auto_label_hierarchical_ports : t -> bool
 
 (** [trace_properties t] returns true when tracing of ltl properties is enabled *)
 val trace_properties : t -> bool

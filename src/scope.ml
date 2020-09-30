@@ -3,9 +3,10 @@ open! Import
 module Path = struct
   type t = string list [@@deriving sexp_of]
 
+  let default_path_seperator = "$"
   let create () = []
   let push path name = name :: path
-  let to_string ?(sep = "$") path = String.concat ~sep (List.rev path)
+  let to_string ?(sep = default_path_seperator) path = String.concat ~sep (List.rev path)
   let to_list path = path
 end
 
@@ -24,6 +25,7 @@ type t =
   ; flatten_design : bool
   ; trace_properties : bool
   ; naming_scheme : Naming_scheme.t
+  ; auto_label_hierarchical_ports : bool
   ; assertion_manager : Assertion_manager.t
   ; instantiation_mangler : Mangler.t
   ; property_manager : Property_manager.t
@@ -33,7 +35,14 @@ type t =
 (* Choose whether mangling of instantiation names is case sensitive or not. *)
 let case_sensitive = false
 
-let create ?(flatten_design = false) ?(trace_properties = false) ?naming_scheme ?name () =
+let create
+      ?(flatten_design = false)
+      ?(auto_label_hierarchical_ports = false)
+      ?(trace_properties = false)
+      ?naming_scheme
+      ?name
+      ()
+  =
   let naming_scheme =
     match (naming_scheme : Naming_scheme.t option) with
     | Some naming_scheme -> naming_scheme
@@ -51,6 +60,7 @@ let create ?(flatten_design = false) ?(trace_properties = false) ?naming_scheme 
   ; flatten_design
   ; trace_properties
   ; naming_scheme
+  ; auto_label_hierarchical_ports
   ; assertion_manager = Assertion_manager.create ()
   ; instantiation_mangler = Mangler.create ~case_sensitive
   ; property_manager = Property_manager.create ()
@@ -70,12 +80,12 @@ let sub_scope scope name =
   }
 ;;
 
-let name ?(sep = "$") scope n =
+let name ?(sep = Path.default_path_seperator) scope n =
   let path = name_path scope in
   match path with
   | [] -> n
   | _ ->
-    let path = Path.to_string path in
+    let path = Path.to_string ~sep path in
     path ^ sep ^ n
 ;;
 
@@ -92,7 +102,7 @@ let add_assertion scope asn_name asn =
 
 let make_ltl_ap scope name signal =
   let wire = Signal.wireof signal in
-  let wire = naming scope wire ("ap$" ^ name) in
+  let wire = naming scope wire ("ap" ^ Path.default_path_seperator ^ name) in
   Property.LTL.p wire
 ;;
 

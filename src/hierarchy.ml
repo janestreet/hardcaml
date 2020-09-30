@@ -84,6 +84,51 @@ end
 module In_scope (I : Interface.S) (O : Interface.S) = struct
   type create = Scope.t -> Signal.t Interface.Create_fn(I)(O).t
 
-  let create = create
-  let hierarchical = hierarchical (module I) (module O)
+  let create ~scope ~name create_fn inputs =
+    let scope = Scope.sub_scope scope name in
+    let label_ports = Scope.auto_label_hierarchical_ports scope in
+    let ( -- ) = Scope.naming scope in
+    let ( -- ) p s n = Signal.wireof s -- (p ^ Scope.Path.default_path_seperator ^ n) in
+    let inputs =
+      if label_ports then I.map2 inputs I.port_names ~f:(( -- ) "i") else inputs
+    in
+    let outputs = create_fn scope inputs in
+    if label_ports then O.map2 outputs O.port_names ~f:(( -- ) "o") else outputs
+  ;;
+
+  let hierarchical =
+    let hierarchy = hierarchy (module I) (module O) in
+    Circuit.with_create_options
+      (fun create_options
+        ?port_checks
+        ?add_phantom_inputs
+        ?modify_outputs
+        ?instance
+        ~(scope : Scope.t)
+        ~name
+        create_fn
+        inputs
+        ->
+          let instance =
+            match instance with
+            | None -> name
+            | Some name -> name
+          in
+          if Scope.flatten_design scope
+          then create ~scope ~name:instance create_fn inputs
+          else (
+            let scope = Scope.sub_scope scope instance in
+            let instance = Scope.instance scope in
+            Circuit.call_with_create_options
+              hierarchy
+              create_options
+              ?port_checks
+              ?add_phantom_inputs
+              ?modify_outputs
+              ?instance
+              (Scope.circuit_database scope)
+              ~name
+              (create_fn scope)
+              inputs))
+  ;;
 end
