@@ -67,7 +67,7 @@ module Test_mult = struct
 
   let%expect_test "Waveform from multiplying two numbers" =
     let module Sim = Cyclesim.With_interface (I) (O) in
-    let sim = Sim.create ~is_internal_port:(Base.Fn.const true) create in
+    let sim = Sim.create ~config:Cyclesim.Config.trace_all create in
     let waves, sim = Hardcaml_waveterm.Waveform.create sim in
     let inputs = Cyclesim.inputs sim in
     inputs.a := Bits.of_int ~width:8 11;

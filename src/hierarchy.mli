@@ -6,31 +6,25 @@ open! Import
 val hierarchical
   :  (module Interface.S_Of_signal with type Of_signal.t = 'i)
   -> (module Interface.S_Of_signal with type Of_signal.t = 'o)
-  -> (?port_checks:Circuit.Port_checks.t
-      -> ?add_phantom_inputs:bool
-      -> ?modify_outputs:(Signal.t list -> Signal.t list)
-      -> ?instance:string
-      -> scope:Scope.t
-      -> name:string
-      -> (Scope.t -> 'i -> 'o)
-      -> 'i
-      -> 'o)
-       Circuit.with_create_options
+  -> ?config:Circuit.Config.t
+  -> ?instance:string
+  -> scope:Scope.t
+  -> name:string
+  -> (Scope.t -> 'i -> 'o)
+  -> 'i
+  -> 'o
 
 module With_interface (I : Interface.S) (O : Interface.S) : sig
   (** [create database ~name create_fn inputs] creates a sub-circuit using [create_fn
       inputs] and adds it to [database].  It is then referenced in current circuit by an
       instantiation. *)
   val create
-    : (?port_checks:Circuit.Port_checks.t
-       -> ?add_phantom_inputs:bool
-       -> ?modify_outputs:(Signal.t list -> Signal.t list)
-       -> ?instance:string
-       -> Circuit_database.t
-       -> name:string
-       -> Circuit.With_interface(I)(O).create
-       -> Circuit.With_interface(I)(O).create)
-        Circuit.with_create_options
+    :  ?config:Circuit.Config.t
+    -> ?instance:string
+    -> Circuit_database.t
+    -> name:string
+    -> Circuit.With_interface(I)(O).create
+    -> Circuit.With_interface(I)(O).create
 end
 
 (** Support for hierarchically structured Hardcaml designs. We extend the standard
@@ -61,13 +55,10 @@ module In_scope (I : Interface.S) (O : Interface.S) : sig
       derived automatically. [name]s are mangled so they form unique hierarchical paths to
       each instantiatiated design. *)
   val hierarchical
-    : (?port_checks:Circuit.Port_checks.t
-       -> ?add_phantom_inputs:bool
-       -> ?modify_outputs:(Signal.t list -> Signal.t list)
-       -> ?instance:string
-       -> scope:Scope.t
-       -> name:string
-       -> create
-       -> Circuit.With_interface(I)(O).create)
-        Circuit.with_create_options
+    :  ?config:Circuit.Config.t
+    -> ?instance:string
+    -> scope:Scope.t
+    -> name:string
+    -> create
+    -> Circuit.With_interface(I)(O).create
 end

@@ -49,41 +49,37 @@ module Summary = struct
   ;;
 end
 
-type 'a with_create_options =
-  ?detect_combinational_loops:bool
-  -> ?normalize_uids:bool
-  -> ?assertions:Assertion_manager.t
-  -> 'a
-
-module Create_options = struct
+module Port_checks = struct
   type t =
-    { detect_combinational_loops : bool option
-    ; normalize_uids : bool option
-    ; assertions : Assertion_manager.t option
-    }
-  [@@deriving sexp_of]
+    | Relaxed
+    | Port_sets
+    | Port_sets_and_widths
 end
 
-let with_create_options f ?detect_combinational_loops ?normalize_uids ?assertions =
-  f { Create_options.detect_combinational_loops; normalize_uids; assertions }
-;;
+module Config = struct
+  type t =
+    { detect_combinational_loops : bool
+    ; normalize_uids : bool
+    ; assertions : Assertion_manager.t option
+    ; port_checks : Port_checks.t
+    ; add_phantom_inputs : bool
+    ; modify_outputs : Signal.t list -> Signal.t list
+    }
 
-let call_with_create_options
-      t
-      { Create_options.detect_combinational_loops; normalize_uids; assertions }
-  =
-  t ?detect_combinational_loops ?normalize_uids ?assertions
-;;
+  let default =
+    { detect_combinational_loops = true
+    ; normalize_uids = true
+    ; assertions = None
+    ; port_checks = Relaxed
+    ; add_phantom_inputs = true
+    ; modify_outputs = Fn.id
+    }
+  ;;
+end
 
-let create_exn
-      ?(detect_combinational_loops = true)
-      ?(normalize_uids = true)
-      ?assertions
-      ~name
-      outputs
-  =
+let create_exn ?(config = Config.default) ~name outputs =
   let assertions =
-    match assertions with
+    match config.assertions with
     | Some assertions -> Assertion_manager.finalize assertions
     | None -> Map.empty (module String)
   in
@@ -109,7 +105,9 @@ let create_exn
   ignore (ok_exn (Signal_graph.outputs ~validate:true signal_graph) : Signal.t list);
   (* uid normalization *)
   let signal_graph =
-    if normalize_uids then Signal_graph.normalize_uids signal_graph else signal_graph
+    if config.normalize_uids
+    then Signal_graph.normalize_uids signal_graph
+    else signal_graph
   in
   (* get new output wires *)
   let outputs = Signal_graph.outputs signal_graph |> ok_exn in
@@ -127,7 +125,7 @@ let create_exn
             | None -> None)))
   in
   (* check for combinational loops *)
-  if detect_combinational_loops
+  if config.detect_combinational_loops
   then ok_exn (Signal_graph.detect_combinational_loops signal_graph);
   (* construct the circuit *)
   { name
@@ -232,13 +230,6 @@ let structural_compare ?check_names c0 c1 =
   recurse_into_circuit ()
 ;;
 
-module Port_checks = struct
-  type t =
-    | Relaxed
-    | Port_sets
-    | Port_sets_and_widths
-end
-
 module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = struct
   type create = I.Of_signal.t -> O.Of_signal.t
 
@@ -307,45 +298,32 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
         from_.s_attributes <- []))
   ;;
 
-  let create_exn =
-    with_create_options
-      (fun create_options
-        ?(port_checks = Port_checks.Relaxed)
-        ?(add_phantom_inputs = true)
-        ?(modify_outputs = Fn.id)
-        ~name
-        logic
-        ->
-          let circuit_inputs =
-            List.map I.Names_and_widths.t ~f:(fun (n, b) -> n, Signal.input n b)
-            |> I.of_alist
-          in
-          let inputs = I.map circuit_inputs ~f:Signal.wireof in
-          let outputs = logic inputs in
-          let circuit_outputs =
-            List.map2_exn O.Names_and_widths.port_names (O.to_list outputs) ~f:(fun n s ->
-              n, Signal.output n s)
-            |> O.of_alist
-          in
-          I.iter2 inputs circuit_inputs ~f:move_port_attributes;
-          O.iter2 outputs circuit_outputs ~f:move_port_attributes;
-          let circuit =
-            call_with_create_options
-              create_exn
-              create_options
-              ~name
-              (modify_outputs (O.to_list circuit_outputs))
-          in
-          let circuit =
-            if add_phantom_inputs
-            then set_phantom_inputs circuit I.Names_and_widths.t
-            else circuit
-          in
-          (match port_checks with
-           | Relaxed -> ()
-           | Port_sets -> check_io_port_sets_match circuit
-           | Port_sets_and_widths -> check_io_port_sets_and_widths_match circuit);
-          circuit)
+  let create_exn ?(config = Config.default) ~name logic =
+    let circuit_inputs =
+      List.map I.Names_and_widths.t ~f:(fun (n, b) -> n, Signal.input n b) |> I.of_alist
+    in
+    let inputs = I.map circuit_inputs ~f:Signal.wireof in
+    let outputs = logic inputs in
+    let circuit_outputs =
+      List.map2_exn O.Names_and_widths.port_names (O.to_list outputs) ~f:(fun n s ->
+        n, Signal.output n s)
+      |> O.of_alist
+    in
+    I.iter2 inputs circuit_inputs ~f:move_port_attributes;
+    O.iter2 outputs circuit_outputs ~f:move_port_attributes;
+    let circuit =
+      create_exn ~config ~name (config.modify_outputs (O.to_list circuit_outputs))
+    in
+    let circuit =
+      if config.add_phantom_inputs
+      then set_phantom_inputs circuit I.Names_and_widths.t
+      else circuit
+    in
+    (match config.port_checks with
+     | Relaxed -> ()
+     | Port_sets -> check_io_port_sets_match circuit
+     | Port_sets_and_widths -> check_io_port_sets_and_widths_match circuit);
+    circuit
   ;;
 end
 

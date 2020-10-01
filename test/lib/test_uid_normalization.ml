@@ -41,7 +41,12 @@ let design () =
 ;;
 
 let test ~normalize_uids =
-  let circuit = Circuit.create_exn ~normalize_uids ~name:"foo" (design ()) in
+  let circuit =
+    Circuit.create_exn
+      ~config:{ Circuit.Config.default with normalize_uids }
+      ~name:"foo"
+      (design ())
+  in
   Rtl.print Verilog circuit
 ;;
 

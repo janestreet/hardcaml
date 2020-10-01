@@ -74,7 +74,9 @@ let sim combinational_ops_database (op1 : op1 list) (op2 : op2 list) args =
   let circuit =
     Circuit.create_exn ~name:"test" (List.concat (List.map (f i) ~f:O.to_list))
   in
-  let sim = Cs.create ~combinational_ops_database circuit in
+  let sim =
+    Cs.create ~config:{ Cyclesim.Config.default with combinational_ops_database } circuit
+  in
   (* simulator ports *)
   let i : Bits.t ref I.t = I.map ~f:(fun (n, _) -> S.in_port sim n) I.t in
   let o : Bits.t ref O.t list =

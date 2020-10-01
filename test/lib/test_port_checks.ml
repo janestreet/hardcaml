@@ -22,7 +22,12 @@ let%expect_test "too many inputs" =
   let module Circuit = Circuit.With_interface (I) (O) in
   let create (i : _ I.t) = { O.x = Signal.(i.a |: i.b |: input "c" 1) } in
   let circuit (port_checks : Hardcaml.Circuit.Port_checks.t) =
-    ignore (Circuit.create_exn ~port_checks ~name:"foo" create : Hardcaml.Circuit.t)
+    ignore
+      (Circuit.create_exn
+         ~config:{ Hardcaml.Circuit.Config.default with port_checks }
+         ~name:"foo"
+         create
+       : Hardcaml.Circuit.t)
   in
   circuit Relaxed;
   [%expect {||}];
@@ -43,7 +48,14 @@ let%expect_test "too few inputs" =
   let create (i : _ I.t) = { O.x = i.a } in
   let circuit (port_checks : Hardcaml.Circuit.Port_checks.t) =
     ignore
-      (Circuit.create_exn ~port_checks ~add_phantom_inputs:false ~name:"foo" create
+      (Circuit.create_exn
+         ~config:
+           { Hardcaml.Circuit.Config.default with
+             port_checks
+           ; add_phantom_inputs = false
+           }
+         ~name:"foo"
+         create
        : Hardcaml.Circuit.t)
   in
   circuit Relaxed;
@@ -72,7 +84,12 @@ let%expect_test "output width does not match" =
   let module Circuit = Circuit.With_interface (I) (O) in
   let create (i : _ I.t) = { O.x = Signal.(i.a |: i.b |> ue) } in
   let circuit (port_checks : Hardcaml.Circuit.Port_checks.t) =
-    ignore (Circuit.create_exn ~port_checks ~name:"foo" create : Hardcaml.Circuit.t)
+    ignore
+      (Circuit.create_exn
+         ~config:{ Hardcaml.Circuit.Config.default with port_checks }
+         ~name:"foo"
+         create
+       : Hardcaml.Circuit.t)
   in
   circuit Relaxed;
   [%expect {||}];

@@ -561,16 +561,18 @@ module Last_layer = struct
   ;;
 end
 
-let empty_ops_database = Combinational_ops_database.create ()
-
-let create ?is_internal_port ?(combinational_ops_database = empty_ops_database) circuit =
+let create ?(config = Cyclesim0.Config.default) circuit =
   (* add internally traced nodes *)
   let assertions = Circuit.assertions circuit in
-  let internal_ports = Internal_ports.create circuit ~is_internal_port in
+  let internal_ports =
+    Internal_ports.create circuit ~is_internal_port:config.is_internal_port
+  in
   let bundle = Schedule.create circuit internal_ports in
   (* build maps *)
   let maps : Maps.t = Maps.create bundle in
-  let compile = Compile.signal ~combinational_ops_database maps in
+  let compile =
+    Compile.signal ~combinational_ops_database:config.combinational_ops_database maps
+  in
   let compile_and_tag s = Option.map (compile s) ~f:(fun t -> uid s, t) in
   (* compile the task list *)
   let tasks_check = List.map bundle.inputs ~f:(Io_ports.check_input maps) in

@@ -36,6 +36,27 @@ let sexp_of_t sexp_of_i sexp_of_o t =
 
 type t_port_list = (Port_list.t, Port_list.t) t
 
+module Config = struct
+  type t =
+    { is_internal_port : (Signal.t -> bool) option
+    ; combinational_ops_database : Combinational_ops_database.t
+    }
+
+  let empty_ops_database = Combinational_ops_database.create ()
+
+  let default =
+    { is_internal_port = None; combinational_ops_database = empty_ops_database }
+  ;;
+
+  let trace on =
+    { is_internal_port = Some (Fn.const on)
+    ; combinational_ops_database = empty_ops_database
+    }
+  ;;
+
+  let trace_all = trace true
+end
+
 module type Private = Cyclesim0_intf.Private
 
 module Private = struct

@@ -29,6 +29,8 @@ let results_of_assertions (t : _ t) =
     | None -> Violated_or_not.Not_violated)
 ;;
 
+module Config = Cyclesim0.Config
+
 let cycle_check (sim : _ t) = sim.cycle_check ()
 let cycle_before_clock_edge (sim : _ t) = sim.cycle_before_clock_edge ()
 let cycle_at_clock_edge (sim : _ t) = sim.cycle_at_clock_edge ()
@@ -83,11 +85,6 @@ let combine = Cyclesim_combine.combine
 
 (* compilation *)
 
-type 'a with_create_options =
-  ?is_internal_port:(Signal.t -> bool)
-  -> ?combinational_ops_database:Combinational_ops_database.t
-  -> 'a
-
 let create = Cyclesim_compile.create
 
 (* interfaces *)
@@ -108,27 +105,9 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
     Private.coerce sim ~to_input ~to_output
   ;;
 
-  let create =
-    Circuit.with_create_options
-      (fun create_options
-        ?is_internal_port
-        ?combinational_ops_database
-        ?port_checks
-        ?add_phantom_inputs
-        ?modify_outputs
-        create_fn
-        ->
-          let circuit =
-            Circuit.call_with_create_options
-              C.create_exn
-              create_options
-              ?port_checks
-              ?add_phantom_inputs
-              ?modify_outputs
-              ~name:"simulator"
-              create_fn
-          in
-          let sim = create ?is_internal_port ?combinational_ops_database circuit in
-          coerce sim)
+  let create ?config ?circuit_config create_fn =
+    let circuit = C.create_exn ?config:circuit_config ~name:"simulator" create_fn in
+    let sim = create ?config circuit in
+    coerce sim
   ;;
 end

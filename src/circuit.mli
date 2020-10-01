@@ -5,24 +5,43 @@ open! Import
 (** circuit data structure *)
 type t [@@deriving sexp_of]
 
-(** [with_create_options] specifies the optional arguments that can be supplied to
-    [create_exn].
+(** Check if the ports specified in the interface match those defined in the circuit. *)
+module Port_checks : sig
+  type t =
+    | Relaxed (** No checks *)
+    | Port_sets (** Input and output port sets agree *)
+    | Port_sets_and_widths
+    (** Input and output port sets agree, and their widths are the same. *)
+end
 
-    [detect_combinational_loops] determines whether [create_exn] ensures that there is no
-    path from a signal to itself that does not pass through a register or memory.
+module Config : sig
+  type t =
+    { detect_combinational_loops : bool
+    (** Check circuit for combinational loops (cyclic paths that do not pass through a
+        register or memory). *)
+    ; normalize_uids : bool
+    (** Renumber the [Uid]s of all signals in the circuit starting at one.
 
-    [normalize_uids] determines whether [create_exn] renumbers the uids of all signals in
-    the circuit starting at one.  Uid normalization ensures that circuits will print the
-    same (as sexps or rtl) regardless of the environment in which they are constructed (in
-    particular with regard to the global uid generator). *)
-type 'a with_create_options =
-  ?detect_combinational_loops:bool (** default is [true] *)
-  -> ?normalize_uids:bool (** default is [true] *)
-  -> ?assertions:Assertion_manager.t
-  -> 'a
+        Uid normalization ensures that circuits will print the same (as sexps or rtl)
+        regardless of the environment in which they are constructed (in particular with
+        regard to the global uid generator). *)
+    ; assertions : Assertion_manager.t option
+    ; port_checks : Port_checks.t
+    (** Perform validation checks on inputs and outputs ([With_interface] only) *)
+    ; add_phantom_inputs : bool
+    (** Add inputs defined in an [Interface] but not used within the [Circuit]
+        ([With_interface] only). *)
+    ; modify_outputs : Signal.t list -> Signal.t list
+    (** Map over circuit outputs just before constructing the circuit. *)
+    }
+
+  (** Perform combination loop checking, normalize uids, [Relaxed] port checks, and add
+      phantom inputs. *)
+  val default : t
+end
 
 (** create circuit data structure  *)
-val create_exn : (name:string -> Signal.t list -> t) with_create_options
+val create_exn : ?config:Config.t -> name:string -> Signal.t list -> t
 
 (** return circuit inputs *)
 val inputs : t -> Signal.t list
@@ -75,61 +94,18 @@ val fan_in_map : t -> Signal.Uid_set.t Signal.Uid_map.t
 (** compare 2 circuits to see if they are the same *)
 val structural_compare : ?check_names:bool -> t -> t -> bool
 
-(** [Create_options] is a record with one field for each [with_create_options] argument.
-    It allows one to define a function of type [_ with_create_options] that takes the same
-    optional arguments as [create_exn] and to pass those options on to [create_exn],
-    without every having to directly refer to any of the arguments.  This makes wrapper
-    code robust to changes in what the optional arguments are.  Here is the usage idiom:
-
-    {[
-      module M : sig
-        val f : (...) Circuit.with_create_options
-      end = struct
-        let f =
-          Circuit.with_create_options (fun create_options ->
-            ...
-            call_with_create_options Circuit.create_exn create_options ~name signals;
-            ...)
-      end
-    ]} *)
-module Create_options : sig
-  type t [@@deriving sexp_of]
-end
-
-val with_create_options : (Create_options.t -> 'a) -> 'a with_create_options
-val call_with_create_options : 'a with_create_options -> Create_options.t -> 'a
-
-(** Check if the ports specified in the interface match those defined in the circuit. *)
-module Port_checks : sig
-  type t =
-    | Relaxed (** No checks *)
-    | Port_sets (** Input and output port sets agree *)
-    | Port_sets_and_widths
-    (** Input and output port sets agree, and their widths are the same. *)
-end
-
 val create_with_interface
   :  (module Interface.S_Of_signal with type Of_signal.t = 'i)
   -> (module Interface.S_Of_signal with type Of_signal.t = 'o)
-  -> (?port_checks:Port_checks.t (** Default is [Relaxed]. *)
-      -> ?add_phantom_inputs:bool (** Default is [true]. *)
-      -> ?modify_outputs:(Signal.t list -> Signal.t list)
-      -> name:string
-      -> ('i -> 'o)
-      -> t)
-       with_create_options
+  -> ?config:Config.t
+  -> name:string
+  -> ('i -> 'o)
+  -> t
 
 module With_interface (I : Interface.S) (O : Interface.S) : sig
   type create = Signal.t Interface.Create_fn(I)(O).t
 
   (** Create a circuit with [inputs] and [outputs] automatically defined and labelled
       according to the input ([I]) and output ([O]) interfaces. *)
-  val create_exn
-    : (?port_checks:Port_checks.t (** Default is [Relaxed]. *)
-       -> ?add_phantom_inputs:bool (** Default is [true]. *)
-       -> ?modify_outputs:(Signal.t list -> Signal.t list)
-       -> name:string
-       -> create
-       -> t)
-        with_create_options
+  val create_exn : ?config:Config.t -> name:string -> create -> t
 end

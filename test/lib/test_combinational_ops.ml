@@ -207,11 +207,15 @@ let%expect_test "internal representation (mutable)" =
 ;;
 
 let sim_functional ~database circuit =
-  Cyclesim.create ~combinational_ops_database:database circuit
+  Cyclesim.create
+    ~config:{ Cyclesim.Config.default with combinational_ops_database = database }
+    circuit
 ;;
 
 let sim_imperative ~database circuit =
-  Cyclesim.create ~combinational_ops_database:database circuit
+  Cyclesim.create
+    ~config:{ Cyclesim.Config.default with combinational_ops_database = database }
+    circuit
 ;;
 
 let testbench ~create_circuit ~create_sim =

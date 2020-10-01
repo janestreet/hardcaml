@@ -69,6 +69,17 @@ module type Cyclesim0 = sig
 
   type t_port_list = (Port_list.t, Port_list.t) t
 
+  module Config : sig
+    type t =
+      { is_internal_port : (Signal.t -> bool) option
+      ; combinational_ops_database : Combinational_ops_database.t
+      }
+
+    val default : t
+    val trace : bool -> t
+    val trace_all : t
+  end
+
   module type Private = Private
 
   module Private :

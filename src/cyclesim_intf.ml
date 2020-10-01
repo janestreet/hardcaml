@@ -2,6 +2,7 @@ open! Import
 
 module type Cyclesim = sig
   module Port_list = Cyclesim0.Port_list
+  module Config = Cyclesim0.Config
 
   (** base type of the cycle based simulators *)
   type ('i, 'o) t
@@ -58,13 +59,8 @@ module type Cyclesim = sig
 
   val results_of_assertions : _ t -> Violated_or_not.t Map.M(String).t
 
-  type 'a with_create_options =
-    ?is_internal_port:(Signal.t -> bool)
-    -> ?combinational_ops_database:Combinational_ops_database.t
-    -> 'a
-
   (** construct a simulator from a circuit *)
-  val create : (Circuit.t -> t_port_list) with_create_options
+  val create : ?config:Config.t -> Circuit.t -> t_port_list
 
   module Combine_error = Cyclesim_combine.Combine_error
 
@@ -88,13 +84,10 @@ module type Cyclesim = sig
     (** Create a simulator using the provided [Create_fn].  The returned simulator ports
         are coerced to the input and output interface types. *)
     val create
-      : (?port_checks:Circuit.Port_checks.t
-         -> ?add_phantom_inputs:bool
-         -> ?modify_outputs:(Signal.t list -> Signal.t list)
-         -> Circuit.With_interface(I)(O).create
-         -> t)
-          with_create_options
-          Circuit.with_create_options
+      :  ?config:Config.t
+      -> ?circuit_config:Circuit.Config.t
+      -> Circuit.With_interface(I)(O).create
+      -> t
 
     (** Coerce simulator port types to use the provided input and output interfaces. *)
     val coerce : t_port_list -> t
