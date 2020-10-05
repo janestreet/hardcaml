@@ -75,8 +75,7 @@ let get_length ~loc label_declaration =
   | None -> raise_errorf ~loc "[%s] length attribute must be set" deriver
 
 
-let field_name ~loc txt =
-  pexp_constant ~loc (Pconst_string (txt, None))
+let field_name ~loc txt = estring ~loc txt
 
 let get_rtlname ~loc txt label_declaration =
   match Attribute.(find rtlname) label_declaration with
@@ -104,7 +103,7 @@ let get_doc ~loc label_declaration =
   match Attribute.(find doc) label_declaration with
   | Some (expr) -> (
       match expr.pexp_desc with
-      | Pexp_constant (Pconst_string(str, _)) -> Some str
+      | Pexp_constant (Pconst_string(str, _, _)) -> Some str
       | _ -> raise_errorf ~loc "[%s] doc atttribute must be a string" deriver)
   | None -> None
 
@@ -507,7 +506,7 @@ let expand_ast_label opts var
       let ast = pexp_ident ~loc (Located.mk ~loc (Ldot (mname, "ast"))) in
       let mname =
         let mname = Longident.flatten_exn mname |> String.concat ~sep:"." in
-        pexp_constant ~loc (Pconst_string(mname, None)) in
+        estring ~loc mname in
       [%expr Module { name = [%e mname]
                     ; ast = [%e ast] }]
     in
@@ -559,7 +558,7 @@ let expand_ast_label opts var
     let doc =
       match get_doc ~loc label_declaration with
       | None -> [%expr None]
-      | Some doc -> [%expr Some [%e pexp_constant ~loc (Pconst_string(doc, None))]]
+      | Some doc -> [%expr Some [%e estring ~loc doc]]
     in
     [%expr { Ppx_deriving_hardcaml_runtime.Interface.Ast.Field.
              name = [%e field_name]
