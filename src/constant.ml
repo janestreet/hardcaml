@@ -26,6 +26,63 @@ external unsafe_set : Bytes.t -> int -> int64 -> unit = "%caml_bytes_set64u"
 let unsafe_get b i = unsafe_get b (i lsl shift_bytes_to_words)
 let unsafe_set b i v = unsafe_set b (i lsl shift_bytes_to_words) v
 
+module Raw = struct
+  let of_bytes bytes ~width =
+    let words = words_of_width width in
+    let b =
+      init
+        ~width
+        ~data:
+          (Bytes.init (words lsl shift_bytes_to_words) ~f:(fun i ->
+             try Bytes.get bytes i with
+             | _ -> '\000'))
+    in
+    mask width b.data;
+    b
+  ;;
+
+  let to_bytes t =
+    let len = (width t + 7) / 8 in
+    Bytes.init len ~f:(Bytes.get t.data)
+  ;;
+
+  let of_string string ~width =
+    let words = words_of_width width in
+    let b =
+      init
+        ~width
+        ~data:
+          (Bytes.init (words lsl shift_bytes_to_words) ~f:(fun i ->
+             try string.[i] with
+             | _ -> '\000'))
+    in
+    mask width b.data;
+    b
+  ;;
+
+  let to_string t =
+    let len = (width t + 7) / 8 in
+    String.init len ~f:(Bytes.get t.data)
+  ;;
+
+  let unsafe_of_bytes ~width b =
+    let expected_bytes = words_of_width width lsl shift_bytes_to_words in
+    let actual_bytes = Bytes.length b in
+    if actual_bytes <> expected_bytes
+    then
+      raise_s
+        [%message
+          "[Constant.of_bytes] Bytes.t length is not suitable for constant"
+            (expected_bytes : int)
+            (actual_bytes : int)
+            (width : int)];
+    mask width b;
+    init ~width ~data:b
+  ;;
+
+  let unsafe_to_bytes t = t.data
+end
+
 let rec rsplit_into_n ~n string =
   let len = String.length string in
   if len <= n
@@ -63,7 +120,6 @@ let to_binary_string t =
 ;;
 
 let to_binary_string_hum t = to_binary_string t |> to_hum
-let unsafe_to_bytes t = t.data
 let to_int64 t = unsafe_get t.data 0
 let to_int t = Base.Int64.to_int_trunc (to_int64 t)
 let to_int32 t = Base.Int64.to_int32_trunc (to_int64 t)
@@ -160,22 +216,6 @@ let of_binary_string b =
 ;;
 
 let of_binary_string_hum b = of_binary_string (of_hum b)
-
-let unsafe_of_bytes ~width b =
-  let expected_bytes = words_of_width width lsl shift_bytes_to_words in
-  let actual_bytes = Bytes.length b in
-  if actual_bytes <> expected_bytes
-  then
-    raise_s
-      [%message
-        "[Constant.of_bytes] Bytes.t length is not suitable for constant"
-          (expected_bytes : int)
-          (actual_bytes : int)
-          (width : int)];
-  mask width b;
-  init ~width ~data:b
-;;
-
 let minus_one = -1L
 
 let of_int64 ~width i =

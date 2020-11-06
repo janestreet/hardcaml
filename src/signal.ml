@@ -418,7 +418,6 @@ let structural_compare
         | Multiport_mem { size = mem_size0; _ }, Multiport_mem { size = mem_size1; _ } ->
           mem_size0 = mem_size1
         | Mem_read_port _, Mem_read_port _ -> true
-        (* XXX check if inputs have same names ? *)
         | Wire _, Wire _ -> true
         | Inst { instantiation = i0; _ }, Inst { instantiation = i1; _ } ->
           String.equal i0.inst_name i1.inst_name

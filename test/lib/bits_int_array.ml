@@ -219,8 +219,6 @@ module T = struct
     List.nth_exn l idx
   ;;
 
-  (* XXX some of the harder operations *)
-
   let concat_msb l =
     let c_width = List.fold l ~init:0 ~f:(fun a b -> a + width b) in
     let c_words = words c_width in

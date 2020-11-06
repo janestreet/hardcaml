@@ -313,3 +313,106 @@ let%expect_test "[Bits.num_bits_to_represent]" =
   print_s [%message "" ~_:(List.init 10 ~f:Bits.num_bits_to_represent : int list)];
   [%expect {| (1 1 2 2 3 3 3 3 4 4) |}]
 ;;
+
+let%expect_test "" =
+  let test str ~width =
+    let of_string = Constant.Raw.of_string ~width str |> Bits.of_constant in
+    let of_bytes =
+      Constant.Raw.of_bytes ~width (Bytes.of_string str) |> Bits.of_constant
+    in
+    let to_string = Bits.to_constant of_string |> Constant.Raw.to_string in
+    let to_bytes = Bits.to_constant of_bytes |> Constant.Raw.to_bytes in
+    print_s
+      [%message
+        (of_string : Bits.t)
+          (to_string : String.t)
+          (of_bytes : Bits.t)
+          (to_bytes : Bytes.t)]
+  in
+  test "\002" ~width:1;
+  test "\002" ~width:2;
+  test "\002" ~width:8;
+  test "\002" ~width:32;
+  [%expect
+    {|
+    ((of_string 0)
+     (to_string "\000")
+     (of_bytes  0)
+     (to_bytes  "\000"))
+    ((of_string 10)
+     (to_string "\002")
+     (of_bytes  10)
+     (to_bytes  "\002"))
+    ((of_string 00000010)
+     (to_string "\002")
+     (of_bytes  00000010)
+     (to_bytes  "\002"))
+    ((of_string 00000000000000000000000000000010)
+     (to_string "\002\000\000\000")
+     (of_bytes  00000000000000000000000000000010)
+     (to_bytes  "\002\000\000\000")) |}];
+  test "\001\002\003\004" ~width:8;
+  test "\001\002\003\004" ~width:16;
+  test "\001\002\003\004" ~width:24;
+  test "\001\002\003\004" ~width:32;
+  test "\001\002\003\004" ~width:40;
+  [%expect
+    {|
+    ((of_string 00000001)
+     (to_string "\001")
+     (of_bytes  00000001)
+     (to_bytes  "\001"))
+    ((of_string 0000001000000001)
+     (to_string "\001\002")
+     (of_bytes  0000001000000001)
+     (to_bytes  "\001\002"))
+    ((of_string 000000110000001000000001)
+     (to_string "\001\002\003")
+     (of_bytes  000000110000001000000001)
+     (to_bytes  "\001\002\003"))
+    ((of_string 00000100000000110000001000000001)
+     (to_string "\001\002\003\004")
+     (of_bytes  00000100000000110000001000000001)
+     (to_bytes  "\001\002\003\004"))
+    ((of_string 0000000000000100000000110000001000000001)
+     (to_string "\001\002\003\004\000")
+     (of_bytes  0000000000000100000000110000001000000001)
+     (to_bytes  "\001\002\003\004\000")) |}];
+  for width = 8 to 15 do
+    test "\000\255" ~width
+  done;
+  [%expect
+    {|
+    ((of_string 00000000)
+     (to_string "\000")
+     (of_bytes  00000000)
+     (to_bytes  "\000"))
+    ((of_string 100000000)
+     (to_string "\000\001")
+     (of_bytes  100000000)
+     (to_bytes  "\000\001"))
+    ((of_string 1100000000)
+     (to_string "\000\003")
+     (of_bytes  1100000000)
+     (to_bytes  "\000\003"))
+    ((of_string 11100000000)
+     (to_string "\000\007")
+     (of_bytes  11100000000)
+     (to_bytes  "\000\007"))
+    ((of_string 111100000000)
+     (to_string "\000\015")
+     (of_bytes  111100000000)
+     (to_bytes  "\000\015"))
+    ((of_string 1111100000000)
+     (to_string "\000\031")
+     (of_bytes  1111100000000)
+     (to_bytes  "\000\031"))
+    ((of_string 11111100000000)
+     (to_string "\000?")
+     (of_bytes  11111100000000)
+     (to_bytes  "\000?"))
+    ((of_string 111111100000000)
+     (to_string "\000\127")
+     (of_bytes  111111100000000)
+     (to_bytes  "\000\127")) |}]
+;;

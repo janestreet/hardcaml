@@ -160,7 +160,6 @@ module LTL = struct
     | X p -> "(X " ^ to_string p ^ ")"
     | U (a, b) -> "(" ^ to_string a ^ " U " ^ to_string b ^ ")"
     | R (a, b) -> "(" ^ to_string a ^ " V " ^ to_string b ^ ")"
-    (* XXX I think? weak release? *)
     | F p -> "(F " ^ to_string p ^ ")"
     | G p -> "(G " ^ to_string p ^ ")"
   ;;

@@ -41,7 +41,6 @@ open Cyclesim.Api
 
 type wave =
   { name  : string
-  (* XXX str   : t -> string*)
   ; nbits : int
   ; data  : exarray }
 

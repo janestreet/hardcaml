@@ -236,7 +236,6 @@ module SignalNameManager (S : SignalNaming) () = struct
   let add_mem signal nm =
     let name =
       List.hd_exn (names_of_signal signal)
-      (* XXX check: may need to legalize these names *)
     in
     let name_arr = mangle (name ^ "_mem") nm in
     let name_typ = mangle (name ^ "_type") nm in

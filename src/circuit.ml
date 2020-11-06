@@ -77,6 +77,42 @@ module Config = struct
   ;;
 end
 
+let check_port_names_are_well_formed inputs outputs =
+  let check direction ports =
+    let find_repeated_names ports =
+      let rec find seen repeated = function
+        | [] -> seen, repeated
+        | name :: ports ->
+          if Set.mem seen name
+          then find seen (Set.add repeated name) ports
+          else find (Set.add seen name) repeated ports
+      in
+      let empty = Set.empty (module String) in
+      find empty empty ports
+    in
+    let port_names =
+      List.map ports ~f:(fun s ->
+        match Signal.names s with
+        | [ name ] -> name
+        | _ ->
+          raise_s [%message (direction ^ "s must have a single name") (s : Signal.t)])
+    in
+    let set, repeated = find_repeated_names port_names in
+    if not (Set.is_empty repeated)
+    then
+      raise_s
+        [%message (direction ^ " port names are not unique") (repeated : Set.M(String).t)];
+    set
+  in
+  let inputs = check "Input" inputs in
+  let outputs = check "Output" outputs in
+  let input_and_output_names = Set.inter inputs outputs in
+  if not (Set.is_empty input_and_output_names)
+  then
+    raise_s
+      [%message "Port names are not unique" (input_and_output_names : Set.M(String).t)]
+;;
+
 let create_exn ?(config = Config.default) ~name outputs =
   let assertions =
     match config.assertions with
@@ -127,6 +163,8 @@ let create_exn ?(config = Config.default) ~name outputs =
   (* check for combinational loops *)
   if config.detect_combinational_loops
   then ok_exn (Signal_graph.detect_combinational_loops signal_graph);
+  (* Ensure input and output port names are unique *)
+  check_port_names_are_well_formed inputs outputs;
   (* construct the circuit *)
   { name
   ; signal_by_uid = Signal_map.create signal_graph

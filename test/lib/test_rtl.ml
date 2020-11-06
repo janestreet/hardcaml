@@ -5,19 +5,8 @@ let rtl_write_null outputs = Rtl.print Verilog (Circuit.create_exn ~name:"test" 
 
 let%expect_test "Port names must be unique" =
   require_does_raise [%here] (fun () -> rtl_write_null [ output "a" (input "a" 1) ]);
-  [%expect
-    {|
-    ("Error while writing circuit"
-      (circuit_name test)
-      (hierarchy_path (test))
-      (output ((language Verilog) (mode (To_channel <stdout>))))
-      (exn (
-        "port name has already been defined or matches a reserved identifier"
-        (port (
-          wire
-          (names (a))
-          (width   1)
-          (data_in a)))))) |}]
+  [%expect {|
+    ("Port names are not unique" (input_and_output_names (a))) |}]
 ;;
 
 let%expect_test "Port names must be legal" =

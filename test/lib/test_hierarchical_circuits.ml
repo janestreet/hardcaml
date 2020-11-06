@@ -230,26 +230,8 @@ let%expect_test "generate hierarchy with sharing" =
 
 let%expect_test "generate hierarchy exn" =
   show_raise (fun () -> create ~cause_exn:true ~share:true);
-  [%expect
-    {|
-    (circuit_database (
-      (inner  inner)
-      (middle middle)))
-
-    Verilog
-    --------
-    (raised (
-      "Error while writing circuit"
-      (circuit_name inner)
-      (hierarchy_path (outer middle inner))
-      (output ((language Verilog) (mode (To_channel <stdout>))))
-      (exn (
-        "port name has already been defined or matches a reserved identifier"
-        (port (
-          wire
-          (names (a))
-          (width   1)
-          (data_in a))))))) |}]
+  [%expect {|
+    (raised ("Port names are not unique" (input_and_output_names (a)))) |}]
 ;;
 
 open Async
