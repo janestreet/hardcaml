@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 let uid = Signal.uid
 let deps = Signal.deps

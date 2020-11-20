@@ -3,7 +3,7 @@
    All such unassigned wires are circuit inputs.  As a consequence, all other wires
    in a circuit are assigned, and hence cannot be changed. *)
 
-open! Import
+open Base
 module Uid_set = Signal.Uid_set
 
 module Signal_map = struct
@@ -77,35 +77,37 @@ module Config = struct
   ;;
 end
 
-let check_port_names_are_well_formed inputs outputs =
-  let check direction ports =
-    let find_repeated_names ports =
-      let rec find seen repeated = function
-        | [] -> seen, repeated
-        | name :: ports ->
-          if Set.mem seen name
-          then find seen (Set.add repeated name) ports
-          else find (Set.add seen name) repeated ports
-      in
-      let empty = Set.empty (module String) in
-      find empty empty ports
+let ok_exn = Or_error.ok_exn
+
+let check_ports_in_one_direction direction ports =
+  let find_repeated_names ports =
+    let rec find seen repeated = function
+      | [] -> seen, repeated
+      | name :: ports ->
+        if Set.mem seen name
+        then find seen (Set.add repeated name) ports
+        else find (Set.add seen name) repeated ports
     in
-    let port_names =
-      List.map ports ~f:(fun s ->
-        match Signal.names s with
-        | [ name ] -> name
-        | _ ->
-          raise_s [%message (direction ^ "s must have a single name") (s : Signal.t)])
-    in
-    let set, repeated = find_repeated_names port_names in
-    if not (Set.is_empty repeated)
-    then
-      raise_s
-        [%message (direction ^ " port names are not unique") (repeated : Set.M(String).t)];
-    set
+    let empty = Set.empty (module String) in
+    find empty empty ports
   in
-  let inputs = check "Input" inputs in
-  let outputs = check "Output" outputs in
+  let port_names =
+    List.map ports ~f:(fun s ->
+      match Signal.names s with
+      | [ name ] -> name
+      | _ -> raise_s [%message (direction ^ "s must have a single name") (s : Signal.t)])
+  in
+  let set, repeated = find_repeated_names port_names in
+  if not (Set.is_empty repeated)
+  then
+    raise_s
+      [%message (direction ^ " port names are not unique") (repeated : Set.M(String).t)];
+  set
+;;
+
+let check_port_names_are_well_formed inputs outputs =
+  let inputs = check_ports_in_one_direction "Input" inputs in
+  let outputs = check_ports_in_one_direction "Output" outputs in
   let input_and_output_names = Set.inter inputs outputs in
   if not (Set.is_empty input_and_output_names)
   then
@@ -336,16 +338,26 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
         from_.s_attributes <- []))
   ;;
 
+  let check_alist_of_one_direction direction alist =
+    ignore
+      (check_ports_in_one_direction direction (List.map ~f:snd alist) : Set.M(String).t)
+  ;;
+
   let create_exn ?(config = Config.default) ~name logic =
     let circuit_inputs =
-      List.map I.Names_and_widths.t ~f:(fun (n, b) -> n, Signal.input n b) |> I.of_alist
+      let ports = List.map I.Names_and_widths.t ~f:(fun (n, b) -> n, Signal.input n b) in
+      check_alist_of_one_direction "Input" ports;
+      I.of_alist ports
     in
     let inputs = I.map circuit_inputs ~f:Signal.wireof in
     let outputs = logic inputs in
     let circuit_outputs =
-      List.map2_exn O.Names_and_widths.port_names (O.to_list outputs) ~f:(fun n s ->
-        n, Signal.output n s)
-      |> O.of_alist
+      let ports =
+        List.map2_exn O.Names_and_widths.port_names (O.to_list outputs) ~f:(fun n s ->
+          n, Signal.output n s)
+      in
+      check_alist_of_one_direction "Output" ports;
+      O.of_alist ports
     in
     I.iter2 inputs circuit_inputs ~f:move_port_attributes;
     O.iter2 outputs circuit_outputs ~f:move_port_attributes;

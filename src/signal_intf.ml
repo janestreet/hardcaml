@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 module type Signal = sig
   (** Signal data type and low-level functions *)

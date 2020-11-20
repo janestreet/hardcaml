@@ -3,7 +3,7 @@
     They track a circuit database of instantiated modules, and a scheme for managing the
     naming of signals within the design. *)
 
-open! Import
+open Base
 
 module Path : sig
   type t [@@deriving sexp_of]
@@ -107,3 +107,6 @@ val add_ltl_property : t -> string -> Property.LTL.path -> unit
    that assertion managers are shared among {!sub_scope}s. *)
 val assertion_manager : t -> Assertion_manager.t
 val property_manager : t -> Property_manager.t
+
+(** add an assertion to the scope's assertion manager *)
+val assert_signal_in_always : t -> string -> Signal.t -> Always.t

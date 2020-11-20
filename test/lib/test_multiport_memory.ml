@@ -1,4 +1,5 @@
 open! Import
+open Hardcaml_waveterm
 
 let write_port address_width data_width =
   { Signal.write_clock = Signal.gnd
@@ -501,7 +502,7 @@ let%expect_test "dual port VHDL" =
 let%expect_test "simulation - write and read data on both ports" =
   let circuit = dual_port () in
   let simulator = Cyclesim.create circuit in
-  let waves, simulator = Waves.Waveform.create simulator in
+  let waves, simulator = Waveform.create simulator in
   let write_enable1 = Cyclesim.in_port simulator "write_enable1" in
   let write_address1 = Cyclesim.in_port simulator "write_address1" in
   let write_data1 = Cyclesim.in_port simulator "write_data1" in
@@ -543,7 +544,7 @@ let%expect_test "simulation - write and read data on both ports" =
   read_enable1 := Bits.gnd;
   read_enable2 := Bits.gnd;
   Cyclesim.cycle simulator;
-  Waves.Waveform.print ~display_height:42 ~display_width:86 ~wave_width:2 waves;
+  Waveform.print ~display_height:42 ~display_width:86 ~wave_width:2 waves;
   [%expect
     {|
     ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────┐
@@ -593,7 +594,7 @@ let%expect_test "simulation - write and read data on both ports" =
 let%expect_test "simulation - write on both ports - highest indexed port wins" =
   let circuit = dual_port () in
   let simulator = Cyclesim.create circuit in
-  let waves, simulator = Waves.Waveform.create simulator in
+  let waves, simulator = Waveform.create simulator in
   let write_enable1 = Cyclesim.in_port simulator "write_enable1" in
   let write_address1 = Cyclesim.in_port simulator "write_address1" in
   let write_data1 = Cyclesim.in_port simulator "write_data1" in
@@ -623,7 +624,7 @@ let%expect_test "simulation - write on both ports - highest indexed port wins" =
   read_enable1 := Bits.gnd;
   read_enable2 := Bits.gnd;
   Cyclesim.cycle simulator;
-  Waves.Waveform.print ~display_height:42 ~display_width:60 ~wave_width:2 waves;
+  Waveform.print ~display_height:42 ~display_width:60 ~wave_width:2 waves;
   [%expect
     {|
     ┌Signals──────┐┌Waves──────────────────────────────────────┐
@@ -674,7 +675,7 @@ let%expect_test "simulation - demonstrate collision modes" =
   let test collision_mode =
     let circuit = dual_port ~collision_mode () in
     let simulator = Cyclesim.create circuit in
-    let waves, simulator = Waves.Waveform.create simulator in
+    let waves, simulator = Waveform.create simulator in
     let write_enable1 = Cyclesim.in_port simulator "write_enable1" in
     let write_address1 = Cyclesim.in_port simulator "write_address1" in
     let write_data1 = Cyclesim.in_port simulator "write_data1" in
@@ -694,7 +695,7 @@ let%expect_test "simulation - demonstrate collision modes" =
     write_enable1 := Bits.gnd;
     read_enable1 := Bits.gnd;
     Cyclesim.cycle simulator;
-    Waves.Waveform.print ~display_height:42 ~display_width:60 ~wave_width:2 waves
+    Waveform.print ~display_height:42 ~display_width:60 ~wave_width:2 waves
   in
   test Read_before_write;
   [%expect

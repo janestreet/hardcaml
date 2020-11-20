@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 
 let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =

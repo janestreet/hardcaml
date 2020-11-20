@@ -1,6 +1,6 @@
 (** The underlying representations of [Constant.t] and [Bits.t].  Not exposed by the
     Hardcaml interface. *)
-open! Import
+open Base
 
 type t = private
   { width : int

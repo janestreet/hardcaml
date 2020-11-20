@@ -1,4 +1,4 @@
-open! Import
+open Base
 open Signal
 
 include Fifo_intf.T

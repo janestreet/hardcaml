@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 module T = struct
   open Bin_prot.Std

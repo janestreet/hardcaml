@@ -1,6 +1,6 @@
 (** Creation and manipulation of hardware circuits *)
 
-open! Import
+open Base
 
 (** circuit data structure *)
 type t [@@deriving sexp_of]

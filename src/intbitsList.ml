@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 (* Bits API built using lists on ints.  Allows any bit precision and is simple, but
    slow. *)

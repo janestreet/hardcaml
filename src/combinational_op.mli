@@ -1,6 +1,6 @@
 (** A custom combinational operation that can be inserted into a simulation. *)
 
-open! Import
+open Base
 
 (** Implementation of the custom operation using [Bits.Mutable.t] *)
 type create_fn = Bits.Mutable.t list -> Bits.Mutable.t list -> unit

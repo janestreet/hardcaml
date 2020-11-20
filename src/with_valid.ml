@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 type ('valid, 'value) t2 =
   { valid : 'valid

@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 let keywords s = String.split_lines s |> List.map ~f:String.strip
 

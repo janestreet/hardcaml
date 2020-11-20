@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 (* This allows the creation of sequential hardware designs using [if], [while] and
    [assignments]. *)

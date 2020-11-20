@@ -3,6 +3,7 @@
    while in showahead mode it is valid along with the empty flags deassertion. *)
 
 open! Import
+open Hardcaml_waveterm
 
 module I = struct
   type 'a t =
@@ -38,7 +39,7 @@ let wrap ~capacity ~(create_fn : Fifo.create_fifo) (i : _ I.t) =
 ;;
 
 let display_rules =
-  Waves.Display_rule.(
+  Display_rule.(
     [ I.map I.port_names ~f:(port_name_is ~wave_format:(Bit_or Unsigned_int)) |> I.to_list
     ; O.map O.port_names ~f:(port_name_is ~wave_format:(Bit_or Unsigned_int)) |> O.to_list
     ; [ port_name_matches Re.Posix.(re ".*" |> compile) ~wave_format:(Bit_or Unsigned_int)
@@ -73,19 +74,14 @@ let fill_then_empty (waves, sim) =
   inputs.rd := Bits.gnd;
   Cyclesim.cycle sim;
   Cyclesim.cycle sim;
-  Waves.Waveform.print
-    ~display_width:87
-    ~display_height:27
-    ~wave_width:1
-    ~display_rules
-    waves
+  Waveform.print ~display_width:87 ~display_height:27 ~wave_width:1 ~display_rules waves
 ;;
 
 let%expect_test "classic" =
   let module Sim = Cyclesim.With_interface (I) (O) in
   wrap ~capacity:4 ~create_fn:(Fifo.create ~showahead:false)
   |> Sim.create
-  |> Waves.Waveform.create
+  |> Waveform.create
   |> fill_then_empty;
   [%expect
     {|
@@ -122,7 +118,7 @@ let%expect_test "showahead" =
   let module Sim = Cyclesim.With_interface (I) (O) in
   wrap ~capacity:4 ~create_fn:(Fifo.create ~showahead:true)
   |> Sim.create
-  |> Waves.Waveform.create
+  |> Waveform.create
   |> fill_then_empty;
   [%expect
     {|
@@ -159,7 +155,7 @@ let%expect_test "classic with reg" =
   let module Sim = Cyclesim.With_interface (I) (O) in
   wrap ~capacity:4 ~create_fn:Fifo.create_classic_with_extra_reg
   |> Sim.create
-  |> Waves.Waveform.create
+  |> Waveform.create
   |> fill_then_empty;
   [%expect
     {|
@@ -196,7 +192,7 @@ let%expect_test "showahead from classic" =
   let module Sim = Cyclesim.With_interface (I) (O) in
   wrap ~capacity:4 ~create_fn:Fifo.create_showahead_from_classic
   |> Sim.create
-  |> Waves.Waveform.create
+  |> Waveform.create
   |> fill_then_empty;
   [%expect
     {|
@@ -233,7 +229,7 @@ let%expect_test "showahead with extra reg" =
   let module Sim = Cyclesim.With_interface (I) (O) in
   wrap ~capacity:4 ~create_fn:Fifo.create_showahead_with_extra_reg
   |> Sim.create
-  |> Waves.Waveform.create
+  |> Waveform.create
   |> fill_then_empty;
   [%expect
     {|

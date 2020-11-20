@@ -1,4 +1,4 @@
-open! Import
+open Base
 include Interface_intf
 
 module Create_fn (I : S) (O : S) = struct
@@ -315,6 +315,17 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     let port_names = to_list port_names
     let port_widths = to_list port_widths
   end
+
+  module Of_always = struct
+    let assign dst src = map2 dst src ~f:Always.( <-- ) |> to_list |> Always.proc
+    let value t = map t ~f:(fun a -> a.Always.Variable.value)
+
+    let reg spec ~enable =
+      map port_widths ~f:(fun width -> Always.Variable.reg spec ~enable ~width)
+    ;;
+
+    let wire f = map port_widths ~f:(fun width -> Always.Variable.wire ~default:(f width))
+  end
 end
 
 module Make_enums (Enum : Interface_intf.Enum) = struct
@@ -333,6 +344,10 @@ module Make_enums (Enum : Interface_intf.Enum) = struct
   end
 
   let num_enums = List.length Enum.all
+
+  let raise_non_exhaustive_mux () =
+    failwith "[mux] on enum cases not exhaustive, and [default] not provided"
+  ;;
 
   module Binary = struct
     let width = Int.ceil_log2 (List.length Enum.all)
@@ -355,12 +370,25 @@ module Make_enums (Enum : Interface_intf.Enum) = struct
 
     let to_enum t = Map.find_exn to_enum (Bits.to_int t)
 
-    let mux (type a) (module Comb : Comb.S with type t = a) ~(default : a) selector cases =
+    let mux
+          (type a)
+          (module Comb : Comb.S with type t = a)
+          ?(default : a option)
+          selector
+          cases
+      =
       let out_cases = Array.create ~len:num_enums default in
       List.iter cases ~f:(fun (enum, value) ->
-        out_cases.(Enum.Variants.to_rank enum) <- value);
-      Comb.mux selector (Array.to_list out_cases)
+        out_cases.(Enum.Variants.to_rank enum) <- Some value);
+      let cases =
+        List.map (Array.to_list out_cases) ~f:(function
+          | None -> raise_non_exhaustive_mux ()
+          | Some case -> case)
+      in
+      Comb.mux selector cases
     ;;
+
+    let equal (type a) (module Comb : Comb.S with type t = a) = Comb.( ==: )
 
     module For_testing = struct
       let set t enum = t := of_enum (module Bits) enum
@@ -389,16 +417,27 @@ module Make_enums (Enum : Interface_intf.Enum) = struct
 
     let to_enum t = Map.find_exn to_enum (Bits.to_int t)
 
-    let mux (type a) (module Comb : Comb.S with type t = a) ~(default : a) selector cases =
+    let mux
+          (type a)
+          (module Comb : Comb.S with type t = a)
+          ?(default : a option)
+          selector
+          cases
+      =
       let out_cases = Array.create ~len:num_enums default in
       List.iter cases ~f:(fun (enum, value) ->
-        out_cases.(Enum.Variants.to_rank enum) <- value);
-      List.map2_exn
-        (Comb.bits_lsb selector)
-        (Array.to_list out_cases)
-        ~f:(fun valid value -> { With_valid.valid; value })
+        out_cases.(Enum.Variants.to_rank enum) <- Some value);
+      let cases =
+        List.map (Array.to_list out_cases) ~f:(function
+          | None -> raise_non_exhaustive_mux ()
+          | Some case -> case)
+      in
+      List.map2_exn (Comb.bits_lsb selector) cases ~f:(fun valid value ->
+        { With_valid.valid; value })
       |> Comb.onehot_select
     ;;
+
+    let equal (type a) (module Comb : Comb.S with type t = a) = Comb.( ==: )
 
     module For_testing = struct
       let set t enum = t := of_enum (module Bits) enum

@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 module type Cyclesim = sig
   module Port_list = Cyclesim0.Port_list

@@ -1,6 +1,10 @@
-open! Import
+open Base
 open Printf
 open Signal
+module Out_channel = Stdio.Out_channel
+module Filename = Caml.Filename
+
+let fprintf = Out_channel.fprintf
 
 (* write a DOT file with rank information - looks absolutely terrible *)
 let write_dot_rank chan circuit =

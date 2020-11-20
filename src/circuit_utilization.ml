@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 module Total_bits = struct
   type t =

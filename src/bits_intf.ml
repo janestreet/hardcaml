@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 module type Bits = sig
   type t [@@deriving compare, sexp_of]

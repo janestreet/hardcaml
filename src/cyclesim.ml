@@ -1,4 +1,4 @@
-open! Import
+open Base
 include Cyclesim_intf
 
 (* types defined in Cyclesim0. *)

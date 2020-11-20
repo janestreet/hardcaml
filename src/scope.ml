@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 module Path = struct
   type t = string list [@@deriving sexp_of]
@@ -116,3 +116,10 @@ let add_ltl_property scope property_name property =
 
 let assertion_manager scope = scope.assertion_manager
 let property_manager scope = scope.property_manager
+
+let assert_signal_in_always scope asn_name asn =
+  let asn_var = Always.Variable.wire ~default:(Signal.one 1) in
+  add_assertion scope asn_name (Always.Variable.value asn_var);
+  Always.( <-- ) asn_var asn
+;;
+

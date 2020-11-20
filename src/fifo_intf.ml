@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 module type Config = sig
   val data_width : int

@@ -505,3 +505,23 @@ let%expect_test "verify_clock_pins" =
         (enable     0b1))
        (data_in memory_read_port))))) |}]
 ;;
+
+let%expect_test "Raises when encounters duplicated ports in interfaces." =
+  let module I = struct
+    type 'a t =
+      { foo : 'a [@rtlname "hello"]
+      ; bar : 'a [@rtlname "hello"]
+      }
+    [@@deriving sexp_of, hardcaml]
+  end
+  in
+  let module O = struct
+    type 'a t = { baz : 'a } [@@deriving sexp_of, hardcaml]
+  end
+  in
+  let module C = Circuit.With_interface (I) (O) in
+  Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+    C.create_exn ~name:"circuit" (fun (input : _ I.t) ->
+      { O.baz = input.foo +: uresize input.bar 30 }));
+  [%expect {| ("Input port names are not unique" (repeated (hello))) |}]
+;;

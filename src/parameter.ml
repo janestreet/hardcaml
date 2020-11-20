@@ -1,6 +1,10 @@
-module Unstable = struct
-  open! Base
+open Base
 
+module type Unstable = sig
+  type t [@@deriving compare, sexp]
+end
+
+module Unstable = struct
   module Std_logic = struct
     type t =
       | U
@@ -48,8 +52,6 @@ module Unstable = struct
 
   include T
 end
-
-open! Import
 
 module Std_logic = struct
   module Unstable = Unstable.Std_logic

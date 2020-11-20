@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 module type Rtl = sig
   module Language : sig
@@ -19,7 +19,7 @@ module type Rtl = sig
           of the circuit name and the approriate file extension ([.v] for Verilog and
           [.vhd] for VHDL). *)
       | To_buffer of Buffer.t (** Write all circuits into one buffer. *)
-      | To_channel of Out_channel.t (** Write all circuits to one out channel. *)
+      | To_channel of Stdio.Out_channel.t (** Write all circuits to one out channel. *)
       | To_file of string (** Write all circuits into one file. *)
     [@@deriving sexp_of]
   end

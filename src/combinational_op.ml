@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 type create_fn = (Bits.Mutable.t list -> Bits.Mutable.t list -> unit[@sexp.opaque])
 [@@deriving sexp_of]

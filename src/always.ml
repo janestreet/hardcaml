@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 let ( ==: ) = Signal.( ==: )
 
@@ -78,12 +78,6 @@ let ( <-- ) (a : Variable.t) b =
           ~expression_width:(Signal.width b : int)
           ~expression:(b : Signal.t)];
   Assign (a, b)
-;;
-
-let assert_signal scope asn_name asn =
-  let asn_var = Variable.wire ~default:(Signal.one 1) in
-  Scope.add_assertion scope asn_name (Variable.value asn_var);
-  asn_var <-- asn
 ;;
 
 let ( <--. ) (a : Variable.t) b = a <-- Signal.of_int ~width:(Signal.width a.value) b
@@ -229,7 +223,7 @@ module State_machine = struct
       | None ->
         raise_s
           [%message
-            (concat [ "[Always.State_machine."; name; "] got unknown state" ])
+            (String.concat [ "[Always.State_machine."; name; "] got unknown state" ])
               ~_:(state : State.t)]
     in
     let state_val name s = snd (find_state name s) in

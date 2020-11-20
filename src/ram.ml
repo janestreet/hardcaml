@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 module Collision_mode = struct
   module T = struct

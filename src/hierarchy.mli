@@ -1,7 +1,7 @@
 (** Allow a hardcaml circuit to be defined as a hierarchy of modules, rather than just a
     single flat module. *)
 
-open! Import
+open Base
 
 val hierarchical
   :  (module Interface.S_Of_signal with type Of_signal.t = 'i)

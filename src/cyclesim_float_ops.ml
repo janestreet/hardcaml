@@ -1,4 +1,4 @@
-open! Import
+open Base
 include Cyclesim_float_ops_intf
 
 (* simulation modules for floating point arithmetic *)
@@ -89,7 +89,7 @@ struct
   let ( *: ) = op2 ( *. ) "mul"
   let ( /: ) = op2 ( /. ) "div"
   let ( %: ) = op2 Float.mod_float "mod"
-  let ( **: ) = op2 ( ** ) "pow"
+  let ( **: ) = op2 Float.( ** ) "pow"
   let exp = op1 Float.exp "exp"
   let log = op1 Float.log "log"
   let log10 = op1 Float.log10 "log10"
@@ -103,8 +103,8 @@ struct
   let cosh = op1 Float.cosh "cosh"
   let sinh = op1 Float.sinh "sinh"
   let tanh = op1 Float.tanh "tanh"
-  let ceil = op1 ceil "ceil"
-  let floor = op1 floor "floor"
+  let ceil = op1 Float.round_up "ceil"
+  let floor = op1 Float.round_down "floor"
   let abs = op1 Float.abs "abs"
 end
 

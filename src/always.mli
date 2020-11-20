@@ -8,6 +8,7 @@
     variables;
 
     {[
+      let r_sync = Reg_spec.create ~clock ~clear in
       let var = wire (zero 8) in
       let var = reg r_sync enable 8 in
     ]}
@@ -80,7 +81,7 @@
       ....
     v} *)
 
-open! Import
+open Base
 
 (** The type of variables in guarded assignments.  Variables may be asychronous
     [wire]s, or synchronous [reg]s.  The current value of the variable may be
@@ -137,9 +138,6 @@ val ( <-- ) : Variable.t -> Signal.t -> t
 
 (** assignment with an integer constant - width is inferred *)
 val ( <--. ) : Variable.t -> int -> t
-
-(** add an assertion to the scope's assertion manager *)
-val assert_signal : Scope.t -> string -> Signal.t -> t
 
 module State_machine : sig
   type 'a t =

@@ -1,4 +1,4 @@
-open! Import
+open! Base
 
 module type Real = sig
   val database : Combinational_ops_database.t

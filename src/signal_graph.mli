@@ -2,7 +2,7 @@
     to inputs (unassigned wires or constants).  Functions are provided for traversing
     the graph. *)
 
-open! Import
+open Base
 
 type t [@@deriving sexp_of]
 

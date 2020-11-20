@@ -1,4 +1,4 @@
-open! Import
+open Base
 include Bits0
 
 let char_zero = Char.to_int '0'

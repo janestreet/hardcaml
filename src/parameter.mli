@@ -3,7 +3,11 @@
 
     In Verilog they are called [parameters]s and in VHDL they are called [generic]s. *)
 
-open! Import
+open Base
+
+module type Unstable = sig
+  type t [@@deriving compare, sexp]
+end
 
 (** 9-state VHDL std_logic enumeration *)
 module Std_logic : sig

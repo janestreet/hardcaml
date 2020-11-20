@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 type t [@@deriving sexp_of]
 

@@ -2,7 +2,7 @@
 
     For use with generated RTL when we want to reference some non-hardcaml modules. *)
 
-open! Import
+open Base
 
 val create
   :  ?lib:string

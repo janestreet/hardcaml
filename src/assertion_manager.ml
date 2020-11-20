@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 type t =
   { mutable map : Signal.t Map.M(String).t

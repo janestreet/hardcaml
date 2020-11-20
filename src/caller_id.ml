@@ -1,4 +1,4 @@
-open! Import
+open Base
 module Printexc = Caml.Printexc
 
 module Mode = struct
@@ -20,7 +20,7 @@ type t =
   | Full_trace of Printexc.location option list
 
 let sexp_of_location (t : Printexc.location) =
-  let loc = sprintf "%s:%i:%i" t.filename t.line_number t.start_char in
+  let loc = Printf.sprintf "%s:%i:%i" t.filename t.line_number t.start_char in
   [%sexp (loc : string)]
 ;;
 

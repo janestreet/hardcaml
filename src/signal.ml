@@ -1,4 +1,4 @@
-open! Import
+open Base
 open! Signal_intf
 
 module Signal_op = struct

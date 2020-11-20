@@ -1,7 +1,7 @@
 (** RTL name of parameters on instantiated modules. *)
 
 
-open! Import
+open Base
 
 type t [@@deriving compare, sexp]
 

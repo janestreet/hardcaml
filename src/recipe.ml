@@ -1,4 +1,4 @@
-open! Import
+open Base
 open Signal
 open! Recipe_intf
 
@@ -145,7 +145,7 @@ let follow ~clock ~enable start (Recipe r) =
     | _ ->
       (* this can lead to combinatorial loops, so perhaps an exception would be better
       *)
-      printf "unassigned var; defaulting to zero\n";
+      Stdio.printf "unassigned var; defaulting to zero\n";
       o <== zero (width o)
       (* unassigned variable *));
   fin, a

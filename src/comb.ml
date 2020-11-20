@@ -1,4 +1,4 @@
-open! Import
+open Base
 include Comb_intf
 
 module Make_primitives (Gates : Gates) = struct

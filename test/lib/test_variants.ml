@@ -41,6 +41,13 @@ module Test (Enum : Hardcaml.Interface.S_enum with module Enum := Cases) = struc
     ((selector C3) (value 0000000000000011))
     ((selector C4) (value 0000000000000100)) |}]
   ;;
+
+  let%expect_test "Raises when non exhaustive without default" =
+    Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+      Enum.mux (module Bits) (Enum.of_enum (module Bits) C0) []);
+    [%expect
+      {| (Failure "[mux] on enum cases not exhaustive, and [default] not provided") |}]
+  ;;
 end
 
 include Test (Enum.Binary)

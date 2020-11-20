@@ -1,6 +1,6 @@
 (** Tables of reserved words in Verilog, VHDL and OCaml. *)
 
-open! Import
+open Base
 
 val verilog : string list
 val vhdl : string list

@@ -1,6 +1,6 @@
 (** Representation of variable width Constants and conversion to/from OCaml types. *)
 
-open! Import
+open Base
 
 type t = Bits0.t [@@deriving compare, sexp, bin_io]
 

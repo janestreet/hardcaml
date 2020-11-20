@@ -6,7 +6,7 @@
 
     By default it is not enabled. *)
 
-open! Import
+open Base
 
 module Mode : sig
   type t =

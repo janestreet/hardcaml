@@ -3,7 +3,7 @@
     Can be specified with arbitrary numbers of read and write ports, though in reality
     only up to 1 of each can be inferred by a synthesizer. *)
 
-open! Import
+open Base
 
 module Collision_mode : sig
   type t =

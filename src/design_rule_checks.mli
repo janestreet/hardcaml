@@ -1,6 +1,6 @@
 (** Simple circuit analsysis passes for common issues. *)
 
-open! Import
+open Base
 
 (** Raises if there exists a seqential element (register or memory) whose clock input pin
     is not in [expected_clock_pins]. Clocks are defined by the name of input clock signals

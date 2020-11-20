@@ -1,8 +1,8 @@
 (** Write circuit as graph. *)
 
-open! Import
+open Base
 
-val write_dot_rank : Out_channel.t -> Circuit.t -> unit
+val write_dot_rank : Stdio.Out_channel.t -> Circuit.t -> unit
 
 (** write a GDL (graph description language) file of the given circuit *)
 val write_gdl
@@ -10,7 +10,7 @@ val write_gdl
   -> ?widths:bool
   -> ?consts:bool
   -> ?clocks:bool
-  -> Out_channel.t
+  -> Stdio.Out_channel.t
   -> Circuit.t
   -> unit
 

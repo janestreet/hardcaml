@@ -1,7 +1,7 @@
 (** Uses a [valid] bit to indicate the validity of a [value].  Conceptually similar to an
     [Option.t]. *)
 
-open! Import
+open Base
 
 type ('valid, 'value) t2 =
   { valid : 'valid

@@ -28,7 +28,7 @@
    NOTE: It would be nice if many of the rules below could be encoded into the
    type system, but I dont know how or if it's possible. *)
 
-open! Import
+open Base
 include Structural_intf
 
 type name = string

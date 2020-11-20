@@ -1,4 +1,4 @@
-open! Import
+open Base
 
 module type Pre_partial = sig
   type 'a t [@@deriving sexp_of]
@@ -236,6 +236,21 @@ module type S = sig
     include Of_signal_functions with type t := t
   end
 
+  (** Helper functions to ease usage of the Always API when working with interfaces. *)
+  module Of_always : sig
+    val value : Always.Variable.t t -> Signal.t t
+
+    (** Assign a interface containing variables in an always block. *)
+    val assign : Always.Variable.t t -> Signal.t t -> Always.t
+
+    (** Creates a interface container with register variables. *)
+    val reg : Reg_spec.t -> enable:Signal.t -> Always.Variable.t t
+
+    (** Creates a interface container with wire variables, e.g. [Foo.Of_always.wire
+        Signal.zero], which would yield wires defaulting to zero. *)
+    val wire : (int -> Signal.t) -> Always.Variable.t t
+  end
+
   module Names_and_widths : Names_and_widths
 end
 
@@ -299,10 +314,11 @@ module type S_enum = sig
 
   val of_enum : (module Comb.S with type t = 'a) -> Enum.t -> 'a t
   val to_enum : Bits.t t -> Enum.t
+  val equal : (module Comb.S with type t = 'a) -> 'a t -> 'a t -> 'a
 
   val mux
     :  (module Comb.S with type t = 'a)
-    -> default:'a
+    -> ?default:'a
     -> 'a t
     -> (Enum.t * 'a) list
     -> 'a

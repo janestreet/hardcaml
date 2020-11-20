@@ -1,5 +1,6 @@
 open Base
 open Hardcaml
+open Hardcaml_waveterm
 open Signal
 open Recipe
 open Let_syntax
@@ -68,7 +69,7 @@ module Test_mult = struct
   let%expect_test "Waveform from multiplying two numbers" =
     let module Sim = Cyclesim.With_interface (I) (O) in
     let sim = Sim.create ~config:Cyclesim.Config.trace_all create in
-    let waves, sim = Hardcaml_waveterm.Waveform.create sim in
+    let waves, sim = Waveform.create sim in
     let inputs = Cyclesim.inputs sim in
     inputs.a := Bits.of_int ~width:8 11;
     inputs.b := Bits.of_int ~width:8 16;
@@ -78,7 +79,7 @@ module Test_mult = struct
     for _ = 0 to 10 do
       Cyclesim.cycle sim
     done;
-    Hardcaml_waveterm.Waveform.print ~display_height:40 ~display_width:80 waves;
+    Waveform.print ~display_height:40 ~display_width:80 waves;
     [%expect
       {|
       ┌Signals───────────┐┌Waves─────────────────────────────────────────────────────┐
