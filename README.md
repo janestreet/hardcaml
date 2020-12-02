@@ -12,10 +12,13 @@ Hardcaml is an OCaml library for designing hardware.
 # Install
 
 ```
-$ opam install hardcaml
+$ opam install hardcaml ppx_deriving_hardcaml hardcaml_waveterm
 ```
 
-This will also include `ppx_deriving_hardcaml`.
+# Documentation
+
+* [Manual](https://github.com/janestreet/hardcaml/blob/master/docs/intro.mdx)
+* [API Docs](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml)
 
 # Related tools and libraries
 

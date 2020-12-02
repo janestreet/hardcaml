@@ -1,5 +1,29 @@
 open Base
 
+let validate_circuit_against_interface
+      (type i)
+      (module I : Interface.S_Of_signal with type Of_signal.t = i)
+      circuit
+  =
+  let circuit_inputs =
+    Circuit.inputs circuit
+    |> List.map ~f:(fun s -> Signal.names s |> List.hd_exn)
+    |> Set.of_list (module String)
+  in
+  let interface_inputs = Set.of_list (module String) I.Names_and_widths.port_names in
+  let input_ports_in_circuit_but_not_interface =
+    Set.diff circuit_inputs interface_inputs
+  in
+  let circuit_name = Circuit.name circuit in
+  if not (Set.is_empty input_ports_in_circuit_but_not_interface)
+  then
+    raise_s
+      [%message
+        "Error while instantiating module hierarchy"
+          (circuit_name : string)
+          (input_ports_in_circuit_but_not_interface : Set.M(String).t)]
+;;
+
 let hierarchy
       (type i o)
       (module I : Interface.S_Of_signal with type Of_signal.t = i)
@@ -14,6 +38,7 @@ let hierarchy
   let create_inst = Instantiation.create_with_interface (module I) (module O) in
   let create_circuit_exn = Circuit.create_with_interface (module I) (module O) in
   let circuit = create_circuit_exn ?config ~name create_fn in
+  validate_circuit_against_interface (module I) circuit;
   let name = Circuit_database.insert db circuit in
   create_inst ?instance ~name inputs
 ;;

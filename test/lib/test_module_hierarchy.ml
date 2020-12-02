@@ -600,3 +600,45 @@ let%expect_test "hierarchical" =
 
     endmodule |}]
 ;;
+
+module Floating_inner = struct
+  include Inner
+  open Signal
+
+  let create scope foo (i : _ I.t) =
+    let ( -- ) = Scope.naming scope in
+    { O.c = ~:(i.a) -- "a"; d = foo |: i.b }
+  ;;
+
+  let hierarchical scope foo =
+    let module Hier = Hierarchy.In_scope (I) (O) in
+    Hier.hierarchical ~scope ~name:"floating_inner" (fun scope i -> create scope foo i)
+  ;;
+end
+
+module Floating_outer = struct
+  module I = struct
+    type 'a t =
+      { foo : 'a
+      ; inner : 'a Floating_inner.I.t
+      }
+    [@@deriving sexp_of, hardcaml]
+  end
+
+  module O = Floating_inner.O
+
+  let create scope (i : _ I.t) = Floating_inner.hierarchical scope i.foo i.inner
+end
+
+let%expect_test "floating ports not in interface" =
+  let module Circ = Circuit.With_interface (Floating_outer.I) (Floating_outer.O) in
+  let scope = Scope.create ~flatten_design:false () in
+  require_does_raise [%here] (fun () ->
+    let circ = Circ.create_exn ~name:"floating_outer" (Floating_outer.create scope) in
+    Rtl.print Verilog ~database:(Scope.circuit_database scope) circ);
+  [%expect
+    {|
+    ("Error while instantiating module hierarchy"
+     (circuit_name floating_inner)
+     (input_ports_in_circuit_but_not_interface (foo))) |}]
+;;
