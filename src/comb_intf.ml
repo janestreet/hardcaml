@@ -175,6 +175,9 @@ module type S = sig
   (** convert a [char] to an 8 bit constant *)
   val of_char : char -> t
 
+  (** Convert bits to a Zarith.t *)
+  val to_z : t -> signedness:Constant.Signedness.t -> Zarith.Z.t
+
   val constv : string -> t [@@deprecated "[since 2019-11] constv]"]
   val consti : width:int -> int -> t [@@deprecated "[since 2019-11] consti]"]
   val consti32 : width:int -> int32 -> t [@@deprecated "[since 2019-11] consti32]"]
@@ -405,6 +408,9 @@ module type S = sig
   val ( >=+ ) : t -> t -> t
 
   val ( >=+. ) : t -> int -> t
+
+  (** Propositional logic implication operator *)
+  val ( -->: ) : t -> t -> t
 
   (** create string from signal *)
   val to_string : t -> string

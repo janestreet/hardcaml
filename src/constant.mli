@@ -38,8 +38,8 @@ val to_int64 : t -> int64
 (** Convert to array of int64s *)
 val to_int64_array : t -> int64 array
 
-(** Convert to an unsigned arbitrary precision integer. *)
-val to_z : t -> Zarith.Z.t
+(** Convert to an arbitrary precision integer. *)
+val to_z : signedness:Signedness.t -> t -> Zarith.Z.t
 
 (** Convert to a hex encoded string. *)
 val to_hex_string : signedness:Signedness.t -> t -> string

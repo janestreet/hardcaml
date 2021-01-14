@@ -475,9 +475,9 @@ module VerilogCore : Rtl_internal = struct
     let tag = print_attribute s in
     match s with
     | Empty -> raise_unexpected ~while_:"declaring signals" ~got_signal:s
-    | Mux { cases; _ } ->
+    | Mux { select; cases; _ } ->
       (match cases with
-       | [ _; _ ] -> io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
+       | [ _; _ ] when width select = 1 -> io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
        | _ -> io (tag ^ t4 ^ decl Reg name (width s) ^ ";\n"))
     | Op2 _ | Not _ | Cat _ | Wire _ | Select _ | Inst _ ->
       io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
@@ -572,7 +572,10 @@ module VerilogCore : Rtl_internal = struct
       io (t4 ^ "assign " ^ sn ^ " = { " ^ cat ^ " };\n")
     | Mux { select; cases; _ } ->
       (match cases with
-       | [ false_; true_ ] ->
+       | [ false_; true_ ] when width select = 1 ->
+         (* the select width must be [1] bit, if we want to write in the ternary
+            expression format or verilator fails to compile due to one of it's lint
+            checks. *)
          io
            (t4
             ^ "assign "

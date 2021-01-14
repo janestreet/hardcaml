@@ -1,5 +1,16 @@
 (** The underlying representations of [Constant.t] and [Bits.t].  Not exposed by the
-    Hardcaml interface. *)
+    Hardcaml interface.
+
+    They are represented by 2 fields - a bit [width] and [data] represented as a
+    [Bytes.t].
+
+    Abstractly, [data] is thought of as an array of 64 bit integers. Even a single bit
+    vector requires 64 bits to store it. Any unused upper bits must be set to [0] - this
+    is a requirement of functions over [Bits].
+
+    It is represented with [Bytes.t] because that is a more efficient memory layout than
+    an ocaml array of [Int64]s.
+*)
 open Base
 
 type t = private

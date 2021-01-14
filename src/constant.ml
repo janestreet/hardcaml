@@ -125,7 +125,7 @@ let to_int t = Base.Int64.to_int_trunc (to_int64 t)
 let to_int32 t = Base.Int64.to_int32_trunc (to_int64 t)
 let to_int64_array t = Array.init (words t) ~f:(unsafe_get t.data)
 
-let to_z t =
+let to_z ~signedness t =
   let module Z = Zarith.Z in
   let words = words t in
   let rec f word z =
@@ -139,7 +139,13 @@ let to_z t =
       let z = Z.(logor (shift_left z 32) (of_int64 a)) in
       f (word - 1) z)
   in
-  f (words - 1) Z.zero
+  let z = f (words - 1) Z.zero in
+  match (signedness : Signedness.t) with
+  | Unsigned -> z
+  | Signed ->
+    let width = t.width in
+    let is_unsigned = Z.(compare (z land shift_left one Int.(width - 1)) zero = 0) in
+    if is_unsigned then z else Z.(z - shift_left (of_int 1) width)
 ;;
 
 let to_hex_string ~signedness t =

@@ -547,6 +547,9 @@ module Make (Prims : Primitives) = struct
   let ( >+. ) a b = op_int_right ( >+ ) a b
   let ( <=+. ) a b = op_int_right ( <=+ ) a b
   let ( >=+. ) a b = op_int_right ( >=+ ) a b
+
+  (* propositional logic implication *)
+  let ( -->: ) a b = ~:a |: b
   let to_string a = Prims.to_string a
   let to_int a = to_constant a |> Constant.to_int
   let to_bstr a = to_constant a |> Constant.to_binary_string
@@ -555,6 +558,7 @@ module Make (Prims : Primitives) = struct
   let bits_msb s = bits_lsb s |> List.rev
   let to_array b = Array.of_list (bits_lsb b)
   let of_array l = concat_lsb (Array.to_list l)
+  let to_z b = to_constant b |> Constant.to_z
 
   (* {[
        let rec repeat s n =
