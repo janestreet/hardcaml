@@ -5,6 +5,7 @@ include Cyclesim_intf
 
 module Port_list = Cyclesim0.Port_list
 module Private = Cyclesim0.Private
+module Digest = Cyclesim0.Digest
 
 type t_port_list = Cyclesim0.t_port_list
 type ('i, 'o) t = ('i, 'o) Cyclesim0.t [@@deriving sexp_of]
@@ -14,6 +15,7 @@ let lookup_signal = Cyclesim0.lookup_signal
 let internal_ports = Cyclesim0.internal_ports
 let in_ports = Cyclesim0.in_ports
 let inputs = Cyclesim0.inputs
+let digest t = Cyclesim0.digest t
 
 module Violated_or_not = struct
   type t =

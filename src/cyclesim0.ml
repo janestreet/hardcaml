@@ -6,6 +6,15 @@ end
 
 type task = unit -> unit
 
+module Digest = struct
+  type t = Md5_lib.t
+
+  let sexp_of_t t = [%sexp_of: string] (Md5_lib.to_hex t : string)
+  let compare a b = String.compare (Md5_lib.to_binary a) (Md5_lib.to_binary b)
+  let equal a b = String.equal (Md5_lib.to_binary a) (Md5_lib.to_binary b)
+  let none = Md5_lib.string "none"
+end
+
 type ('i, 'o) t =
   { in_ports : Port_list.t
   ; out_ports_before_clock_edge : Port_list.t
@@ -23,6 +32,7 @@ type ('i, 'o) t =
   ; lookup_reg : Signal.Uid.t -> Bits.t ref
   ; assertions : Signal.t Map.M(String).t
   ; violated_assertions : int list Hashtbl.M(String).t
+  ; digest : Digest.t ref
   }
 [@@deriving fields]
 
@@ -40,17 +50,22 @@ module Config = struct
   type t =
     { is_internal_port : (Signal.t -> bool) option
     ; combinational_ops_database : Combinational_ops_database.t
+    ; compute_digest : bool
     }
 
   let empty_ops_database = Combinational_ops_database.create ()
 
   let default =
-    { is_internal_port = None; combinational_ops_database = empty_ops_database }
+    { is_internal_port = None
+    ; combinational_ops_database = empty_ops_database
+    ; compute_digest = Exported_for_specific_uses.am_testing
+    }
   ;;
 
   let trace on =
     { is_internal_port = Some (Fn.const on)
     ; combinational_ops_database = empty_ops_database
+    ; compute_digest = Exported_for_specific_uses.am_testing
     }
   ;;
 
@@ -95,6 +110,7 @@ module Private = struct
     ; lookup_reg
     ; assertions
     ; violated_assertions = Hashtbl.create (module String)
+    ; digest = ref (Md5_lib.string "none")
     }
   ;;
 

@@ -2,6 +2,7 @@ open Base
 
 module type Cyclesim = sig
   module Port_list = Cyclesim0.Port_list
+  module Digest = Cyclesim0.Digest
   module Config = Cyclesim0.Config
 
   (** base type of the cycle based simulators *)
@@ -47,6 +48,7 @@ module type Cyclesim = sig
   (** get list of internal nodes *)
   val internal_ports : _ t -> Port_list.t
 
+  val digest : _ t -> Digest.t ref
   val lookup_signal : _ t -> Signal.Uid.t -> Bits.t ref
   val lookup_reg : _ t -> Signal.Uid.t -> Bits.t ref
 

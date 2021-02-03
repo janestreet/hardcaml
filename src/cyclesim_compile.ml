@@ -561,6 +561,44 @@ module Last_layer = struct
   ;;
 end
 
+module Compute_digest = struct
+  let create out_ports_before out_ports_after internal_ports =
+    let digest = ref (Md5_lib.string "digest of hardcaml simulation") in
+    let digest_length = String.length (Md5_lib.to_binary !digest) in
+    let ports =
+      [ out_ports_before; out_ports_after; internal_ports ]
+      |> List.concat
+      |> List.map ~f:snd
+    in
+    let total_length =
+      digest_length
+      + List.fold ports ~init:0 ~f:(fun total bits ->
+        total + Bytes.length (Bits.Unsafe.data !bits))
+    in
+    let digestable_string = Bytes.init total_length ~f:(Fn.const '\000') in
+    let build_digestable_string () =
+      (* copy bits into digestable string *)
+      let pos =
+        List.fold ports ~init:digest_length ~f:(fun pos bits ->
+          let bytes = Bits.Unsafe.data !bits in
+          let length = Bytes.length bytes in
+          Bytes.blito ~src:bytes ~dst:digestable_string ~dst_pos:pos ();
+          pos + length)
+      in
+      assert (pos = Bytes.length digestable_string)
+    in
+    let compute_digest () =
+      build_digestable_string ();
+      Bytes.blito
+        ~src:(Md5_lib.to_binary !digest |> Bytes.of_string)
+        ~dst:digestable_string
+        ();
+      digest := Md5_lib.bytes digestable_string
+    in
+    digest, compute_digest
+  ;;
+end
+
 let create ?(config = Cyclesim0.Config.default) circuit =
   (* add internally traced nodes *)
   let assertions = Circuit.assertions circuit in
@@ -641,6 +679,12 @@ let create ?(config = Cyclesim0.Config.default) circuit =
     then Last_layer.create circuit tasks_comb
     else tasks_before_clock_edge
   in
+  let digest, digest_task =
+    Compute_digest.create
+      out_ports_before_clock_edge
+      out_ports_after_clock_edge
+      internal_ports
+  in
   { Cyclesim0.in_ports
   ; out_ports_after_clock_edge
   ; out_ports_before_clock_edge
@@ -658,11 +702,17 @@ let create ?(config = Cyclesim0.Config.default) circuit =
         ; [ check_assertions_task ]
         ]
   ; cycle_at_clock_edge = task tasks_at_clock_edge
-  ; cycle_after_clock_edge = tasks [ tasks_after_clock_edge; [ out_ports_task ] ]
+  ; cycle_after_clock_edge =
+      tasks
+        [ tasks_after_clock_edge
+        ; [ out_ports_task ]
+        ; (if config.compute_digest then [ digest_task ] else [])
+        ]
   ; reset = tasks [ resets; [ clear_violated_assertions_task ] ]
   ; lookup_signal
   ; lookup_reg
   ; assertions
   ; violated_assertions
+  ; digest
   }
 ;;

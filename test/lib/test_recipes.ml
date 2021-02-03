@@ -79,7 +79,7 @@ module Test_mult = struct
     for _ = 0 to 10 do
       Cyclesim.cycle sim
     done;
-    Waveform.print ~display_height:40 ~display_width:80 waves;
+    Waveform.expect ~display_height:40 ~display_width:80 waves;
     [%expect
       {|
       ┌Signals───────────┐┌Waves─────────────────────────────────────────────────────┐
@@ -121,6 +121,7 @@ module Test_mult = struct
       │                  ││                                                          │
       │                  ││                                                          │
       │                  ││                                                          │
-      └──────────────────┘└──────────────────────────────────────────────────────────┘ |}]
+      └──────────────────┘└──────────────────────────────────────────────────────────┘
+      b993c3a853ad99911831ed3fca3f925f |}]
   ;;
 end

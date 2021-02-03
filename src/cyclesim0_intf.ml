@@ -45,6 +45,12 @@ module type Cyclesim0 = sig
     type t = (string * Bits.t ref) list [@@deriving sexp_of]
   end
 
+  module Digest : sig
+    type t = Md5_lib.t [@@deriving sexp_of, compare, equal]
+
+    val none : t
+  end
+
   type task = unit -> unit
 
   type ('i, 'o) t =
@@ -64,6 +70,7 @@ module type Cyclesim0 = sig
     ; lookup_reg : Signal.Uid.t -> Bits.t ref
     ; assertions : Signal.t Map.M(String).t
     ; violated_assertions : int list Hashtbl.M(String).t
+    ; digest : Digest.t ref
     }
   [@@deriving fields, sexp_of]
 
@@ -72,7 +79,14 @@ module type Cyclesim0 = sig
   module Config : sig
     type t =
       { is_internal_port : (Signal.t -> bool) option
+      (** Passed each signal in the design which has a name. Returns [true] if the
+          simulator should expose it for reading in the testbench (or display in a
+          waveform). *)
       ; combinational_ops_database : Combinational_ops_database.t
+      (** Database of instantiations which may be replace by a combinational operation. *)
+      ; compute_digest : bool
+      (** Compute an md5 digest of the outputs of a simulation run. Enabled by default
+          within inlined tests. *)
       }
 
     val default : t

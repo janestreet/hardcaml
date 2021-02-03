@@ -50,7 +50,6 @@ let wrap sim =
   let ports p= List.map
                  (fun s ->
                     { name = fst s
-                    (* XXX str = Bits.to_string*)
                     ; nbits = Bits.width !(snd s)
                     ; data = make () }) p
   in
@@ -329,7 +328,7 @@ module Gui = struct
            render_1 (0, margin) (!w_width, w_height) !n ctx
              (select data.data !ofs !n)
          else
-           let str = Bits.to_string in (* XXX data.str *)
+           let str = Bits.to_string in
            render_n str (0, margin) (!w_width, w_height) !n ctx
              (select data.data !ofs !n));
         ctx##stroke;
