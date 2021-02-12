@@ -1,5 +1,16 @@
 open Base
-include Interface_intf
+
+include struct
+  open Interface_intf
+
+  module type Pre_partial = Pre_partial
+  module type Pre = Pre
+  module type S = S
+  module type S_Of_signal = S_Of_signal
+  module type Ast = Ast
+  module type Empty = Empty
+  module type Comb = Comb
+end
 
 module Create_fn (I : S) (O : S) = struct
   type 'a t = 'a I.t -> 'a O.t
@@ -88,6 +99,9 @@ module Ast = struct
 
   type t = Ast.t [@@deriving sexp_of]
 end
+
+module type S_enum = Interface_intf.S_enum with module Ast := Ast
+module type S_enums = Interface_intf.S_enums with module Ast := Ast
 
 module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   include X
@@ -341,6 +355,17 @@ module Make_enums (Enum : Interface_intf.Enum) = struct
     let iter a ~f = f a
     let iter2 a b ~f = f a b
     let t = M.t
+
+    let ast : Ast.t =
+      [ { Ast.Field.name = fst M.t
+        ; type_ = Signal { bits = snd M.t; rtlname = fst M.t }
+        ; sequence = None
+        ; doc = None
+        }
+      ]
+    ;;
+
+    let[@inline always] to_raw t = t
   end
 
   let num_enums = List.length Enum.all

@@ -392,10 +392,11 @@ let last_layer_of_nodes ~is_input graph =
     | None ->
       (* These nodes are not scheduled, so need filtering. They are all terminal nodes
          under scheduling deps. Put them in the map as not in the final layer. *)
-      if Signal.is_const signal
-      || Signal.is_empty signal
-      || Signal.is_multiport_mem signal
-      || is_input signal
+      if
+        Signal.is_const signal
+        || Signal.is_empty signal
+        || Signal.is_multiport_mem signal
+        || is_input signal
       then
         Map.set in_layer ~key:(uid signal) ~data:false, false
         (* Regs are not in the final layer either, but we can't add them to the map as

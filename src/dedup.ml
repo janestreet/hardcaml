@@ -199,11 +199,12 @@ let transform_sequential_signal canonical signal =
     let write_ports =
       Array.map
         write_ports
-        ~f:(fun { Signal.write_clock : Signal.t
-                ; write_address : Signal.t
-                ; write_enable : Signal.t
-                ; write_data : Signal.t
-                }
+        ~f:(fun
+             { Signal.write_clock : Signal.t
+             ; write_address : Signal.t
+             ; write_enable : Signal.t
+             ; write_data : Signal.t
+             }
              ->
                { Signal.write_clock = get_canonical write_clock
                ; write_address = get_canonical write_address

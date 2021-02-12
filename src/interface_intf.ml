@@ -309,9 +309,11 @@ end
 (** Functions to project an [Enum] type into and out of hardcaml bit vectors representated
     as an interface. *)
 module type S_enum = sig
+  module Ast : Ast
   module Enum : Enum
   include S
 
+  val ast : Ast.t
   val of_enum : (module Comb.S with type t = 'a) -> Enum.t -> 'a t
   val to_enum : Bits.t t -> Enum.t
   val equal : (module Comb.S with type t = 'a) -> 'a t -> 'a t -> 'a
@@ -323,6 +325,8 @@ module type S_enum = sig
     -> (Enum.t * 'a) list
     -> 'a
 
+  val to_raw : 'a t -> 'a
+
   module For_testing : sig
     val set : Bits.t ref t -> Enum.t -> unit
     val get : Bits.t ref t -> Enum.t
@@ -331,9 +335,10 @@ end
 
 (** Binary and onehot selectors for [Enums]. *)
 module type S_enums = sig
+  module Ast : Ast
   module Enum : Enum
-  module Binary : S_enum with module Enum := Enum
-  module One_hot : S_enum with module Enum := Enum
+  module Binary : S_enum with module Enum := Enum and module Ast := Ast
+  module One_hot : S_enum with module Enum := Enum and module Ast := Ast
 end
 
 module type Interface = sig
@@ -361,8 +366,8 @@ module type Interface = sig
 
   module Make (X : Pre) : S with type 'a t := 'a X.t
 
-  module type S_enum = S_enum
-  module type S_enums = S_enums
+  module type S_enum = S_enum with module Ast := Ast
+  module type S_enums = S_enums with module Ast := Ast
 
   (** Constructs a hardcaml interface which represents hardware for the given [Enum] as an
       absstract [Interface]. *)

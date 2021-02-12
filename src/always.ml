@@ -39,7 +39,8 @@ module Variable = struct
   let pipeline ~depth (spec : Reg_spec.t) ~enable ~width =
     if depth = 0
     then
-      if (* use a wire - need to derive the default value *)
+      if
+        (* use a wire - need to derive the default value *)
         Signal.is_empty spec.reg_reset_value
       then wire ~default:(Signal.zero width)
       else wire ~default:spec.reg_reset_value
