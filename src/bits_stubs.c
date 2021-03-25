@@ -35,7 +35,7 @@ CAMLprim value hardcaml_bits_mask(intnat width, value vdst) {
 }
 
 CAMLprim value hardcaml_bits_mask_bc(value width, value vdst) {
-  return hardcaml_bits_mask(Val_int(width), vdst);
+  return hardcaml_bits_mask(Int_val(width), vdst);
 }
 
 /* Add two multiword [Bits.t].  The widths of the arguments and results are the same.
