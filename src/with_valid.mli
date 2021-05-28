@@ -7,7 +7,7 @@ type ('valid, 'value) t2 =
   { valid : 'valid
   ; value : 'value
   }
-[@@deriving sexp]
+[@@deriving sexp, bin_io]
 
 type 'a t = ('a, 'a) t2 [@@deriving sexp_of]
 

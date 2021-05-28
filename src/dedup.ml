@@ -18,7 +18,7 @@ module Structure_kind = struct
     | Wire of string list
     | Select of int * int
     | Mem_read_port
-    | Sequential of Signal.Uid.t
+    | Dont_dedup of Signal.Uid.t
   [@@deriving sexp_of, compare, hash]
 
   let equal a b = compare a b = 0
@@ -34,16 +34,16 @@ let structure_kind (signal : Signal.t) =
   | Signal.Not _ -> Structure_kind.Not
   | Signal.Wire _ -> Structure_kind.Wire (Signal.names signal)
   | Signal.Select { high; low; _ } -> Structure_kind.Select (high, low)
-  | Signal.Reg _ -> Structure_kind.Sequential (Signal.uid signal)
-  | Signal.Mem _ -> Structure_kind.Sequential (Signal.uid signal)
-  | Signal.Multiport_mem _ -> Structure_kind.Sequential (Signal.uid signal)
+  | Signal.Reg _ -> Structure_kind.Dont_dedup (Signal.uid signal)
+  | Signal.Mem _ -> Structure_kind.Dont_dedup (Signal.uid signal)
+  | Signal.Multiport_mem _ -> Structure_kind.Dont_dedup (Signal.uid signal)
   | Signal.Mem_read_port _ -> Structure_kind.Mem_read_port
-  | Signal.Inst _ -> Structure_kind.Sequential (Signal.uid signal)
+  | Signal.Inst _ -> Structure_kind.Dont_dedup (Signal.uid signal)
 ;;
 
 let children (signal : Signal.t) =
   match structure_kind signal with
-  | Structure_kind.Sequential _ -> []
+  | Structure_kind.Dont_dedup _ -> []
   | _ ->
     (match signal with
      | Wire { driver; _ } -> [ !driver ]
@@ -120,7 +120,7 @@ let signal_hash memo signal =
 
 let make_canonical_signal canonical sequential_wires signal =
   match structure_kind signal with
-  | Structure_kind.Sequential _ ->
+  | Structure_kind.Dont_dedup _ ->
     let wire = Signal.wire (Signal.width signal) in
     Hashtbl.add_exn sequential_wires ~key:(Signal.uid signal) ~data:(signal, wire);
     wire
@@ -134,8 +134,16 @@ let make_canonical_signal canonical sequential_wires signal =
     map_children signal ~f:(fun child -> Hashtbl.find_exn canonical (Signal.uid child))
 ;;
 
+let is_anonymous signal = Signal.is_empty signal || List.is_empty (Signal.names signal)
+
+(* Note that named signals should never be equivalent. It is not sufficient to check for
+   Signal naming equality. If two signals are named the same thing, the simulation trace
+   should render them as two different signals, ie: [XYZ] and [XYZ_0].
+*)
 let rec shallow_equal a b =
-  Structure_kind.equal (structure_kind a) (structure_kind b)
+  is_anonymous a
+  && is_anonymous b
+  && Structure_kind.equal (structure_kind a) (structure_kind b)
   &&
   match a, b with
   | Wire { driver = r_a; _ }, Wire { driver = r_b; _ } ->
@@ -149,74 +157,85 @@ let rec shallow_equal a b =
 
 let transform_sequential_signal canonical signal =
   let get_canonical signal = Hashtbl.find_exn canonical (Signal.uid signal) in
-  match signal with
-  | Signal.Reg
-      { signal_id
-      ; register =
-          { Signal.reg_clock
-          ; reg_clock_edge
-          ; reg_reset
-          ; reg_reset_edge
-          ; reg_reset_value
-          ; reg_clear
-          ; reg_clear_level
-          ; reg_clear_value
-          ; reg_enable
-          }
-      ; d
-      } ->
-    let d = get_canonical d in
-    let register =
-      { Signal.reg_clock = get_canonical reg_clock
-      ; reg_clock_edge
-      ; reg_reset = get_canonical reg_reset
-      ; reg_reset_edge
-      ; reg_reset_value = get_canonical reg_reset_value
-      ; reg_clear = get_canonical reg_clear
-      ; reg_clear_level
-      ; reg_clear_value = get_canonical reg_clear_value
-      ; reg_enable = get_canonical reg_enable
-      }
+  let rewrite_instantiation (instantiation : Signal.instantiation) =
+    let inst_inputs =
+      List.map instantiation.inst_inputs ~f:(fun (name, s) -> name, get_canonical s)
     in
+    { instantiation with inst_inputs }
+  in
+  let rewrite_register register =
+    let { Signal.reg_clock
+        ; reg_clock_edge
+        ; reg_reset
+        ; reg_reset_edge
+        ; reg_reset_value
+        ; reg_clear
+        ; reg_clear_level
+        ; reg_clear_value
+        ; reg_enable
+        }
+      =
+      register
+    in
+    { Signal.reg_clock = get_canonical reg_clock
+    ; reg_clock_edge
+    ; reg_reset = get_canonical reg_reset
+    ; reg_reset_edge
+    ; reg_reset_value = get_canonical reg_reset_value
+    ; reg_clear = get_canonical reg_clear
+    ; reg_clear_level
+    ; reg_clear_value = get_canonical reg_clear_value
+    ; reg_enable = get_canonical reg_enable
+    }
+  in
+  let rewrite_signal_id (signal_id : Signal.signal_id) =
+    { signal_id with
+      s_id = Signal.new_id ()
+    ; s_deps = List.map signal_id.Signal.s_deps ~f:get_canonical
+    }
+  in
+  let rewrite_memory memory =
+    let { Signal.mem_size; mem_read_address; mem_write_address; mem_write_data } =
+      memory
+    in
+    { Signal.mem_size
+    ; mem_read_address = get_canonical mem_read_address
+    ; mem_write_address = get_canonical mem_write_address
+    ; mem_write_data = get_canonical mem_write_data
+    }
+  in
+  let rewrite_write_port { Signal.write_clock; write_address; write_enable; write_data } =
+    { Signal.write_clock = get_canonical write_clock
+    ; write_address = get_canonical write_address
+    ; write_enable = get_canonical write_enable
+    ; write_data = get_canonical write_data
+    }
+  in
+  match signal with
+  | Signal.Reg { signal_id; register; d } ->
     Signal.Reg
-      { signal_id =
-          { signal_id with
-            s_id = Signal.new_id ()
-          ; s_deps =
-              [ d
-              ; register.reg_clock
-              ; register.reg_reset
-              ; register.reg_reset_value
-              ; register.reg_clear
-              ; register.reg_clear_value
-              ; register.reg_enable
-              ]
-          }
-      ; register
-      ; d
+      { signal_id = rewrite_signal_id signal_id
+      ; register = rewrite_register register
+      ; d = get_canonical d
       }
   | Signal.Multiport_mem { signal_id; size; write_ports } ->
-    let write_ports =
-      Array.map
-        write_ports
-        ~f:(fun
-             { Signal.write_clock : Signal.t
-             ; write_address : Signal.t
-             ; write_enable : Signal.t
-             ; write_data : Signal.t
-             }
-             ->
-               { Signal.write_clock = get_canonical write_clock
-               ; write_address = get_canonical write_address
-               ; write_enable = get_canonical write_enable
-               ; write_data = get_canonical write_data
-               })
-    in
     Signal.Multiport_mem
-      { signal_id =
-          { signal_id with s_deps = List.map signal_id.Signal.s_deps ~f:get_canonical }
+      { signal_id = rewrite_signal_id signal_id
       ; size
-      ; write_ports
+      ; write_ports = Array.map write_ports ~f:rewrite_write_port
+      }
+  | Signal.Mem { signal_id; extra_uid; memory; register } ->
+    Signal.Mem
+      { signal_id = rewrite_signal_id signal_id
+      ; register = rewrite_register register
+      ; memory = rewrite_memory memory
+      ; extra_uid
+      }
+  | Inst { signal_id; extra_uid; instantiation } ->
+    Signal.Inst
+      { signal_id = rewrite_signal_id signal_id
+      ; extra_uid
+      ; instantiation = rewrite_instantiation instantiation
       }
   | _ ->
     let sexp_of_finite_signal signal =
@@ -224,7 +243,7 @@ let transform_sequential_signal canonical signal =
     in
     raise_s
       [%message
-        "Unexpected signal type. Only sequential signals are expected here"
+        "Unexpected signal type. Only [Dont_dedup]-type signals are expected here"
           (signal : finite_signal)]
 ;;
 
@@ -307,9 +326,17 @@ let deduplicate circuit =
   let all_original_signals =
     Circuit.signal_graph circuit |> Signal_graph.filter ~f:(Fn.const true)
   in
-  let canonical = canonicalize all_original_signals in
+  let canonical =
+    canonicalize (all_original_signals @ Map.data (Circuit.assertions circuit))
+  in
   let outputs = Circuit.outputs circuit in
+  let assertions =
+    Map.map (Circuit.assertions circuit) ~f:(fun signal ->
+      Hashtbl.find_exn canonical (Signal.uid signal))
+    |> Assertion_manager.of_signals
+  in
   Circuit.create_exn
+    ~config:{ Circuit.Config.default with assertions = Some assertions }
     ~name:(Circuit.name circuit)
     (List.map outputs ~f:(fun signal -> Hashtbl.find_exn canonical (Signal.uid signal)))
 ;;

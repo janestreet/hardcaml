@@ -72,4 +72,4 @@ let command =
          })
 ;;
 
-let () = Command.run ~version:"1.0" ~build_info:"?" command
+let () = Command_unix.run ~version:"1.0" ~build_info:"?" command

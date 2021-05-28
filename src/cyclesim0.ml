@@ -51,6 +51,7 @@ module Config = struct
     { is_internal_port : (Signal.t -> bool) option
     ; combinational_ops_database : Combinational_ops_database.t
     ; compute_digest : bool
+    ; deduplicate_signals : bool
     }
 
   let empty_ops_database = Combinational_ops_database.create ()
@@ -59,6 +60,7 @@ module Config = struct
     { is_internal_port = None
     ; combinational_ops_database = empty_ops_database
     ; compute_digest = Exported_for_specific_uses.am_testing
+    ; deduplicate_signals = true
     }
   ;;
 
@@ -66,6 +68,7 @@ module Config = struct
     { is_internal_port = Some (Fn.const on)
     ; combinational_ops_database = empty_ops_database
     ; compute_digest = Exported_for_specific_uses.am_testing
+    ; deduplicate_signals = true
     }
   ;;
 

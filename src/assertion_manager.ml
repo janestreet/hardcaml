@@ -19,3 +19,5 @@ let finalize t =
   t.is_finalized <- true;
   t.map
 ;;
+
+let of_signals signals = { map = signals; is_finalized = true }

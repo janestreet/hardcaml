@@ -600,6 +600,9 @@ module Compute_digest = struct
 end
 
 let create ?(config = Cyclesim0.Config.default) circuit =
+  let circuit =
+    if config.deduplicate_signals then Dedup.deduplicate circuit else circuit
+  in
   (* add internally traced nodes *)
   let assertions = Circuit.assertions circuit in
   let internal_ports =

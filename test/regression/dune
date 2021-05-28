@@ -1,2 +1,3 @@
 (executables (names test_comb_bits_primitives)
- (libraries base core hardcaml_test stdio) (preprocess (pps ppx_jane)))
+ (libraries base core.command_unix core hardcaml_test stdio)
+ (preprocess (pps ppx_jane)))

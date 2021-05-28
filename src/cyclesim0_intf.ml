@@ -87,6 +87,8 @@ module type Cyclesim0 = sig
       ; compute_digest : bool
       (** Compute an md5 digest of the outputs of a simulation run. Enabled by default
           within inlined tests. *)
+      ; deduplicate_signals : bool
+      (** Perform a pass which finds structurally equal signals and shares them. *)
       }
 
     val default : t
