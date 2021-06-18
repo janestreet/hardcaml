@@ -5,6 +5,7 @@ let create
       ?(arch = "rtl")
       ?instance
       ?(parameters = [])
+      ?(attributes = [])
       ()
       ~name
       ~inputs
@@ -38,13 +39,15 @@ let create
           }
       }
   in
+  List.iter attributes ~f:(fun attribute ->
+    ignore (Signal.add_attribute signal attribute : Signal.t));
   List.map outputs ~f:(fun (name, (width, offset)) ->
     name, Signal.select signal (offset + width - 1) offset)
   |> Map.of_alist_exn (module String)
 ;;
 
 module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = struct
-  let create ?lib ?arch ?instance ?parameters ~name inputs =
+  let create ?lib ?arch ?instance ?parameters ?attributes ~name inputs =
     let inputs =
       List.map2_exn I.Names_and_widths.t (I.to_list inputs) ~f:(fun (n, _) s -> n, s)
     in
@@ -55,6 +58,7 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
         ?arch
         ?instance
         ?parameters
+        ?attributes
         ~name
         ~inputs
         ~outputs:O.Names_and_widths.t

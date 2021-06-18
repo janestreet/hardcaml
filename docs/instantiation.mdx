@@ -21,6 +21,7 @@ open Hardcaml
     ?arch:string ->
     ?instance:string ->
     ?parameters:Parameter.t list ->
+    ?attributes:Hardcaml.Rtl_attribute.t list ->
     unit ->
     name:string ->
     inputs:(string * Signal.t) list ->
@@ -49,11 +50,11 @@ and the `value` is a signal corresponding to the output port.
 val the_instantiation : Signal.t Base.Map.M(Base.String).t = <abstr>
 # Map.find_exn the_instantiation "x"
 - : Signal.t =
-(select (loc instantiation.ml:42:10) (width 5) (range (4 0))
+(select (loc instantiation.ml:45:10) (width 5) (range (4 0))
  (data_in instantiation))
 # Map.find_exn the_instantiation "y"
 - : Signal.t =
-(select (loc instantiation.ml:42:10) (width 10) (range (14 5))
+(select (loc instantiation.ml:45:10) (width 10) (range (14 5))
  (data_in instantiation))
 ```
 

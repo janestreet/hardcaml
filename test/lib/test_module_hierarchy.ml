@@ -42,7 +42,13 @@ module Middle = struct
     let ( -- ) = Scope.naming scope in
     let (o1 : _ Inner.O.t) = Inner_inst.create ~scope ~name:"inner" Inner.create i in
     let (o2 : _ Inner.O.t) =
-      Inner_inst.hierarchical ~scope ~name:"inner" Inner.create i
+      let keep_hierarchy = Rtl_attribute.Vivado.keep_hierarchy true in
+      Inner_inst.hierarchical
+        ~attributes:[ keep_hierarchy ]
+        ~scope
+        ~name:"inner"
+        Inner.create
+        i
     in
     { O.o = [| o1; o2 |]; x = Signal.of_int ~width:1 0 -- "x" }
   ;;
@@ -273,6 +279,7 @@ let%expect_test "hierarchical" =
 
           /* logic */
           assign _13 = _12[1:1];
+          (* keep_hierarchy="yes" *)
           inner
               inner_0
               ( .a(_8), .b(_5), .d(_12[1:1]), .c(_12[0:0]) );
@@ -402,6 +409,7 @@ let%expect_test "hierarchical" =
 
         /* logic */
         assign _13 = _12[1:1];
+        (* keep_hierarchy="yes" *)
         inner
             inner_0
             ( .a(_8), .b(_5), .d(_12[1:1]), .c(_12[0:0]) );
@@ -531,6 +539,7 @@ let%expect_test "hierarchical" =
 
         /* logic */
         assign _13 = _12[1:1];
+        (* keep_hierarchy="yes" *)
         inner
             inner_0
             ( .a(_8), .b(_5), .d(_12[1:1]), .c(_12[0:0]) );
@@ -634,11 +643,21 @@ let%expect_test "floating ports not in interface" =
   let module Circ = Circuit.With_interface (Floating_outer.I) (Floating_outer.O) in
   let scope = Scope.create ~flatten_design:false () in
   require_does_raise [%here] (fun () ->
-    let circ = Circ.create_exn ~name:"floating_outer" (Floating_outer.create scope) in
+    let circ =
+      Circ.create_exn
+        ~config:{ Circuit.Config.default with port_checks = Relaxed }
+        ~name:"floating_outer"
+        (Floating_outer.create scope)
+    in
     Rtl.print Verilog ~database:(Scope.circuit_database scope) circ);
   [%expect
     {|
-    ("Error while instantiating module hierarchy"
-     (circuit_name floating_inner)
-     (input_ports_in_circuit_but_not_interface (foo))) |}]
+    ("Port sets do not match"
+      (direction input)
+      (expected_ports (a b))
+      (actual_ports (a b foo))
+      (expected_but_not_in_circuit ())
+      (in_circuit_but_not_expected (foo))
+      (circuit (
+        (name floating_inner) (input_ports (b foo a)) (output_ports (c d))))) |}]
 ;;

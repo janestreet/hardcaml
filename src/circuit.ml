@@ -70,7 +70,7 @@ module Config = struct
     { detect_combinational_loops = true
     ; normalize_uids = true
     ; assertions = None
-    ; port_checks = Relaxed
+    ; port_checks = Port_sets_and_widths
     ; add_phantom_inputs = true
     ; modify_outputs = Fn.id
     }
@@ -313,9 +313,28 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
   ;;
 
   let check_widths_match circuit =
-    let port s =
+    let port (intf : (string * int) list) s =
       match Signal.names s with
-      | [ name ] -> name, s
+      | [ name ] ->
+        (match List.Assoc.find intf name ~equal:String.equal with
+         | None ->
+           raise_s
+             [%message
+               "Signal was a circuit port, but was not listed in the interface"
+                 (name : string)
+                 (intf : (string * int) list)]
+         | Some expected_width ->
+           let port_width = Signal.width s in
+           if port_width <> expected_width
+           then
+             raise_s
+               [%message
+                 "Port width of "
+                   (name : string)
+                   (port_width : int)
+                   " was specified as "
+                   (expected_width : int)
+                   " in interface"])
       | _ ->
         raise_s
           [%message
@@ -323,8 +342,8 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
              name(s)"
               (circuit : Summary.t)]
     in
-    I.Of_signal.validate (inputs circuit |> List.map ~f:port |> I.of_alist);
-    O.Of_signal.validate (outputs circuit |> List.map ~f:port |> O.of_alist)
+    inputs circuit |> List.iter ~f:(port I.Names_and_widths.t);
+    outputs circuit |> List.iter ~f:(port O.Names_and_widths.t)
   ;;
 
   let check_io_port_sets_and_widths_match circuit =

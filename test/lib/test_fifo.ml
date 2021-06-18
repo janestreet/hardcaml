@@ -23,16 +23,16 @@ module O = struct
     ; empty : 'a
     ; nearly_full : 'a
     ; nearly_empty : 'a
-    ; used : 'a
+    ; used : 'a [@bits 3]
     }
   [@@deriving sexp_of, hardcaml]
 end
 
 open Hardcaml
 
-let wrap ~capacity ~(create_fn : Fifo.create_fifo) (i : _ I.t) =
+let wrap ~(create_fn : Fifo.create_fifo) (i : _ I.t) =
   let { Fifo.q; full; empty; nearly_full; nearly_empty; used } =
-    create_fn () ~capacity ~clock:i.clock ~clear:i.clear ~wr:i.wr ~d:i.d ~rd:i.rd
+    create_fn () ~capacity:4 ~clock:i.clock ~clear:i.clear ~wr:i.wr ~d:i.d ~rd:i.rd
   in
   let o = { O.q; full; empty; nearly_full; nearly_empty; used } in
   o
@@ -79,7 +79,7 @@ let fill_then_empty (waves, sim) =
 
 let%expect_test "classic" =
   let module Sim = Cyclesim.With_interface (I) (O) in
-  wrap ~capacity:4 ~create_fn:(Fifo.create ~showahead:false)
+  wrap ~create_fn:(Fifo.create ~showahead:false)
   |> Sim.create
   |> Waveform.create
   |> fill_then_empty;
@@ -117,7 +117,7 @@ let%expect_test "classic" =
 
 let%expect_test "showahead" =
   let module Sim = Cyclesim.With_interface (I) (O) in
-  wrap ~capacity:4 ~create_fn:(Fifo.create ~showahead:true)
+  wrap ~create_fn:(Fifo.create ~showahead:true)
   |> Sim.create
   |> Waveform.create
   |> fill_then_empty;
@@ -155,7 +155,7 @@ let%expect_test "showahead" =
 
 let%expect_test "classic with reg" =
   let module Sim = Cyclesim.With_interface (I) (O) in
-  wrap ~capacity:4 ~create_fn:Fifo.create_classic_with_extra_reg
+  wrap ~create_fn:Fifo.create_classic_with_extra_reg
   |> Sim.create
   |> Waveform.create
   |> fill_then_empty;
@@ -193,7 +193,7 @@ let%expect_test "classic with reg" =
 
 let%expect_test "showahead from classic" =
   let module Sim = Cyclesim.With_interface (I) (O) in
-  wrap ~capacity:4 ~create_fn:Fifo.create_showahead_from_classic
+  wrap ~create_fn:Fifo.create_showahead_from_classic
   |> Sim.create
   |> Waveform.create
   |> fill_then_empty;
@@ -231,7 +231,7 @@ let%expect_test "showahead from classic" =
 
 let%expect_test "showahead with extra reg" =
   let module Sim = Cyclesim.With_interface (I) (O) in
-  wrap ~capacity:4 ~create_fn:Fifo.create_showahead_with_extra_reg
+  wrap ~create_fn:Fifo.create_showahead_with_extra_reg
   |> Sim.create
   |> Waveform.create
   |> fill_then_empty;

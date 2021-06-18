@@ -9,6 +9,7 @@ val create
   -> ?arch:string
   -> ?instance:string
   -> ?parameters:Parameter.t list
+  -> ?attributes:Rtl_attribute.t list
   -> unit
   -> name:string
   -> inputs:(string * Signal.t) list
@@ -22,6 +23,7 @@ module With_interface (I : Interface.S) (O : Interface.S) : sig
     -> ?arch:string
     -> ?instance:string
     -> ?parameters:Parameter.t list
+    -> ?attributes:Rtl_attribute.t list
     -> name:string
     -> Signal.t Interface.Create_fn(I)(O).t
 end
@@ -33,6 +35,7 @@ val create_with_interface
   -> ?arch:string
   -> ?instance:string
   -> ?parameters:Parameter.t list
+  -> ?attributes:Rtl_attribute.t list
   -> name:string
   -> 'i
   -> 'o

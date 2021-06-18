@@ -28,6 +28,7 @@ let hierarchy
       (type i o)
       (module I : Interface.S_Of_signal with type Of_signal.t = i)
       (module O : Interface.S_Of_signal with type Of_signal.t = o)
+      ?attributes
       ?config
       ?instance
       db
@@ -40,7 +41,7 @@ let hierarchy
   let circuit = create_circuit_exn ?config ~name create_fn in
   validate_circuit_against_interface (module I) circuit;
   let name = Circuit_database.insert db circuit in
-  create_inst ?instance ~name inputs
+  create_inst ?instance ?attributes ~name inputs
 ;;
 
 let create ~scope ~name create_fn inputs =
@@ -54,12 +55,13 @@ let hierarchical
       (module O : Interface.S_Of_signal with type Of_signal.t = o)
       ?config
       ?instance
+      ?attributes
       ~(scope : Scope.t)
       ~name
       create_fn
       inputs
   =
-  let hierarchy = hierarchy (module I) (module O) in
+  let hierarchy = hierarchy ?attributes (module I) (module O) in
   let instance =
     match instance with
     | None -> name
@@ -98,8 +100,9 @@ module In_scope (I : Interface.S) (O : Interface.S) = struct
     if label_ports then O.map2 outputs O.port_names ~f:(( -- ) "o") else outputs
   ;;
 
-  let hierarchical ?config ?instance ~(scope : Scope.t) ~name create_fn inputs =
-    let hierarchy = hierarchy (module I) (module O) in
+  let hierarchical ?config ?instance ?attributes ~(scope : Scope.t) ~name create_fn inputs
+    =
+    let hierarchy = hierarchy ?attributes (module I) (module O) in
     let instance =
       match instance with
       | None -> name

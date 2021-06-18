@@ -32,6 +32,10 @@ module Vivado : sig
       to a port. *)
   val dont_touch : bool -> t
 
+  (** Setting keep_hierarchy to yes will prevent Vivado from optimizating across module
+      boundaries. Can only be applied to modules or instances. *)
+  val keep_hierarchy : bool -> t
+
   (** Select encoding of finite state machine.  Apply to state register. *)
   val fsm_encoding : [ `auto | `gray | `johnson | `none | `one_hot | `sequential ] -> t
 

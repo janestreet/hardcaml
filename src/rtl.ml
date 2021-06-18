@@ -479,8 +479,12 @@ module VerilogCore : Rtl_internal = struct
       (match cases with
        | [ _; _ ] when width select = 1 -> io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
        | _ -> io (tag ^ t4 ^ decl Reg name (width s) ^ ";\n"))
-    | Op2 _ | Not _ | Cat _ | Wire _ | Select _ | Inst _ ->
+    | Op2 _ | Not _ | Cat _ | Wire _ | Select _ ->
       io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
+    | Inst _ ->
+      (* attributes are printed at the instantiation site, not the output signal
+         declaration. *)
+      io (t4 ^ decl Wire name (width s) ^ ";\n")
     | Reg _ -> io (tag ^ t4 ^ decl Reg name (width s) ^ ";\n")
     | Const { constant; _ } ->
       io (tag ^ t4 ^ decl (Constant (Bits.to_bstr constant)) name (width s) ^ ";\n")
@@ -692,7 +696,8 @@ module VerilogCore : Rtl_internal = struct
   ;;
 
   let logic_inst io name inst_name s i =
-    io (t4 ^ i.inst_name ^ "\n");
+    let attributes = print_attribute s in
+    io (attributes ^ t4 ^ i.inst_name ^ "\n");
     let assoc n v = "." ^ n ^ "(" ^ v ^ ")" in
     (* parameters *)
     let param_string (p : Parameter.t) =

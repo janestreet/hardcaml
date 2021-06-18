@@ -8,6 +8,7 @@ val hierarchical
   -> (module Interface.S_Of_signal with type Of_signal.t = 'o)
   -> ?config:Circuit.Config.t
   -> ?instance:string
+  -> ?attributes:Rtl_attribute.t list
   -> scope:Scope.t
   -> name:string
   -> (Scope.t -> 'i -> 'o)
@@ -19,7 +20,8 @@ module With_interface (I : Interface.S) (O : Interface.S) : sig
       inputs] and adds it to [database].  It is then referenced in current circuit by an
       instantiation. *)
   val create
-    :  ?config:Circuit.Config.t
+    :  ?attributes:Rtl_attribute.t list
+    -> ?config:Circuit.Config.t
     -> ?instance:string
     -> Circuit_database.t
     -> name:string
@@ -57,6 +59,7 @@ module In_scope (I : Interface.S) (O : Interface.S) : sig
   val hierarchical
     :  ?config:Circuit.Config.t
     -> ?instance:string
+    -> ?attributes:Rtl_attribute.t list
     -> scope:Scope.t
     -> name:string
     -> create

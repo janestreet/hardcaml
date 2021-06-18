@@ -32,7 +32,7 @@ module Test (Enum : Hardcaml.Interface.S_enum with module Enum := Cases) = struc
           ; C4, Bits.of_int ~width:16 4
           ]
       in
-      Core_kernel.print_s [%message (selector : Cases.t) (value : Bits.t)]);
+      Core.print_s [%message (selector : Cases.t) (value : Bits.t)]);
     [%expect
       {|
     ((selector C0) (value 0000000000000000))

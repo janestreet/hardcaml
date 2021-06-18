@@ -1,4 +1,4 @@
 (library (name hardcaml_test)
- (libraries core expect_test_helpers_async expect_test_helpers_core hardcaml
-  hardcaml_waveterm)
+ (libraries core_kernel.core expect_test_helpers_async
+  expect_test_helpers_core hardcaml hardcaml_waveterm)
  (preprocess (pps ppx_deriving_hardcaml ppx_jane)))
