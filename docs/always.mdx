@@ -30,7 +30,7 @@ clock signal provided within a `Reg_spec.t` type.
 ```ocaml
 # (* Creates a register variable. *)
   Always.Variable.reg
-- : Signal.register -> enable:Signal.t -> width:int -> Always.Variable.t =
+- : ?enable:Signal.t -> width:int -> Signal.register -> Always.Variable.t =
 <fun>
 ```
 

@@ -1088,7 +1088,7 @@ module Reg_spec_ = struct
   let reset spec = spec.reg_reset
 end
 
-let reg spec ~enable d =
+let reg spec ?(enable = vdd) d =
   let spec = form_spec spec enable d in
   let deps =
     [ spec.reg_clock
@@ -1102,15 +1102,20 @@ let reg spec ~enable d =
   Reg { signal_id = make_id (width d) (d :: deps); register = spec; d }
 ;;
 
-let reg_fb spec ~enable ~w:width f =
+let reg_fb spec ?enable ~w:width f =
   let d = wire width in
-  let q = reg spec ~enable d in
+  let q = reg spec ?enable d in
   d <== f q;
   q
 ;;
 
-let rec pipeline spec ~n ~enable d =
-  if n = 0 then d else reg spec ~enable (pipeline ~n:(n - 1) spec ~enable d)
+let rec pipeline ?(attributes = []) spec ~n ?enable d =
+  let maybe_add_attributes s = List.fold attributes ~init:s ~f:add_attribute in
+  if n = 0
+  then d
+  else
+    maybe_add_attributes
+      (reg spec ?enable (pipeline ~attributes ~n:(n - 1) spec ?enable d))
 ;;
 
 let memory size ~write_port ~read_address =

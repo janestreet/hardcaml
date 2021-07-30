@@ -48,4 +48,24 @@ module Vivado : sig
     val registers : t
     val ultra : t
   end
+
+  (** SRL_STYLE instructs the synthesis tool on how to infer SRLs that are found in the
+      design. Accepted values are
+
+      - register: The tool does not infer an SRL, but instead only uses registers.
+      - srl: The tool infers an SRL without any registers before or after.
+      - srl_reg: The tool infers an SRL and leaves one register after the SRL.
+      - reg_srl: The tool infers an SRL and leaves one register before the SRL.
+      - reg_srl_reg: The tool infers an SRL and leaves one register before and one
+        register after the SRL.
+      - block: The tool infers the SRL inside a block RAM
+  *)
+  module Srl_style : sig
+    val register : t
+    val srl : t
+    val srl_reg : t
+    val reg_srl : t
+    val reg_srl_reg : t
+    val block : t
+  end
 end

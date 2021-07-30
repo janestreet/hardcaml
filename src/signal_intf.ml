@@ -307,9 +307,18 @@ module type Signal = sig
     val reset : t -> signal
   end
 
-  val reg : Reg_spec_.t -> enable:t -> t -> t
-  val reg_fb : Reg_spec_.t -> enable:t -> w:int -> (t -> t) -> t
-  val pipeline : Reg_spec_.t -> n:int -> enable:t -> t -> t
+  val reg : Reg_spec_.t -> ?enable:t -> t -> t
+  val reg_fb : Reg_spec_.t -> ?enable:t -> w:int -> (t -> t) -> t
+
+  (** Pipeline a signal [n] times with the given register specification. If set, a list of
+      RTL attributes will also be applied to each register created. *)
+  val pipeline
+    :  ?attributes:Rtl_attribute.t list
+    -> Reg_spec_.t
+    -> n:int
+    -> ?enable:t
+    -> t
+    -> t
 
   val memory : int -> write_port:write_port -> read_address:t -> t
 

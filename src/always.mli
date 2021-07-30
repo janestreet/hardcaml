@@ -99,10 +99,10 @@ module Variable : sig
   val wire : default:Signal.t -> t
 
   (** create a register *)
-  val reg : Reg_spec.t -> enable:Signal.t -> width:int -> t
+  val reg : ?enable:Signal.t -> width:int -> Reg_spec.t -> t
 
   (** create a pipeline of registers *)
-  val pipeline : depth:int -> Reg_spec.t -> enable:Signal.t -> width:int -> t
+  val pipeline : ?enable:Signal.t -> width:int -> depth:int -> Reg_spec.t -> t
 end
 
 type t = private

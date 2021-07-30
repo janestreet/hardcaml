@@ -30,13 +30,13 @@ module Variable = struct
     { value = wire; internal = { assigns_to_wire = wire; default } }
   ;;
 
-  let reg spec ~enable ~width =
+  let reg ?enable ~width spec =
     let wire = Signal.wire width in
-    let reg = Signal.reg spec ~enable wire in
+    let reg = Signal.reg spec ?enable wire in
     { value = reg; internal = { assigns_to_wire = wire; default = reg } }
   ;;
 
-  let pipeline ~depth (spec : Reg_spec.t) ~enable ~width =
+  let pipeline ?enable ~width ~depth (spec : Reg_spec.t) =
     if depth = 0
     then
       if
@@ -45,9 +45,9 @@ module Variable = struct
       then wire ~default:(Signal.zero width)
       else wire ~default:spec.reg_reset_value
     else (
-      let r = reg spec ~enable ~width in
+      let r = reg spec ?enable ~width in
       (* delay the output by the pipeline length, minus 1 *)
-      { r with value = Signal.pipeline ~n:(depth - 1) spec ~enable r.value })
+      { r with value = Signal.pipeline ~n:(depth - 1) spec ?enable r.value })
   ;;
 end
 

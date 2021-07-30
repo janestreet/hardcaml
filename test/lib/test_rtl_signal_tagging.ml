@@ -138,3 +138,83 @@ let%expect_test "Signal attributes on top of signals in VHDL" =
       (output ((language Vhdl) (mode (To_channel <stdout>))))
       (exn "Signal attributes are not supported in VHDL yet")) |}]
 ;;
+
+let%expect_test "Test Rtl attributes on the pipeline construct" =
+  let module Test_pipeline = struct
+    module I = struct
+      type 'a t =
+        { clk : 'a
+        ; a : 'a [@bits 4]
+        }
+      [@@deriving sexp_of, hardcaml]
+    end
+
+    module O = struct
+      type 'a t = { b : 'a [@bits 4] } [@@deriving sexp_of, hardcaml]
+    end
+
+    let create (i : _ I.t) =
+      let spec = Reg_spec.create ~clock:i.clk () in
+      { O.b =
+          pipeline
+            ~attributes:[ Rtl_attribute.Vivado.Srl_style.register ]
+            spec
+            ~enable:vdd
+            ~n:3
+            i.a
+      }
+    ;;
+  end
+  in
+  let open Test_pipeline in
+  let module Circuit = Circuit.With_interface (I) (O) in
+  Rtl.print Verilog (Circuit.create_exn ~name:"module_foo" create);
+  [%expect
+    {|
+    module module_foo (
+        clk,
+        a,
+        b
+    );
+
+        input clk;
+        input [3:0] a;
+        (* SRL_STYLE="register" *)
+        output [3:0] b;
+
+        /* signal declarations */
+        wire [3:0] _14 = 4'b0000;
+        wire [3:0] _13 = 4'b0000;
+        wire [3:0] _11 = 4'b0000;
+        wire [3:0] _10 = 4'b0000;
+        wire vdd = 1'b1;
+        wire [3:0] _7 = 4'b0000;
+        wire [3:0] _6 = 4'b0000;
+        wire _2;
+        wire [3:0] _4;
+        (* SRL_STYLE="register" *)
+        reg [3:0] _9;
+        (* SRL_STYLE="register" *)
+        reg [3:0] _12;
+        reg [3:0] _15;
+
+        /* logic */
+        assign _2 = clk;
+        assign _4 = a;
+        always @(posedge _2) begin
+            _9 <= _4;
+        end
+        always @(posedge _2) begin
+            _12 <= _9;
+        end
+        always @(posedge _2) begin
+            _15 <= _12;
+        end
+
+        /* aliases */
+
+        /* output assignments */
+        assign b = _15;
+
+    endmodule |}]
+;;

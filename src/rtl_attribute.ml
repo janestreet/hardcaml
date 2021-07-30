@@ -60,4 +60,13 @@ module Vivado = struct
     let registers = create "RAM_STYLE" ~value:(String "registers")
     let ultra = create "RAM_STYLE" ~value:(String "ultra")
   end
+
+  module Srl_style = struct
+    let register = create "SRL_STYLE" ~value:(String "register")
+    let srl = create "SRL_STYLE" ~value:(String "srl")
+    let srl_reg = create "SRL_STYLE" ~value:(String "srl_reg")
+    let reg_srl = create "SRL_STYLE" ~value:(String "reg_srl")
+    let reg_srl_reg = create "SRL_STYLE" ~value:(String "reg_srl_reg")
+    let block = create "SRL_STYLE" ~value:(String "block")
+  end
 end

@@ -15,16 +15,15 @@ module Enum = Interface.Make_enums (Cases)
 module Test (Enum : Hardcaml.Interface.S_enum with module Enum := Cases) = struct
   let%expect_test "unpack_exn and pack roundtrips" =
     List.iter Cases.all ~f:(fun enum ->
-      let after = Enum.of_enum (module Bits) enum |> Enum.to_enum in
+      let after = Enum.Of_bits.of_enum enum |> Enum.to_enum |> Or_error.ok_exn in
       assert (Cases.equal enum after))
   ;;
 
   let%expect_test "muxes as expected" =
     List.iter Cases.all ~f:(fun selector ->
       let value =
-        Enum.mux
-          (module Bits)
-          (Enum.of_enum (module Bits) selector)
+        Enum.Of_bits.match_
+          (Enum.Of_bits.of_enum selector)
           ~default:(Bits.of_int ~width:16 1)
           [ C0, Bits.of_int ~width:16 0
           ; C2, Bits.of_int ~width:16 2
@@ -44,7 +43,7 @@ module Test (Enum : Hardcaml.Interface.S_enum with module Enum := Cases) = struc
 
   let%expect_test "Raises when non exhaustive without default" =
     Expect_test_helpers_base.require_does_raise [%here] (fun () ->
-      Enum.mux (module Bits) (Enum.of_enum (module Bits) C0) []);
+      Enum.Of_bits.match_ (Enum.of_enum (module Bits) C0) []);
     [%expect
       {| (Failure "[mux] on enum cases not exhaustive, and [default] not provided") |}]
   ;;

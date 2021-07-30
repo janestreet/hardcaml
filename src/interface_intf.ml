@@ -143,6 +143,9 @@ module type Of_signal_functions = sig
     -> unit
     -> t
 
+  (** Defines a register over values in this interface. [enable] defaults to vdd. *)
+  val reg : ?enable:Signal.t -> Reg_spec.t -> t -> t
+
   val assign : t -> t -> unit
   val ( <== ) : t -> t -> unit
 
@@ -244,7 +247,7 @@ module type S = sig
     val assign : Always.Variable.t t -> Signal.t t -> Always.t
 
     (** Creates a interface container with register variables. *)
-    val reg : Reg_spec.t -> enable:Signal.t -> Always.Variable.t t
+    val reg : ?enable:Signal.t -> Reg_spec.t -> Always.Variable.t t
 
     (** Creates a interface container with wire variables, e.g. [Foo.Of_always.wire
         Signal.zero], which would yield wires defaulting to zero. *)
@@ -300,10 +303,6 @@ end
     [compare, enumerate, sexp_of, variants]. *)
 module type Enum = sig
   type t [@@deriving compare, enumerate, sexp_of]
-
-  module Variants : sig
-    val to_rank : t -> int
-  end
 end
 
 (** Functions to project an [Enum] type into and out of hardcaml bit vectors representated
@@ -315,10 +314,11 @@ module type S_enum = sig
 
   val ast : Ast.t
   val of_enum : (module Comb.S with type t = 'a) -> Enum.t -> 'a t
-  val to_enum : Bits.t t -> Enum.t
-  val equal : (module Comb.S with type t = 'a) -> 'a t -> 'a t -> 'a
+  val to_enum : Bits.t t -> Enum.t Or_error.t
+  val to_enum_exn : Bits.t t -> Enum.t
+  val ( ==: ) : (module Comb.S with type t = 'a) -> 'a t -> 'a t -> 'a
 
-  val mux
+  val match_
     :  (module Comb.S with type t = 'a)
     -> ?default:'a
     -> 'a t
@@ -327,10 +327,82 @@ module type S_enum = sig
 
   val to_raw : 'a t -> 'a
 
-  module For_testing : sig
-    val set : Bits.t ref t -> Enum.t -> unit
-    val get : Bits.t ref t -> Enum.t
+  type 'a outer := 'a t
+
+  module Of_signal : sig
+    include module type of Of_signal (** @inline *)
+
+    (** Tests for equality between two enums. For writing conditional statements
+        based on the value of the enum, consider using [match_] below, or
+        [Of_always.match_] instead
+    *)
+    val ( ==: ) : t -> t -> Signal.t
+
+    (** Create an Enum value from a statically known value. *)
+    val of_enum : Enum.t -> Signal.t outer
+
+    (** Creates a Enum value from a raw value. Note that this only performs a
+        check widths, and does not generate circuitry to validate that the input
+        is valid. See documentation on Enums for more information.
+    *)
+    val of_raw : Signal.t -> Signal.t outer
+
+    (** Multiplex on an enum value. If there are unhandled cases, a [default]
+        needs to be specified.
+    *)
+    val match_
+      :  ?default:Signal.t
+      -> Signal.t outer
+      -> (Enum.t * Signal.t) list
+      -> Signal.t
+
+    (** Convenient wrapper around [eq x (of_enum Foo)] *)
+    val is : t -> Enum.t -> Signal.t
   end
+
+  module Of_bits : sig
+    include module type of Of_bits (** @inline *)
+
+    val is : t -> Enum.t -> Bits.t
+    val ( ==: ) : t -> t -> Bits.t
+    val of_enum : Enum.t -> Bits.t outer
+    val of_raw : Bits.t -> Bits.t outer
+    val match_ : ?default:Bits.t -> Bits.t outer -> (Enum.t * Bits.t) list -> Bits.t
+  end
+
+  module Of_always : sig
+    include module type of Of_always (** @inline *)
+
+    (** Performs a "pattern match" on a [Signal.t t], and "executes" the branch that
+        matches the signal value. Semantics similar to [switch] in verilog.
+    *)
+    val match_
+      :  ?default:Always.t list
+      -> Signal.t t
+      -> (Enum.t * Always.t list) list
+      -> Always.t
+  end
+
+  (** Set an input port in simulation to a concrete Enum value. *)
+  val sim_set : Bits.t ref t -> Enum.t -> unit
+
+  (** Similar to [sim_set], but operates on raw [Bits.t] instead. *)
+  val sim_set_raw : Bits.t ref t -> Bits.t -> unit
+
+  (** Read an output port from simulation to a concreate Enum value.
+      Returns [Ok enum] when the [Bits.t] value can be parsed, and
+      [Error _] when the value is unhandled.
+  *)
+  val sim_get : Bits.t ref t -> Enum.t Or_error.t
+
+  (** Equivalent to [ok_exn (sim_get x)] *)
+  val sim_get_exn : Bits.t ref t -> Enum.t
+
+  (** Similar to [sim_get], but operates on raw [Bits.t] instead. This
+      doesn't return [_ Or_error.t]. Undefined values will be returned as
+      it is.
+  *)
+  val sim_get_raw : Bits.t ref t -> Bits.t
 end
 
 (** Binary and onehot selectors for [Enums]. *)
@@ -378,4 +450,7 @@ module type Interface = sig
       (Pre : Pre) (M : sig
                      val t : (string * int) Pre.t
                    end) : S with type 'a t = 'a Pre.t
+
+  (** Create a new hardcaml interface with [With_valid.t] on a per-field basis. *)
+  module Make_with_valid (X : Pre) : S with type 'a t = 'a With_valid.t X.t
 end
