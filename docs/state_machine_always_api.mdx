@@ -243,15 +243,12 @@ let main (stream_a : stream) (stream_b : stream) =
 
     handshake stream_b (fun data ->
       Always.[
-        foo <--. 0
+        foo <--. 0;
+        bar <-- ~:(data)
       ]
     );
   ]
 ;;
-```
-```mdx-error
-Line 4, characters 9-12:
-Warning 26: unused variable bar.
 ```
 
 The beauty in this approach is that the repetitive tedious
