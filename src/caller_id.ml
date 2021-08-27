@@ -33,21 +33,18 @@ let sexp_of_t (t : t) =
 let get ?(skip = []) () =
   let skip =
     "list.ml"
-    ::
-    "list0.ml"
-    ::
-    "array.ml"
-    ::
-    "comb.ml"
-    ::
-    "interface.ml"
-    ::
-    "signal.ml"
-    ::
-    "bits.ml"
-    ::
-    "with_valid.ml"
-    :: "scope.ml" :: "parameter.ml" :: "hierarchy.ml" :: Caml.__FILE__ :: skip
+    :: "list0.ml"
+    :: "array.ml"
+    :: "comb.ml"
+    :: "interface.ml"
+    :: "signal.ml"
+    :: "bits.ml"
+    :: "with_valid.ml"
+    :: "scope.ml"
+    :: "parameter.ml"
+    :: "hierarchy.ml"
+    :: Caml.__FILE__
+    :: skip
   in
   let stack = Printexc.get_callstack 16 in
   let len = Printexc.raw_backtrace_length stack in

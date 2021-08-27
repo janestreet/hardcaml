@@ -294,9 +294,8 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
     let check direction actual_ports expected_ports =
       let expected_but_not_in_circuit = Set.diff expected_ports actual_ports in
       let in_circuit_but_not_expected = Set.diff actual_ports expected_ports in
-      if
-        (not (Set.is_empty expected_but_not_in_circuit))
-        || not (Set.is_empty in_circuit_but_not_expected)
+      if (not (Set.is_empty expected_but_not_in_circuit))
+      || not (Set.is_empty in_circuit_but_not_expected)
       then
         raise_s
           [%message

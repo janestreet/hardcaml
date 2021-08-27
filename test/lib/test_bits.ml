@@ -423,10 +423,9 @@ module Make (R : Require) = struct
     print_s [%message (config : Config.t)];
     List.iter config.prims ~f:(fun op ->
       let rec loop i =
-        if
-          i < config.iterations
-          && (T.run op here config.min_bit_width config.max_bit_width
-              || not stop_on_first_primitive_error)
+        if i < config.iterations
+        && (T.run op here config.min_bit_width config.max_bit_width
+            || not stop_on_first_primitive_error)
         then loop (i + 1)
       in
       loop 0)

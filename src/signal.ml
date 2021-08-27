@@ -1266,8 +1266,7 @@ let multiport_memory ?name ?(attributes = []) size ~write_ports ~read_addresses 
   let data_width = width write_expected.write_data in
   let deps =
     Array.to_list read_addresses
-    ::
-    List.map (Array.to_list write_ports) ~f:(fun (w : write_port) ->
+    :: List.map (Array.to_list write_ports) ~f:(fun (w : write_port) ->
       let { write_clock; write_address; write_data; write_enable } = w in
       [ write_clock; write_address; write_data; write_enable ])
     |> List.concat
