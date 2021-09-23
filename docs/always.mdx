@@ -1,5 +1,12 @@
 # Always DSL
 
+<!--
+```ocaml
+# Hardcaml.Caller_id.set_mode Disabled
+- : unit = ()
+```
+-->
+
 The [`Always` DSL](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Always/index.html)
 is a DSL in Hardcaml that lets one describe circuits
 in a similar style to a Verilog `always` block. Always blocks allow
@@ -50,8 +57,7 @@ Both kinds of variable will return the same type, namely an `Always.Variable.t`
 ```ocaml
 # let foo = Always.Variable.wire ~default:Signal.gnd ;;
 val foo : Always.Variable.t =
-  {Hardcaml.Always.Variable.value =
-    (wire (loc always.ml:29:15) (width 1) (data_in empty));
+  {Hardcaml.Always.Variable.value = (wire (width 1) (data_in empty));
    internal = <abstr>}
 ```
 
@@ -61,7 +67,7 @@ that can be used to form expressions.
 
 ```ocaml
 # foo.value;;
-- : Signal.t = (wire (loc always.ml:29:15) (width 1) (data_in empty))
+- : Signal.t = (wire (width 1) (data_in empty))
 ```
 
 ## 2. Writing the Always Program

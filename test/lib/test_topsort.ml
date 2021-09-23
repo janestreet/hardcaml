@@ -174,6 +174,7 @@ let%expect_test "Instantiation loop - not allowed." =
   Signal.(w <== Map.find_exn inst "b");
   require_does_raise [%here] (fun () ->
     Signal_graph.topological_sort ~deps (Signal_graph.create [ w ]));
-  [%expect {|
-    ("Topological_sort.sort encountered cycle" (instantiation wire)) |}]
+  [%expect
+    {|
+    ("Topological_sort.sort encountered cycle" (wire wire instantiation)) |}]
 ;;

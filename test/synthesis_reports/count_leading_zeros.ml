@@ -54,7 +54,7 @@ struct
 end
 
 let command =
-  Command.basic
+  Async.Command.async
     ~summary:"count leading zeros logic"
     (let open Command.Let_syntax in
      let%map_open () = return ()

@@ -32,26 +32,38 @@ module Mutable = struct
   let vdd = of_constant (Constant.of_int ~width:1 1)
   let gnd = of_constant (Constant.of_int ~width:1 0)
 
-  let ( &: ) c a b =
-    let words = words a in
-    for i = 0 to words - 1 do
-      unsafe_set c.data i (Int64.( land ) (unsafe_get a.data i) (unsafe_get b.data i))
-    done
-  ;;
+  external and_
+    :  (int[@untagged])
+    -> Bytes.t
+    -> Bytes.t
+    -> Bytes.t
+    -> unit
+    = "hardcaml_bits_and_bc" "hardcaml_bits_and"
+  [@@noalloc]
 
-  let ( |: ) c a b =
-    let words = words a in
-    for i = 0 to words - 1 do
-      unsafe_set c.data i (Int64.( lor ) (unsafe_get a.data i) (unsafe_get b.data i))
-    done
-  ;;
+  let ( &: ) c a b = and_ (width c) c.data a.data b.data
 
-  let ( ^: ) c a b =
-    let words = words a in
-    for i = 0 to words - 1 do
-      unsafe_set c.data i (Int64.( lxor ) (unsafe_get a.data i) (unsafe_get b.data i))
-    done
-  ;;
+  external or_
+    :  (int[@untagged])
+    -> Bytes.t
+    -> Bytes.t
+    -> Bytes.t
+    -> unit
+    = "hardcaml_bits_or_bc" "hardcaml_bits_or"
+  [@@noalloc]
+
+  let ( |: ) c a b = or_ (width c) c.data a.data b.data
+
+  external xor_
+    :  (int[@untagged])
+    -> Bytes.t
+    -> Bytes.t
+    -> Bytes.t
+    -> unit
+    = "hardcaml_bits_xor_bc" "hardcaml_bits_xor"
+  [@@noalloc]
+
+  let ( ^: ) c a b = xor_ (width c) c.data a.data b.data
 
   external mask
     :  (int[@untagged])
@@ -60,13 +72,15 @@ module Mutable = struct
     = "hardcaml_bits_mask_bc" "hardcaml_bits_mask"
   [@@noalloc]
 
-  let ( ~: ) c a =
-    let words = words a in
-    for i = 0 to words - 1 do
-      unsafe_set c.data i (Int64.lnot (unsafe_get a.data i))
-    done;
-    mask c.width c.data
-  ;;
+  external not_
+    :  (int[@untagged])
+    -> Bytes.t
+    -> Bytes.t
+    -> unit
+    = "hardcaml_bits_not_bc" "hardcaml_bits_not"
+  [@@noalloc]
+
+  let ( ~: ) c a = not_ (width c) c.data a.data
 
   external add
     :  (int[@untagged])
@@ -79,8 +93,7 @@ module Mutable = struct
 
   let ( +: ) dst a b =
     let width = width dst in
-    add width dst.data a.data b.data;
-    mask width dst.data
+    add width dst.data a.data b.data
   ;;
 
   external sub
@@ -94,30 +107,27 @@ module Mutable = struct
 
   let ( -: ) dst a b =
     let width = width dst in
-    sub width dst.data a.data b.data;
-    mask width dst.data
+    sub width dst.data a.data b.data
   ;;
 
   (* Unsigned Int64 compare. *)
-  external cmpu64
+  external _cmpu64
     :  (Int64.t[@unboxed])
     -> (Int64.t[@unboxed])
     -> (int[@untagged])
     = "hardcaml_bits_uint64_compare_bc" "hardcaml_bits_uint64_compare"
   [@@noalloc]
 
-  let rec eq words i a b =
-    if i = words
-    then Int64.one
-    else if Int64.equal (unsafe_get a.data i) (unsafe_get b.data i)
-    then eq words (i + 1) a b
-    else Int64.zero
-  ;;
+  external eq
+    :  (int[@untagged])
+    -> Bytes.t
+    -> Bytes.t
+    -> Bytes.t
+    -> unit
+    = "hardcaml_bits_eq_bc" "hardcaml_bits_eq"
+  [@@noalloc]
 
-  let ( ==: ) c a b =
-    let words = words a in
-    unsafe_set c.data 0 (eq words 0 a b)
-  ;;
+  let ( ==: ) c a b = eq (width a) c.data a.data b.data
 
   let rec neq words i a b =
     if i = words
@@ -132,20 +142,16 @@ module Mutable = struct
     unsafe_set c.data 0 (neq words 0 a b)
   ;;
 
-  let rec lt i a b =
-    if i < 0
-    then Int64.zero (* must be equal *)
-    else (
-      match cmpu64 (unsafe_get a.data i) (unsafe_get b.data i) with
-      | -1 -> Int64.one
-      | 0 -> lt (i - 1) a b
-      | _ -> Int64.zero)
-  ;;
+  external lt
+    :  (int[@untagged])
+    -> Bytes.t
+    -> Bytes.t
+    -> Bytes.t
+    -> unit
+    = "hardcaml_bits_lt_bc" "hardcaml_bits_lt"
+  [@@noalloc]
 
-  let ( <: ) c a b =
-    let words = words a in
-    unsafe_set c.data 0 (lt (words - 1) a b)
-  ;;
+  let ( <: ) c a b = lt (width a) c.data a.data b.data
 
   let[@cold] raise_mux_of_empty_list () =
     raise_s [%message "Bits.mux unexpected empty list"]
@@ -164,31 +170,15 @@ module Mutable = struct
     copy ~src:(mux_find idx 0 l) ~dst
   ;;
 
-  let cat c_words a_width a b =
-    let a_words = words_of_width a_width in
-    let b_width, b_words = width b, words b in
-    let a_bits = a_width land width_mask in
-    let a, b = a.data, b.data in
-    if a_bits = 0
-    then
-      (* aligned *)
-      for i = 0 to b_words - 1 do
-        unsafe_set a (a_words + i) (unsafe_get b i)
-      done
-    else
-      (* not aligned *)
-      for i = 0 to b_words - 1 do
-        let x = unsafe_get a (a_words - 1 + i) in
-        let y = unsafe_get b i in
-        let x = Int64.(x lor (y lsl a_bits)) in
-        unsafe_set a (a_words - 1 + i) x;
-        if a_words + i < c_words
-        then (
-          let y = Int64.(y lsr Int.(bits_per_word - a_bits)) in
-          unsafe_set a (a_words + i) y)
-      done;
-    a_width + b_width
-  ;;
+
+  external cat2
+    :  Bytes.t
+    -> (int[@untagged])
+    -> Bytes.t
+    -> (int[@untagged])
+    -> unit
+    = "hardcaml_bits_cat2_bc" "hardcaml_bits_cat2"
+  [@@noalloc]
 
   (* This implementation allocates due to [List.rev], but is slightly faster:
 
@@ -208,44 +198,27 @@ module Mutable = struct
            copy ~src:h ~dst:c;
            cat_iter c_words (width h) c t
      ]} *)
-  let rec cat_iter_back c_words width_ c l =
+  let rec cat_iter_back width_ c l =
     match l with
     | [] -> ()
     | h :: t ->
-      let width = width_ - width h in
-      cat_iter_back c_words width c t;
-      ignore (cat c_words width c h : int)
+      let width_ = width_ - width h in
+      cat_iter_back width_ c t;
+      cat2 c.data width_ h.data (width h)
   ;;
 
-  let concat c l =
-    let c_words = words c in
-    cat_iter_back c_words (width c) c l
-  ;;
+  let concat c l = cat_iter_back (width c) c l
 
-  let word w = w lsr log_bits_per_word
+  external select
+    :  Bytes.t
+    -> Bytes.t
+    -> (int[@untagged])
+    -> (int[@untagged])
+    -> unit
+    = "hardcaml_bits_select_bc" "hardcaml_bits_select"
+  [@@noalloc]
 
-  let select c s h l =
-    let c_width = h - l + 1 in
-    let c_words = words c in
-    let s_bits = l land width_mask in
-    let lo_word = word l in
-    let hi_word = word h in
-    let s = s.data in
-    if s_bits = 0
-    then
-      for i = 0 to c_words - 1 do
-        unsafe_set c.data i (unsafe_get s (lo_word + i))
-      done
-    else
-      for i = 0 to c_words - 1 do
-        let j = lo_word + i in
-        let a = unsafe_get s j in
-        let b = if j >= hi_word then Int64.zero else unsafe_get s (j + 1) in
-        let x = Int64.((a lsr s_bits) lor (b lsl Int.(bits_per_word - s_bits))) in
-        unsafe_set c.data i x
-      done;
-    mask c_width c.data
-  ;;
+  let select c s h l = select c.data s.data h l
 
   external umul
     :  Bytes.t

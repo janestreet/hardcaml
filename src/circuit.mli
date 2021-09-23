@@ -94,6 +94,9 @@ val fan_in_map : t -> Signal.Uid_set.t Signal.Uid_map.t
 (** compare 2 circuits to see if they are the same *)
 val structural_compare : ?check_names:bool -> t -> t -> bool
 
+(** returns the list of instantiations in this circuit *)
+val instantiations : t -> Signal.instantiation list
+
 val create_with_interface
   :  (module Interface.S_Of_signal with type Of_signal.t = 'i)
   -> (module Interface.S_Of_signal with type Of_signal.t = 'o)

@@ -175,6 +175,9 @@ module type S = sig
   (** convert a [char] to an 8 bit constant *)
   val of_char : char -> t
 
+  (** convert a [bool] to [vdd] or [gnd] *)
+  val of_bool : bool -> t
+
   (** Convert bits to a Zarith.t *)
   val to_z : t -> signedness:Constant.Signedness.t -> Zarith.Z.t
 

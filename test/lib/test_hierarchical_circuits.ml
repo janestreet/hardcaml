@@ -106,22 +106,26 @@ let%expect_test "generate hierarchy without sharing" =
 
         /* signal declarations */
         wire _6;
-        wire _4;
-        wire _7;
+        wire _1;
+        wire _8;
+        wire _3;
+        wire _9;
 
         /* logic */
         inner_0
             the_inner_0
             ( .a(a), .b(_6) );
+        assign _1 = _6;
         inner
             the_inner
-            ( .a(a), .b(_4) );
-        assign _7 = _4 | _6;
+            ( .a(a), .b(_8) );
+        assign _3 = _8;
+        assign _9 = _3 | _1;
 
         /* aliases */
 
         /* output assignments */
-        assign b = _7;
+        assign b = _9;
 
     endmodule
     module outer (
@@ -133,17 +137,19 @@ let%expect_test "generate hierarchy without sharing" =
         output b;
 
         /* signal declarations */
-        wire _4;
+        wire _5;
+        wire _2;
 
         /* logic */
         middle
             the_middle
-            ( .a(a), .b(_4) );
+            ( .a(a), .b(_5) );
+        assign _2 = _5;
 
         /* aliases */
 
         /* output assignments */
-        assign b = _4;
+        assign b = _2;
 
     endmodule |}]
 ;;
@@ -186,22 +192,26 @@ let%expect_test "generate hierarchy with sharing" =
 
         /* signal declarations */
         wire _6;
-        wire _4;
-        wire _7;
+        wire _1;
+        wire _8;
+        wire _3;
+        wire _9;
 
         /* logic */
         inner
             the_inner
             ( .a(a), .b(_6) );
+        assign _1 = _6;
         inner
             the_inner_0
-            ( .a(a), .b(_4) );
-        assign _7 = _4 | _6;
+            ( .a(a), .b(_8) );
+        assign _3 = _8;
+        assign _9 = _3 | _1;
 
         /* aliases */
 
         /* output assignments */
-        assign b = _7;
+        assign b = _9;
 
     endmodule
     module outer (
@@ -213,17 +223,19 @@ let%expect_test "generate hierarchy with sharing" =
         output b;
 
         /* signal declarations */
-        wire _4;
+        wire _5;
+        wire _2;
 
         /* logic */
         middle
             the_middle
-            ( .a(a), .b(_4) );
+            ( .a(a), .b(_5) );
+        assign _2 = _5;
 
         /* aliases */
 
         /* output assignments */
-        assign b = _4;
+        assign b = _2;
 
     endmodule |}]
 ;;
@@ -276,22 +288,26 @@ let%expect_test "To_file" =
 
         /* signal declarations */
         wire _6;
-        wire _4;
-        wire _7;
+        wire _1;
+        wire _8;
+        wire _3;
+        wire _9;
 
         /* logic */
         inner
             the_inner
             ( .a(a), .b(_6) );
+        assign _1 = _6;
         inner
             the_inner_0
-            ( .a(a), .b(_4) );
-        assign _7 = _4 | _6;
+            ( .a(a), .b(_8) );
+        assign _3 = _8;
+        assign _9 = _3 | _1;
 
         /* aliases */
 
         /* output assignments */
-        assign b = _7;
+        assign b = _9;
 
     endmodule
     module outer (
@@ -303,17 +319,19 @@ let%expect_test "To_file" =
         output b;
 
         /* signal declarations */
-        wire _4;
+        wire _5;
+        wire _2;
 
         /* logic */
         middle
             the_middle
-            ( .a(a), .b(_4) );
+            ( .a(a), .b(_5) );
+        assign _2 = _5;
 
         /* aliases */
 
         /* output assignments */
-        assign b = _4;
+        assign b = _2;
 
     endmodule |}];
   return ()
@@ -398,22 +416,26 @@ let%expect_test "In_directory" =
 
         -- signal declarations
         signal hc_6 : std_logic;
-        signal hc_4 : std_logic;
-        signal hc_7 : std_logic;
+        signal hc_1 : std_logic;
+        signal hc_8 : std_logic;
+        signal hc_3 : std_logic;
+        signal hc_9 : std_logic;
 
     begin
 
         -- logic
         the_inner: entity work.inner (rtl)
             port map ( a => a, b => hc_6 );
+        hc_1 <= hc_6;
         the_inner_0: entity work.inner (rtl)
-            port map ( a => a, b => hc_4 );
-        hc_7 <= hc_sl(hc_uns(hc_4) or hc_uns(hc_6));
+            port map ( a => a, b => hc_8 );
+        hc_3 <= hc_8;
+        hc_9 <= hc_sl(hc_uns(hc_3) or hc_uns(hc_1));
 
         -- aliases
 
         -- output assignments
-        b <= hc_7;
+        b <= hc_9;
 
     end architecture;
     library ieee;
@@ -443,18 +465,20 @@ let%expect_test "In_directory" =
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
 
         -- signal declarations
-        signal hc_4 : std_logic;
+        signal hc_5 : std_logic;
+        signal hc_2 : std_logic;
 
     begin
 
         -- logic
         the_middle: entity work.middle (rtl)
-            port map ( a => a, b => hc_4 );
+            port map ( a => a, b => hc_5 );
+        hc_2 <= hc_5;
 
         -- aliases
 
         -- output assignments
-        b <= hc_4;
+        b <= hc_2;
 
     end architecture; |}];
   return ()

@@ -559,6 +559,7 @@ module Make (Prims : Primitives) = struct
   let to_array b = Array.of_list (bits_lsb b)
   let of_array l = concat_lsb (Array.to_list l)
   let to_z b = to_constant b |> Constant.to_z
+  let of_bool b = if b then vdd else gnd
 
   (* {[
        let rec repeat s n =

@@ -1,5 +1,12 @@
 # Instantiation
 
+<!--
+```ocaml
+# Hardcaml.Caller_id.set_mode Disabled
+- : unit = ()
+```
+-->
+
 An [instantiation](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Instantiation/index.html)
 creates a placeholder for a named sub-circuit with
 specified input and output ports.
@@ -49,13 +56,9 @@ and the `value` is a signal corresponding to the output port.
       ()
 val the_instantiation : Signal.t Base.Map.M(Base.String).t = <abstr>
 # Map.find_exn the_instantiation "x"
-- : Signal.t =
-(select (loc instantiation.ml:45:10) (width 5) (range (4 0))
- (data_in instantiation))
+- : Signal.t = (select (width 5) (range (4 0)) (data_in instantiation))
 # Map.find_exn the_instantiation "y"
-- : Signal.t =
-(select (loc instantiation.ml:45:10) (width 10) (range (14 5))
- (data_in instantiation))
+- : Signal.t = (select (width 10) (range (14 5)) (data_in instantiation))
 ```
 
 ## Parameters

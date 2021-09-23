@@ -21,6 +21,7 @@ let create
   let outputs, _ =
     List.fold outputs ~init:([], 0) ~f:(fun (o, a) (n, w) -> (n, (w, a)) :: o, a + w)
   in
+  let one_output = List.length outputs = 1 in
   let signal =
     Signal.Inst
       { signal_id = Signal.make_id width deps
@@ -42,7 +43,13 @@ let create
   List.iter attributes ~f:(fun attribute ->
     ignore (Signal.add_attribute signal attribute : Signal.t));
   List.map outputs ~f:(fun (name, (width, offset)) ->
-    name, Signal.select signal (offset + width - 1) offset)
+    ( name
+      , (* We need to create a distinct output signal - if there is only one output then
+           the instantiation and the output signal share a uid which confuses the logic
+           for associating attrributes correctly. *)
+      if one_output
+      then Signal.wireof signal
+      else Signal.select signal (offset + width - 1) offset ))
   |> Map.of_alist_exn (module String)
 ;;
 

@@ -25,17 +25,19 @@ let%expect_test "Intstantiation in Verilog with single bit output" =
         output b;
 
         /* signal declarations */
-        wire _4;
+        wire _5;
+        wire _2;
 
         /* logic */
         example
             the_example
-            ( .a(a), .b(_4) );
+            ( .a(a), .b(_5) );
+        assign _2 = _5;
 
         /* aliases */
 
         /* output assignments */
-        assign b = _4;
+        assign b = _2;
 
     endmodule |}]
 ;;
@@ -71,18 +73,20 @@ let%expect_test "Intstantiation in VHDL with single bit output" =
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
 
         -- signal declarations
-        signal hc_4 : std_logic;
+        signal hc_5 : std_logic;
+        signal hc_2 : std_logic;
 
     begin
 
         -- logic
         the_example: entity work.example (rtl)
-            port map ( a => a, b => hc_4 );
+            port map ( a => a, b => hc_5 );
+        hc_2 <= hc_5;
 
         -- aliases
 
         -- output assignments
-        b <= hc_4;
+        b <= hc_2;
 
     end architecture; |}]
 ;;

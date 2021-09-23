@@ -29,7 +29,7 @@ struct
 end
 
 let command =
-  Command.basic
+  Async.Command.async
     ~summary:"multiply by constant logic"
     (let open Command.Let_syntax in
      let%map_open () = return ()

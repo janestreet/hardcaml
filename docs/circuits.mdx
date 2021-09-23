@@ -1,5 +1,12 @@
 # Circuits
 
+<!--
+```ocaml
+# Hardcaml.Caller_id.set_mode Disabled
+- : unit = ()
+```
+-->
+
 A Hardcaml [`Circuit.t`](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Circuit/index.html)
 encodes both the RTL logic for a hardware
 design along with named input and output ports. Circuits can be
@@ -71,10 +78,7 @@ may write
      ~outputs:[ "c", 8 ]
 val an_instantiation : Signal.t Base.Map.M(Base.String).t = <abstr>
 # Map.find_exn an_instantiation "c"
-- : Signal.t =
-(instantiation (loc instantiation.ml:26:20) (width 8)
- ("work.some_subcircuit(rtl)" (parameters ()) (inputs ((a 0b1) (b 0b111)))
-  (outputs ((c 8)))))
+- : Signal.t = (wire (width 8) (data_in instantiation))
 ```
 
 The given name corresponds to the module name of the instantiated

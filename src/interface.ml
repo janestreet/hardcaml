@@ -198,6 +198,18 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
             (lengths : int t)]
   ;;
 
+  module All (M : Monad.S) = struct
+    let all (t : _ M.t t) =
+      let%map.M l = M.all (to_list t) in
+      of_alist (List.zip_exn (to_list port_names) l)
+    ;;
+  end
+
+  let or_error_all t =
+    let open All (Or_error) in
+    all t
+  ;;
+
   module Make_comb (Comb : Comb.S) = struct
     type comb = Comb.t [@@deriving sexp_of]
     type t = Comb.t X.t [@@deriving sexp_of]
@@ -312,16 +324,22 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     ;;
 
     let validate t =
-      iter3 port_names port_widths t ~f:(fun port_name port_width signal ->
-        if Signal.width signal <> port_width
-        then (
-          let signal_width = Signal.width signal in
-          raise_s
-            [%message
-              "Interface validation failed!"
-                (port_name : string)
-                (port_width : int)
-                (signal_width : int)]))
+      let (_ : unit X.t) =
+        map3 port_names port_widths t ~f:(fun port_name port_width signal ->
+          if Signal.width signal <> port_width
+          then (
+            let signal_width = Signal.width signal in
+            Or_error.error_s
+              [%message
+                "Interface validation failed!"
+                  (port_name : string)
+                  (port_width : int)
+                  (signal_width : int)])
+          else Ok ())
+        |> or_error_all
+        |> Or_error.ok_exn
+      in
+      ()
     ;;
   end
 

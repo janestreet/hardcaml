@@ -148,7 +148,8 @@ let%expect_test "Instantiation blackbox" =
         wire _4;
         wire _6;
         wire _8;
-        wire [31:0] _11;
+        wire [31:0] _12;
+        wire [31:0] _9;
 
         /* logic */
         assign _2 = d;
@@ -157,12 +158,13 @@ let%expect_test "Instantiation blackbox" =
         assign _8 = clk;
         fir_filter
             fir_filter
-            ( .clk(_8), .clr(_6), .enable(_4), .d(_2), .q(_11[31:0]) );
+            ( .clk(_8), .clr(_6), .enable(_4), .d(_2), .q(_12[31:0]) );
+        assign _9 = _12;
 
         /* aliases */
 
         /* output assignments */
-        assign q = _11;
+        assign q = _9;
 
     endmodule |}];
   (* Now just print the top level module, plus black boxes for the instantiations *)
@@ -207,7 +209,8 @@ let%expect_test "Instantiation blackbox" =
         wire _4;
         wire _6;
         wire _8;
-        wire [31:0] _11;
+        wire [31:0] _12;
+        wire [31:0] _9;
 
         /* logic */
         assign _2 = d;
@@ -216,12 +219,13 @@ let%expect_test "Instantiation blackbox" =
         assign _8 = clk;
         fir_filter
             fir_filter
-            ( .clk(_8), .clr(_6), .enable(_4), .d(_2), .q(_11[31:0]) );
+            ( .clk(_8), .clr(_6), .enable(_4), .d(_2), .q(_12[31:0]) );
+        assign _9 = _12;
 
         /* aliases */
 
         /* output assignments */
-        assign q = _11;
+        assign q = _9;
 
     endmodule |}]
 ;;

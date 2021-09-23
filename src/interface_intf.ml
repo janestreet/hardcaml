@@ -229,6 +229,16 @@ module type S = sig
       Raises if all lists don't have the same length. *)
   val to_interface_list : 'a list t -> 'a t list
 
+  (** Similar to [Monad.all] for lists -- combine and lift the monads to outside the
+      interface.
+  *)
+  module All (M : Monad.S) : sig
+    val all : 'a M.t t -> 'a t M.t
+  end
+
+  (** Equivalent to All(Or_error).all. This is made a special case for convenience. *)
+  val or_error_all : 'a Or_error.t t -> 'a t Or_error.t
+
   module type Comb = Comb with type 'a interface := 'a t
 
   module Make_comb (Comb : Comb.S) : Comb with type comb = Comb.t

@@ -270,6 +270,14 @@ let structural_compare ?check_names c0 c1 =
   recurse_into_circuit ()
 ;;
 
+let instantiations t =
+  let instantiations = ref [] in
+  Signal_graph.iter (signal_graph t) ~f:(function
+    | Signal.Inst inst -> instantiations := inst.instantiation :: !instantiations
+    | _ -> ());
+  !instantiations
+;;
+
 module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = struct
   type create = I.Of_signal.t -> O.Of_signal.t
 

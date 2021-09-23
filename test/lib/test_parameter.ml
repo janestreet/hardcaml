@@ -211,24 +211,28 @@ let%expect_test "instantiation in verilog" =
         output [1:0] b_verilog;
 
         /* signal declarations */
-        wire [1:0] _5;
         wire [1:0] _7;
+        wire [1:0] _1;
+        wire [1:0] _9;
+        wire [1:0] _4;
 
         /* logic */
         test_parameters_verilog
             #( .an_int(7), .a_bool(1'b1), .a_string("world"), .a_real(3.900000), .a_bit(1'b1), .a_bit_vector(4'b1100), .a_std_logic(4'd5), .a_std_ulogic(4'd3), .a_std_logic_vector(4'b1010), .a_std_ulogic_vector(4'b1011) )
             the_test_parameters_verilog
-            ( .a(a), .b(_5[1:0]) );
+            ( .a(a), .b(_7[1:0]) );
+        assign _1 = _7;
         test_parameters_vhdl
             #( .an_int(7), .a_bool(1'b1), .a_string("world"), .a_real(3.900000), .a_bit(1'b1), .a_bit_vector(4'b1100), .a_std_logic(4'd5), .a_std_ulogic(4'd3), .a_std_logic_vector(4'b1010), .a_std_ulogic_vector(4'b1011) )
             the_test_parameters_vhdl
-            ( .a(a), .b(_7[1:0]) );
+            ( .a(a), .b(_9[1:0]) );
+        assign _4 = _9;
 
         /* aliases */
 
         /* output assignments */
-        assign b_vhdl = _7;
-        assign b_verilog = _5;
+        assign b_vhdl = _4;
+        assign b_verilog = _1;
 
     endmodule |}]
 ;;
@@ -265,24 +269,28 @@ let%expect_test "instantiation in vhdl" =
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
 
         -- signal declarations
-        signal hc_5 : std_logic_vector (1 downto 0);
         signal hc_7 : std_logic_vector (1 downto 0);
+        signal hc_1 : std_logic_vector (1 downto 0);
+        signal hc_9 : std_logic_vector (1 downto 0);
+        signal hc_4 : std_logic_vector (1 downto 0);
 
     begin
 
         -- logic
         the_test_parameters_verilog: entity work.test_parameters_verilog (rtl)
             generic map ( an_int => 7, a_bool => true, a_string => "world", a_real => 3.900000, a_bit => '1', a_bit_vector => "1100", a_std_logic => 'W', a_std_ulogic => '1', a_std_logic_vector => std_logic_vector'("1010"), a_std_ulogic_vector => std_ulogic_vector'("1011"))
-            port map ( a => a, b => hc_5(1 downto 0) );
+            port map ( a => a, b => hc_7(1 downto 0) );
+        hc_1 <= hc_7;
         the_test_parameters_vhdl: entity work.test_parameters_vhdl (rtl)
             generic map ( an_int => 7, a_bool => true, a_string => "world", a_real => 3.900000, a_bit => '1', a_bit_vector => "1100", a_std_logic => 'W', a_std_ulogic => '1', a_std_logic_vector => std_logic_vector'("1010"), a_std_ulogic_vector => std_ulogic_vector'("1011"))
-            port map ( a => a, b => hc_7(1 downto 0) );
+            port map ( a => a, b => hc_9(1 downto 0) );
+        hc_4 <= hc_9;
 
         -- aliases
 
         -- output assignments
-        b_vhdl <= hc_7;
-        b_verilog <= hc_5;
+        b_vhdl <= hc_4;
+        b_verilog <= hc_1;
 
     end architecture; |}]
 ;;

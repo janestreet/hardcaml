@@ -101,7 +101,8 @@ let%expect_test "instantiation input is empty" =
         output b;
 
         /* signal declarations */
-        wire _3;
+        wire _4;
+        wire _1;
 
         /* logic */
         example
