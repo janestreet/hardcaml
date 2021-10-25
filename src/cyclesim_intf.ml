@@ -10,6 +10,9 @@ module type Cyclesim = sig
 
   type t_port_list = (Port_list.t, Port_list.t) t
 
+  (** returns the circuit used to compile the simulation. *)
+  val circuit : _ t -> Circuit.t option
+
   (** advance by 1 clock cycle (check->comb->seq->comb) *)
   val cycle : _ t -> unit
 

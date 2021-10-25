@@ -1,7 +1,7 @@
 type t =
   | High
   | Low
-[@@deriving sexp_of]
+[@@deriving sexp_of, equal]
 
 let to_int = function
   | High -> 1

@@ -42,6 +42,9 @@ module Vivado : sig
   (** Export net for debugging with chipscope. *)
   val mark_debug : bool -> t
 
+  (** Similar to dont_touch *)
+  val keep : bool -> t
+
   module Ram_style : sig
     val block : t
     val distributed : t

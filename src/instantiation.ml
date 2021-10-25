@@ -55,6 +55,8 @@ let create
 
 module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = struct
   let create ?lib ?arch ?instance ?parameters ?attributes ~name inputs =
+    (* ensure the passed inputs are of the correct widths. *)
+    I.Of_signal.validate inputs;
     let inputs =
       List.map2_exn I.Names_and_widths.t (I.to_list inputs) ~f:(fun (n, _) s -> n, s)
     in

@@ -3,6 +3,6 @@
 type t =
   | Rising
   | Falling
-[@@deriving sexp_of]
+[@@deriving sexp_of, equal]
 
 val to_int : t -> int

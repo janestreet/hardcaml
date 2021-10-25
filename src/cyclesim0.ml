@@ -33,6 +33,7 @@ type ('i, 'o) t =
   ; assertions : Signal.t Map.M(String).t
   ; violated_assertions : int list Hashtbl.M(String).t
   ; digest : Digest.t ref
+  ; circuit : Circuit.t option
   }
 [@@deriving fields]
 
@@ -52,6 +53,7 @@ module Config = struct
     ; combinational_ops_database : Combinational_ops_database.t
     ; compute_digest : bool
     ; deduplicate_signals : bool
+    ; store_circuit : bool
     }
 
   let empty_ops_database = Combinational_ops_database.create ()
@@ -61,6 +63,7 @@ module Config = struct
     ; combinational_ops_database = empty_ops_database
     ; compute_digest = Exported_for_specific_uses.am_testing
     ; deduplicate_signals = true
+    ; store_circuit = false
     }
   ;;
 
@@ -69,6 +72,7 @@ module Config = struct
     ; combinational_ops_database = empty_ops_database
     ; compute_digest = Exported_for_specific_uses.am_testing
     ; deduplicate_signals = true
+    ; store_circuit = false
     }
   ;;
 
@@ -114,6 +118,7 @@ module Private = struct
     ; assertions
     ; violated_assertions = Hashtbl.create (module String)
     ; digest = ref (Md5_lib.string "none")
+    ; circuit = None
     }
   ;;
 

@@ -453,3 +453,31 @@ let%expect_test "onehot_select" =
     ((x 0011)
      (y 00000110)) |}]
 ;;
+
+module Test = struct
+  open Core
+
+  module Another_module = struct
+    type 'a t = { value : 'a [@bits 16] } [@@deriving sexp_of, hardcaml]
+  end
+
+  type 'a t =
+    { foo : 'a [@bits 8]
+    ; bar : 'a Another_module.t
+    ; baz : 'a Another_module.t
+    }
+  [@@deriving sexp_of, hardcaml]
+
+  let%expect_test "Test to show interface with identical port names. In this case you \
+                   would need to add a RTL prefix to fix the problem."
+    =
+    Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+      let raw = Bits.of_int 0xAA00BB01 ~width:(fold ~init:0 ~f:( + ) port_widths) in
+      let raw_unpacked = Of_bits.unpack raw |> map ~f:Bits.to_int in
+      print_s [%message (raw_unpacked : Int.Hex.t t)];
+      (* We don't actually print out the (wrong) values, as we now raise in this
+         situation. *)
+      [%expect.unreachable]);
+    [%expect {| ("Cannot have duplicate port names" (dups (value))) |}]
+  ;;
+end

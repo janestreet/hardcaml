@@ -33,6 +33,7 @@ let results_of_assertions (t : _ t) =
 
 module Config = Cyclesim0.Config
 
+let circuit (sim : _ t) = sim.circuit
 let cycle_check (sim : _ t) = sim.cycle_check ()
 let cycle_before_clock_edge (sim : _ t) = sim.cycle_before_clock_edge ()
 let cycle_at_clock_edge (sim : _ t) = sim.cycle_at_clock_edge ()

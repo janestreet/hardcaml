@@ -112,6 +112,10 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   let to_alist x = to_list (map2 port_names x ~f:(fun name x -> name, x))
 
   let of_alist x =
+    (* Assert there are no ports with duplicate names. *)
+    (match List.find_all_dups (fst (List.unzip x)) ~compare:String.compare with
+     | [] -> ()
+     | dups -> raise_s [%message "Cannot have duplicate port names" (dups : string list)]);
     map port_names ~f:(fun name ->
       match List.Assoc.find x name ~equal:String.equal with
       | Some x -> x

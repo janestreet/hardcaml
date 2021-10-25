@@ -717,5 +717,6 @@ let create ?(config = Cyclesim0.Config.default) circuit =
   ; assertions
   ; violated_assertions
   ; digest
+  ; circuit = (if config.store_circuit then Some circuit else None)
   }
 ;;

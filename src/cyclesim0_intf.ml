@@ -71,6 +71,7 @@ module type Cyclesim0 = sig
     ; assertions : Signal.t Map.M(String).t
     ; violated_assertions : int list Hashtbl.M(String).t
     ; digest : Digest.t ref
+    ; circuit : Circuit.t option
     }
   [@@deriving fields, sexp_of]
 
@@ -89,6 +90,11 @@ module type Cyclesim0 = sig
           within inlined tests. *)
       ; deduplicate_signals : bool
       (** Perform a pass which finds structurally equal signals and shares them. *)
+      ; store_circuit : bool
+      (** Stores the post-processed circuit that is used to compile the
+          simulation. This should generally be set to false, so that the Circuit
+          can be garbage collected once the simulation is constructed.
+      *)
       }
 
     val default : t

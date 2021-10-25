@@ -365,7 +365,7 @@ let%expect_test "test instantiation" =
       (data_in (
         instantiation
         (width 7)
-        ("work.module_name(rtl)"
+        ("work.module_name(rtl){the_module_name}"
           (parameters (
             (int_param    1)
             (string_param string_value)

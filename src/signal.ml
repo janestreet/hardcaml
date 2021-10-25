@@ -469,6 +469,7 @@ let rec sexp_of_instantiation_recursive ?show_uids ~depth inst =
   let name =
     if String.is_empty inst.inst_arch then name else name ^ "(" ^ inst.inst_arch ^ ")"
   in
+  let name = name ^ "{" ^ inst.inst_instance ^ "}" in
   let sexp_of_output_width (w, _) = [%sexp (w : int)] in
   [%message
     name
