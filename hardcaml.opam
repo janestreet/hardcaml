@@ -18,7 +18,7 @@ depends: [
   "stdio"
   "topological_sort"
   "dune"             {>= "2.0.0"}
-  "ppxlib"           {= "0.22.0"}
+  "ppxlib"           {>= "0.23.0"}
   "zarith"           {>= "1.11"}
 ]
 synopsis: "RTL Hardware Design in OCaml"

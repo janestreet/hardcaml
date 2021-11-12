@@ -454,7 +454,7 @@ let%expect_test "onehot_select" =
      (y 00000110)) |}]
 ;;
 
-module Test = struct
+module _ = struct
   open Core
 
   module Another_module = struct

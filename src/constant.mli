@@ -102,10 +102,6 @@ module Raw : sig
   (** Convert from a byte buffer.  The copied data is padded as required. *)
   val of_bytes : Bytes.t -> width:int -> t
 
-  (** Convert to a byte buffer. The output buffer length is rounded to a multiple of 8
-      bits. *)
-  val to_bytes : t -> Bytes.t
-
   (** Convert from a string buffer.  The copied data is padded as required. *)
   val of_string : String.t -> width:int -> t
 
@@ -113,16 +109,5 @@ module Raw : sig
       bits . *)
   val to_string : t -> String.t
 
-  (** {2 Unsafe Operations} *)
-
-  (** Return the underlying [Bytes.t] representation of the constant. We label as unsafe as
-      the output bytes are not copied. Mutating them should be done with care. *)
-  val unsafe_to_bytes : t -> Bytes.t
-
-  (** Construct a constant from the given [Bytes.t]. We label as unsafe as the input bytes
-      are not copied. Mutating them should be done with care.
-
-      The length of the given [Bytes.t] must be rounded up to 64 bits and be the correct
-      size of fit [width] bits or an exception is raised. *)
-  val unsafe_of_bytes : width:int -> Bytes.t -> t
+  val to_bytes : t -> Bytes.t
 end

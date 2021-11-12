@@ -460,27 +460,27 @@ let%expect_test "BadPrimitives" =
       (iterations    1)
       (min_bit_width 1)
       (max_bit_width 20)))
-    (* require-failed: lib/hardcaml/test/lib/test_bits.ml:LINE:COL. *)
+    (* require-failed: lib/hardcaml/hardcaml/test/lib/test_bits.ml:LINE:COL. *)
     (mismatch
       (operation (110111000101100 +: 001000001100100))
       (result1 111111010010000)
       (result2 000000101101111))
-    (* require-failed: lib/hardcaml/test/lib/test_bits.ml:LINE:COL. *)
+    (* require-failed: lib/hardcaml/hardcaml/test/lib/test_bits.ml:LINE:COL. *)
     (mismatch
       (operation (101 *: 0000))
       (result1 0000000)
       (result2 1111111))
-    (* require-failed: lib/hardcaml/test/lib/test_bits.ml:LINE:COL. *)
+    (* require-failed: lib/hardcaml/hardcaml/test/lib/test_bits.ml:LINE:COL. *)
     (mismatch
       (operation (select 0111100110000011 10 3))
       (result1 00110000)
       (result2 11001111))
-    (* require-failed: lib/hardcaml/test/lib/test_bits.ml:LINE:COL. *)
+    (* require-failed: lib/hardcaml/hardcaml/test/lib/test_bits.ml:LINE:COL. *)
     (mismatch
       (operation (mux 0 (0011 0000)))
       (result1 0011)
       (result2 1100))
-    (* require-failed: lib/hardcaml/test/lib/test_bits.ml:LINE:COL. *)
+    (* require-failed: lib/hardcaml/hardcaml/test/lib/test_bits.ml:LINE:COL. *)
     (mismatch
       (operation (
         concat (1100101111 00001100011100 11101011010 00 01101101011111101000)))

@@ -5,7 +5,7 @@ open Signal
 open Recipe
 open Let_syntax
 
-module Test_mult = struct
+module _ = struct
   module I = struct
     type 'a t =
       { clock : 'a [@bits 1]

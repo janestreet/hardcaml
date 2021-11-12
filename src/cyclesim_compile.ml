@@ -315,8 +315,20 @@ module Io_ports = struct
 end
 
 module Compile = struct
-  let mutable_to_int x = Bits.Mutable.Comb.to_int x
+  let mutable_to_int x = Int64.to_int_trunc (Bits.Mutable.unsafe_get_int64 x 0)
   let zero n = Bits.Mutable.of_constant (Constant.of_int ~width:n 0)
+
+  let dispach_on_width width ~less_than_64 ~exactly_64 ~more_than_64 =
+    Some
+      (if width <= 64
+       then less_than_64
+       else if width = 64
+       then exactly_64
+       else more_than_64)
+  ;;
+
+  let[@inline] set0 t value = Bits.Mutable.unsafe_set_int64 t 0 value
+  let[@inline] get0 t = Bits.Mutable.unsafe_get_int64 t 0
 
   let signal ~combinational_ops_database (maps : Maps.t) signal =
     let find_exn signal = Maps.find_data_exn maps signal in
@@ -331,19 +343,30 @@ module Compile = struct
       let not_ () = Bits.Mutable.( ~: ) tgt arg in
       Some not_
     | Cat { args; _ } ->
-      let args = List.map args ~f:find_or_empty in
-      let cat () = Bits.Mutable.concat tgt args in
+      let args = List.map args ~f:find_or_empty |> List.rev |> Array.of_list in
+      let cat () = Bits.Mutable.concat_rev_array tgt args in
       Some cat
     | Mux { select; cases; _ } ->
       let sel = find_or_empty select in
       let els = Array.of_list (List.map cases ~f:find_or_empty) in
-      let max = Array.length els - 1 in
-      let mux () =
+      let muxn () =
         let sel = mutable_to_int sel in
+        let max = Array.length els - 1 in
         let sel = if sel > max then max else sel in
-        Bits.Mutable.copy ~dst:tgt ~src:els.(sel)
+        Bits.Mutable.copy ~dst:tgt ~src:(Array.unsafe_get els sel)
       in
-      Some mux
+      let mux64 () =
+        let sel = mutable_to_int sel in
+        let max = Array.length els - 1 in
+        let sel = if sel > max then max else sel in
+        let (selected : Bits.Mutable.t) = Array.unsafe_get els sel in
+        set0 tgt (get0 selected)
+      in
+      dispach_on_width
+        (Bits.Mutable.width tgt)
+        ~less_than_64:mux64
+        ~exactly_64:mux64
+        ~more_than_64:muxn
     | Op2 { op; arg_a; arg_b; signal_id = _ } ->
       let a = find_or_empty arg_a in
       let b = find_or_empty arg_b in
@@ -377,8 +400,13 @@ module Compile = struct
          Some lt)
     | Wire _ ->
       let src = List.hd_exn deps in
-      let wire () = Bits.Mutable.copy ~dst:tgt ~src in
-      Some wire
+      if Bits.Mutable.width tgt <= 64
+      then (
+        let wire64 () = set0 tgt (get0 src) in
+        Some wire64)
+      else (
+        let wiren () = Bits.Mutable.copy ~dst:tgt ~src in
+        Some wiren)
     | Select { arg; high; low; _ } ->
       let d = find_or_empty arg in
       let sel () = Bits.Mutable.select tgt d high low in
@@ -463,14 +491,53 @@ module Compile = struct
          Some inst)
   ;;
 
-  let register_update (maps : Maps.t) (signal : Signal.t) =
-    match signal with
-    | Reg _ ->
-      let tgt = Maps.find_data_exn maps signal in
-      let src = Maps.find_reg_exn maps signal in
-      let reg_upd () = Bits.Mutable.copy ~dst:tgt ~src in
-      reg_upd
-    | _ -> raise_s [%message "[compile_reg_update] expecting register"]
+  let register_update (maps : Maps.t) (signals : Signal.t list) =
+    let signals = Array.of_list signals in
+    let single_word_signals, multiple_word_signals =
+      Array.partition_tf signals ~f:(fun signal -> Signal.width signal <= 64)
+    in
+    let entries_of_signals (signals : Signal.t array) =
+      let dsts =
+        Array.map signals ~f:(fun signal ->
+          match signal with
+          | Reg _ ->
+            let dst = Maps.find_data_exn maps signal in
+            dst
+          | _ -> raise_s [%message "[compile_reg_update] expecting register"])
+      in
+      let srcs =
+        Array.map signals ~f:(fun signal ->
+          match signal with
+          | Reg _ ->
+            let src = Maps.find_reg_exn maps signal in
+            src
+          | _ -> raise_s [%message "[compile_reg_update] expecting register"])
+      in
+      dsts, srcs
+    in
+    let single_word_dsts, single_word_srcs = entries_of_signals single_word_signals in
+    let multiple_word_dsts, multiple_word_srcs =
+      entries_of_signals multiple_word_signals
+    in
+    let reg_updates () =
+      let () =
+        let len = Array.length single_word_dsts in
+        for i = 0 to len - 1 do
+          let src0 = Array.unsafe_get single_word_srcs i in
+          let dst0 = Array.unsafe_get single_word_dsts i in
+          Bits.Mutable.unsafe_set_int64 dst0 0 (Bits.Mutable.unsafe_get_int64 src0 0)
+        done
+      in
+      for i = 0 to Array.length multiple_word_dsts - 1 do
+        let src = Array.unsafe_get multiple_word_srcs i in
+        let dst = Array.unsafe_get multiple_word_dsts i in
+        let words = Bits.Mutable.num_words src in
+        for j = 0 to words - 1 do
+          Bits.Mutable.unsafe_set_int64 dst j (Bits.Mutable.unsafe_get_int64 src j)
+        done
+      done
+    in
+    Staged.stage reg_updates
   ;;
 
   let memory_update (maps : Maps.t) (signal : Signal.t) =
@@ -573,16 +640,20 @@ module Compute_digest = struct
     let total_length =
       digest_length
       + List.fold ports ~init:0 ~f:(fun total bits ->
-        total + Bytes.length (Bits.Unsafe.data !bits))
+        total + Bits.number_of_data_bytes !bits)
     in
     let digestable_string = Bytes.init total_length ~f:(Fn.const '\000') in
     let build_digestable_string () =
       (* copy bits into digestable string *)
       let pos =
         List.fold ports ~init:digest_length ~f:(fun pos bits ->
-          let bytes = Bits.Unsafe.data !bits in
-          let length = Bytes.length bytes in
-          Bytes.blito ~src:bytes ~dst:digestable_string ~dst_pos:pos ();
+          let length = Bits.number_of_data_bytes !bits in
+          Bytes.blito
+            ~src_pos:Bits.Expert.offset_for_data
+            ~src:(Bits.Expert.unsafe_underlying_repr !bits)
+            ~dst:digestable_string
+            ~dst_pos:pos
+            ();
           pos + length)
       in
       assert (pos = Bytes.length digestable_string)
@@ -620,8 +691,10 @@ let create ?(config = Cyclesim0.Config.default) circuit =
   let tasks_comb = List.filter_opt (List.map bundle.schedule ~f:compile_and_tag) in
   let tasks_regs = List.filter_opt (List.map bundle.regs ~f:compile) in
   let tasks_at_clock_edge =
-    List.map bundle.mems ~f:(Compile.memory_update maps)
-    @ List.map bundle.regs ~f:(Compile.register_update maps)
+    List.concat
+      [ List.map bundle.mems ~f:(Compile.memory_update maps)
+      ; [ Staged.unstage (Compile.register_update maps bundle.regs) ]
+      ]
   in
   (* reset *)
   let resets = List.filter_opt (List.map bundle.regs ~f:(Compile.reset maps)) in
@@ -646,27 +719,42 @@ let create ?(config = Cyclesim0.Config.default) circuit =
     cycle_no := 0
   in
   (* simulator structure *)
-  let task tasks () = List.iter tasks ~f:(fun f -> f ()) in
-  let tasks tasks =
-    let t = List.map tasks ~f:(fun t -> task t) in
-    fun () -> List.iter t ~f:(fun t -> t ())
+  let task tasks =
+    let tasks = Array.of_list tasks in
+    fun () ->
+      for i = 0 to Array.length tasks - 1 do
+        (Array.unsafe_get tasks i) ()
+      done
   in
+  let tasks tasks = task (List.concat tasks) in
   let in_ports, in_ports_task =
     let i =
       List.map in_ports ~f:(fun (n, b) -> n, ref (Bits.zero (Bits.Mutable.width b)))
     in
+    let names = Array.of_list (List.map i ~f:fst) in
+    let src_and_tgt =
+      List.map2_exn in_ports i ~f:(fun (_, tgt) (_, src) -> src, tgt) |> Array.of_list
+    in
     let copy_in_ports () =
-      List.iter2_exn in_ports i ~f:(fun (_, tgt) (name, src) ->
+      for i = 0 to Array.length src_and_tgt - 1 do
+        let src, tgt = Array.unsafe_get src_and_tgt i in
         if Bits.width !src <> Bits.Mutable.width tgt
-        then Io_ports.raise_input_port_width_mismatch name !src tgt;
-        Bits.Mutable.copy_bits ~dst:tgt ~src:!src)
+        then Io_ports.raise_input_port_width_mismatch names.(i) !src tgt;
+        Bits.Mutable.copy_bits ~dst:tgt ~src:!src
+      done
     in
     i, copy_in_ports
   in
   let out_ports_ref ports =
     let p = List.map ports ~f:(fun (n, s) -> n, ref (Bits.zero (Bits.Mutable.width s))) in
+    let tgt_and_src =
+      List.map2_exn p ports ~f:(fun (_, rf) (_, v) -> rf, v) |> Array.of_list
+    in
     let copy_out_ports () =
-      List.iter2_exn p ports ~f:(fun (_, rf) (_, v) -> rf := Bits.Mutable.to_bits v)
+      for i = 0 to Array.length tgt_and_src - 1 do
+        let tgt, src = Array.unsafe_get tgt_and_src i in
+        tgt := Bits.Mutable.to_bits src
+      done
     in
     p, copy_out_ports
   in

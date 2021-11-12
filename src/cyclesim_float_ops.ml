@@ -19,19 +19,19 @@ let op2 op name (width : Width.t) =
   let create_fn i o =
     match i, o with
     | [ x; y ], [ z ] ->
-      let x = Bits.Mutable.get_word x 0 in
-      let y = Bits.Mutable.get_word y 0 in
+      let x = Bits.Mutable.unsafe_get_int64 x 0 in
+      let y = Bits.Mutable.unsafe_get_int64 y 0 in
       (match width with
        | W32 ->
          let x = Int32.of_int64_trunc x |> Int32.float_of_bits in
          let y = Int32.of_int64_trunc y |> Int32.float_of_bits in
          let z' = op x y |> Int32.bits_of_float |> Int64.of_int32_exn in
-         Bits.Mutable.set_word z 0 Int64.(z' land 0xFFFF_FFFFL)
+         Bits.Mutable.unsafe_set_int64 z 0 Int64.(z' land 0xFFFF_FFFFL)
        | W64 ->
          let x = Int64.float_of_bits x in
          let y = Int64.float_of_bits y in
          let z' = op x y |> Int64.bits_of_float in
-         Bits.Mutable.set_word z 0 z')
+         Bits.Mutable.unsafe_set_int64 z 0 z')
     | _ ->
       raise_s [%message "operation requires 2 arguments and 1 result" (name : string)]
   in
@@ -43,16 +43,16 @@ let op1 op name (width : Width.t) =
   let create_fn i o =
     match i, o with
     | [ x ], [ z ] ->
-      let x = Bits.Mutable.get_word x 0 in
+      let x = Bits.Mutable.unsafe_get_int64 x 0 in
       (match width with
        | W32 ->
          let x = Int32.of_int64_trunc x |> Int32.float_of_bits in
          let z' = op x |> Int32.bits_of_float |> Int64.of_int32_exn in
-         Bits.Mutable.set_word z 0 Int64.(z' land 0xFFFF_FFFFL)
+         Bits.Mutable.unsafe_set_int64 z 0 Int64.(z' land 0xFFFF_FFFFL)
        | W64 ->
          let x = Int64.float_of_bits x in
          let z' = op x |> Int64.bits_of_float in
-         Bits.Mutable.set_word z 0 z')
+         Bits.Mutable.unsafe_set_int64 z 0 z')
     | _ ->
       raise_s [%message "operation requires 1 arguments and 1 result" (name : string)]
   in

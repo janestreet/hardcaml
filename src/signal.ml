@@ -1308,7 +1308,7 @@ let ram_wbr ?attributes ~write_port ~read_port size =
 (* Pretty printer *)
 let pp fmt t = Caml.Format.fprintf fmt "%s" ([%sexp (t : t)] |> Sexp.to_string_hum)
 
-module PP = Pretty_printer.Register (struct
+module _ = Pretty_printer.Register (struct
     type nonrec t = t
 
     let module_name = "Hardcaml.Signal"

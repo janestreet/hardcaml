@@ -6,14 +6,31 @@ module type Bits = sig
   include Comb.S with type t := t
   include Comparator.S with type t := t
 
-  module Unsafe : sig
-    val data : t -> bytes
+  (** The number of bytes used to represent the data in [t]. This excludes
+      any bytes used to represent any associated metadata.
+  *)
+  val number_of_data_bytes : t -> int
+
+  (** Get the i-th 64-bit word within the underlying representation. *)
+  val unsafe_get_int64 : t -> int -> int64
+
+  (** Set the i-th 64-bit word within the underlying representation. *)
+  val unsafe_set_int64 : t -> int -> int64 -> unit
+
+  module Expert : sig
+    (** Access the underlying data representation. Note that this is unstable,
+        and may change over time.
+    *)
+    val unsafe_underlying_repr : t -> bytes
+
+    (** Offset to access actual data within in the underlying repr. *)
+    val offset_for_data : int
   end
 
   (** [Mutable] is a mutable bits used by [Cyclesim] for efficiency. *)
   module Mutable : sig
     type bits
-    type t
+    type t = private bytes
 
     val empty : t
     val width : t -> int
@@ -28,8 +45,8 @@ module type Bits = sig
     (** A [Bits.Mutable.t] can be accessed as an array of 64 bit words. *)
     val num_words : t -> int
 
-    val get_word : t -> int -> int64
-    val set_word : t -> int -> int64 -> unit
+    val unsafe_get_int64 : t -> int -> int64
+    val unsafe_set_int64 : t -> int -> int64 -> unit
     val to_bits : t -> bits
     val of_constant : Constant.t -> t
     val to_constant : t -> Constant.t
@@ -48,9 +65,13 @@ module type Bits = sig
     val ( <: ) : t -> t -> t -> unit
     val mux : t -> t -> t list -> unit
     val concat : t -> t list -> unit
+    val concat_rev_array : t -> t array -> unit
     val select : t -> t -> int -> int -> unit
     val ( *: ) : t -> t -> t -> unit
     val ( *+ ) : t -> t -> t -> unit
+
+    (** Mask the unused bits to zero. *)
+    val mask : t -> unit
 
     module Comb : Comb.S with type t = t
   end

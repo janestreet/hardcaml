@@ -2,16 +2,19 @@ open Base
 
 type t = Bits0.t
 
-module Unsafe = struct
-  let data t = t.Bits0.data
+let number_of_data_bytes (t : t) = Bits0.number_of_data_bytes t
+let unsafe_get_int64 = Bits0.unsafe_get_int64
+let unsafe_set_int64 = Bits0.unsafe_set_int64
+
+module Expert = struct
+  let unsafe_underlying_repr (t : t) = (t :> Bytes.t)
+  let offset_for_data = 8
 end
 
 module Mutable = struct
   include Bits0
 
-  let unsafe_get b i = Bytes.unsafe_get_int64 b (i lsl shift_bytes_to_words)
-  let unsafe_set b i v = Bytes.unsafe_set_int64 b (i lsl shift_bytes_to_words) v
-  let is_empty a = a.width = 0
+  let is_empty a = width a = 0
   let of_constant t = t
   let to_constant t = t
   let to_string t = Constant.to_binary_string t
@@ -20,7 +23,7 @@ module Mutable = struct
   let copy ~src ~dst =
     let words = words src in
     for i = 0 to words - 1 do
-      unsafe_set dst.data i (unsafe_get src.data i)
+      unsafe_set_int64 dst i (unsafe_get_int64 src i)
     done
   ;;
 
@@ -29,126 +32,118 @@ module Mutable = struct
   let vdd = of_constant (Constant.of_int ~width:1 1)
   let gnd = of_constant (Constant.of_int ~width:1 0)
 
-  external and_
-    :  (int[@untagged])
-    -> Bytes.t
-    -> Bytes.t
-    -> Bytes.t
-    -> unit
-    = "hardcaml_bits_and_bc" "hardcaml_bits_and"
-  [@@noalloc]
-
-  let ( &: ) c a b = and_ (width c) c.data a.data b.data
-
-  external or_
-    :  (int[@untagged])
-    -> Bytes.t
-    -> Bytes.t
-    -> Bytes.t
-    -> unit
-    = "hardcaml_bits_or_bc" "hardcaml_bits_or"
-  [@@noalloc]
-
-  let ( |: ) c a b = or_ (width c) c.data a.data b.data
-
-  external xor_
-    :  (int[@untagged])
-    -> Bytes.t
-    -> Bytes.t
-    -> Bytes.t
-    -> unit
-    = "hardcaml_bits_xor_bc" "hardcaml_bits_xor"
-  [@@noalloc]
-
-  let ( ^: ) c a b = xor_ (width c) c.data a.data b.data
-
-  external mask
-    :  (int[@untagged])
-    -> Bytes.t
-    -> unit
-    = "hardcaml_bits_mask_bc" "hardcaml_bits_mask"
-  [@@noalloc]
-
-  external not_
-    :  (int[@untagged])
-    -> Bytes.t
-    -> Bytes.t
-    -> unit
-    = "hardcaml_bits_not_bc" "hardcaml_bits_not"
-  [@@noalloc]
-
-  let ( ~: ) c a = not_ (width c) c.data a.data
-
-  external add
-    :  (int[@untagged])
-    -> Bytes.t
-    -> Bytes.t
-    -> Bytes.t
-    -> unit
-    = "hardcaml_bits_add_bc" "hardcaml_bits_add"
-  [@@noalloc]
-
-  let ( +: ) dst a b =
-    let width = width dst in
-    add width dst.data a.data b.data
+  let ( &: ) c a b =
+    let words = words a in
+    for i = 0 to words - 1 do
+      let x = Int64.( land ) (unsafe_get_int64 a i) (unsafe_get_int64 b i) in
+      unsafe_set_int64 c i x
+    done
   ;;
 
-  external sub
-    :  (int[@untagged])
-    -> Bytes.t
-    -> Bytes.t
-    -> Bytes.t
-    -> unit
-    = "hardcaml_bits_sub_bc" "hardcaml_bits_sub"
-  [@@noalloc]
+  let ( |: ) c a b =
+    let words = words a in
+    for i = 0 to words - 1 do
+      let x = Int64.( lor ) (unsafe_get_int64 a i) (unsafe_get_int64 b i) in
+      unsafe_set_int64 c i x
+    done
+  ;;
+
+  let ( ^: ) c a b =
+    let words = words a in
+    for i = 0 to words - 1 do
+      let x = Int64.( lxor ) (unsafe_get_int64 a i) (unsafe_get_int64 b i) in
+      unsafe_set_int64 c i x
+    done
+  ;;
+
+  let ( ~: ) c a =
+    (* Use [lxor] instead of [lnot] since the former is exposed as a primitive
+       in base's mli. *)
+    let words = words a in
+    for i = 0 to words - 1 do
+      unsafe_set_int64 c i (Int64.( lxor ) (-1L) (unsafe_get_int64 a i))
+    done;
+    mask c
+  ;;
+
+  external add : t -> t -> t -> unit = "hardcaml_bits_add" [@@noalloc]
+
+  let ( +: ) dst a b =
+    add dst a b;
+    mask dst
+  ;;
+
+  external sub : t -> t -> t -> unit = "hardcaml_bits_sub" [@@noalloc]
 
   let ( -: ) dst a b =
-    let width = width dst in
-    sub width dst.data a.data b.data
+    sub dst a b;
+    mask dst
   ;;
 
   (* Unsigned Int64 compare. *)
-  external _cmpu64
+  external cmpu64
     :  (Int64.t[@unboxed])
     -> (Int64.t[@unboxed])
     -> (int[@untagged])
     = "hardcaml_bits_uint64_compare_bc" "hardcaml_bits_uint64_compare"
   [@@noalloc]
 
-  external eq
-    :  (int[@untagged])
-    -> Bytes.t
-    -> Bytes.t
-    -> Bytes.t
-    -> unit
-    = "hardcaml_bits_eq_bc" "hardcaml_bits_eq"
-  [@@noalloc]
+  (* [eq], [neq], [lt] returns int rather than int64 to prevent allocation or any
+     memory indirection.
+  *)
+  let rec eq words i a b =
+    if i = words
+    then 1
+    else if Int64.( = ) (unsafe_get_int64 a i) (unsafe_get_int64 b i)
+    then eq words (i + 1) a b
+    else 0
+  ;;
 
-  let ( ==: ) c a b = eq (width a) c.data a.data b.data
+  let ( ==: ) c a b =
+    let words = words a in
+    unsafe_set_int64 c 0 (Int64.of_int (eq words 0 a b))
+  ;;
 
   let rec neq words i a b =
     if i = words
-    then Int64.zero
-    else if Int64.equal (unsafe_get a.data i) (unsafe_get b.data i)
+    then 0L
+    else if Int64.( = ) (unsafe_get_int64 a i) (unsafe_get_int64 b i)
     then neq words (i + 1) a b
-    else Int64.one
+    else 1L
   ;;
 
   let ( <>: ) c a b =
     let words = words a in
-    unsafe_set c.data 0 (neq words 0 a b)
+    unsafe_set_int64 c 0 (neq words 0 a b)
   ;;
 
-  external lt
-    :  (int[@untagged])
-    -> Bytes.t
-    -> Bytes.t
-    -> Bytes.t
-    -> unit
-    = "hardcaml_bits_lt_bc" "hardcaml_bits_lt"
-  [@@noalloc]
+  let rec lt i a b =
+    if i < 0
+    then 0 (* must be equal *)
+    else (
+      match cmpu64 (unsafe_get_int64 a i) (unsafe_get_int64 b i) with
+      | -1 -> 1
+      | 0 -> lt (i - 1) a b
+      | _ -> 0)
+  ;;
 
-  let ( <: ) c a b = lt (width a) c.data a.data b.data
+  let ( <: ) c a b =
+    let words = words a in
+    (* We cannot special case <= 64, since OCaml does not have unsigned
+       comparison primitives yet. *)
+    if width a <= 63
+    then (
+      let result =
+        (* Caml.Obj.magic is the most efficient way to convert bool to int
+           without incurring a branch.
+        *)
+        Int64.( < ) (unsafe_get_int64 a 0) (unsafe_get_int64 b 0)
+        |> Caml.Obj.magic
+        |> Int64.of_int
+      in
+      unsafe_set_int64 c 0 result)
+    else unsafe_set_int64 c 0 (Int64.of_int (lt (words - 1) a b))
+  ;;
 
   let[@cold] raise_mux_of_empty_list () =
     raise_s [%message "Bits.mux unexpected empty list"]
@@ -167,15 +162,48 @@ module Mutable = struct
     copy ~src:(mux_find idx 0 l) ~dst
   ;;
 
+  let cat2 a_width a b =
+    let b_width = width b in
+    let a_words = words_of_width a_width in
+    let b_words = words_of_width b_width in
+    let a_bits = a_width land width_mask in
+    if a_bits = 0
+    then
+      (* If the next bit to write to the is 64-bit-aligned, skip the unnecessary
+         bit shifts.
+      *)
+      for i = 0 to b_words - 1 do
+        unsafe_set_int64 a (a_words + i) (unsafe_get_int64 b i)
+      done
+    else (
+      (* The general case where next bit to write is not 64-bit aligned follows. *)
+      (* The below memory access is always safe, as (a_bits != 0 --> a_words > 0).
+         This buffers the first word in [a], to be bitwise OR-ed with data from
+         [b].
+      *)
+      let x = ref (unsafe_get_int64 a (a_words - 1)) in
+      (* The following loop takes the bottom [64 - a_bits] and OR it with [a_bits]
+         from either an earlier word or the existing data in [a]. [x] is then
+         updated to contain the uppermost [a_bits] from this word in [b].
+      *)
+      for i = 0 to b_words - 1 do
+        let y = unsafe_get_int64 b i in
+        unsafe_set_int64 a (a_words - 1 + i) Int64.(!x lor (y lsl a_bits));
+        x := Int64.O.(y lsr Int.(64 - a_bits))
+      done;
+      (* [x] contains residual data, that is either the a[words - 1] (when b_words
+         = 0), or the upper [a_bits] of the last 64-bit word of [b]'s data.
 
-  external cat2
-    :  Bytes.t
-    -> (int[@untagged])
-    -> Bytes.t
-    -> (int[@untagged])
-    -> unit
-    = "hardcaml_bits_cat2_bc" "hardcaml_bits_cat2"
-  [@@noalloc]
+         The following conditional checks if the residual word is within the bound
+         of [b].
+      *)
+      let num_bits_in_last_word = b_width land 63 in
+      let num_bits_in_last_word =
+        if num_bits_in_last_word = 0 then 64 else num_bits_in_last_word
+      in
+      if num_bits_in_last_word > 64 - a_bits
+      then unsafe_set_int64 a (a_words + b_words - 1) !x)
+  ;;
 
   (* This implementation allocates due to [List.rev], but is slightly faster:
 
@@ -201,55 +229,68 @@ module Mutable = struct
     | h :: t ->
       let width_ = width_ - width h in
       cat_iter_back width_ c t;
-      cat2 c.data width_ h.data (width h)
+      cat2 width_ c h
   ;;
 
   let concat c l = cat_iter_back (width c) c l
 
-  external select
-    :  Bytes.t
-    -> Bytes.t
-    -> (int[@untagged])
-    -> (int[@untagged])
-    -> unit
-    = "hardcaml_bits_select_bc" "hardcaml_bits_select"
-  [@@noalloc]
+  let concat_rev_array c l =
+    let acc_width = ref 0 in
+    for i = 0 to Array.length l - 1 do
+      let h = Array.unsafe_get l i in
+      let width = width h in
+      cat2 !acc_width c h;
+      acc_width := !acc_width + width
+    done
+  ;;
 
-  let select c s h l = select c.data s.data h l
+  let word w = w lsr log_bits_per_word
 
-  external umul
-    :  Bytes.t
-    -> Bytes.t
-    -> Bytes.t
-    -> (int[@untagged])
-    -> (int[@untagged])
-    -> unit
-    = "hardcaml_bits_umul_bc" "hardcaml_bits_umul"
-  [@@noalloc]
+  let select dst src h l =
+    let words = words dst in
+    let s_bits = l land width_mask in
+    let lo_word = word l in
+    let hi_word = word h in
+    if s_bits = 0
+    then
+      (* If first selected bit position is 64-bit aligned, use short-circuit
+         that skip all the bit shifting
+      *)
+      for i = 0 to words - 1 do
+        unsafe_set_int64 dst i (unsafe_get_int64 src (lo_word + i))
+      done
+    else (
+      (* The following routine loops through [words] words in [src], can
+         concatenate the upper [bits] of the src[low_word+i] with the bottom
+         [64-bits] of [low_word+i+1]. src[low_word_i] is conveniently buffered
+         in the [a] variable.
+      *)
+      let a = ref (unsafe_get_int64 src lo_word) in
+      for i = 0 to words - 1 do
+        let b =
+          if lo_word + i >= hi_word then 0L else unsafe_get_int64 src (lo_word + i + 1)
+        in
+        let x = Int64.O.((b lsl Int.O.(64 - s_bits)) lor (!a lsr s_bits)) in
+        unsafe_set_int64 dst i x;
+        a := b
+      done);
+    mask dst
+  ;;
 
-  external smul
-    :  Bytes.t
-    -> Bytes.t
-    -> Bytes.t
-    -> (int[@untagged])
-    -> (int[@untagged])
-    -> unit
-    = "hardcaml_bits_smul_bc" "hardcaml_bits_smul"
-  [@@noalloc]
+  external umul : t -> t -> t -> unit = "hardcaml_bits_umul" [@@noalloc]
+  external smul : t -> t -> t -> unit = "hardcaml_bits_smul" [@@noalloc]
 
   let ( *: ) dst a b =
-    umul dst.data a.data b.data (width a) (width b);
-    mask (width dst) dst.data
+    umul dst a b;
+    mask dst
   ;;
 
   let ( *+ ) dst a b =
-    smul dst.data a.data b.data (width a) (width b);
-    mask (width dst) dst.data
+    smul dst a b;
+    mask dst
   ;;
 
   let num_words = words
-  let get_word t = unsafe_get t.data
-  let set_word t = unsafe_set t.data
 
   let to_bits t =
     let result = create (width t) in
@@ -368,7 +409,7 @@ let to_int32 x = Constant.to_int32 x
 let zero w = Bits0.create w
 let pp fmt t = Caml.Format.fprintf fmt "%s" (to_bstr t)
 
-module PP = Pretty_printer.Register (struct
+module _ = Pretty_printer.Register (struct
     type nonrec t = Bits0.t
 
     let module_name = "Hardcaml.Bits"

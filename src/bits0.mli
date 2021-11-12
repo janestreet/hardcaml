@@ -13,11 +13,7 @@
 *)
 open Base
 
-type t = private
-  { width : int
-  ; data : Bytes.t
-  }
-[@@deriving compare, sexp, bin_io]
+type t = private Bytes.t [@@deriving compare, sexp, bin_io]
 
 module Comparable : Comparable.S with type t := t
 
@@ -27,6 +23,7 @@ val shift_bits_to_bytes : int
 val shift_bytes_to_words : int
 val width_mask : int
 val words_of_width : int -> int
+val bytes_of_width : int -> int
 
 (* The empty constant. Contains no bits. *)
 val empty : t
@@ -34,15 +31,31 @@ val empty : t
 (** [create n] create a [n] bit constant, initialized to hold all [0]s. *)
 val create : int -> t
 
-(** [create_bytes width] returns a [Bytes.t] large enough to hold [width] bits and
-    rouneded up appropriately. *)
-val create_bytes : int -> Bytes.t
-
-(** Construct a [t] with the given [width] and [Bytes.t] data. *)
-val init : width:int -> data:Bytes.t -> t
-
 (** The number of 64 bit words used to represent the constant *)
 val words : t -> int
 
+(** The number of bytes used to represent the constant. *)
+val number_of_data_bytes : t -> int
+
 (** Bit width of constant *)
 val width : t -> int
+
+(** Create a constant of width [width] from a byte at a time. *)
+val init_byte : width:int -> f:(int -> char) -> t
+
+(** Similar to [init_byte], but constructs a 64-bit word at a time. *)
+val init_int64 : width:int -> f:(int -> int64) -> t
+
+(** Get the n-th byte of the constant. *)
+val unsafe_get_byte : t -> int -> char
+
+(** Get the n-th 64-bit word of the constant. [unsafe_get_word t pos] accesses
+    the data at the [pos * 8]-th byte of t.
+*)
+val unsafe_get_int64 : t -> int -> int64
+
+(** Similar to [unsafe_get_int64], but for writing instead of reading. *)
+val unsafe_set_int64 : t -> int -> int64 -> unit
+
+(** Maskout the unused bits to zeros *)
+val mask : t -> unit

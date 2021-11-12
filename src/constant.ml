@@ -12,72 +12,27 @@ module Signedness = struct
   [@@deriving sexp_of]
 end
 
-external mask
-  :  (int[@untagged])
-  -> Bytes.t
-  -> unit
-  = "hardcaml_bits_mask_bc" "hardcaml_bits_mask"
-[@@noalloc]
-
-(* compiler intrinsics *)
-let unsafe_get b i = Bytes.unsafe_get_int64 b (i lsl shift_bytes_to_words)
-let unsafe_set b i v = Bytes.unsafe_set_int64 b (i lsl shift_bytes_to_words) v
-
 module Raw = struct
   let of_bytes bytes ~width =
-    let words = words_of_width width in
-    let b =
-      init
-        ~width
-        ~data:
-          (Bytes.init (words lsl shift_bytes_to_words) ~f:(fun i ->
-             try Bytes.get bytes i with
-             | _ -> '\000'))
-    in
-    mask width b.data;
-    b
-  ;;
-
-  let to_bytes t =
-    let len = (width t + 7) / 8 in
-    Bytes.init len ~f:(Bytes.get t.data)
+    init_byte ~width ~f:(fun i ->
+      try Bytes.get bytes i with
+      | _ -> '\000')
   ;;
 
   let of_string string ~width =
-    let words = words_of_width width in
-    let b =
-      init
-        ~width
-        ~data:
-          (Bytes.init (words lsl shift_bytes_to_words) ~f:(fun i ->
-             try string.[i] with
-             | _ -> '\000'))
-    in
-    mask width b.data;
-    b
+    init_byte ~width ~f:(fun i ->
+      try string.[i] with
+      | _ -> '\000')
+  ;;
+
+  let to_bytes (t : t) =
+    let len = (width t + 7) / 8 in
+    Bytes.subo ~pos:8 ~len (t :> bytes)
   ;;
 
   let to_string t =
-    let len = (width t + 7) / 8 in
-    String.init len ~f:(Bytes.get t.data)
+    Bytes.unsafe_to_string ~no_mutation_while_string_reachable:(to_bytes t)
   ;;
-
-  let unsafe_of_bytes ~width b =
-    let expected_bytes = words_of_width width lsl shift_bytes_to_words in
-    let actual_bytes = Bytes.length b in
-    if actual_bytes <> expected_bytes
-    then
-      raise_s
-        [%message
-          "[Constant.of_bytes] Bytes.t length is not suitable for constant"
-            (expected_bytes : int)
-            (actual_bytes : int)
-            (width : int)];
-    mask width b;
-    init ~width ~data:b
-  ;;
-
-  let unsafe_to_bytes t = t.data
 end
 
 let rec rsplit_into_n ~n string =
@@ -107,20 +62,21 @@ let hex_char_of_int i =
 let to_hum x = rsplit_into_n ~n:4 x |> List.rev |> String.concat ~sep:"_"
 
 let to_binary_string t =
-  String.init t.width ~f:(fun j ->
-    let j = t.width - j - 1 in
+  let width = width t in
+  String.init width ~f:(fun j ->
+    let j = width - j - 1 in
     let byte = j lsr 3 in
     let bit = j land 7 in
-    let char = Bytes.get t.data byte |> Char.to_int in
+    let char = unsafe_get_byte t byte |> Char.to_int in
     let bit = (char land (1 lsl bit)) lsr bit in
     Char.of_int_exn (bit + char_zero))
 ;;
 
 let to_binary_string_hum t = to_binary_string t |> to_hum
-let to_int64 t = unsafe_get t.data 0
-let to_int t = Base.Int64.to_int_trunc (to_int64 t)
-let to_int32 t = Base.Int64.to_int32_trunc (to_int64 t)
-let to_int64_array t = Array.init (words t) ~f:(unsafe_get t.data)
+let to_int64 t = unsafe_get_int64 t 0
+let to_int t = Int64.to_int_trunc (to_int64 t)
+let to_int32 t = Int64.to_int32_trunc (to_int64 t)
+let to_int64_array t = Array.init (words t) ~f:(fun i -> unsafe_get_int64 t i)
 
 let to_z ~signedness t =
   let module Z = Zarith.Z in
@@ -129,7 +85,7 @@ let to_z ~signedness t =
     if word < 0
     then z
     else (
-      let w = unsafe_get t.data word in
+      let w = unsafe_get_int64 t word in
       let a = Int64.(w lsr 32) in
       let z = Z.(logor (shift_left z 32) (of_int64 a)) in
       let a = Int64.(w land 0xFFFF_FFFFL) in
@@ -140,7 +96,7 @@ let to_z ~signedness t =
   match (signedness : Signedness.t) with
   | Unsigned -> z
   | Signed ->
-    let width = t.width in
+    let width = width t in
     let is_unsigned = Z.(compare (z land shift_left one Int.(width - 1)) zero = 0) in
     if is_unsigned then z else Z.(z - shift_left (of_int 1) width)
 ;;
@@ -215,23 +171,18 @@ let of_binary_string b =
         Bytes.set x index (to_int8 b 0 (count - bits) bits);
         convert b x (index + 1) (count - bits))
     in
-    init ~width ~data:(convert b (create_bytes width) 0 width))
+    let data = Caml.Bytes.make (words_of_width width lsl shift_bytes_to_words) '\000' in
+    let data = convert b data 0 width in
+    init_byte ~width ~f:(fun i -> Bytes.get data i))
 ;;
 
 let of_binary_string_hum b = of_binary_string (of_hum b)
-let minus_one = -1L
 
 let of_int64 ~width i =
-  let s = create_bytes width in
-  unsafe_set s 0 i;
-  (* Sign extend. *)
-  if Int64.(i < Int64.zero)
-  then
-    for i = 1 to words_of_width width - 1 do
-      unsafe_set s i minus_one
-    done;
-  mask width s;
-  init ~width ~data:s
+  let sign_extend_value = if Int64.(i < 0L) then -1L else 0L in
+  init_int64 ~width ~f:(function
+    | 0 -> i
+    | _ -> sign_extend_value)
 ;;
 
 let of_int ~width i = of_int64 ~width (Int64.of_int i)
@@ -246,17 +197,14 @@ let of_int64_array ~width a =
         "[of_int64_array] array to large for given [width]"
           (array_width : int)
           (width : int)];
-  let c = create_bytes (Array.length a lsl log_bits_per_word) in
-  Array.iteri a ~f:(unsafe_set c);
-  mask width c;
-  init ~width ~data:c
+  init_int64 ~width ~f:(fun i -> a.(i))
 ;;
 
 let z32mask = Zarith.Z.of_int64 0xFFFF_FFFFL
 
 let of_z ~width z =
   let module Z = Zarith.Z in
-  let c = create_bytes width in
+  let t = create width in
   let rec f i z width =
     if width <= 0 || Z.(equal z zero)
     then ()
@@ -269,12 +217,12 @@ let of_z ~width z =
       let z = Z.shift_right z 32 in
       (* construct 64 bit value *)
       let a = Int64.(a lor (b lsl 32)) in
-      unsafe_set c i a;
+      unsafe_set_int64 t i a;
       f (i + 1) z (width - 64))
   in
   f 0 z width;
-  mask width c;
-  init ~width ~data:c
+  mask t;
+  t
 ;;
 
 let of_pow2_string ~(signedness : Signedness.t) ~width ~pow2 h =
@@ -352,7 +300,7 @@ include Comparable
 (* Pretty printer *)
 let pp fmt t = Caml.Format.fprintf fmt "%s" (to_binary_string_hum t)
 
-module PP = Pretty_printer.Register (struct
+module _ = Pretty_printer.Register (struct
     type nonrec t = t
 
     let module_name = "Hardcaml.Constant"
