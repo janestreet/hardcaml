@@ -1,5 +1,6 @@
 open Base
 open! Cyclesim0
+module Schedule = Cyclesim_schedule
 
 let uid = Signal.uid
 let names = Signal.names
@@ -125,71 +126,6 @@ module Internal_ports = struct
   ;;
 end
 
-module Schedule = struct
-  type t =
-    { schedule : Signal.t list
-    ; internal_ports : Signal.t list
-    ; regs : Signal.t list
-    ; mems : Signal.t list
-    ; consts : Signal.t list
-    ; inputs : Signal.t list
-    ; remaining : Signal.t list
-    ; ready : Signal.t list
-    }
-
-  let find_elements circuit =
-    Signal_graph.depth_first_search
-      (Circuit.signal_graph circuit)
-      ~init:([], [], [], [], [])
-      ~f_before:(fun (regs, mems, consts, inputs, remaining) signal ->
-        if Signal.is_empty signal
-        then regs, mems, consts, inputs, remaining
-        else if Signal.is_reg signal
-        then signal :: regs, mems, consts, inputs, remaining
-        else if Signal.is_const signal
-        then regs, mems, signal :: consts, inputs, remaining
-        else if Circuit.is_input circuit signal
-        then regs, mems, consts, signal :: inputs, remaining
-        else if Signal.is_mem signal
-        then regs, signal :: mems, consts, inputs, remaining
-        else regs, mems, consts, inputs, signal :: remaining)
-  ;;
-
-  (* Specialised signal dependencies that define a graph that breaks cycles through
-     sequential elements. This is done by removing the input edges of registers and
-     memories (excluding the read address, since hardcaml memories are read
-     asynchronously).
-
-     Instantiations do not allow cycles from output to input ports, which is a valid
-     assumption for the simulator, but not in general.
-
-     Note that all signals in the graph cannot be reached from just the outputs of a
-     circuit using these dependencies. The (discarded) inputs to all registers and
-     memories must also be included. *)
-  let scheduling_deps (s : Signal.t) = Signal_graph.scheduling_deps s
-
-  let create circuit internal_ports =
-    let regs, mems, consts, inputs, remaining = find_elements circuit in
-    let ready = regs @ inputs @ consts in
-    let outputs = Circuit.outputs circuit @ internal_ports in
-    let schedule =
-      if List.is_empty outputs
-      then []
-      else
-        Signal_graph.topological_sort ~deps:scheduling_deps (Signal_graph.create outputs)
-    in
-    let schedule_set =
-      List.concat [ internal_ports; mems; remaining ]
-      |> List.map ~f:Signal.uid
-      |> Set.of_list (module Signal.Uid)
-    in
-    let schedule =
-      List.filter schedule ~f:(fun signal -> Set.mem schedule_set (Signal.uid signal))
-    in
-    { schedule; internal_ports; regs; mems; consts; inputs; remaining; ready }
-  ;;
-end
-
 module Maps : sig
   type t
 
@@ -206,48 +142,66 @@ end = struct
     { data : Bits.Mutable.t Map.M(Signal.Uid).t
     ; reg : Bits.Mutable.t Map.M(Signal.Uid).t
     ; mem : Bits.Mutable.t array Map.M(Signal.Uid).t
+    ; schedule : Schedule.t
     }
+
+  let uid = Signal.uid
+
+  let alias_or_self (t : t) uid =
+    match Schedule.resolve_alias t.schedule uid with
+    | None -> uid
+    | Some alias -> Signal.uid alias
+  ;;
 
   let create (bundle : Schedule.t) =
     let zero n = Bits.Mutable.of_constant (Constant.of_int ~width:n 0) in
     let const c = Bits.Mutable.of_constant (Bits.to_constant c) in
-    let data_add map signal =
-      let value =
-        match (signal : Signal.t) with
-        | Const { constant; _ } -> const constant
-        | _ -> zero (Signal.width signal)
+    let data_map =
+      let data_add map signal =
+        if not (Schedule.is_alias bundle (uid signal))
+        then (
+          let value =
+            match (signal : Signal.t) with
+            | Const { constant; _ } -> const constant
+            | _ -> zero (Signal.width signal)
+          in
+          Map.set map ~key:(uid signal) ~data:value)
+        else map
       in
-      Map.set map ~key:(uid signal) ~data:value
-    in
-    let data_map = Map.empty (module Signal.Uid) in
-    let data_map = List.fold bundle.ready ~init:data_map ~f:data_add in
-    let data_map = List.fold bundle.internal_ports ~init:data_map ~f:data_add in
-    let data_map = List.fold bundle.mems ~init:data_map ~f:data_add in
-    let data_map = List.fold bundle.remaining ~init:data_map ~f:data_add in
-    let reg_add map signal =
-      Map.set map ~key:(uid signal) ~data:(zero (Signal.width signal))
+      let add_data_from_list list map = List.fold list ~init:map ~f:data_add in
+      Map.empty (module Signal.Uid)
+      |> add_data_from_list (Schedule.regs bundle)
+      |> add_data_from_list (Schedule.inputs bundle)
+      |> add_data_from_list (Schedule.consts bundle)
+      |> add_data_from_list (Schedule.schedule bundle)
     in
     let reg_map =
-      List.fold bundle.regs ~init:(Map.empty (module Signal.Uid)) ~f:reg_add
-    in
-    let mem_add map (signal : Signal.t) =
-      match signal with
-      | Mem { memory = { mem_size; _ }; _ } | Multiport_mem { size = mem_size; _ } ->
-        let mem = Array.init mem_size ~f:(fun _ -> zero (Signal.width signal)) in
-        Map.set map ~key:(uid signal) ~data:mem
-      | _ -> raise_s [%message "Expecting memory"]
+      let reg_add map signal =
+        Map.set map ~key:(uid signal) ~data:(zero (Signal.width signal))
+      in
+      List.fold (Schedule.regs bundle) ~init:(Map.empty (module Signal.Uid)) ~f:reg_add
     in
     let mem_map =
-      List.fold bundle.mems ~init:(Map.empty (module Signal.Uid)) ~f:mem_add
+      let mem_add map (signal : Signal.t) =
+        match signal with
+        | Mem { memory = { mem_size; _ }; _ } | Multiport_mem { size = mem_size; _ } ->
+          let mem = Array.init mem_size ~f:(fun _ -> zero (Signal.width signal)) in
+          Map.set map ~key:(uid signal) ~data:mem
+        | _ -> raise_s [%message "Expecting memory"]
+      in
+      List.fold (Schedule.mems bundle) ~init:(Map.empty (module Signal.Uid)) ~f:mem_add
     in
-    { data = data_map; reg = reg_map; mem = mem_map }
+    { data = data_map; reg = reg_map; mem = mem_map; schedule = bundle }
   ;;
 
-  let find_data_by_uid_exn maps uid = Map.find_exn maps.data uid
-  let find_data_exn maps signal = find_data_by_uid_exn maps (uid signal)
+  let find_data_by_uid_exn maps uid = Map.find_exn maps.data (alias_or_self maps uid)
+
+  let find_data_exn maps signal =
+    find_data_by_uid_exn maps (alias_or_self maps (uid signal))
+  ;;
 
   let find_data maps signal =
-    match Map.find maps.data (uid signal) with
+    match Map.find maps.data (alias_or_self maps (uid signal)) with
     | None -> Bits.Mutable.empty
     | Some bits -> bits
   ;;
@@ -330,7 +284,15 @@ module Compile = struct
   let[@inline] set0 t value = Bits.Mutable.unsafe_set_int64 t 0 value
   let[@inline] get0 t = Bits.Mutable.unsafe_get_int64 t 0
 
-  let signal ~combinational_ops_database (maps : Maps.t) signal =
+  let[@inline] mask ~width x =
+    let mask = Int64.( lsr ) (-1L) (64 - width) in
+    Int64.( land ) mask x
+  ;;
+
+  (* Obj.magic is marginally faster, but not enough to live with the code smell. *)
+  let[@inline] int64_of_bool (x : bool) : int64 = if x then 1L else 0L
+
+  let signal ~schedule ~combinational_ops_database (maps : Maps.t) signal =
     let find_exn signal = Maps.find_data_exn maps signal in
     let find_or_empty signal = Maps.find_data maps signal in
     let tgt = find_exn signal in
@@ -340,12 +302,40 @@ module Compile = struct
     | Const _ -> None
     | Not { arg; _ } ->
       let arg = find_or_empty arg in
-      let not_ () = Bits.Mutable.( ~: ) tgt arg in
-      Some not_
+      let notsmall () =
+        let width = Bits.Mutable.width arg in
+        set0 tgt (mask ~width (Int64.( lxor ) (get0 arg) (-1L)))
+      in
+      let not64 () = set0 tgt (Int64.( lxor ) (get0 arg) (-1L)) in
+      let notbig () = Bits.Mutable.( ~: ) tgt arg in
+      dispach_on_width
+        (Bits.Mutable.width tgt)
+        ~less_than_64:notsmall
+        ~exactly_64:not64
+        ~more_than_64:notbig
     | Cat { args; _ } ->
-      let args = List.map args ~f:find_or_empty |> List.rev |> Array.of_list in
-      let cat () = Bits.Mutable.concat_rev_array tgt args in
-      Some cat
+      let args = List.map args ~f:find_or_empty in
+      let cat64 =
+        let args = Array.of_list args in
+        fun () ->
+          let acc = ref 0L in
+          for i = 0 to Array.length args - 1 do
+            let arg = Array.unsafe_get args i in
+            let arg_width = Bits.Mutable.width arg in
+            acc := Int64.O.(get0 arg lor (!acc lsl arg_width))
+          done;
+          set0 tgt !acc
+      in
+      let catbig =
+        let args = Array.of_list args in
+        Array.rev_inplace args;
+        fun () -> Bits.Mutable.concat_rev_array tgt args
+      in
+      dispach_on_width
+        (Bits.Mutable.width tgt)
+        ~less_than_64:cat64
+        ~exactly_64:cat64
+        ~more_than_64:catbig
     | Mux { select; cases; _ } ->
       let sel = find_or_empty select in
       let els = Array.of_list (List.map cases ~f:find_or_empty) in
@@ -372,11 +362,27 @@ module Compile = struct
       let b = find_or_empty arg_b in
       (match op with
        | Signal_add ->
-         let add () = Bits.Mutable.( +: ) tgt a b in
-         Some add
+         let addsmall () =
+           set0 tgt (mask ~width:(Bits.Mutable.width a) (Int64.( + ) (get0 a) (get0 b)))
+         in
+         let add64 () = set0 tgt (Int64.( + ) (get0 a) (get0 b)) in
+         let addbig () = Bits.Mutable.( +: ) tgt a b in
+         dispach_on_width
+           (Bits.Mutable.width tgt)
+           ~less_than_64:addsmall
+           ~exactly_64:add64
+           ~more_than_64:addbig
        | Signal_sub ->
-         let sub () = Bits.Mutable.( -: ) tgt a b in
-         Some sub
+         let subsmall () =
+           set0 tgt (mask ~width:(Bits.Mutable.width a) (Int64.( - ) (get0 a) (get0 b)))
+         in
+         let sub64 () = set0 tgt (Int64.( - ) (get0 a) (get0 b)) in
+         let subbig () = Bits.Mutable.( -: ) tgt a b in
+         dispach_on_width
+           (Bits.Mutable.width tgt)
+           ~less_than_64:subsmall
+           ~exactly_64:sub64
+           ~more_than_64:subbig
        | Signal_mulu ->
          let mulu () = Bits.Mutable.( *: ) tgt a b in
          Some mulu
@@ -384,33 +390,68 @@ module Compile = struct
          let muls () = Bits.Mutable.( *+ ) tgt a b in
          Some muls
        | Signal_and ->
-         let and_ () = Bits.Mutable.( &: ) tgt a b in
-         Some and_
+         let and64 () = set0 tgt (Int64.( land ) (get0 a) (get0 b)) in
+         let andbig () = Bits.Mutable.( &: ) tgt a b in
+         dispach_on_width
+           (Bits.Mutable.width tgt)
+           ~less_than_64:and64
+           ~exactly_64:and64
+           ~more_than_64:andbig
        | Signal_or ->
-         let or_ () = Bits.Mutable.( |: ) tgt a b in
-         Some or_
+         let or64 () = set0 tgt (Int64.( lor ) (get0 a) (get0 b)) in
+         let orbig () = Bits.Mutable.( |: ) tgt a b in
+         dispach_on_width
+           (Bits.Mutable.width tgt)
+           ~less_than_64:or64
+           ~exactly_64:or64
+           ~more_than_64:orbig
        | Signal_xor ->
-         let xor_ () = Bits.Mutable.( ^: ) tgt a b in
-         Some xor_
+         let xor64 () = set0 tgt (Int64.( lxor ) (get0 a) (get0 b)) in
+         let xorbig () = Bits.Mutable.( ^: ) tgt a b in
+         dispach_on_width
+           (Bits.Mutable.width tgt)
+           ~less_than_64:xor64
+           ~exactly_64:xor64
+           ~more_than_64:xorbig
        | Signal_eq ->
-         let eq () = Bits.Mutable.( ==: ) tgt a b in
-         Some eq
+         let eq64 () = set0 tgt (int64_of_bool (Int64.( = ) (get0 a) (get0 b))) in
+         let eqbig () = Bits.Mutable.( ==: ) tgt a b in
+         dispach_on_width
+           (Bits.Mutable.width a)
+           ~less_than_64:eq64
+           ~exactly_64:eq64
+           ~more_than_64:eqbig
        | Signal_lt ->
-         let lt () = Bits.Mutable.( <: ) tgt a b in
-         Some lt)
+         let ltsmall () = set0 tgt (int64_of_bool (Int64.( < ) (get0 a) (get0 b))) in
+         let lt64 () =
+           set0 tgt (int64_of_bool (Caml.Int64.unsigned_compare (get0 a) (get0 b) = -1))
+         in
+         let ltbig () = Bits.Mutable.( <: ) tgt a b in
+         let width = Bits.Mutable.width a in
+         if width <= 63 then Some ltsmall else if width = 64 then Some lt64 else Some ltbig)
     | Wire _ ->
-      let src = List.hd_exn deps in
-      if Bits.Mutable.width tgt <= 64
-      then (
-        let wire64 () = set0 tgt (get0 src) in
-        Some wire64)
-      else (
-        let wiren () = Bits.Mutable.copy ~dst:tgt ~src in
-        Some wiren)
+      if not (Schedule.is_alias schedule (Signal.uid signal))
+      then raise_s [%message "Expecting all non-input wires to be compiled into aliases"];
+      None
     | Select { arg; high; low; _ } ->
       let d = find_or_empty arg in
-      let sel () = Bits.Mutable.select tgt d high low in
-      Some sel
+      let selectsmall () =
+        let width = Bits.Mutable.width tgt in
+        let x = Int64.( lsr ) (get0 d) low in
+        let x = mask ~width x in
+        set0 tgt x
+      in
+      let select64from64 () = set0 tgt (get0 d) in
+      let selectbig () = Bits.Mutable.select tgt d high low in
+      dispach_on_width
+        (Signal.width arg)
+        ~less_than_64:selectsmall
+        ~exactly_64:
+          (if high - low + 1 = 64
+           then (* Weird case where arg is 64 bits and dst is 64 bits  *)
+             select64from64
+           else selectsmall)
+        ~more_than_64:selectbig
     | Reg { register = r; d; _ } ->
       let tgt = Maps.find_reg_exn maps signal in
       let src = find_or_empty d in
@@ -596,12 +637,13 @@ module Compile = struct
 end
 
 module Last_layer = struct
-  let create circuit tasks_comb =
+  let create ~schedule circuit tasks_comb =
     (* Find nodes between registers and outputs *)
     let nodes =
       Signal_graph.last_layer_of_nodes
         ~is_input:(Circuit.is_input circuit)
         (Circuit.signal_graph circuit)
+      |> List.filter ~f:(fun uid -> not (Schedule.is_alias schedule uid))
       |> Set.of_list (module Signal.Uid)
     in
     (* Compile them *)
@@ -683,21 +725,28 @@ let create ?(config = Cyclesim0.Config.default) circuit =
   (* build maps *)
   let maps : Maps.t = Maps.create bundle in
   let compile =
-    Compile.signal ~combinational_ops_database:config.combinational_ops_database maps
+    Compile.signal
+      ~combinational_ops_database:config.combinational_ops_database
+      ~schedule:bundle
+      maps
   in
   let compile_and_tag s = Option.map (compile s) ~f:(fun t -> uid s, t) in
   (* compile the task list *)
-  let tasks_check = List.map bundle.inputs ~f:(Io_ports.check_input maps) in
-  let tasks_comb = List.filter_opt (List.map bundle.schedule ~f:compile_and_tag) in
-  let tasks_regs = List.filter_opt (List.map bundle.regs ~f:compile) in
+  let tasks_check = List.map (Schedule.inputs bundle) ~f:(Io_ports.check_input maps) in
+  let tasks_comb =
+    List.filter_opt (List.map (Schedule.schedule bundle) ~f:compile_and_tag)
+  in
+  let tasks_regs = List.filter_opt (List.map (Schedule.regs bundle) ~f:compile) in
   let tasks_at_clock_edge =
     List.concat
-      [ List.map bundle.mems ~f:(Compile.memory_update maps)
-      ; [ Staged.unstage (Compile.register_update maps bundle.regs) ]
+      [ List.map (Schedule.mems bundle) ~f:(Compile.memory_update maps)
+      ; [ Staged.unstage (Compile.register_update maps (Schedule.regs bundle)) ]
       ]
   in
   (* reset *)
-  let resets = List.filter_opt (List.map bundle.regs ~f:(Compile.reset maps)) in
+  let resets =
+    List.filter_opt (List.map (Schedule.regs bundle) ~f:(Compile.reset maps))
+  in
   let { Io_ports.in_ports; out_ports; internal_ports } =
     Io_ports.create circuit maps internal_ports
   in
@@ -767,7 +816,7 @@ let create ?(config = Cyclesim0.Config.default) circuit =
   let tasks_after_clock_edge =
     let optimize_last_layer = true in
     if optimize_last_layer
-    then Last_layer.create circuit tasks_comb
+    then Last_layer.create ~schedule:bundle circuit tasks_comb
     else tasks_before_clock_edge
   in
   let digest, digest_task =

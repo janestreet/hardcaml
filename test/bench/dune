@@ -1,2 +1,2 @@
-(library (name hardcaml_bench) (libraries hardcaml)
+(library (name hardcaml_bench) (libraries hardcaml base_bigstring)
  (preprocess (pps ppx_jane)))

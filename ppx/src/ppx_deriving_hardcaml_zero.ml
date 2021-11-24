@@ -596,8 +596,8 @@ let record_fields (iter_or_map : Iter_or_map.t) ~loc fields =
          None)
 
 let str_of_type ~options ({ ptype_loc = loc; _ } as type_decl) =
-  match type_decl.ptype_kind, type_decl.ptype_params, type_decl.ptype_manifest with
-  | Ptype_record labels, [ ({ ptyp_desc = Ptyp_var(var); _ }, _) ], None ->
+  match type_decl.ptype_kind, type_decl.ptype_params with
+  | Ptype_record labels, [ ({ ptyp_desc = Ptyp_var(var); _ }, _) ] ->
     let str_t_labels       = List.map labels ~f:(expand_t_label options var) in
     let str_t              = pexp_record ~loc str_t_labels None in
     let str_map iter_or_map =

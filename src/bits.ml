@@ -80,14 +80,6 @@ module Mutable = struct
     mask dst
   ;;
 
-  (* Unsigned Int64 compare. *)
-  external cmpu64
-    :  (Int64.t[@unboxed])
-    -> (Int64.t[@unboxed])
-    -> (int[@untagged])
-    = "hardcaml_bits_uint64_compare_bc" "hardcaml_bits_uint64_compare"
-  [@@noalloc]
-
   (* [eq], [neq], [lt] returns int rather than int64 to prevent allocation or any
      memory indirection.
   *)
@@ -121,7 +113,7 @@ module Mutable = struct
     if i < 0
     then 0 (* must be equal *)
     else (
-      match cmpu64 (unsafe_get_int64 a i) (unsafe_get_int64 b i) with
+      match Caml.Int64.unsigned_compare (unsafe_get_int64 a i) (unsafe_get_int64 b i) with
       | -1 -> 1
       | 0 -> lt (i - 1) a b
       | _ -> 0)
@@ -134,12 +126,11 @@ module Mutable = struct
     if width a <= 63
     then (
       let result =
-        (* Caml.Obj.magic is the most efficient way to convert bool to int
-           without incurring a branch.
-        *)
-        Int64.( < ) (unsafe_get_int64 a 0) (unsafe_get_int64 b 0)
-        |> Caml.Obj.magic
-        |> Int64.of_int
+        (* Note: Caml.Obj.magic is the most efficient way to convert bool to int without
+           incurring a branch. But it is a code smell. Benchmark measurements so
+           negligible gain anyway. If it ends up in a blessed core library, then we'll use
+           it. *)
+        if Int64.( < ) (unsafe_get_int64 a 0) (unsafe_get_int64 b 0) then 1L else 0L
       in
       unsafe_set_int64 c 0 result)
     else unsafe_set_int64 c 0 (Int64.of_int (lt (words - 1) a b))
