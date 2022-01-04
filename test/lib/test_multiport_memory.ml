@@ -286,7 +286,8 @@ let%expect_test "verilog, async memory, 2 ports" =
 
 let dual_port ?(collision_mode = Ram.Collision_mode.Read_before_write) () =
   let read_data =
-    Ram.create
+    Ram.create_named
+      ~name:"named_ram"
       ~collision_mode
       ~size:32
       ~write_ports:
@@ -311,6 +312,7 @@ let dual_port ?(collision_mode = Ram.Collision_mode.Read_before_write) () =
            ; read_enable = Signal.input "read_enable2" 1
            }
         |]
+      ()
   in
   Circuit.create_exn
     ~name:"multi_port_memory"
@@ -366,25 +368,25 @@ let%expect_test "dual port Verilog" =
         reg [14:0] _21;
         wire [14:0] _24 = 15'b000000000000000;
         wire [14:0] _23 = 15'b000000000000000;
-        reg [14:0] _17[0:31];
+        reg [14:0] named_ram[0:31];
         wire [14:0] _22;
         reg [14:0] _25;
 
         /* logic */
-        assign _18 = _17[read_address2];
+        assign _18 = named_ram[read_address2];
         always @(posedge read_clock2) begin
             if (read_enable2)
                 _21 <= _18;
         end
         always @(posedge write_clock1) begin
             if (write_enable1)
-                _17[write_address1] <= write_data1;
+                named_ram[write_address1] <= write_data1;
         end
         always @(posedge write_clock2) begin
             if (write_enable2)
-                _17[write_address2] <= write_data2;
+                named_ram[write_address2] <= write_data2;
         end
-        assign _22 = _17[read_address1];
+        assign _22 = named_ram[read_address1];
         always @(posedge read_clock1) begin
             if (read_enable1)
                 _25 <= _22;
@@ -451,15 +453,15 @@ let%expect_test "dual port VHDL" =
         signal hc_21 : std_logic_vector (14 downto 0);
         constant hc_24 : std_logic_vector (14 downto 0) := "000000000000000";
         constant hc_23 : std_logic_vector (14 downto 0) := "000000000000000";
-        type hc_17_type is array (0 to 31) of std_logic_vector(14 downto 0);
-        signal hc_17 : hc_17_type;
+        type named_ram_type is array (0 to 31) of std_logic_vector(14 downto 0);
+        signal named_ram : named_ram_type;
         signal hc_22 : std_logic_vector (14 downto 0);
         signal hc_25 : std_logic_vector (14 downto 0);
 
     begin
 
         -- logic
-        hc_18 <= hc_17(to_integer(hc_uns(read_address2)));
+        hc_18 <= named_ram(to_integer(hc_uns(read_address2)));
         process (read_clock2) begin
             if rising_edge(read_clock2) then
                 if read_enable2 = '1' then
@@ -470,18 +472,18 @@ let%expect_test "dual port VHDL" =
         process (write_clock1) begin
             if rising_edge(write_clock1) then
                 if write_enable1 = '1' then
-                    hc_17(to_integer(hc_uns(write_address1))) <= write_data1;
+                    named_ram(to_integer(hc_uns(write_address1))) <= write_data1;
                 end if;
             end if;
         end process;
         process (write_clock2) begin
             if rising_edge(write_clock2) then
                 if write_enable2 = '1' then
-                    hc_17(to_integer(hc_uns(write_address2))) <= write_data2;
+                    named_ram(to_integer(hc_uns(write_address2))) <= write_data2;
                 end if;
             end if;
         end process;
-        hc_22 <= hc_17(to_integer(hc_uns(read_address1)));
+        hc_22 <= named_ram(to_integer(hc_uns(read_address1)));
         process (read_clock1) begin
             if rising_edge(read_clock1) then
                 if read_enable1 = '1' then

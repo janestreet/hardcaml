@@ -33,6 +33,16 @@ module Read_port : sig
   [@@deriving sexp_of]
 end
 
+(** create RAM with a name *)
+val create_named
+  :  ?name:string
+  -> collision_mode:Collision_mode.t
+  -> size:int
+  -> write_ports:Write_port.t array
+  -> read_ports:Read_port.t array
+  -> unit
+  -> Signal.t array
+
 val create
   :  collision_mode:Collision_mode.t
   -> size:int

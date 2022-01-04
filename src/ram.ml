@@ -66,10 +66,15 @@ let if_read_before_write_mode ~collision_mode (r : Read_port.t array) (q : Signa
       Signal.reg (Reg_spec.create () ~clock:r.read_clock) ~enable:r.read_enable q)
 ;;
 
-let create ~collision_mode ~size ~write_ports ~read_ports =
+let create_named ?name ~collision_mode ~size ~write_ports ~read_ports () =
   Signal.multiport_memory
+    ?name
     size
     ~write_ports
     ~read_addresses:(if_write_before_read_mode ~collision_mode read_ports)
   |> if_read_before_write_mode ~collision_mode read_ports
+;;
+
+let create ~collision_mode ~size ~write_ports ~read_ports =
+  create_named ~collision_mode ~size ~write_ports ~read_ports ()
 ;;
