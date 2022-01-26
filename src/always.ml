@@ -180,10 +180,10 @@ module State_machine = struct
 
   let create
         ?(encoding = Encoding.Binary)
+        ?(enable = Signal.vdd)
         (type a)
         (module State : State with type t = a)
         reg_spec
-        ~enable
     =
     let module State = struct
       include State

@@ -103,6 +103,9 @@ end
 module type S_enum = Interface_intf.S_enum with module Ast := Ast
 module type S_enums = Interface_intf.S_enums with module Ast := Ast
 
+type 'a with_valid = 'a Comb_intf.with_valid
+type ('a, 'b) with_valid2 = ('a, 'b) Comb_intf.with_valid2
+
 module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   include X
 
@@ -256,13 +259,13 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     let mux2 s h l = mux s [ l; h ]
     let concat l = map ~f:Comb.concat_msb (of_interface_list l)
 
-    let distribute_valids (ts : (comb, t) With_valid.t2 list) =
+    let distribute_valids (ts : (comb, t) with_valid2 list) =
       List.map ts ~f:(fun { valid; value } ->
-        map value ~f:(fun value -> { With_valid.valid; value }))
+        map value ~f:(fun value : _ with_valid2 -> { valid; value }))
     ;;
 
-    let collect_valids (t : comb With_valid.t X.t) =
-      { With_valid.valid =
+    let collect_valids (t : comb with_valid X.t) : _ with_valid2 =
+      { valid =
           (match to_list t with
            | { valid; _ } :: _ -> valid
            | [] -> raise_s [%message "[priority_select] interface has no fields"])
@@ -270,8 +273,8 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
       }
     ;;
 
-    let priority_select ?branching_factor (ts : (comb, t) With_valid.t2 list)
-      : (comb, t) With_valid.t2
+    let priority_select ?branching_factor (ts : (comb, t) with_valid2 list)
+      : (comb, t) with_valid2
       =
       if List.is_empty ts
       then raise_s [%message "[priority_select] requires at least one input"];
@@ -282,7 +285,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
 
     let priority_select_with_default
           ?branching_factor
-          (ts : (comb, t) With_valid.t2 list)
+          (ts : (comb, t) with_valid2 list)
           ~(default : t)
       =
       if List.is_empty ts
@@ -292,7 +295,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
         Comb.priority_select_with_default ?branching_factor t ~default)
     ;;
 
-    let onehot_select ?branching_factor (ts : (comb, t) With_valid.t2 list) =
+    let onehot_select ?branching_factor (ts : (comb, t) with_valid2 list) =
       if List.is_empty ts
       then raise_s [%message "[onehot_select] requires at least one input"];
       let ts = distribute_valids ts in
@@ -320,6 +323,11 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     ;;
 
     let reg ?enable spec t = map ~f:(Signal.reg ?enable spec) t
+
+    let pipeline ?attributes ?enable ~n spec t =
+      map ~f:(Signal.pipeline ?attributes ?enable ~n spec) t
+    ;;
+
     let inputs () = wires () ~named:true
     let outputs t = wires () ~from:t ~named:true
 
@@ -572,8 +580,8 @@ module Make_enums (Enum : Interface_intf.Enum) = struct
             | None -> raise_non_exhaustive_mux ()
             | Some case -> case)
         in
-        List.map2_exn (Comb.bits_lsb selector) cases ~f:(fun valid value ->
-          { With_valid.valid; value })
+        List.map2_exn (Comb.bits_lsb selector) cases ~f:(fun valid value : _ with_valid2 ->
+          { valid; value })
         |> Comb.onehot_select
       ;;
     end)
@@ -609,25 +617,47 @@ module Empty = struct
     end)
 end
 
-module Make_with_valid (M : Pre) = struct
-  module Pre = struct
-    type 'a t = 'a With_valid.t M.t [@@deriving sexp_of]
+module Make_interface_with_conversion
+    (Repr : S) (M : sig
+                  type 'a t [@@deriving sexp_of]
 
-    let map t ~f = M.map ~f:(With_valid.map ~f) t
-    let iter (t : 'a t) ~(f : 'a -> unit) = M.iter ~f:(With_valid.iter ~f) t
-    let map2 a b ~f = M.map2 a b ~f:(With_valid.map2 ~f)
-    let iter2 a b ~f = M.iter2 a b ~f:(With_valid.iter2 ~f)
+                  val t_of_repr : 'a Repr.t -> 'a t
+                  val repr_of_t : 'a t -> 'a Repr.t
+                end) =
+struct
+  type 'a t = 'a M.t [@@deriving sexp_of]
 
-    let t =
-      M.map M.t ~f:(fun (n, w) ->
-        { With_valid.value = n ^ "$value", w; valid = n ^ "$valid", 1 })
-    ;;
+  include Make (struct
+      type nonrec 'a t = 'a t [@@deriving sexp_of]
 
-    let to_list t = M.map t ~f:With_valid.to_list |> M.to_list |> List.concat
+      let t = M.t_of_repr Repr.t
+      let map t ~f = M.t_of_repr (Repr.map (M.repr_of_t t) ~f)
+      let map2 a b ~f = M.t_of_repr (Repr.map2 (M.repr_of_t a) (M.repr_of_t b) ~f)
+      let iter t ~f = Repr.iter (M.repr_of_t t) ~f
+      let iter2 a b ~f = Repr.iter2 (M.repr_of_t a) (M.repr_of_t b) ~f
+      let to_list t = Repr.to_list (M.repr_of_t t)
+    end)
+end
+
+module Value (S : sig
+    val port_name : string
+    val port_width : int
+  end) =
+struct
+  module T = struct
+    type 'a t = 'a
+
+    let sexp_of_t sexp_of_a a = [%sexp_of: string * a] (S.port_name, a)
+    let t = S.port_name, S.port_width
+    let map t ~f = f t
+    let iter t ~f = f t
+    let map2 s t ~f = f s t
+    let iter2 s t ~f = f s t
+    let to_list t = [ t ]
   end
 
-  include Pre
-  include Make (Pre)
+  include T
+  include Make (T)
 end
 
 module type S_with_ast = sig

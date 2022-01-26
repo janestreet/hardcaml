@@ -118,7 +118,7 @@ We also need to store the computed bits in a register.
 
 ```ocaml
 # let computed_bits spec width bit =
-   reg_fb spec ~enable:vdd ~w:width (fun d -> bit @: msbs d)
+   reg_fb spec ~width ~f:(fun d -> bit @: msbs d)
 val computed_bits : register -> int -> signal -> signal = <fun>
 ```
 

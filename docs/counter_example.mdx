@@ -41,8 +41,8 @@ end
         reg_fb
           (Reg_spec.create ~clock:i.clock ~clear:i.clear ())
           ~enable:i.incr
-          ~w:8
-          (fun d -> d +:. 1)
+          ~width:8
+          ~f:(fun d -> d +:. 1)
     }
 val create : t I.t -> t O.t = <fun>
 ```
@@ -61,8 +61,8 @@ register with feedback. Let's look at each argument in turn.
   reset, rising or falling clock edge and so on.
 - `enable`: when high the register will load a new value. Otherwise it
   holds its previous value.
-- `w` is the bit width of the register.
-- `fun d -> ...`: this function receives the current value of the
+- `width` is the bit width of the register.
+- `f`: this function receives the current value of the
   register, and computes the next value. In this case it increments it
   by one.
 

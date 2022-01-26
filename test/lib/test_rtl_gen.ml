@@ -324,6 +324,7 @@ let%expect_test "multiport mem" =
       ~size:4
       ~write_ports:[| { write_clock = clock; write_address; write_enable; write_data } |]
       ~read_ports:[| { read_clock = clock; read_address; read_enable } |]
+      ()
   in
   let q = Array.to_list q |> List.mapi ~f:(fun i q -> output ("q" ^ Int.to_string i) q) in
   let circuit = Circuit.create_exn ~name:"reg" q in

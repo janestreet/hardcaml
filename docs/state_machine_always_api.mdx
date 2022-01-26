@@ -23,8 +23,9 @@ The main function to create state machine in hardcaml is as follows:
 # open Signal
 # Always.State_machine.create
 - : ?encoding:Always.State_machine.Encoding.t ->
+    ?enable:t ->
     (module Hardcaml.Always.State_machine.State with type t = 'a) ->
-    register -> enable:t -> 'a Always.State_machine.t
+    register -> 'a Always.State_machine.t
 = <fun>
 ```
 

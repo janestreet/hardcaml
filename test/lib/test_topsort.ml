@@ -57,7 +57,7 @@ let reg_spec = Reg_spec.create () ~clock ~clear
 (* You require custom [deps] to express the fact that you may loop through certain
    nodes. *)
 let%expect_test "reg loop (standard deps)" =
-  let b = Signal.reg_fb reg_spec ~enable:Signal.vdd ~w:1 Signal.(fun d -> d +:. 1) in
+  let b = Signal.reg_fb reg_spec ~width:1 ~f:Signal.(fun d -> d +:. 1) in
   require_does_raise [%here] (fun () ->
     Signal_graph.topological_sort (Signal_graph.create [ b ]));
   [%expect {|
@@ -73,7 +73,9 @@ let deps (s : Signal.t) =
 ;;
 
 let%expect_test "reg loop" =
-  let b = Signal.reg_fb reg_spec ~enable:Signal.vdd ~w:1 Signal.(fun d -> d +:. 1) in
+  let b =
+    Signal.reg_fb reg_spec ~enable:Signal.vdd ~width:1 ~f:Signal.(fun d -> d +:. 1)
+  in
   let result = Signal_graph.topological_sort ~deps (Signal_graph.create [ b ]) in
   print_s [%sexp (result : Signal.t list)];
   [%expect

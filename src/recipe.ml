@@ -49,8 +49,8 @@ let delayFb ~clock ~enable ~clear_to f =
   reg_fb
     (Reg_spec.override (Reg_spec.create () ~clock) ~clear_to)
     ~enable
-    ~w:(width clear_to)
-    f
+    ~width:(width clear_to)
+    ~f
 ;;
 
 let setReset ~clock ~enable s r =

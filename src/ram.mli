@@ -34,8 +34,11 @@ module Read_port : sig
 end
 
 val create
-  :  collision_mode:Collision_mode.t
+  :  ?attributes:Rtl_attribute.t list
+  -> ?name:string
+  -> collision_mode:Collision_mode.t
   -> size:int
   -> write_ports:Write_port.t array
   -> read_ports:Read_port.t array
+  -> unit
   -> Signal.t array

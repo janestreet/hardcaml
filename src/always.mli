@@ -169,9 +169,9 @@ module State_machine : sig
       register created from [reg_spec] and [e]. *)
   val create
     :  ?encoding:Encoding.t (** default is [Binary] *)
+    -> ?enable:Signal.t
     -> (module State with type t = 'a)
     -> Reg_spec.t
-    -> enable:Signal.t
     -> 'a t
 end
 

@@ -100,13 +100,14 @@ module type Comb_monomorphic = sig
   val concat : t list -> t
 
   val priority_select
-    : ((comb, t) With_valid.t2 list -> (comb, t) With_valid.t2)
+    : ((comb, t) Comb.with_valid2 list -> (comb, t) Comb.with_valid2)
         Comb.optional_branching_factor
 
   val priority_select_with_default
-    : ((comb, t) With_valid.t2 list -> default:t -> t) Comb.optional_branching_factor
+    : ((comb, t) Comb.with_valid2 list -> default:t -> t) Comb.optional_branching_factor
 
-  val onehot_select : ((comb, t) With_valid.t2 list -> t) Comb.optional_branching_factor
+  val onehot_select
+    : ((comb, t) Comb.with_valid2 list -> t) Comb.optional_branching_factor
 end
 
 module type Comb = sig
@@ -145,6 +146,16 @@ module type Of_signal_functions = sig
 
   (** Defines a register over values in this interface. [enable] defaults to vdd. *)
   val reg : ?enable:Signal.t -> Reg_spec.t -> t -> t
+
+  (** Defines a register pipeline over values in this interface. [enable]
+      defaults to vdd and [attributes] defaults to an empty list. *)
+  val pipeline
+    :  ?attributes:Rtl_attribute.t list
+    -> ?enable:Signal.t
+    -> n:int
+    -> Reg_spec.t
+    -> t
+    -> t
 
   val assign : t -> t -> unit
   val ( <== ) : t -> t -> unit
@@ -455,12 +466,27 @@ module type Interface = sig
       absstract [Interface]. *)
   module Make_enums (Enum : Enum) : S_enums with module Enum := Enum
 
+  (** An interface for a single value *)
+  module Value (S : sig
+      val port_name : string
+      val port_width : int
+    end) : S with type 'a t = 'a
+
   (** Recreate a Hardcaml Interface with the same type, but different port names / widths. *)
   module Update
       (Pre : Pre) (M : sig
                      val t : (string * int) Pre.t
                    end) : S with type 'a t = 'a Pre.t
 
-  (** Create a new hardcaml interface with [With_valid.t] on a per-field basis. *)
-  module Make_with_valid (X : Pre) : S with type 'a t = 'a With_valid.t X.t
+  (** Creates a new hardcaml interface by converting between functions. This can
+      be used to implement Hardcaml.Interface.S on types that otherwise can't
+      use [@@deriving hardcaml]
+  *)
+  module Make_interface_with_conversion
+      (Repr : S) (M : sig
+                    type 'a t [@@deriving sexp_of]
+
+                    val t_of_repr : 'a Repr.t -> 'a t
+                    val repr_of_t : 'a t -> 'a Repr.t
+                  end) : S with type 'a t = 'a M.t
 end

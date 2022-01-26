@@ -7,6 +7,13 @@ open Base
     [branching_factor = X], the depth is by [ceil_log_{X} N]. *)
 type 'a optional_branching_factor = ?branching_factor:int (** default is 2 *) -> 'a
 
+type 'a with_valid = ('a, 'a) with_valid2
+
+and ('a, 'b) with_valid2 =
+  { valid : 'a
+  ; value : 'b
+  }
+
 module type TypedMath = sig
   type t
   type v
@@ -560,18 +567,18 @@ module type S = sig
   val tree : arity:int -> f:('a list -> 'a) -> 'a list -> 'a
 
   (** [priority_select cases] returns the value associated with the first case whose
-      [valid] signal is high.  [valid] will be set low in the returned [With_valid.t] if
+      [valid] signal is high.  [valid] will be set low in the returned [with_valid] if
       no case is selected. *)
-  val priority_select : (t With_valid.t list -> t With_valid.t) optional_branching_factor
+  val priority_select : (t with_valid list -> t with_valid) optional_branching_factor
 
   (** Same as [priority_select] except returns [default] if no case matches. *)
   val priority_select_with_default
-    : (t With_valid.t list -> default:t -> t) optional_branching_factor
+    : (t with_valid list -> default:t -> t) optional_branching_factor
 
   (** Select a case where one and only one [valid] signal is enabled.  If more than one
       case is [valid] then the return value is undefined.  If no cases are valid, [0] is
       returned by the current implementation, though this should not be relied upon. *)
-  val onehot_select : (t With_valid.t list -> t) optional_branching_factor
+  val onehot_select : (t with_valid list -> t) optional_branching_factor
 
   (** [popcount t] returns the number of bits set in [t]. *)
   val popcount : (t -> t) optional_branching_factor
@@ -597,11 +604,11 @@ module type S = sig
 
   (** [floor_log2 x] returns the floor of log-base-2 of [x].  [x] is treated as unsigned
       and an error is indicated by [valid = gnd] in the return value if [x = 0]. *)
-  val floor_log2 : (t -> t With_valid.t) optional_branching_factor
+  val floor_log2 : (t -> t with_valid) optional_branching_factor
 
   (** [ceil_log2 x] returns the ceiling of log-base-2 of [x].  [x] is treated as unsigned
       and an error is indicated by [valid = gnd] in the return value if [x = 0]. *)
-  val ceil_log2 : (t -> t With_valid.t) optional_branching_factor
+  val ceil_log2 : (t -> t with_valid) optional_branching_factor
 
   (** convert binary to onehot *)
   val binary_to_onehot : t -> t
@@ -641,6 +648,13 @@ module type Comb = sig
   module type S = S
 
   type nonrec 'a optional_branching_factor = 'a optional_branching_factor
+
+  type nonrec ('a, 'b) with_valid2 = ('a, 'b) with_valid2 =
+    { valid : 'a
+    ; value : 'b
+    }
+
+  type nonrec 'a with_valid = ('a, 'a) with_valid2
 
   module Make_primitives (Gates : Gates) : Primitives with type t = Gates.t
 

@@ -96,7 +96,7 @@ example, to build a counter we need to access the old value to produce
 the next one.
 
 ```ocaml
-# let counter = Signal.reg_fb spec ~enable:Signal.vdd  ~w:8 (fun d -> Signal.(d +:. 1))
+# let counter = Signal.reg_fb spec ~enable:Signal.vdd  ~width:8 ~f:(fun d -> Signal.(d +:. 1))
 val counter : Signal.t =
   (register (width 8)
  ((clock clock) (clock_edge Rising) (clear clear) (clear_level High)
@@ -245,7 +245,8 @@ Each read port can have a different clock.
       ~collision_mode:Read_before_write
       ~size:256
       ~write_ports:[|write_port|]
-      ~read_ports:[|read_port|]
+      ~read_ports:[|read_port|] 
+      ()
 val q : Signal.t array =
   [|(register (width 32) ((clock clock) (clock_edge Rising) (enable read_enable))
  (data_in memory_read_port))|]

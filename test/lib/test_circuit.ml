@@ -460,8 +460,8 @@ let%expect_test "verify_clock_pins" =
     let clock3 = input "clock3" 1 in
     let ram_outputs =
       Ram.create
-        ~size:128
         ~collision_mode:Read_before_write
+        ~size:128
         ~write_ports:
           [| { write_enable = vdd
              ; write_address = foo
@@ -478,6 +478,7 @@ let%expect_test "verify_clock_pins" =
           [| { read_enable = vdd; read_address = foo; read_clock = clock2 }
            ; { read_enable = vdd; read_address = foo; read_clock = clock3 }
           |]
+        ()
     in
     Circuit.create_exn
       ~name:"name"

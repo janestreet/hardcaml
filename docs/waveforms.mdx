@@ -55,8 +55,8 @@ let create (i : _ I.t) =
         reg_fb
           (Reg_spec.create ~clock:i.clock ~clear:i.clear ())
           ~enable:i.incr
-          ~w:8
-          (fun d -> d +:. 1)
+          ~width:8
+          ~f:(fun d -> d +:. 1)
     }
 ;;
 

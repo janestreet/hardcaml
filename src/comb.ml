@@ -119,6 +119,13 @@ module Make_primitives (Gates : Gates) = struct
   ;;
 end
 
+type nonrec ('a, 'b) with_valid2 = ('a, 'b) with_valid2 =
+  { valid : 'a
+  ; value : 'b
+  }
+
+type nonrec 'a with_valid = 'a with_valid
+
 module Make (Prims : Primitives) = struct
   type t = Prims.t
 
@@ -862,8 +869,8 @@ module Make (Prims : Primitives) = struct
   ;;
 
   let priority_select ?branching_factor ts =
-    tree_or_reduce_binary_operator ts ?branching_factor ~f:(fun (a : t With_valid.t) b ->
-      { With_valid.valid = a.valid |: b.valid; value = mux2 a.valid a.value b.value })
+    tree_or_reduce_binary_operator ts ?branching_factor ~f:(fun (a : t with_valid) b ->
+      { valid = a.valid |: b.valid; value = mux2 a.valid a.value b.value })
   ;;
 
   let priority_select_with_default ?branching_factor data ~default =
@@ -871,7 +878,7 @@ module Make (Prims : Primitives) = struct
     mux2 d.valid d.value default
   ;;
 
-  let onehot_select ?branching_factor (ts : t With_valid.t list) =
+  let onehot_select ?branching_factor (ts : t with_valid list) =
     List.map ts ~f:(fun d -> sresize d.valid (width d.value) &: d.value)
     |> tree_or_reduce_binary_operator ?branching_factor ~f:( |: )
   ;;
@@ -894,8 +901,7 @@ module Make (Prims : Primitives) = struct
 
   let leading_zeros_of_bits_list ?branching_factor d =
     let result_width = num_bits_to_represent (List.length d) in
-    List.mapi d ~f:(fun i valid ->
-      { With_valid.valid; value = of_int ~width:result_width i })
+    List.mapi d ~f:(fun i valid -> { valid; value = of_int ~width:result_width i })
     |> priority_select_with_default
          ?branching_factor
          ~default:(of_int ~width:result_width (List.length d))
@@ -926,7 +932,7 @@ module Make (Prims : Primitives) = struct
     if width t = 1 then t else popcount ?branching_factor t ==:. 1
   ;;
 
-  let floor_log2 ?branching_factor t : t With_valid.t =
+  let floor_log2 ?branching_factor t : t with_valid =
     let width = width t in
     if width = 0 then raise_of_empty "[floor_log2]";
     let leading_zeros = leading_zeros t ?branching_factor in

@@ -1103,7 +1103,7 @@ let reg spec ?(enable = vdd) d =
   Reg { signal_id = make_id (width d) (d :: deps); register = spec; d }
 ;;
 
-let reg_fb spec ?enable ~w:width f =
+let reg_fb ?enable spec ~width ~f =
   let d = wire width in
   let q = reg spec ?enable d in
   d <== f q;

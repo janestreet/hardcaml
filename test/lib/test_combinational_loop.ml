@@ -99,7 +99,9 @@ let%expect_test "combinational loop in 2nd arg" =
 ;;
 
 let%expect_test "loop through register" =
-  let a = Signal.reg_fb (Reg_spec.create () ~clock) ~enable:vdd ~w:2 (fun d -> d +:. 1) in
+  let a =
+    Signal.reg_fb (Reg_spec.create () ~clock) ~enable:vdd ~width:2 ~f:(fun d -> d +:. 1)
+  in
   test [ a ];
   [%expect {|
     (Ok ()) |}]
@@ -163,7 +165,7 @@ let%expect_test "combinational loop between registers" =
 let%expect_test "combinational loop inside register loop" =
   let reg_spec = Reg_spec.create () ~clock in
   let a =
-    reg_fb reg_spec ~enable:vdd ~w:2 (fun d ->
+    reg_fb reg_spec ~enable:vdd ~width:2 ~f:(fun d ->
       let w = wire 2 -- "wire_in_loop" in
       let e = d +: w in
       w <== w;

@@ -98,3 +98,25 @@ and read an output like so:
 See the pages on [waveforms](waveforms.mdx) and using the
 [interactive viewer](waveterm_interactive_viewer.mdx) for more information.
 
+
+# Limitations
+
+The simulators provided by Hardcaml are called cycle accurate
+simulators, rather than the more complex event driven simulators
+often used for RTL design.
+
+Verilator is an example of a popular cycle accurate simulator, while
+Icarus Verilog and Modelsim are examples of event driven simulators.
+
+While event driven simulators are more powerful, for testing standard
+synchronous designs cycle accurate simulators are generally good
+enough, simpler to write testbenchs for and easier to make run
+reasonably fast.
+
+The Hardcaml simulators also add some further restrictions -
+specifically it is possible to (approximately) model multiple clock
+domains with cycle accurate simulators, but we do not currently allow
+that. Further, we do not model different clock edges and assume all
+synchronous logic is triggered on the rising edge.
+
+Let us know if this is particularly restrictive for you!

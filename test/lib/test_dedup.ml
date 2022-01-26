@@ -43,9 +43,9 @@ let%expect_test "register" =
   let v =
     reg_fb
       (Reg_spec.create () ~clock)
-      (fun x -> x +: of_string "1111")
+      ~f:(fun x -> x +: of_string "1111")
       ~enable:(of_string "1")
-      ~w:4
+      ~width:4
   in
   let c = dedup [ output "out" (v +: of_string "1111") ] in
   print_circuit c;
