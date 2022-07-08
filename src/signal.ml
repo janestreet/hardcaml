@@ -53,6 +53,7 @@ type signal_id =
   ; mutable s_names : string list
   ; s_width : int
   ; mutable s_attributes : Rtl_attribute.t list
+  ; mutable s_comment : string option
   ; mutable s_deps : t list
   ; caller_id : Caller_id.t option
   }
@@ -237,6 +238,23 @@ let add_attributes signal attributes =
   signal
 ;;
 
+let set_comment signal comment =
+  match signal_id signal with
+  | None ->
+    raise_s [%message "attempt to add comment to an empty signal" ~to_:(comment : string)]
+  | Some s ->
+    s.s_comment <- Some comment;
+    signal
+;;
+
+let unset_comment signal =
+  match signal_id signal with
+  | None -> raise_s [%message "attempt to remove comment from an empty signal"]
+  | Some s ->
+    s.s_comment <- None;
+    signal
+;;
+
 let names s =
   match signal_id s with
   | None -> raise_s [%message "cannot get [names] from the empty signal"]
@@ -247,6 +265,12 @@ let attributes s =
   match signal_id s with
   | None -> raise_s [%message "cannot get [tag] from the empty signal"]
   | Some s -> s.s_attributes
+;;
+
+let comment s =
+  match signal_id s with
+  | None -> raise_s [%message "cannot get [comment] from the empty signal"]
+  | Some s -> s.s_comment
 ;;
 
 let has_name t = not (List.is_empty (names t))
@@ -338,6 +362,7 @@ let make_id w deps =
   { s_id = new_id ()
   ; s_names = []
   ; s_attributes = []
+  ; s_comment = None
   ; s_width = w
   ; s_deps = deps
   ; caller_id = Caller_id.get () ~skip:[]

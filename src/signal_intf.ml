@@ -37,6 +37,7 @@ module type Signal = sig
     ; mutable s_names : string list
     ; s_width : int
     ; mutable s_attributes : Rtl_attribute.t list
+    ; mutable s_comment : string option
     (** Making this mutable turns hardcaml from pretty functional to pretty imperative.
         however, if used carefully and only with the library, we can provide a
         potentially easier way of changing the graph structure in some cases *)
@@ -181,6 +182,17 @@ module type Signal = sig
 
   (** Returns attributes associated to the signal *)
   val attributes : t -> Rtl_attribute.t list
+
+  (** Set the comment associated with the signal. This is currently only supported in
+      Verilog *)
+  val set_comment : t -> string -> t
+
+  (** Remove the comment associated with the signal. This is currently only supported in
+      Verilog *)
+  val unset_comment : t -> t
+
+  (** Returns comment associated with the signal *)
+  val comment : t -> string option
 
   val has_name : t -> bool
 

@@ -28,9 +28,9 @@ type ('i, 'o) t =
   ; cycle_before_clock_edge : task
   ; cycle_at_clock_edge : task
   ; cycle_after_clock_edge : task
-  ; lookup_signal : Signal.Uid.t -> Bits.t ref
-  ; lookup_reg : Signal.Uid.t -> Bits.t ref
-  ; assertions : Signal.t Map.M(String).t
+  ; lookup_reg : string -> Bits.Mutable.t option
+  ; lookup_mem : string -> Bits.Mutable.t array option
+  ; assertions : Bits.Mutable.t Map.M(String).t
   ; violated_assertions : int list Hashtbl.M(String).t
   ; digest : Digest.t ref
   ; circuit : Circuit.t option
@@ -88,6 +88,7 @@ module Private = struct
   type nonrec task = task
 
   let create
+        ?circuit
         ~in_ports
         ~out_ports_before_clock_edge
         ~out_ports_after_clock_edge
@@ -97,9 +98,10 @@ module Private = struct
         ~cycle_before_clock_edge
         ~cycle_at_clock_edge
         ~cycle_after_clock_edge
-        ~lookup_signal
         ~lookup_reg
+        ~lookup_mem
         ~assertions
+        ()
     =
     { in_ports
     ; out_ports_before_clock_edge
@@ -113,12 +115,12 @@ module Private = struct
     ; cycle_before_clock_edge
     ; cycle_at_clock_edge
     ; cycle_after_clock_edge
-    ; lookup_signal
-    ; lookup_reg
     ; assertions
+    ; lookup_reg
+    ; lookup_mem
     ; violated_assertions = Hashtbl.create (module String)
     ; digest = ref (Md5_lib.string "none")
-    ; circuit = None
+    ; circuit
     }
   ;;
 

@@ -79,7 +79,7 @@ end
 
 let ok_exn = Or_error.ok_exn
 
-let check_ports_in_one_direction direction ports =
+let check_ports_in_one_direction circuit_name direction ports =
   let find_repeated_names ports =
     let rec find seen repeated = function
       | [] -> seen, repeated
@@ -95,24 +95,35 @@ let check_ports_in_one_direction direction ports =
     List.map ports ~f:(fun s ->
       match Signal.names s with
       | [ name ] -> name
-      | _ -> raise_s [%message (direction ^ "s must have a single name") (s : Signal.t)])
+      | _ ->
+        raise_s
+          [%message
+            (direction ^ "s must have a single name")
+              (circuit_name : string)
+              (s : Signal.t)])
   in
   let set, repeated = find_repeated_names port_names in
   if not (Set.is_empty repeated)
   then
     raise_s
-      [%message (direction ^ " port names are not unique") (repeated : Set.M(String).t)];
+      [%message
+        (direction ^ " port names are not unique")
+          (circuit_name : string)
+          (repeated : Set.M(String).t)];
   set
 ;;
 
-let check_port_names_are_well_formed inputs outputs =
-  let inputs = check_ports_in_one_direction "Input" inputs in
-  let outputs = check_ports_in_one_direction "Output" outputs in
+let check_port_names_are_well_formed circuit_name inputs outputs =
+  let inputs = check_ports_in_one_direction circuit_name "Input" inputs in
+  let outputs = check_ports_in_one_direction circuit_name "Output" outputs in
   let input_and_output_names = Set.inter inputs outputs in
   if not (Set.is_empty input_and_output_names)
   then
     raise_s
-      [%message "Port names are not unique" (input_and_output_names : Set.M(String).t)]
+      [%message
+        "Port names are not unique"
+          (circuit_name : string)
+          (input_and_output_names : Set.M(String).t)]
 ;;
 
 let create_exn ?(config = Config.default) ~name outputs =
@@ -166,7 +177,7 @@ let create_exn ?(config = Config.default) ~name outputs =
   if config.detect_combinational_loops
   then ok_exn (Signal_graph.detect_combinational_loops signal_graph);
   (* Ensure input and output port names are unique *)
-  check_port_names_are_well_formed inputs outputs;
+  check_port_names_are_well_formed name inputs outputs;
   (* construct the circuit *)
   { name
   ; signal_by_uid = Signal_map.create signal_graph
@@ -365,16 +376,17 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
         from_.s_attributes <- []))
   ;;
 
-  let check_alist_of_one_direction direction alist =
+  let check_alist_of_one_direction name direction alist =
     ignore
-      (check_ports_in_one_direction direction (List.map ~f:snd alist) : Set.M(String).t)
+      (check_ports_in_one_direction name direction (List.map ~f:snd alist)
+       : Set.M(String).t)
   ;;
 
   let create_exn ?(config = Config.default) ~name logic =
     let circuit_inputs =
       let ports = List.map I.Names_and_widths.t ~f:(fun (n, b) -> n, Signal.input n b) in
-      check_alist_of_one_direction "Input" ports;
-      I.of_alist ports
+      check_alist_of_one_direction name "Input" ports;
+      I.Unsafe_assoc_by_port_name.of_alist ports
     in
     let inputs = I.map circuit_inputs ~f:Signal.wireof in
     let outputs = logic inputs in
@@ -383,8 +395,8 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
         List.map2_exn O.Names_and_widths.port_names (O.to_list outputs) ~f:(fun n s ->
           n, Signal.output n s)
       in
-      check_alist_of_one_direction "Output" ports;
-      O.of_alist ports
+      check_alist_of_one_direction name "Output" ports;
+      O.Unsafe_assoc_by_port_name.of_alist ports
     in
     I.iter2 inputs circuit_inputs ~f:move_port_attributes;
     O.iter2 outputs circuit_outputs ~f:move_port_attributes;

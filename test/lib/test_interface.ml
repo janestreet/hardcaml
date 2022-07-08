@@ -125,25 +125,48 @@ let%expect_test "offsets" =
      (y 0)) |}]
 ;;
 
-let%expect_test "assoc list" =
-  let alist = I.to_alist a in
+let%expect_test "unsafe assoc list" =
+  let alist = I.Unsafe_assoc_by_port_name.to_alist a in
   print_s [%sexp (alist : (string * int) list)];
   [%expect {|
     ((x 1)
      (y 5)) |}];
-  print_s [%sexp (I.of_alist alist : int I.t)];
+  print_s [%sexp (I.Unsafe_assoc_by_port_name.of_alist alist : int I.t)];
   [%expect {|
     ((x 1)
      (y 5)) |}];
   require_does_raise [%here] (fun () -> I.of_alist []);
   [%expect
     {|
-    ("[Interface_extended.of_alist] Field not found in interface"
-     (missing_field_name x)
-     (input ())
+    ("[Interface.Make.of_alist] Field not provided"
+     (missing_field_name (x))
      (interface (
        (x 4)
        (y 8)))) |}]
+;;
+
+let%expect_test "safe assoc list" =
+  let module I = struct
+    type 'a t =
+      { x : 'a
+      ; y : 'a [@rtlname "x"]
+      }
+    [@@deriving sexp_of, hardcaml]
+  end
+  in
+  (* show port names are the same *)
+  print_s [%message (I.port_names : string I.t)];
+  [%expect {|
+    (I.port_names (
+      (x x)
+      (y x))) |}];
+  let alist = I.to_alist { x = 1; y = 2 } in
+  let roundtrip = I.of_alist alist in
+  print_s [%message (roundtrip : int I.t)];
+  [%expect {|
+    (roundtrip (
+      (x 1)
+      (y 2))) |}]
 ;;
 
 let%expect_test "[wires]" =
@@ -243,7 +266,7 @@ let%expect_test "[of_interface_list], [to_interface_list]" =
   require_does_raise [%here] (fun () -> I.to_interface_list { I.x = [ 1 ]; y = [ 2; 3 ] });
   [%expect
     {|
-    ("[Interface_extended.to_interface_list] field list lengths must be the same"
+    ("[Interface.Make.to_interface_list] field list lengths must be the same"
      (lengths (
        (x 1)
        (y 2)))) |}]
@@ -462,22 +485,27 @@ module _ = struct
   end
 
   type 'a t =
-    { foo : 'a [@bits 8]
+    { foo : 'a [@bits 8] [@rtlname "value"]
     ; bar : 'a Another_module.t
     ; baz : 'a Another_module.t
     }
   [@@deriving sexp_of, hardcaml]
 
-  let%expect_test "Test to show interface with identical port names. In this case you \
-                   would need to add a RTL prefix to fix the problem."
-    =
-    Expect_test_helpers_base.require_does_raise [%here] (fun () ->
-      let raw = Bits.of_int 0xAA00BB01 ~width:(fold ~init:0 ~f:( + ) port_widths) in
-      let raw_unpacked = Of_bits.unpack raw |> map ~f:Bits.to_int in
-      print_s [%message (raw_unpacked : Int.Hex.t t)];
-      (* We don't actually print out the (wrong) values, as we now raise in this
-         situation. *)
-      [%expect.unreachable]);
-    [%expect {| ("Cannot have duplicate port names" (dups (value))) |}]
+  let%expect_test "all names are 'value'." =
+    print_s [%message (port_names : string t)];
+    [%expect {| (port_names ((foo value) (bar ((value value))) (baz ((value value))))) |}]
+  ;;
+
+  let%expect_test "pack and unpack work, even though port names are shared." =
+    let packed =
+      { foo = 0x1; bar = { value = 0xbb }; baz = { value = 0xaa } }
+      |> map2 port_widths ~f:(fun width -> Bits.of_int ~width)
+      |> Of_bits.pack
+    in
+    let unpacked = Of_bits.unpack packed |> map ~f:Bits.to_int in
+    print_s [%message (unpacked : Int.Hex.t t)];
+    (* We don't actually print out the (wrong) values, as we now raise in this
+       situation. *)
+    [%expect {| (unpacked ((foo 0x1) (bar ((value 0xbb))) (baz ((value 0xaa))))) |}]
   ;;
 end

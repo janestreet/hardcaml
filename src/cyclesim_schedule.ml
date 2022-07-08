@@ -1,12 +1,19 @@
 open Base
 
+module Aliases = struct
+  type t = Signal.Uid.t Hashtbl.M(Signal.Uid).t
+
+  let resolve_alias (t : t) uid = Hashtbl.find t uid
+  let is_alias (t : t) uid = Hashtbl.mem t uid
+end
+
 type t =
   { schedule : Signal.t list
   ; regs : Signal.t list
   ; mems : Signal.t list
   ; consts : Signal.t list
   ; inputs : Signal.t list
-  ; aliases : Signal.t Hashtbl.M(Signal.Uid).t
+  ; aliases : Aliases.t
   }
 [@@deriving fields]
 
@@ -51,12 +58,10 @@ let create_aliases signal_graph =
   Signal_graph.iter signal_graph ~f:(fun signal ->
     match unwrap_wire signal with
     | None -> ()
-    | Some unwrapped -> Hashtbl.set ~key:(Signal.uid signal) ~data:unwrapped table);
+    | Some unwrapped ->
+      Hashtbl.set ~key:(Signal.uid signal) ~data:(Signal.uid unwrapped) table);
   table
 ;;
-
-let resolve_alias (t : t) uid = Hashtbl.find t.aliases uid
-let is_alias (t : t) uid = Hashtbl.mem t.aliases uid
 
 (* Specialised signal dependencies that define a graph that breaks cycles through
    sequential elements. This is done by removing the input edges of registers and

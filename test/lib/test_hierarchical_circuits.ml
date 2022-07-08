@@ -242,8 +242,12 @@ let%expect_test "generate hierarchy with sharing" =
 
 let%expect_test "generate hierarchy exn" =
   show_raise (fun () -> create ~cause_exn:true ~share:true);
-  [%expect {|
-    (raised ("Port names are not unique" (input_and_output_names (a)))) |}]
+  [%expect
+    {|
+    (raised (
+      "Port names are not unique"
+      (circuit_name inner)
+      (input_and_output_names (a)))) |}]
 ;;
 
 open Async

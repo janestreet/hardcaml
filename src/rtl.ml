@@ -112,9 +112,18 @@ module type SignalNaming = sig
   val legalize : string -> string
 end
 
-module type SignalNameManager = sig
-  module UI : Comparator.S with type t = Signal.Uid.t * int
+module Uid_with_index = struct
+  module T = struct
+    type t = Signal.Uid.t * int [@@deriving compare, sexp_of]
+  end
 
+  include T
+  include (val Comparator.make ~compare ~sexp_of_t)
+end
+
+type signals_name_map_t = string Map.M(Uid_with_index).t [@@deriving sexp_of]
+
+module type SignalNameManager = sig
   type mem_names =
     { arr : string
     ; typ : string
@@ -124,7 +133,7 @@ module type SignalNameManager = sig
 
   type name_map =
     { mangler : Mangler.t
-    ; signals : string Map.M(UI).t
+    ; signals : signals_name_map_t
     ; mem : mem_names Uid_map.t
     ; inst_labels : string Uid_map.t
     }
@@ -139,12 +148,6 @@ module type SignalNameManager = sig
 end
 
 module SignalNameManager (S : SignalNaming) () = struct
-  module UI = struct
-    type t = Uid.t * int [@@deriving compare, sexp_of]
-
-    include (val Comparator.make ~compare ~sexp_of_t)
-  end
-
   let prefix = S.prefix
   let reserved = S.reserved
 
@@ -158,7 +161,7 @@ module SignalNameManager (S : SignalNaming) () = struct
 
   type name_map =
     { mangler : Mangler.t
-    ; signals : string Map.M(UI).t
+    ; signals : signals_name_map_t
     ; mem : mem_names Map.M(Uid).t
     ; inst_labels : string Map.M(Uid).t
     }
@@ -196,7 +199,7 @@ module SignalNameManager (S : SignalNaming) () = struct
     let mangler = Mangler.create ~case_sensitive:S.case_sensitive in
     Mangler.add_identifiers_exn mangler resv;
     { mangler
-    ; signals = Map.empty (module UI)
+    ; signals = Map.empty (module Uid_with_index)
     ; mem = Map.empty (module Uid)
     ; inst_labels = Map.empty (module Uid)
     }
@@ -427,6 +430,14 @@ module VerilogCore : Rtl_internal = struct
 
   let comment s = "/* " ^ s ^ " */"
 
+  let get_comment s =
+    match Signal.comment s with
+    | None -> ""
+    | Some c -> comment c
+  ;;
+
+  let name_with_comment n s = n ^ get_comment s
+
   let decl t n b =
     let decl s n b =
       if b = 1 then s ^ " " ^ n else s ^ " [" ^ Int.to_string (b - 1) ^ ":0] " ^ n
@@ -473,6 +484,7 @@ module VerilogCore : Rtl_internal = struct
 
   let signal_decl io name s =
     let tag = print_attribute s in
+    let name = name_with_comment name s in
     match s with
     | Empty -> raise_unexpected ~while_:"declaring signals" ~got_signal:s
     | Mux { select; cases; _ } ->
@@ -495,21 +507,23 @@ module VerilogCore : Rtl_internal = struct
 
   let alias_decl io name s =
     let tag = print_attribute s in
+    let name = name_with_comment name s in
     io (tag ^ t4 ^ decl Wire name (width s) ^ ";\n")
   ;;
 
   let mem_decl io name mem s =
     let tag = print_attribute s in
+    let comment = get_comment s in
     let open Names in
     match s with
     | Mem { memory = sp; _ } ->
       let b = Int.to_string (width s - 1) in
       let s = Int.to_string (sp.mem_size - 1) in
-      io (tag ^ t4 ^ "reg [" ^ b ^ ":0] " ^ mem.arr ^ "[0:" ^ s ^ "];\n")
+      io (tag ^ t4 ^ "reg [" ^ b ^ ":0] " ^ mem.arr ^ "[0:" ^ s ^ "]" ^ comment ^ ";\n")
     | Multiport_mem { size; _ } ->
       let b = Int.to_string (width s - 1) in
       let size = Int.to_string (size - 1) in
-      io (tag ^ t4 ^ "reg [" ^ b ^ ":0] " ^ name s ^ "[0:" ^ size ^ "];\n")
+      io (tag ^ t4 ^ "reg [" ^ b ^ ":0] " ^ name s ^ "[0:" ^ size ^ "]" ^ comment ^ ";\n")
     | _ -> raise_expected ~while_:"declaring memories" ~expected:"memory" ~got_signal:s
   ;;
 
@@ -1199,7 +1213,8 @@ module Make (R : Rtl_internal) = struct
       io (t4 ^ R.comment "output assignments" ^ "\n");
       List.iter outputs ~f:(R.logic io primary_name);
       io "\n");
-    R.end_logic io
+    R.end_logic io;
+    nm.signals
   ;;
 end
 
@@ -1312,8 +1327,9 @@ module Output = struct
             if Hierarchy_path.is_top_circuit hierarchy_path circuit
             then Out_channel.close out_channel )
       in
-      Language.output blackbox t.language output circuit;
-      close ()
+      let ret = Language.output blackbox t.language output circuit in
+      close ();
+      ret
     with
     | exn ->
       raise_s
@@ -1334,7 +1350,13 @@ module Blackbox = struct
   [@@deriving sexp_of]
 end
 
-let output ?output_mode ?database ?(blackbox = Blackbox.None) language circuit =
+let output_with_name_map
+      ?output_mode
+      ?database
+      ?(blackbox = Blackbox.None)
+      language
+      circuit
+  =
   let output_mode =
     Option.value
       output_mode
@@ -1354,6 +1376,8 @@ let output ?output_mode ?database ?(blackbox = Blackbox.None) language circuit =
   in
   let database = Option.value database ~default:(Circuit_database.create ()) in
   let circuits_already_output = Hash_set.create (module String) in
+  let ret = ref (Map.empty (module Uid_with_index)) in
+  let add_to_ret m = ret := Map.merge_skewed !ret m ~combine:(fun ~key:_ v1 _v2 -> v1) in
   let rec output_circuit blackbox circuit hierarchy_path =
     let circuit_name = Circuit.name circuit in
     if not (Hash_set.mem circuits_already_output circuit_name)
@@ -1363,11 +1387,11 @@ let output ?output_mode ?database ?(blackbox = Blackbox.None) language circuit =
       match (blackbox : Blackbox.t) with
       | None ->
         output_instantitions (None : Blackbox.t) circuit hierarchy_path;
-        Output.output_circuit false output circuit hierarchy_path
-      | Top -> Output.output_circuit true output circuit hierarchy_path
+        Output.output_circuit false output circuit hierarchy_path |> add_to_ret
+      | Top -> Output.output_circuit true output circuit hierarchy_path |> add_to_ret
       | Instantiations ->
         output_instantitions Top circuit hierarchy_path;
-        Output.output_circuit false output circuit hierarchy_path)
+        Output.output_circuit false output circuit hierarchy_path |> add_to_ret)
   and output_instantitions (blackbox : Blackbox.t) circuit hierarchy_path =
     Signal_graph.iter (Circuit.signal_graph circuit) ~f:(fun signal ->
       match signal with
@@ -1380,9 +1404,20 @@ let output ?output_mode ?database ?(blackbox = Blackbox.None) language circuit =
          | Some circuit -> output_circuit blackbox circuit hierarchy_path)
       | _ -> ())
   in
-  output_circuit blackbox circuit Hierarchy_path.empty
+  output_circuit blackbox circuit Hierarchy_path.empty;
+  !ret
+;;
+
+let output ?output_mode ?database ?blackbox language circuit =
+  ignore
+    (output_with_name_map ?output_mode ?database ?blackbox language circuit
+     : signals_name_map_t)
 ;;
 
 let print ?database ?blackbox language circuit =
   output ~output_mode:(To_channel Out_channel.stdout) ?database ?blackbox language circuit
 ;;
+
+module Expert = struct
+  let output_with_name_map = output_with_name_map
+end

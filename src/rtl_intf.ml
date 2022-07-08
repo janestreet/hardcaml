@@ -35,6 +35,14 @@ module type Rtl = sig
     [@@deriving sexp_of]
   end
 
+  module Uid_with_index : sig
+    type t = Signal.Uid.t * int [@@deriving compare, sexp_of]
+
+    include Comparator.S with type t := t
+  end
+
+  type signals_name_map_t = string Map.M(Uid_with_index).t
+
   (** Write circuit to [Verilog] or [Vhdl].  Instantiations are (recursively) looked up in
       [database] and if a circuit exists it is also written.  The [output_mode] specifies
       how the circuit should be written - either to a single file (or buffer, or channel)
@@ -55,4 +63,14 @@ module type Rtl = sig
     -> Language.t
     -> Circuit.t
     -> unit
+
+  module Expert : sig
+    val output_with_name_map
+      :  ?output_mode:Output_mode.t (** default is [To_file (Circuit.name circuit)]. *)
+      -> ?database:Circuit_database.t (** default is an empty database  *)
+      -> ?blackbox:Blackbox.t (** Default is [None] *)
+      -> Language.t
+      -> Circuit.t
+      -> signals_name_map_t
+  end
 end

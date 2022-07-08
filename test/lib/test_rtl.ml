@@ -5,8 +5,9 @@ let rtl_write_null outputs = Rtl.print Verilog (Circuit.create_exn ~name:"test" 
 
 let%expect_test "Port names must be unique" =
   require_does_raise [%here] (fun () -> rtl_write_null [ output "a" (input "a" 1) ]);
-  [%expect {|
-    ("Port names are not unique" (input_and_output_names (a))) |}]
+  [%expect
+    {|
+    ("Port names are not unique" (circuit_name test) (input_and_output_names (a))) |}]
 ;;
 
 let%expect_test "Port names must be legal" =

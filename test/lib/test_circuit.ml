@@ -196,18 +196,19 @@ let%expect_test "Output signal must be a wire" =
 let%expect_test "Port names must be unique" =
   require_does_raise [%here] (fun () ->
     Circuit.create_exn ~name:"test" [ output "a" (input "a" 1) ]);
-  [%expect {|
-    ("Port names are not unique" (input_and_output_names (a))) |}];
+  [%expect
+    {|
+    ("Port names are not unique" (circuit_name test) (input_and_output_names (a))) |}];
   require_does_raise [%here] (fun () ->
     Circuit.create_exn
       ~name:"test"
       [ output "a" (input "b" 1 +: input "b" 1 +: input "c" 1) ]);
-  [%expect {| ("Input port names are not unique" (repeated (b))) |}];
+  [%expect {| ("Input port names are not unique" (circuit_name test) (repeated (b))) |}];
   require_does_raise [%here] (fun () ->
     Circuit.create_exn
       ~name:"test"
       [ output "a" (input "b" 1); output "a" (input "c" 1) ]);
-  [%expect {| ("Output port names are not unique" (repeated (a))) |}]
+  [%expect {| ("Output port names are not unique" (circuit_name test) (repeated (a))) |}]
 ;;
 
 (* This probably shouldn't, otherwise we would have to check all reserved identifiers for
@@ -524,5 +525,6 @@ let%expect_test "Raises when encounters duplicated ports in interfaces." =
   Expect_test_helpers_base.require_does_raise [%here] (fun () ->
     C.create_exn ~name:"circuit" (fun (input : _ I.t) ->
       { O.baz = input.foo +: uresize input.bar 30 }));
-  [%expect {| ("Input port names are not unique" (repeated (hello))) |}]
+  [%expect
+    {| ("Input port names are not unique" (circuit_name circuit) (repeated (hello))) |}]
 ;;

@@ -12,16 +12,15 @@ let raise_errorf = Location.raise_errorf
 type options_t = {
   rtlprefix : expression option;
   rtlsuffix : expression option;
-  rtlmangle : bool;
+  rtlmangle : expression option;
   ast : bool;
 }
 
-let parse_bool option expr ~loc =
+let parse_rtlmangle expr ~loc =
   match expr with
-  | [%expr true]  -> true
-  | [%expr false] -> false
-  | _ -> raise_errorf ~loc "[%s] %s option must be a boolean" deriver option
-;;
+  | [%expr true]  -> Some [%expr "_"]
+  | [%expr false] -> None
+  | e             -> Some e
 
 (*
  * Attribute definition and parsing
@@ -95,9 +94,7 @@ let get_rtlsuffix ~loc:_ opts label_declaration =
 
 let get_rtlmangle ~loc opts label_declaration =
   match Attribute.(find rtlmangle) label_declaration with
-  | Some ([%expr true]) -> true
-  | Some ([%expr false]) -> false
-  | Some (_) -> raise_errorf ~loc "[%s] rtlmangle attribute must be a boolean" deriver
+  | Some expr -> parse_rtlmangle expr ~loc
   | None -> opts.rtlmangle
 
 let get_doc ~loc label_declaration =
@@ -124,33 +121,15 @@ let mk_rtlident ~loc name prefix suffix =
     [@metaloc loc]
 
 let mangle_name ~loc name mangle =
-  if mangle
-  then [%expr Ppx_deriving_hardcaml_runtime.concat [ [%e name]; "_"; _n ]]
-  else [%expr _n]
+  match mangle with
+  | Some separator ->
+    [%expr Ppx_deriving_hardcaml_runtime.concat [ [%e name]; [%e separator]; _n ]]
+  | None  ->
+    [%expr _n]
 
 (*
  * Code generation utility functions
 *)
-
-let check_list_and_array_label var loc = function
-  | Ptyp_var v
-  | Ptyp_constr ({ txt = Ldot(_, _); _ }, [ { ptyp_desc = Ptyp_var(v); _ } ])
-    when String.equal v var ->
-    ()
-  | _ ->
-    raise_errorf ~loc "[%s] check_label: only supports abstract record labels" deriver
-
-let check_label var ({ pld_name = { loc; _ }; _ } as label) =
-  match label.pld_type.ptyp_desc with
-  | Ptyp_var v
-  | Ptyp_constr ({ txt = Ldot(_, _); _ }, [ { ptyp_desc = Ptyp_var(v); _ } ])
-    when String.equal v var ->
-    ()
-  | Ptyp_constr ({ txt = Lident("list"); _ }, [ { ptyp_desc; _ } ])
-  | Ptyp_constr ({ txt = Lident("array"); _ }, [ { ptyp_desc; _ } ]) ->
-    check_list_and_array_label var loc ptyp_desc
-  | _ ->
-    raise_errorf ~loc "[%s] check_label: only supports abstract record labels" deriver
 
 let expand_array_init ~loc vname label_declaration =
   let nbits = get_bits ~loc label_declaration in
@@ -637,8 +616,7 @@ let str_of_type ~options ({ ptype_loc = loc; _ } as type_decl) =
 
 let sig_of_type ~ast ({ ptype_loc = loc; _ } as type_decl) =
   match type_decl.ptype_kind, type_decl.ptype_params with
-  | Ptype_record labels, [ ({ ptyp_desc = Ptyp_var(v); _ }, _) ] ->
-    List.iter labels ~f:(check_label v);
+  | Ptype_record _, [ ({ ptyp_desc = Ptyp_var(_); _ }, _) ] ->
     let intf =
       [%sigi: include Ppx_deriving_hardcaml_runtime.Interface.S with type 'a t := 'a t]
     in
@@ -649,10 +627,8 @@ let sig_of_type ~ast ({ ptype_loc = loc; _ } as type_decl) =
     raise_errorf ~loc "[%s] sig_of_type: only supports record types" deriver
 
 let () =
-  let get_bool_option ~loc option name =
-    match option with
-    | None -> false
-    | Some e -> parse_bool name e ~loc
+  let get_bool_option ~loc option =
+    Option.bind option ~f:(parse_rtlmangle ~loc)
   in
   Deriving.add deriver
     ~str_type_decl:(
@@ -668,7 +644,7 @@ let () =
           let options =
             { rtlprefix
             ; rtlsuffix
-            ; rtlmangle = get_bool_option ~loc rtlmangle "rtlmangle"
+            ; rtlmangle = get_bool_option ~loc rtlmangle
             ; ast } in
           List.concat_map type_declarations
             ~f:(fun decl -> str_of_type ~options decl)))

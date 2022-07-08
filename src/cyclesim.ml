@@ -10,12 +10,12 @@ module Digest = Cyclesim0.Digest
 type t_port_list = Cyclesim0.t_port_list
 type ('i, 'o) t = ('i, 'o) Cyclesim0.t [@@deriving sexp_of]
 
-let lookup_reg = Cyclesim0.lookup_reg
-let lookup_signal = Cyclesim0.lookup_signal
 let internal_ports = Cyclesim0.internal_ports
 let in_ports = Cyclesim0.in_ports
 let inputs = Cyclesim0.inputs
 let digest t = Cyclesim0.digest t
+let lookup_reg = Cyclesim0.lookup_reg
+let lookup_mem = Cyclesim0.lookup_mem
 
 module Violated_or_not = struct
   type t =
@@ -50,6 +50,11 @@ let cycle sim =
 let in_port (sim : _ Cyclesim0.t) name =
   try List.Assoc.find_exn sim.in_ports name ~equal:String.equal with
   | _ -> raise_s [%message "Couldn't find input port" name]
+;;
+
+let internal_port (sim : _ Cyclesim0.t) name =
+  try List.Assoc.find_exn sim.internal_ports name ~equal:String.equal with
+  | _ -> raise_s [%message "Couldn't find internal port" name]
 ;;
 
 let out_port_after_clock_edge (sim : _ Cyclesim0.t) name =

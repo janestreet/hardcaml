@@ -6,7 +6,6 @@ let nbits = Int.num_bits - 1
 let words bits = (bits + nbits - 1) / nbits
 let word_index bit = bit / nbits
 let m = -1 lsr 1 (* 62-bit mask *)
-
 let mask_bits n = if n = 0 then m else m lsr (nbits - n)
 let mask_bit n = 1 lsl n
 let bo2 = nbits / 2

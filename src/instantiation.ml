@@ -72,8 +72,7 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
         ~inputs
         ~outputs:O.Names_and_widths.t
     in
-    List.map O.Names_and_widths.port_names ~f:(fun name -> name, Map.find_exn t name)
-    |> O.of_alist
+    O.Unsafe_assoc_by_port_name.of_alist (Map.to_alist t)
   ;;
 end
 

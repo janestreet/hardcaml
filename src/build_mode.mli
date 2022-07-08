@@ -5,6 +5,6 @@ open Base
 type t =
   | Simulation
   | Synthesis
-[@@deriving sexp_of]
+[@@deriving sexp_of, compare, equal]
 
 val of_string : string -> t

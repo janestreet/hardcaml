@@ -520,12 +520,12 @@ module type S = sig
 
   (** [uresize t w] returns the unsigned resize of [t] to width [w].  If [w = width t],
       this is a no-op.  If [w < width t], this [select]s the [w] low bits of [t].  If [w >
-      width t], this extends [t] with [zero (width t - w)]. *)
+      width t], this extends [t] with [zero (w - width t)]. *)
   val uresize : t -> int -> t
 
   (** [sresize t w] returns the signed resize of [t] to width [w].  If [w = width t], this
       is a no-op.  If [w < width t], this [select]s the [w] low bits of [t].  If [w >
-      width t], this extends [t] with [width t - w] copies of [msb t]. *)
+      width t], this extends [t] with [w - width t] copies of [msb t]. *)
   val sresize : t -> int -> t
 
   (** unsigned resize by +1 bit *)
@@ -549,8 +549,8 @@ module type S = sig
   val reverse : t -> t
 
   (** [mod_counter max t] is [if t = max then 0 else (t + 1)], and can be used to count
-      from 0 to (max-1) then from zero again.  If max == 1<<n, then a comparator is not
-      generated and overflow arithmetic used instead.  If *)
+      from 0 to [max] then from zero again.  If [max == (1<<n - 1)], then a comparator is
+      not generated and overflow arithmetic is used instead. *)
   val mod_counter : max:int -> t -> t
 
   (** [compute_arity ~steps num_values] computes the tree arity required to reduce

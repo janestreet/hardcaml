@@ -7,7 +7,8 @@ module type Private = sig
   type task = unit -> unit
 
   val create
-    :  in_ports:port_list
+    :  ?circuit:Circuit.t
+    -> in_ports:port_list
     -> out_ports_before_clock_edge:port_list
     -> out_ports_after_clock_edge:port_list
     -> internal_ports:port_list
@@ -16,9 +17,10 @@ module type Private = sig
     -> cycle_before_clock_edge:task
     -> cycle_at_clock_edge:task
     -> cycle_after_clock_edge:task
-    -> lookup_signal:(Signal.Uid.t -> Bits.t ref)
-    -> lookup_reg:(Signal.Uid.t -> Bits.t ref)
-    -> assertions:Signal.t Map.M(String).t
+    -> lookup_reg:(string -> Bits.Mutable.t option)
+    -> lookup_mem:(string -> Bits.Mutable.t array option)
+    -> assertions:Bits.Mutable.t Map.M(String).t
+    -> unit
     -> t_port_list
 
   module Step : sig
@@ -66,9 +68,9 @@ module type Cyclesim0 = sig
     ; cycle_before_clock_edge : task
     ; cycle_at_clock_edge : task
     ; cycle_after_clock_edge : task
-    ; lookup_signal : Signal.Uid.t -> Bits.t ref
-    ; lookup_reg : Signal.Uid.t -> Bits.t ref
-    ; assertions : Signal.t Map.M(String).t
+    ; lookup_reg : string -> Bits.Mutable.t option
+    ; lookup_mem : string -> Bits.Mutable.t array option
+    ; assertions : Bits.Mutable.t Map.M(String).t
     ; violated_assertions : int list Hashtbl.M(String).t
     ; digest : Digest.t ref
     ; circuit : Circuit.t option

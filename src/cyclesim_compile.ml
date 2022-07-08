@@ -110,6 +110,7 @@ module Internal_ports = struct
             { s_id = !dangler_uid
             ; s_names = []
             ; s_attributes = []
+            ; s_comment = None
             ; s_width
             ; s_deps = []
             ; caller_id = None
@@ -129,36 +130,45 @@ end
 module Maps : sig
   type t
 
-  val create : Schedule.t -> t
-
-  val find_data_by_uid_exn : t -> Signal.Uid.t -> Bits.Mutable.t
-  val find_reg_by_uid_exn : t -> Signal.Uid.t -> Bits.Mutable.t
+  val create : internal_ports:Signal.t list -> Schedule.t -> t
   val find_data_exn : t -> Signal.t -> Bits.Mutable.t
   val find_data : t -> Signal.t -> Bits.Mutable.t
   val find_reg_exn : t -> Signal.t -> Bits.Mutable.t
   val find_mem_exn : t -> Signal.t -> Bits.Mutable.t array
+  val find_reg_current_by_name : t -> string -> Bits.Mutable.t option
+  val find_mem_by_name : t -> string -> Bits.Mutable.t array option
 end = struct
   type t =
     { data : Bits.Mutable.t Map.M(Signal.Uid).t
     ; reg : Bits.Mutable.t Map.M(Signal.Uid).t
     ; mem : Bits.Mutable.t array Map.M(Signal.Uid).t
-    ; schedule : Schedule.t
+    ; name_to_uid : Signal.Uid.t Map.M(String).t
+    ; aliases : Schedule.Aliases.t
     }
+  [@@deriving fields]
 
   let uid = Signal.uid
 
   let alias_or_self (t : t) uid =
-    match Schedule.resolve_alias t.schedule uid with
+    match Schedule.Aliases.resolve_alias t.aliases uid with
     | None -> uid
-    | Some alias -> Signal.uid alias
+    | Some alias -> alias
   ;;
 
-  let create (bundle : Schedule.t) =
+  let create_name_to_uid signals_list =
+    List.concat_map signals_list ~f:(fun signal ->
+      let uid = Signal.uid signal in
+      List.map (Signal.names signal) ~f:(fun name -> name, uid))
+    |> Map.of_alist_exn (module String)
+  ;;
+
+  let create ~internal_ports (bundle : Schedule.t) =
+    let aliases = Schedule.aliases bundle in
     let zero n = Bits.Mutable.of_constant (Constant.of_int ~width:n 0) in
     let const c = Bits.Mutable.of_constant (Bits.to_constant c) in
     let data_map =
       let data_add map signal =
-        if not (Schedule.is_alias bundle (uid signal))
+        if not (Schedule.Aliases.is_alias aliases (uid signal))
         then (
           let value =
             match (signal : Signal.t) with
@@ -191,7 +201,8 @@ end = struct
       in
       List.fold (Schedule.mems bundle) ~init:(Map.empty (module Signal.Uid)) ~f:mem_add
     in
-    { data = data_map; reg = reg_map; mem = mem_map; schedule = bundle }
+    let name_to_uid = create_name_to_uid internal_ports in
+    { data = data_map; reg = reg_map; mem = mem_map; aliases; name_to_uid }
   ;;
 
   let find_data_by_uid_exn maps uid = Map.find_exn maps.data (alias_or_self maps uid)
@@ -209,6 +220,21 @@ end = struct
   let find_reg_by_uid_exn maps uid = Map.find_exn maps.reg uid
   let find_reg_exn maps signal = find_reg_by_uid_exn maps (uid signal)
   let find_mem_exn maps signal = Map.find_exn maps.mem (uid signal)
+
+  let name_to_uid maps name =
+    let%map.Option uid = Map.find maps.name_to_uid name in
+    alias_or_self maps uid
+  ;;
+
+  let find_mem_by_name maps name =
+    let%bind.Option uid = name_to_uid maps name in
+    Map.find maps.mem uid
+  ;;
+
+  let find_reg_current_by_name maps name =
+    let%bind.Option uid = name_to_uid maps name in
+    if Map.mem maps.reg uid then Some (Map.find_exn maps.data uid) else None
+  ;;
 end
 
 module Io_ports = struct
@@ -292,7 +318,7 @@ module Compile = struct
   (* Obj.magic is marginally faster, but not enough to live with the code smell. *)
   let[@inline] int64_of_bool (x : bool) : int64 = if x then 1L else 0L
 
-  let signal ~schedule ~combinational_ops_database (maps : Maps.t) signal =
+  let signal ~aliases ~combinational_ops_database (maps : Maps.t) signal =
     let find_exn signal = Maps.find_data_exn maps signal in
     let find_or_empty signal = Maps.find_data maps signal in
     let tgt = find_exn signal in
@@ -430,7 +456,7 @@ module Compile = struct
          let width = Bits.Mutable.width a in
          if width <= 63 then Some ltsmall else if width = 64 then Some lt64 else Some ltbig)
     | Wire _ ->
-      if not (Schedule.is_alias schedule (Signal.uid signal))
+      if not (Schedule.Aliases.is_alias aliases (Signal.uid signal))
       then raise_s [%message "Expecting all non-input wires to be compiled into aliases"];
       None
     | Select { arg; high; low; _ } ->
@@ -637,13 +663,13 @@ module Compile = struct
 end
 
 module Last_layer = struct
-  let create ~schedule circuit tasks_comb =
+  let create ~aliases circuit tasks_comb =
     (* Find nodes between registers and outputs *)
     let nodes =
       Signal_graph.last_layer_of_nodes
         ~is_input:(Circuit.is_input circuit)
         (Circuit.signal_graph circuit)
-      |> List.filter ~f:(fun uid -> not (Schedule.is_alias schedule uid))
+      |> List.filter ~f:(fun uid -> not (Schedule.Aliases.is_alias aliases uid))
       |> Set.of_list (module Signal.Uid)
     in
     (* Compile them *)
@@ -717,17 +743,17 @@ let create ?(config = Cyclesim0.Config.default) circuit =
     if config.deduplicate_signals then Dedup.deduplicate circuit else circuit
   in
   (* add internally traced nodes *)
-  let assertions = Circuit.assertions circuit in
   let internal_ports =
     Internal_ports.create circuit ~is_internal_port:config.is_internal_port
   in
   let bundle = Schedule.create circuit internal_ports in
+  let aliases = Schedule.aliases bundle in
   (* build maps *)
-  let maps : Maps.t = Maps.create bundle in
+  let maps : Maps.t = Maps.create ~internal_ports bundle in
   let compile =
     Compile.signal
       ~combinational_ops_database:config.combinational_ops_database
-      ~schedule:bundle
+      ~aliases
       maps
   in
   let compile_and_tag s = Option.map (compile s) ~f:(fun t -> uid s, t) in
@@ -743,6 +769,10 @@ let create ?(config = Cyclesim0.Config.default) circuit =
       ; [ Staged.unstage (Compile.register_update maps (Schedule.regs bundle)) ]
       ]
   in
+  let assertions =
+    Map.map (Circuit.assertions circuit) ~f:(fun asn_signal ->
+      Maps.find_data_exn maps asn_signal)
+  in
   (* reset *)
   let resets =
     List.filter_opt (List.map (Schedule.regs bundle) ~f:(Compile.reset maps))
@@ -750,16 +780,11 @@ let create ?(config = Cyclesim0.Config.default) circuit =
   let { Io_ports.in_ports; out_ports; internal_ports } =
     Io_ports.create circuit maps internal_ports
   in
-  let lookup_signal uid =
-    ref (Maps.find_data_by_uid_exn maps uid |> Bits.Mutable.to_bits)
-  in
-  let lookup_reg uid = ref (Maps.find_reg_by_uid_exn maps uid |> Bits.Mutable.to_bits) in
   let violated_assertions = Hashtbl.create (module String) in
   let cycle_no = ref 0 in
   let check_assertions_task () =
-    Map.iteri assertions ~f:(fun ~key ~data ->
-      let asn_value = lookup_signal (Signal.uid data) in
-      if Bits.is_gnd !asn_value
+    Map.iteri assertions ~f:(fun ~key ~data:asn_value ->
+      if Bits.Mutable.Comb.is_gnd asn_value
       then Hashtbl.add_multi violated_assertions ~key ~data:!cycle_no);
     cycle_no := !cycle_no + 1
   in
@@ -816,7 +841,7 @@ let create ?(config = Cyclesim0.Config.default) circuit =
   let tasks_after_clock_edge =
     let optimize_last_layer = true in
     if optimize_last_layer
-    then Last_layer.create ~schedule:bundle circuit tasks_comb
+    then Last_layer.create ~aliases circuit tasks_comb
     else tasks_before_clock_edge
   in
   let digest, digest_task =
@@ -825,11 +850,15 @@ let create ?(config = Cyclesim0.Config.default) circuit =
       out_ports_after_clock_edge
       internal_ports
   in
+  let lookup_reg = Maps.find_reg_current_by_name maps in
+  let lookup_mem = Maps.find_mem_by_name maps in
   { Cyclesim0.in_ports
   ; out_ports_after_clock_edge
   ; out_ports_before_clock_edge
   ; internal_ports
   ; inputs = in_ports
+  ; lookup_reg
+  ; lookup_mem
   ; outputs_after_clock_edge = out_ports_after_clock_edge
   ; outputs_before_clock_edge = out_ports_before_clock_edge
   ; cycle_check = task tasks_check
@@ -849,11 +878,9 @@ let create ?(config = Cyclesim0.Config.default) circuit =
         ; (if config.compute_digest then [ digest_task ] else [])
         ]
   ; reset = tasks [ resets; [ clear_violated_assertions_task ] ]
-  ; lookup_signal
-  ; lookup_reg
-  ; assertions
   ; violated_assertions
   ; digest
   ; circuit = (if config.store_circuit then Some circuit else None)
+  ; assertions
   }
 ;;

@@ -6,22 +6,27 @@ type ('a, 'b) t2 = ('a, 'b) Comb.with_valid2 =
   }
 [@@deriving sexp, bin_io]
 
-type 'a t = ('a, 'a) t2 [@@deriving sexp, bin_io]
+module T = struct
+  type 'a t = ('a, 'a) t2 [@@deriving sexp, bin_io]
 
-let map x ~f = { valid = f x.valid; value = f x.value }
-let map2 x y ~f = { valid = f x.valid y.valid; value = f x.value y.value }
+  let map x ~f = { valid = f x.valid; value = f x.value }
+  let map2 x y ~f = { valid = f x.valid y.valid; value = f x.value y.value }
 
-let iter x ~f =
-  f x.valid;
-  f x.value
-;;
+  let iter x ~f =
+    f x.valid;
+    f x.value
+  ;;
 
-let iter2 x y ~f =
-  f x.valid y.valid;
-  f x.value y.value
-;;
+  let iter2 x y ~f =
+    f x.valid y.valid;
+    f x.value y.value
+  ;;
 
-let to_list { valid; value } = [ valid; value ]
+  let to_list { valid; value } = [ valid; value ]
+  let map_value { valid; value } ~f = { valid; value = f value }
+end
+
+include T
 
 module Fields = struct
   module Make (M : Interface.Pre) = struct
@@ -79,4 +84,17 @@ module Wrap = struct
   module M (X : T1) = struct
     type nonrec 'a t = ('a, 'a X.t) t2
   end
+end
+
+module Vector (X : sig
+    val width : int
+  end) =
+struct
+  type 'a t = 'a T.t
+
+  include Interface.Make (struct
+      include T
+
+      let t = { value = "value", X.width; valid = "valid", 1 }
+    end)
 end

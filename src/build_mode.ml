@@ -3,7 +3,7 @@ open Base
 type t =
   | Simulation
   | Synthesis
-[@@deriving sexp_of]
+[@@deriving sexp_of, compare, equal]
 
 let of_string = function
   | "simulation" -> Simulation

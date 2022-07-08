@@ -129,8 +129,12 @@ end
 
 module type Names_and_widths = sig
   val t : (string * int) list
+
+  type tag
+
   val port_names : string list
   val port_widths : int list
+  val tags : tag list
 end
 
 module type Of_signal_functions = sig
@@ -189,11 +193,26 @@ module type S = sig
   (** Bit widths specified in the interface definition. *)
   val port_widths : int t
 
-  (** Create association list indexed by field names. *)
-  val to_alist : 'a t -> (string * 'a) list
+  type tag
 
-  (** Create interface from association list indexed by field names *)
-  val of_alist : (string * 'a) list -> 'a t
+  val tags : tag t
+
+  (** Create association list indexed by tag. *)
+  val to_alist : 'a t -> (tag * 'a) list
+
+  (** Create interface from association list indexed by tag. *)
+  val of_alist : (tag * 'a) list -> 'a t
+
+  (** Sum of all port widths specified in the interface definition. *)
+  val sum_of_port_widths : int
+
+  module Unsafe_assoc_by_port_name : sig
+    (** Create association list indexed by field names. *)
+    val to_alist : 'a t -> (string * 'a) list
+
+    (** Create interface from association list indexed by field names. *)
+    val of_alist : (string * 'a) list -> 'a t
+  end
 
   val zip : 'a t -> 'b t -> ('a * 'b) t
   val zip3 : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
@@ -275,7 +294,7 @@ module type S = sig
     val wire : (int -> Signal.t) -> Always.Variable.t t
   end
 
-  module Names_and_widths : Names_and_widths
+  module Names_and_widths : Names_and_widths with type tag := tag
 end
 
 (** Monomorphic functions on Hardcaml interfaces. Note that a functor (or a function)
@@ -285,14 +304,21 @@ end
 module type S_monomorphic = sig
   type a
   type t
+  type tag
 
   val iter : t -> f:(a -> unit) -> unit
   val iter2 : t -> t -> f:(a -> a -> unit) -> unit
   val map : t -> f:(a -> a) -> t
   val map2 : t -> t -> f:(a -> a -> a) -> t
   val to_list : t -> a list
-  val to_alist : t -> (string * a) list
-  val of_alist : (string * a) list -> t
+  val to_alist : t -> (tag * a) list
+  val of_alist : (tag * a) list -> t
+
+  module Unsafe_assoc_by_port_name : sig
+    val to_alist : t -> (string * a) list
+    val of_alist : (string * a) list -> t
+  end
+
   val map3 : t -> t -> t -> f:(a -> a -> a -> a) -> t
   val map4 : t -> t -> t -> t -> f:(a -> a -> a -> a -> a) -> t
   val map5 : t -> t -> t -> t -> t -> f:(a -> a -> a -> a -> a -> a) -> t
@@ -302,7 +328,7 @@ module type S_monomorphic = sig
   val fold : t -> init:'acc -> f:('acc -> a -> 'acc) -> 'acc
   val fold2 : t -> t -> init:'acc -> f:('acc -> a -> a -> 'acc) -> 'acc
 
-  module Names_and_widths : Names_and_widths
+  module Names_and_widths : Names_and_widths with type tag := tag
 end
 
 module type S_Of_signal = sig

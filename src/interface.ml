@@ -109,28 +109,11 @@ type ('a, 'b) with_valid2 = ('a, 'b) Comb_intf.with_valid2
 module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   include X
 
+  type tag = int
+
   let port_names = map t ~f:fst
   let port_widths = map t ~f:snd
   let to_list_rev x = to_list x |> List.rev
-  let to_alist x = to_list (map2 port_names x ~f:(fun name x -> name, x))
-
-  let of_alist x =
-    (* Assert there are no ports with duplicate names. *)
-    (match List.find_all_dups (fst (List.unzip x)) ~compare:String.compare with
-     | [] -> ()
-     | dups -> raise_s [%message "Cannot have duplicate port names" (dups : string list)]);
-    map port_names ~f:(fun name ->
-      match List.Assoc.find x name ~equal:String.equal with
-      | Some x -> x
-      | None ->
-        raise_s
-          [%message
-            "[Interface_extended.of_alist] Field not found in interface"
-              ~missing_field_name:(name : string)
-              ~input:(x : (string * _) list)
-              ~interface:(port_widths : int X.t)])
-  ;;
-
   let zip a b = map2 a b ~f:(fun a b -> a, b)
   let zip3 a b c = map2 (zip a b) c ~f:(fun (a, b) c -> a, b, c)
   let zip4 a b c d = map2 (zip a b) (zip c d) ~f:(fun (a, b) (c, d) -> a, b, c, d)
@@ -159,24 +142,69 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   ;;
 
   let fold2 a b ~init ~f = fold (zip a b) ~init ~f:(fun c (a, b) -> f c a b)
+  let sum_of_port_widths = fold port_widths ~init:0 ~f:( + )
 
-  let scan a ~init ~f =
+  let scan t ~init ~f =
+    (* slightly contorted implementation which avoids depending on the ordering of map. *)
+    let result = map X.t ~f:(fun _ -> ref None) in
     let acc = ref init in
-    map a ~f:(fun a ->
-      let acc', field = f !acc a in
+    iter2 t result ~f:(fun t result ->
+      let acc', field = f !acc t in
       acc := acc';
-      field)
+      result := Some field);
+    map result ~f:(fun x -> Option.value_exn !x)
   ;;
 
   let scan2 a b ~init ~f = scan (zip a b) ~init ~f:(fun c (a, b) -> f c a b)
+  let tags = scan t ~init:0 ~f:(fun acc _ -> acc + 1, acc)
+  let to_alist x = to_list (map2 tags x ~f:(fun tag x -> tag, x))
+  let field_by_tag t tag = List.Assoc.find (to_alist t) tag ~equal:Int.equal
+
+  let of_alist x =
+    map tags ~f:(fun tag ->
+      match List.Assoc.find x tag ~equal:Int.equal with
+      | Some x -> x
+      | None ->
+        let missing_field_name = field_by_tag port_names tag in
+        raise_s
+          [%message
+            "[Interface.Make.of_alist] Field not provided"
+              (missing_field_name : string option)
+              ~interface:(port_widths : int X.t)])
+  ;;
+
+  module Unsafe_assoc_by_port_name = struct
+    let to_alist x = to_list (map2 port_names x ~f:(fun name x -> name, x))
+
+    let of_alist (x : (string * _) list) =
+      (* Assert there are no ports with duplicate names. *)
+      if not
+           (List.is_empty
+              (List.find_all_dups (fst (List.unzip x)) ~compare:String.compare))
+      then raise_s [%message "[of_alist] Duplicate tags"];
+      map port_names ~f:(fun name ->
+        match List.Assoc.find x name ~equal:String.equal with
+        | Some x -> x
+        | None ->
+          raise_s
+            [%message
+              "[Interface.Make.of_alist] Field not found in interface"
+                ~missing_field_name:(name : string)
+                ~input:(x : (string * _) list)
+                ~interface:(port_widths : int X.t)])
+    ;;
+  end
 
   let offsets ?(rev = false) () =
     let rec loop fields ~offset =
       match fields with
       | [] -> []
-      | (name, width) :: fields -> (name, offset) :: loop fields ~offset:(offset + width)
+      | (tag, width) :: fields -> (tag, offset) :: loop fields ~offset:(offset + width)
     in
-    loop (if rev then to_list_rev t else to_list t) ~offset:0 |> of_alist
+    loop
+      (if rev then to_list_rev (zip tags port_widths) else to_list (zip tags port_widths))
+      ~offset:0
+    |> of_alist
   ;;
 
   let of_interface_list ts =
@@ -201,14 +229,14 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     | _ ->
       raise_s
         [%message
-          "[Interface_extended.to_interface_list] field list lengths must be the same"
+          "[Interface.Make.to_interface_list] field list lengths must be the same"
             (lengths : int t)]
   ;;
 
   module All (M : Monad.S) = struct
     let all (t : _ M.t t) =
       let%map.M l = M.all (to_list t) in
-      of_alist (List.zip_exn (to_list port_names) l)
+      of_alist (List.zip_exn (to_list tags) l)
     ;;
   end
 
@@ -248,11 +276,16 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
       let rec loop fields ~offset =
         match fields with
         | [] -> []
-        | (name, width) :: fields ->
-          (name, Comb.select comb (offset + width - 1) offset)
+        | (tag, width) :: fields ->
+          (tag, Comb.select comb (offset + width - 1) offset)
           :: loop fields ~offset:(offset + width)
       in
-      loop (if rev then to_list_rev t else to_list t) ~offset:0 |> of_alist
+      loop
+        (if rev
+         then to_list_rev (zip tags port_widths)
+         else to_list (zip tags port_widths))
+        ~offset:0
+      |> of_alist
     ;;
 
     let mux s l = map ~f:(Comb.mux s) (of_interface_list l)
@@ -359,6 +392,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     let t = to_list t
     let port_names = to_list port_names
     let port_widths = to_list port_widths
+    let tags = to_list tags
   end
 
   module Of_always = struct

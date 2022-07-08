@@ -34,6 +34,9 @@ module type Cyclesim = sig
   (** get input port given a name *)
   val in_port : _ t -> string -> Bits.t ref
 
+  (** get a traced internal port given a name. *)
+  val internal_port : _ t -> string -> Bits.t ref
+
   (** Get output port given a name.  If [clock_edge] is [Before] the outputs are computed
       prior to the clock edge - [After] means the outputs are computed after the clock
       edge. *)
@@ -52,8 +55,20 @@ module type Cyclesim = sig
   val internal_ports : _ t -> Port_list.t
 
   val digest : _ t -> Digest.t ref
-  val lookup_signal : _ t -> Signal.Uid.t -> Bits.t ref
-  val lookup_reg : _ t -> Signal.Uid.t -> Bits.t ref
+
+  (** Peek at internal registers, return Some _ if it's present. Note
+      that the node must marked as traced in [Cyclesim.Config.t] when creating
+      simulations for this to return (Some _). Writing to the [Bits.Mutable.t]
+      will change the simulation internal node's value and affect the results of
+      simulation.
+  *)
+  val lookup_reg : _ t -> string -> Bits.Mutable.t option
+
+  (** Similar to [lookup_data], but for memories. This is very useful
+      for initializing memory contents without having to simulate the entire
+      circuit.
+  *)
+  val lookup_mem : _ t -> string -> Bits.Mutable.t array option
 
   module Violated_or_not : sig
     type t =
