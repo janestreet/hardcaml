@@ -101,8 +101,7 @@ module Simulator = Cyclesim.With_interface(I)(O)
     step ~clear:0 ~incr:0;
     step ~clear:0 ~incr:0
   ;;
-val testbench : Hardcaml__.Circuit.With_interface(I)(O).create -> unit =
-  <fun>
+val testbench : (t I.t -> t O.t) -> unit = <fun>
 
 # testbench create
 dout='00000000'
