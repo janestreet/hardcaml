@@ -10,9 +10,9 @@ module Cases = struct
   [@@deriving sexp_of, compare, enumerate, variants, equal]
 end
 
-module Enum = Interface.Make_enums (Cases)
+module Enum = Enum.Make_enums (Cases)
 
-module Test (Enum : Hardcaml.Interface.S_enum with module Enum := Cases) = struct
+module Test (Enum : Hardcaml.Enum.S_enum with module Cases := Cases) = struct
   let%expect_test "unpack_exn and pack roundtrips" =
     List.iter Cases.all ~f:(fun enum ->
       let after = Enum.Of_bits.of_enum enum |> Enum.to_enum |> Or_error.ok_exn in

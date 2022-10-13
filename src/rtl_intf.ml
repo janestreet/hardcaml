@@ -64,6 +64,19 @@ module type Rtl = sig
     -> Circuit.t
     -> unit
 
+  module Digest : sig
+    type t [@@deriving sexp_of]
+
+    val create
+      :  ?database:Circuit_database.t
+      -> ?blackbox:Blackbox.t
+      -> Language.t
+      -> Circuit.t
+      -> t
+
+    val to_string : t -> String.t
+  end
+
   module Expert : sig
     val output_with_name_map
       :  ?output_mode:Output_mode.t (** default is [To_file (Circuit.name circuit)]. *)

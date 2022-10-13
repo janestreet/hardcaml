@@ -16,6 +16,7 @@ val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
 val iter : 'a t -> f:('a -> unit) -> unit
 val iter2 : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
 val to_list : 'a t -> 'a list
+val map_valid : ('a, 'b) t2 -> f:('a -> 'c) -> ('c, 'b) t2
 val map_value : ('a, 'b) t2 -> f:('b -> 'c) -> ('a, 'c) t2
 
 (** Create a new hardcaml interface with type ['a With_valid.t X.t] *)
@@ -24,6 +25,8 @@ module Fields : sig
 
   module M (X : T1) : sig
     type nonrec 'a t = 'a t X.t
+
+    module type S = Interface.S with type 'a t = 'a t
   end
 end
 
@@ -33,6 +36,14 @@ module Wrap : sig
 
   module M (X : T1) : sig
     type nonrec 'a t = ('a, 'a X.t) t2
+
+    module type S = Interface.S with type 'a t = 'a t
+  end
+
+  module type S = sig
+    type 'a value
+
+    include Interface.S with type 'a t = ('a, 'a value) t2
   end
 end
 

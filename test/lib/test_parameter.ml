@@ -22,7 +22,7 @@ let t2 = { name = Parameter_name.of_string "N2"; value = Int 2 }
 let%expect_test "[sexp_of_t]" =
   show t1;
   [%expect {|
-    (N1 1) |}]
+    (N1 (Int 1)) |}]
 ;;
 
 let%expect_test "[find_name]" =
@@ -31,13 +31,13 @@ let%expect_test "[find_name]" =
     () |}];
   find_name [ t1 ] "N1";
   [%expect {|
-    (1) |}];
+    ((Int 1)) |}];
   find_name [ t1 ] "N2";
   [%expect {|
     () |}];
   find_name [ t1; t2 ] "N2";
   [%expect {|
-    (2) |}]
+    ((Int 2)) |}]
 ;;
 
 let%expect_test "[find_name_exn]" =
@@ -46,13 +46,14 @@ let%expect_test "[find_name_exn]" =
     (Error ("couldn't find parameter" (name foo) (parameters ()))) |}];
   find_name_exn [ t1 ] "N1";
   [%expect {|
-    (Ok 1) |}];
+    (Ok (Int 1)) |}];
   find_name_exn [ t1 ] "N2";
-  [%expect {|
-    (Error ("couldn't find parameter" (name N2) (parameters ((N1 1))))) |}];
+  [%expect
+    {|
+    (Error ("couldn't find parameter" (name N2) (parameters ((N1 (Int 1)))))) |}];
   find_name_exn [ t1; t2 ] "N2";
   [%expect {|
-    (Ok 2) |}]
+    (Ok (Int 2)) |}]
 ;;
 
 let%expect_test "[is_subset]" =
@@ -79,15 +80,15 @@ let%expect_test "[sort_by_name]" =
     () |}];
   sort_by_name [ t1 ];
   [%expect {|
-    ((N1 1)) |}];
+    ((N1 (Int 1))) |}];
   sort_by_name [ t1; t2 ];
   [%expect {|
-    ((N1 1)
-     (N2 2)) |}];
+    ((N1 (Int 1))
+     (N2 (Int 2))) |}];
   sort_by_name [ t2; t1 ];
   [%expect {|
-    ((N1 1)
-     (N2 2)) |}]
+    ((N1 (Int 1))
+     (N2 (Int 2))) |}]
 ;;
 
 let%expect_test "std_logic rountrip" =
@@ -141,23 +142,23 @@ let%expect_test "bad std_logic" =
 ;;
 
 let%expect_test "std_logic_vector" =
-  print_s [%message "" ~_:(Std_logic_vector.create Std_logic.all : Std_logic_vector.t)];
+  print_s [%message "" ~_:(Std_logic.all : Std_logic_vector.t)];
   [%expect {| UX01ZWLH_ |}]
 ;;
 
 let%expect_test "bad std_logic_vector" =
   show_raise (fun () -> Std_logic_vector.of_string "1Ab0");
-  [%expect {| (raised ("[Std_logic.of_char_exn] got invalid char" (char A))) |}]
+  [%expect {| (raised ("[of_string] could not convert constant" (const 1Ab0))) |}]
 ;;
 
 let%expect_test "bit_vector" =
-  print_s [%message "" ~_:(Bit_vector.create [ true; false; true ] : Bit_vector.t)];
+  print_s [%message "" ~_:(Bit_vector.of_string "101" : Bit_vector.t)];
   [%expect {| 101 |}]
 ;;
 
 let%expect_test "bad bit_vector" =
   show_raise (fun () -> Bit_vector.of_string "1U0");
-  [%expect {| (raised ("[Bit_vector.of_string] got invalid char" (char U))) |}]
+  [%expect {| (raised ("[of_string] could not convert constant" (const 1U0))) |}]
 ;;
 
 let create_instantiation_test =
@@ -293,4 +294,18 @@ let%expect_test "instantiation in vhdl" =
         b_verilog <= hc_1;
 
     end architecture; |}]
+;;
+
+(* Basic std_logic_vector operations work *)
+let%expect_test "std_logic_vector, logic works" =
+  let open Std_logic_vector in
+  let x, y = of_string "1100", of_string "1010" in
+  print_s [%message (x &: y : t)];
+  [%expect {| ("x &: y" 1000) |}];
+  print_s [%message (x |: y : t)];
+  [%expect {| ("x |: y" 1110) |}];
+  print_s [%message (x ^: y : t)];
+  [%expect {| ("x ^: y" 0110) |}];
+  print_s [%message (Uop.(x +: y) : t)];
+  [%expect {| ("let open Uop in x +: y" 10110) |}]
 ;;

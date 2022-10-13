@@ -447,8 +447,8 @@ let structural_compare
         | Inst { instantiation = i0; _ }, Inst { instantiation = i1; _ } ->
           String.equal i0.inst_name i1.inst_name
           (*i0.inst_instance=i1.inst_instance &&*)
-          && [%compare.equal: Parameter.t list] i0.inst_generics i1.inst_generics
-          && [%compare.equal: (string * (int * int)) list] i0.inst_outputs i1.inst_outputs
+          && [%equal: Parameter.t list] i0.inst_generics i1.inst_generics
+          && [%equal: (string * (int * int)) list] i0.inst_outputs i1.inst_outputs
         (* inst_inputs=??? *)
         | Op2 { op = o0; _ }, Op2 { op = o1; _ } -> Signal_op.equal o0 o1
         | Not _, Not _ | Mux _, Mux _ | Cat _, Cat _ -> true
@@ -1308,22 +1308,24 @@ let multiport_memory ?name ?(attributes = []) size ~write_ports ~read_addresses 
       { signal_id = make_id data_width [ r; mem ]; memory = mem; read_address = r })
 ;;
 
-let ram_rbw ?attributes ~write_port ~read_port size =
+let ram_rbw ?name ?attributes ~write_port ~read_port size =
   let spec = { reg_empty with reg_clock = read_port.read_clock } in
   reg
     spec
     ~enable:read_port.read_enable
     (multiport_memory
+       ?name
        ?attributes
        size
        ~write_ports:[| write_port |]
        ~read_addresses:[| read_port.read_address |]).(0)
 ;;
 
-let ram_wbr ?attributes ~write_port ~read_port size =
+let ram_wbr ?name ?attributes ~write_port ~read_port size =
   let spec = { reg_empty with reg_clock = read_port.read_clock } in
   (multiport_memory
      size
+     ?name
      ?attributes
      ~write_ports:[| write_port |]
      ~read_addresses:[| reg spec ~enable:read_port.read_enable read_port.read_address |]).(

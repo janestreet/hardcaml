@@ -346,120 +346,6 @@ module type Empty = sig
   include S with type 'a t := 'a t
 end
 
-(** An enumerated type (generally a variant type with no arguments) which should derive
-    [compare, enumerate, sexp_of, variants]. *)
-module type Enum = sig
-  type t [@@deriving compare, enumerate, sexp_of]
-end
-
-(** Functions to project an [Enum] type into and out of hardcaml bit vectors representated
-    as an interface. *)
-module type S_enum = sig
-  module Ast : Ast
-  module Enum : Enum
-  include S
-
-  val ast : Ast.t
-  val of_enum : (module Comb.S with type t = 'a) -> Enum.t -> 'a t
-  val to_enum : Bits.t t -> Enum.t Or_error.t
-  val to_enum_exn : Bits.t t -> Enum.t
-  val ( ==: ) : (module Comb.S with type t = 'a) -> 'a t -> 'a t -> 'a
-
-  val match_
-    :  (module Comb.S with type t = 'a)
-    -> ?default:'a
-    -> 'a t
-    -> (Enum.t * 'a) list
-    -> 'a
-
-  val to_raw : 'a t -> 'a
-
-  type 'a outer := 'a t
-
-  module Of_signal : sig
-    include module type of Of_signal (** @inline *)
-
-    (** Tests for equality between two enums. For writing conditional statements
-        based on the value of the enum, consider using [match_] below, or
-        [Of_always.match_] instead
-    *)
-    val ( ==: ) : t -> t -> Signal.t
-
-    (** Create an Enum value from a statically known value. *)
-    val of_enum : Enum.t -> Signal.t outer
-
-    (** Creates a Enum value from a raw value. Note that this only performs a
-        check widths, and does not generate circuitry to validate that the input
-        is valid. See documentation on Enums for more information.
-    *)
-    val of_raw : Signal.t -> Signal.t outer
-
-    (** Multiplex on an enum value. If there are unhandled cases, a [default]
-        needs to be specified.
-    *)
-    val match_
-      :  ?default:Signal.t
-      -> Signal.t outer
-      -> (Enum.t * Signal.t) list
-      -> Signal.t
-
-    (** Convenient wrapper around [eq x (of_enum Foo)] *)
-    val is : t -> Enum.t -> Signal.t
-  end
-
-  module Of_bits : sig
-    include module type of Of_bits (** @inline *)
-
-    val is : t -> Enum.t -> Bits.t
-    val ( ==: ) : t -> t -> Bits.t
-    val of_enum : Enum.t -> Bits.t outer
-    val of_raw : Bits.t -> Bits.t outer
-    val match_ : ?default:Bits.t -> Bits.t outer -> (Enum.t * Bits.t) list -> Bits.t
-  end
-
-  module Of_always : sig
-    include module type of Of_always (** @inline *)
-
-    (** Performs a "pattern match" on a [Signal.t t], and "executes" the branch that
-        matches the signal value. Semantics similar to [switch] in verilog.
-    *)
-    val match_
-      :  ?default:Always.t list
-      -> Signal.t t
-      -> (Enum.t * Always.t list) list
-      -> Always.t
-  end
-
-  (** Set an input port in simulation to a concrete Enum value. *)
-  val sim_set : Bits.t ref t -> Enum.t -> unit
-
-  (** Similar to [sim_set], but operates on raw [Bits.t] instead. *)
-  val sim_set_raw : Bits.t ref t -> Bits.t -> unit
-
-  (** Read an output port from simulation to a concreate Enum value.
-      Returns [Ok enum] when the [Bits.t] value can be parsed, and
-      [Error _] when the value is unhandled.
-  *)
-  val sim_get : Bits.t ref t -> Enum.t Or_error.t
-
-  (** Equivalent to [ok_exn (sim_get x)] *)
-  val sim_get_exn : Bits.t ref t -> Enum.t
-
-  (** Similar to [sim_get], but operates on raw [Bits.t] instead. This
-      doesn't return [_ Or_error.t]. Undefined values will be returned as
-      it is.
-  *)
-  val sim_get_raw : Bits.t ref t -> Bits.t
-end
-
-(** Binary and onehot selectors for [Enums]. *)
-module type S_enums = sig
-  module Ast : Ast
-  module Enum : Enum
-  module Binary : S_enum with module Enum := Enum and module Ast := Ast
-  module One_hot : S_enum with module Enum := Enum and module Ast := Ast
-end
-
 module type Interface = sig
   module type Pre_partial = Pre_partial
   module type Pre = Pre
@@ -484,13 +370,6 @@ module type Interface = sig
   end
 
   module Make (X : Pre) : S with type 'a t := 'a X.t
-
-  module type S_enum = S_enum with module Ast := Ast
-  module type S_enums = S_enums with module Ast := Ast
-
-  (** Constructs a hardcaml interface which represents hardware for the given [Enum] as an
-      absstract [Interface]. *)
-  module Make_enums (Enum : Enum) : S_enums with module Enum := Enum
 
   (** An interface for a single value *)
   module Value (S : sig

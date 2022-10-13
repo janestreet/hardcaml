@@ -335,14 +335,16 @@ module type Signal = sig
   val memory : int -> write_port:write_port -> read_address:t -> t
 
   val ram_wbr
-    :  ?attributes:Rtl_attribute.t list
+    :  ?name:string
+    -> ?attributes:Rtl_attribute.t list
     -> write_port:write_port
     -> read_port:read_port
     -> int
     -> t
 
   val ram_rbw
-    :  ?attributes:Rtl_attribute.t list
+    :  ?name:string
+    -> ?attributes:Rtl_attribute.t list
     -> write_port:write_port
     -> read_port:read_port
     -> int

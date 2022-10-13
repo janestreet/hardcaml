@@ -23,6 +23,7 @@ module T = struct
   ;;
 
   let to_list { valid; value } = [ valid; value ]
+  let map_valid { valid; value } ~f = { valid = f valid; value }
   let map_value { valid; value } ~f = { valid; value = f value }
 end
 
@@ -51,6 +52,8 @@ module Fields = struct
 
   module M (X : T1) = struct
     type nonrec 'a t = 'a t X.t
+
+    module type S = Interface.S with type 'a t = 'a t
   end
 end
 
@@ -83,6 +86,14 @@ module Wrap = struct
 
   module M (X : T1) = struct
     type nonrec 'a t = ('a, 'a X.t) t2
+
+    module type S = Interface.S with type 'a t = 'a t
+  end
+
+  module type S = sig
+    type 'a value
+
+    include Interface.S with type 'a t = ('a, 'a value) t2
   end
 end
 

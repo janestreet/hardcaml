@@ -21,7 +21,7 @@ let%expect_test "bits<->raw-int" =
         (module_    <opaque>)))
       (bits2 (
         (name       Mutable.Bits_int_array)
-        (short_name raw-int)
+        (short_name raw-old)
         (module_    <opaque>)))
       (prims (Add Sub Mulu Muls And Or Xor Not Eq Lt Sel Mux Cat))
       (iterations    20)
@@ -39,7 +39,7 @@ let%expect_test "bits<->raw-int" =
         (module_    <opaque>)))
       (bits2 (
         (name       Mutable.Bits_int_array)
-        (short_name raw-int)
+        (short_name raw-old)
         (module_    <opaque>)))
       (prims (Add Sub Mulu Muls And Or Xor Not Eq Lt Sel Mux Cat))
       (iterations    200)
@@ -57,7 +57,7 @@ let%expect_test "bits<->raw-int" =
         (module_    <opaque>)))
       (bits2 (
         (name       Mutable.Bits_int_array)
-        (short_name raw-int)
+        (short_name raw-old)
         (module_    <opaque>)))
       (prims (Add Sub Mulu Muls And Or Xor Not Eq Lt Sel Mux Cat))
       (iterations    2000)

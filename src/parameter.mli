@@ -5,10 +5,6 @@
 
 open Base
 
-module type Unstable = sig
-  type t [@@deriving compare, sexp]
-end
-
 (** 9-state VHDL std_logic enumeration *)
 module Std_logic : sig
   type t =
@@ -24,7 +20,6 @@ module Std_logic : sig
   [@@deriving compare, enumerate, sexp_of, variants]
 
   include Equal.S with type t := t
-  module Unstable : Unstable with type t = t
 
   (** Provide the index of [t] in textual order.  When passing a std_logic parameter from
       verilog to vhdl, we need to encode this type into an integer.  For example, L1 =
@@ -37,29 +32,8 @@ module Std_logic : sig
   val to_char : t -> char
 end
 
-module Std_logic_vector : sig
-  type t [@@deriving compare, sexp_of]
-
-  include Equal.S with type t := t
-  include Stringable.S with type t := t
-  module Unstable : Unstable with type t = t
-
-  val create : Std_logic.t list -> t
-  val width : t -> int
-  val of_bits : Bits.t -> t
-end
-
-module Bit_vector : sig
-  type t [@@deriving compare, sexp_of]
-
-  include Equal.S with type t := t
-  include Stringable.S with type t := t
-  module Unstable : Unstable with type t = t
-
-  val create : bool list -> t
-  val width : t -> int
-  val of_bits : Bits.t -> t
-end
+module Std_logic_vector : Bits_list.Comb with type t = Std_logic.t list
+module Bit_vector : Bits_list.Comb with type t = int list
 
 module Value : sig
   type t =
@@ -73,20 +47,18 @@ module Value : sig
     | Std_ulogic of Std_logic.t
     | Std_ulogic_vector of Std_logic_vector.t
     | String of string
-  [@@deriving compare, sexp_of, variants]
+  [@@deriving sexp, variants]
 
   include Equal.S with type t := t
-  module Unstable : Unstable with type t = t
 end
 
 type t =
   { name : Parameter_name.t
   ; value : Value.t
   }
-[@@deriving compare, sexp_of]
+[@@deriving sexp_of]
 
 include Equal.S with type t := t
-module Unstable : Unstable with type t = t
 
 val create : name:string -> value:Value.t -> t
 val find_name : t list -> Parameter_name.t -> Value.t Option.t

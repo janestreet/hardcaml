@@ -119,8 +119,8 @@ let test_sexp_of_bit_string (module M : Hardcaml.Comb.S) =
             ~_:(Or_error.try_with (fun () -> M.of_bit_string s) : M.t Or_error.t)])
 ;;
 
-let%expect_test "[IntbitsList.of_bit_string]" =
-  test_sexp_of_bit_string (module IntbitsList);
+let%expect_test "[Bits_list.of_bit_string]" =
+  test_sexp_of_bit_string (module Bits_list.Int_comb);
   [%expect
     {|
     (0 (Ok 0))
@@ -185,7 +185,9 @@ end
 
 module Bits_module = struct
   type t =
-    | IntbitsList
+    | Bits_list
+    | Bool_list
+    | X_list
     | Bits
     | Bits_int_array
     | Mutable_Bits_int_array
@@ -199,22 +201,33 @@ module Bits_module = struct
     }
   [@@deriving sexp_of]
 
-  let v_IntbitsList =
-    { name = "IntbitsList"; short_name = "intbits"; module_ = (module IntbitsList) }
+  let v_Bits_list =
+    { name = "Int_list"; short_name = "intlist"; module_ = (module Bits_list.Int_comb) }
+  ;;
+
+  let v_Bool_list =
+    { name = "Bool_list"
+    ; short_name = "boollist"
+    ; module_ = (module Bits_list.Bool_comb)
+    }
+  ;;
+
+  let v_X_list =
+    { name = "X_list"; short_name = "xlist"; module_ = (module Bits_list.X_comb) }
   ;;
 
   let v_Bits = { name = "Bits"; short_name = "bits"; module_ = (module Bits) }
 
   let v_Bits_int_array =
     { name = "Bits_int_array"
-    ; short_name = "bits-int"
+    ; short_name = "bits-old"
     ; module_ = (module Bits_int_array)
     }
   ;;
 
   let v_Mutable_ArraybitsInt =
     { name = "Mutable.Bits_int_array"
-    ; short_name = "raw-int"
+    ; short_name = "raw-old"
     ; module_ = (module Bits_int_array.Mutable.Comb)
     }
   ;;
@@ -234,7 +247,9 @@ module Bits_module = struct
   ;;
 
   let select = function
-    | IntbitsList -> v_IntbitsList
+    | Bits_list -> v_Bits_list
+    | Bool_list -> v_Bool_list
+    | X_list -> v_X_list
     | Bits -> v_Bits
     | Bits_int_array -> v_Bits_int_array
     | Mutable_Bits_int_array -> v_Mutable_ArraybitsInt
@@ -489,6 +504,3 @@ let%expect_test "BadPrimitives" =
 ;;
 
 module Test = Make (Expect_test_require)
-
-(* Various files named [test_bits_int64_*.ml] compare int64 against all the other
-   implementations.  Using separate files allows all those tests to run in parallel. *)

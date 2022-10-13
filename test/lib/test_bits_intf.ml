@@ -49,7 +49,9 @@ module type Test_bits = sig
   (** One constructor per (tested) module in [Bits.Comb] with an associated test name. *)
   module Bits_module : sig
     type t =
-      | IntbitsList
+      | Bits_list
+      | Bool_list
+      | X_list
       | Bits
       | Bits_int_array
       | Mutable_Bits_int_array

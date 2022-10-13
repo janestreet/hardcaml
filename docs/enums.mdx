@@ -21,7 +21,7 @@ module Simple_enum_example = struct
     [@@deriving sexp_of, compare, enumerate]
   end
 
-  include Hardcaml.Interface.Make_enums(Enum)
+  include Hardcaml.Enum.Make_enums(Enum)
 end
 ```
 
@@ -55,7 +55,7 @@ module Hello = struct
     [@@deriving sexp_of, compare, enumerate]
   end
 
-  include Hardcaml.Interface.Make_enums(Enum)
+  include Hardcaml.Enum.Make_enums(Enum)
 end
 ```
 

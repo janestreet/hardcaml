@@ -1418,6 +1418,19 @@ let print ?database ?blackbox language circuit =
   output ~output_mode:(To_channel Out_channel.stdout) ?database ?blackbox language circuit
 ;;
 
+module Digest = struct
+  type t = Md5_lib.t
+
+  let create ?database ?blackbox language circuit =
+    let buffer = Buffer.create 1024 in
+    output ~output_mode:(To_buffer buffer) ?database ?blackbox language circuit;
+    Md5_lib.bytes (Buffer.contents_bytes buffer)
+  ;;
+
+  let to_string = Md5_lib.to_hex
+  let sexp_of_t t = [%sexp_of: string] (to_string t)
+end
+
 module Expert = struct
   let output_with_name_map = output_with_name_map
 end

@@ -1,62 +1,20 @@
 open Base
 
-module type Unstable = sig
-  type t [@@deriving compare, sexp]
-end
-
-module Unstable = struct
-  module Std_logic = struct
-    type t =
-      | U
-      | X
-      | L0
-      | L1
-      | Z
-      | W
-      | L
-      | H
-      | Don't_care
-    [@@deriving compare, enumerate, sexp, variants]
-  end
-
-  module Std_logic_vector = struct
-    type t = Std_logic.t list [@@deriving compare, sexp]
-  end
-
-  module Bit_vector = struct
-    type t = bool list [@@deriving compare, sexp]
-  end
-
-  module Value = struct
-    type t =
-      | Bit of bool
-      | Bit_vector of Bit_vector.t
-      | Bool of bool
-      | Int of int
-      | Real of float
-      | Std_logic of Std_logic.t
-      | Std_logic_vector of Std_logic_vector.t
-      | Std_ulogic of Std_logic.t
-      | Std_ulogic_vector of Std_logic_vector.t
-      | String of string
-    [@@deriving compare, sexp, variants]
-  end
-
-  module T = struct
-    type t =
-      { name : Parameter_name.t
-      ; value : Value.t
-      }
-    [@@deriving compare, sexp]
-  end
-
-  include T
-end
-
 module Std_logic = struct
-  module Unstable = Unstable.Std_logic
-  include Unstable
+  type t =
+    | U
+    | X
+    | L0
+    | L1
+    | Z
+    | W
+    | L
+    | H
+    | Don't_care
+  [@@deriving compare, enumerate, sexp, variants]
 
+  let optimise_muxs = false
+  let constant_only = true
   let equal = [%compare.equal: t]
 
   let to_char = function
@@ -69,6 +27,19 @@ module Std_logic = struct
     | L -> 'L'
     | H -> 'H'
     | Don't_care -> '_'
+  ;;
+
+  let of_char = function
+    | 'U' -> U
+    | 'X' -> X
+    | '0' -> L0
+    | '1' -> L1
+    | 'Z' -> Z
+    | 'W' -> W
+    | 'L' -> L
+    | 'H' -> H
+    | '_' -> Don't_care
+    | _ -> raise_s [%message "invalid char"]
   ;;
 
   let sexp_of_t t = [%sexp (to_char t : char)]
@@ -87,78 +58,56 @@ module Std_logic = struct
     | _ as char ->
       raise_s [%message "[Std_logic.of_char_exn] got invalid char" (char : char)]
   ;;
-end
 
-module Std_logic_vector = struct
-  module Unstable = Unstable.Std_logic_vector
-  include Unstable
-
-  let equal = [%compare.equal: t]
-  let to_string v = v |> List.map ~f:Std_logic.to_char |> String.of_char_list
-  let of_string s = s |> String.to_list |> List.map ~f:Std_logic.of_char_exn
-  let sexp_of_t t = [%sexp (to_string t : string)]
-  let create x = x
-  let width x = List.length x
-  let of_bits b = Bits.to_bstr b |> of_string
-end
-
-module Bit_vector = struct
-  module Unstable = Unstable.Bit_vector
-  include Unstable
-
-  let equal = [%compare.equal: t]
-
-  let to_string v =
-    v
-    |> List.map ~f:(function
-      | true -> '1'
-      | false -> '0')
-    |> String.of_char_list
+  let to_x : t -> Bits_list.X.t = function
+    | L0 -> F
+    | L1 -> T
+    | U | X | Z | W | L | H | Don't_care -> X
   ;;
 
-  let of_string s =
-    s
-    |> String.to_list
-    |> List.map ~f:(function
-      | '0' -> false
-      | '1' -> true
-      | _ as char ->
-        raise_s [%message "[Bit_vector.of_string] got invalid char" (char : char)])
+  let of_x : Bits_list.X.t -> t = function
+    | F -> L0
+    | T -> L1
+    | X -> X
   ;;
 
-  let sexp_of_t t = [%sexp (to_string t : string)]
-  let create x = x
-  let width x = List.length x
-  let of_bits b = Bits.to_bstr b |> of_string
+  let gnd = L0
+  let vdd = L1
+  let as_x f a b = of_x (f (to_x a) (to_x b))
+  let ( &: ) = as_x Bits_list.X.( &: )
+  let ( |: ) = as_x Bits_list.X.( |: )
+  let ( ^: ) = as_x Bits_list.X.( ^: )
+  let ( ~: ) a = of_x (Bits_list.X.( ~: ) (to_x a))
 end
+
+module Std_logic_vector = Bits_list.Make (Std_logic)
+module Bit_vector = Bits_list.Int_comb
 
 module Value = struct
-  module Unstable = Unstable.Value
-  include Unstable
-
-  let equal = [%compare.equal: t]
-
-  let sexp_of_t = function
-    | Bit b -> [%sexp (b : bool)]
-    | Bit_vector v -> [%sexp (v : Bit_vector.t)]
-    | Bool b -> [%sexp (b : bool)]
-    | Int i -> [%sexp (i : int)]
-    | Real f -> [%sexp (f : float)]
-    | Std_logic x -> [%sexp (x : Std_logic.t)]
-    | Std_logic_vector x -> [%sexp (x : Std_logic_vector.t)]
-    | Std_ulogic x -> [%sexp (x : Std_logic.t)]
-    | Std_ulogic_vector x -> [%sexp (x : Std_logic_vector.t)]
-    | String s -> [%sexp (s : string)]
-  ;;
+  type t =
+    | Bit of bool
+    | Bit_vector of Bit_vector.t
+    | Bool of bool
+    | Int of int
+    | Real of float
+    | Std_logic of Std_logic.t
+    | Std_logic_vector of Std_logic_vector.t
+    | Std_ulogic of Std_logic.t
+    | Std_ulogic_vector of Std_logic_vector.t
+    | String of string
+  [@@deriving equal, sexp, variants]
 end
 
-include Unstable.T
+type t =
+  { name : Parameter_name.t
+  ; value : Value.t
+  }
+[@@deriving equal, sexp_of]
 
 let sexp_of_t { name; value } =
   [%message "" ~_:(name : Parameter_name.t) ~_:(value : Value.t)]
 ;;
 
-let equal = [%compare.equal: t]
 let create ~name ~value = { name = name |> Parameter_name.of_string; value }
 
 let find_name ts name =
