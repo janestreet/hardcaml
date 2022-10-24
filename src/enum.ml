@@ -58,7 +58,7 @@ module Make_enums (Cases : Enum_intf.Cases) = struct
       t
     ;;
 
-    let unwrap t = t
+    let[@inline always] unwrap t = t
 
     module Unsafe = struct
       let wrap t = t
@@ -228,9 +228,15 @@ end
 module Make_binary (Cases : Enum_intf.Cases) = struct
   module X = Make_enums (Cases)
   include X.Binary
+
+  let[@inline always] unwrap t = t
 end
+[@@inline always]
 
 module Make_one_hot (Cases : Enum_intf.Cases) = struct
   module X = Make_enums (Cases)
   include X.One_hot
+
+  let[@inline always] unwrap t = t
 end
+[@@inline always]

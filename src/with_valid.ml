@@ -50,10 +50,15 @@ module Fields = struct
     include Interface.Make (Pre)
   end
 
-  module M (X : T1) = struct
-    type nonrec 'a t = 'a t X.t
+  module type S = sig
+    type 'a value
+    type nonrec 'a t = 'a t value
 
-    module type S = Interface.S with type 'a t = 'a t
+    include Interface.S with type 'a t := 'a t
+  end
+
+  module M (X : T1) = struct
+    module type S = S with type 'a value := 'a X.t
   end
 end
 

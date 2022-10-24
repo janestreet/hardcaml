@@ -23,10 +23,15 @@ val map_value : ('a, 'b) t2 -> f:('b -> 'c) -> ('a, 'c) t2
 module Fields : sig
   module Make (X : Interface.Pre) : Interface.S with type 'a t = 'a t X.t
 
-  module M (X : T1) : sig
-    type nonrec 'a t = 'a t X.t
+  module type S = sig
+    type 'a value
+    type nonrec 'a t = 'a t value
 
-    module type S = Interface.S with type 'a t = 'a t
+    include Interface.S with type 'a t := 'a t
+  end
+
+  module M (X : T1) : sig
+    module type S = S with type 'a value := 'a X.t
   end
 end
 
