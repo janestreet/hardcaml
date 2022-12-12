@@ -7,11 +7,11 @@
 ```
 -->
 
-Sequential logic is built from primitives such as `register`s and
-`memory`s.
+Sequential logic is built from primitives such as registers and
+memories.
 
 A key concept in sequential logic is the `clock`. Sequential logic
-updates on the rising (or less commonly, falling) edge of the clock and
+updates on the rising (or, less commonly, falling) edge of the clock and
 holds its value throughout the clock cycle.
 
 # Reg_spec
@@ -87,12 +87,11 @@ val q_out_after_3_clocks : Signal.t =
 # Registers with feedback
 
 We noted [previously](combinational_logic.mdx) that combinational
-logic cannot contain cycles.  With sequential logic we can lift this
-restriction so long as the cycle passes through a register (or in fact
-memory).
+logic could not contain cycles.  We can lift this restriction with
+sequential logic so long as the cycle passes through a register (or memory).
 
 The function `reg_fb` encodes a simple example of this pattern. For
-example, to build a counter we need to access the old value to produce
+example, to build a counter, we need to access the current value to produce
 the next one.
 
 ```ocaml
@@ -106,7 +105,7 @@ val counter : Signal.t =
 
 # Wires
 
-In Hardcaml a `wire` is a signal which can be declared prior to
+In Hardcaml a `wire` is a signal which can be declared before
 providing its input driver. Logically, it does nothing - it just
 passes its input through to its output.
 
@@ -124,8 +123,8 @@ Wires can later be assigned an input driver.
 - : Signal.t = (wire (width 1) (data_in 0b1))
 ```
 
-Apart from the fact they basically do nothing they are really useful!
-In fact it is how the `reg_fb` function is implemented.
+Apart from the fact they logically do nothing, they are really useful!
+It is how the `reg_fb` function is implemented.
 
 ```ocaml
 # let reg_fb spec ~enable ~w f =
@@ -138,20 +137,20 @@ val reg_fb :
   enable:Signal.t -> w:int -> (Signal.t -> Signal.t) -> Signal.t = <fun>
 ```
 
-Without wires we cannot express the above function which must
-effectively pass the value returned by `reg` as one of its inputs.
+Without wires we cannot express the above function since the input 
+to `reg` refers to its own output.
 
 Two words of caution when using wires.
 
-1. Combinational cycles! We can't stop you creating them, but we can
+1. Combinational cycles! We can't stop you from creating them, but we can
    throw an exception when you do. It's worth repeating - cycles must
    pass through a sequential primitive.
 2. The hairy unassigned wire exception. Hardcaml will detect when you
-   forget to assign a value to a wire but the error will not be
-   especially useful in finding out where. In these cases you can
+   forget to assign a value to a wire, but the error will not be
+   especially useful in finding out where. You can
    enable an extra level of debugging information by setting the
-   following [value](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Caller_id/index.html).
-   It will help track down where the wire was originally defined.
+   following [value](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Caller_id/index.html),
+   which will help track down where the wire was originally defined.
 
 <!-- Dont execute this -->
 ```
@@ -160,9 +159,9 @@ Caller_id.set_mode Top_of_stack
 
 # State Machines
 
-State machines are really just a complex combination of registers and
+State machines are just a complex combination of registers and
 multiplexers, so it is possible to build them directly with the
-primitives described here. But not very convenient. Instead we
+primitives described here - but not very conveniently. Rather, we
 recommend using the [Always DSL](always.mdx).
 
 # Memories
@@ -172,7 +171,7 @@ recommend using the [Always DSL](always.mdx).
 Hardcaml provides the `multiport_memory` primitive for describing
 memory structures.
 
-They are synchronously written to using `write_ports`. Each write port
+They are synchronously written using `write_ports`. Each write port
 can have a different clock.
 
 ```ocaml
@@ -196,7 +195,7 @@ val write_port : Signal.write_port =
    write_data = (wire (names (data)) (width 32) (data_in empty))}
 ```
 
-The memory is read asychronously using `read_addresses`. The read data
+The memory is read asynchronously using `read_addresses`. The read data
 is returned as an array, one for each read port.
 
 ```ocaml
@@ -215,14 +214,14 @@ val q : Signal.t array =
 
 ## RAMs
 
-On their own, `multiport_memory`s are not that useful. Instead we
+On their own, `multiport_memory`s are not that useful. Instead, we
 provide the [`Ram`](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Ram/index.html)
-module which can target the physical RAM blocks in
-FPGAs (ie BlockRAM or UltraRAM in Xilinx devices).
+module, which can target the physical RAM blocks in
+FPGAs (i.e. BlockRAM or UltraRAM in Xilinx devices).
 
 This is done by instantiating a multiport_memory and a register placed
 on either the read address or output data. Note that this means the
-read ports are now synchronous and the read data is returned 1 cycle
+read ports are now synchronous and read data is returned one cycle
 later.
 
 ```ocaml
@@ -254,17 +253,17 @@ val q : Signal.t array =
 
 For this to work we use a feature of FPGA synthesizers called RTL RAM
 inference. This process is notoriously finicky, so read the tool
-reports to make sure it is doing what you expect (I'm looking at you
+reports to ensure it is doing what you expect (I'm looking at you,
 Vivado!).
 
 ## Practical considerations
 
-The RAM structures provided with Hardcaml are quite flexible in terms
-of the number of read and write ports they can provide. Physically,
+The RAM structures provided with Hardcaml are very flexible regarding
+the number of read and write ports they can provide. Physically,
 however, FPGAs provide RAMs with 1 or 2 ports. If you specify more
-than this you will probably not get the results you intended.
+than this, you will probably not get the results you intended.
 
 The [`hardcaml_xilinx`](https://github.com/janestreet/hardcaml_xilinx)
-library provides a more targetted solution for Xilinx FPGAs and may be
+library offers a more targeted solution for Xilinx FPGAs and may be
 more suitable for applications where precise control of the Vendor RAM
-primitive is desired.
+primitive is required.

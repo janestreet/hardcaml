@@ -1,4 +1,4 @@
-# Computing Finonacci numbers
+# Computing Fibonacci numbers
 
 <!--
 ```ocaml
@@ -7,7 +7,7 @@
 ```
 -->
 
-In the following example we design a statemachine which computes the
+In the following example we design a state machine which computes the
 n-th Fibonacci number.
 
 ## Defining the circuit interfaces
@@ -173,7 +173,7 @@ Lets now write a testbench which traces the sequence of states and the computed 
     print_state_and_outputs ();
 
     (* Cycle 5 - notice that the wire assignment is combinational - the [done] signal
-       is asserted during the same cycle it is assigned in the statemachine.
+       is asserted during the same cycle it is assigned in the state machine.
     *)
     Cyclesim.cycle sim;
     print_state_and_outputs ();
@@ -210,10 +210,10 @@ Lets set up some display rules so the waveform prints nicely.
 
 A useful pattern when defining `display_rules` is to `map` over the
 `port_names` and use the default `wave_format` `(Bit_or X)`. If the
-width of the port is 1 it will show as a bit, otherwise it will show
+width of the port is 1 it will show as a bit, otherwise, it will show
 as the type `X`.
 
-For the state value we use the `Index` type which allows us to show
+For the state value, we use the `Index` type which allows us to show
 the value symbolically.
 
 ```ocaml

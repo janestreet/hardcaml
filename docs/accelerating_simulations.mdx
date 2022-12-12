@@ -1,4 +1,4 @@
-# High performance simulation backends
+# High-performance simulation backends
 
 <!--
 ```ocaml
@@ -23,17 +23,17 @@ opam install hardcaml_c
 
 [Verilator](https://www.veripool.org/wiki/verilator) is a free and
 open-source software tool which converts Verilog to a cycle-accurate
-behavioral model in C++ or SystemC that runs with high
+behavioural model in C++ or SystemC that runs with high
 performance. `Hardcaml_verilator` is a simulation backend that
 compiles a Hardcaml circuit simulation to the Verilator backend, with
-custom generated C++ bindings. All these are done under-the-hood
-whilst exposing the Cyclesim API to the end-user.
+custom-generated C++ bindings. All these are done under the hood
+whilst exposing the Cyclesim API to the end user.
 
 To use `Hardcaml_verilator`,
-[Verilator](https://www.veripool.org/wiki/verilator) and g++ has to be
+[Verilator](https://www.veripool.org/wiki/verilator) and g++ have to be
 installed on your system.
 
-The key benefit for using the Verilator-based backend is that it is
+The key benefit of using the Verilator-based backend is that it is
 much more performant than using Cyclesim or Hardcaml_c.
 
 There are several known downsides with this simulation backend:
@@ -103,11 +103,11 @@ Cyclesim, Hardcaml Verilator, or Hardcaml C.
 Hardcaml_c is a Hardcaml simulator that converts the design to a
 C-based simulation model for improved performance.
 
-The primary benefit from using Hardcaml_c is that it has a much more
-modest compilation time (compared to `Hardcaml_verilator`), but still
+The primary benefit of using Hardcaml_c is that it has a much more
+modest compilation time (compared to `Hardcaml_verilator`), but is still
 much more performant than the regular Hardcaml Cyclesim simulator.
 
-To use `Hardcaml_c`, `gcc` has to be installed in your local machine.
+To use `Hardcaml_c`, `gcc` has to be installed on your local machine.
 
 The key limitation in Hardcaml C is that, as of writing, it does not
 properly support tracing outputs before clock edges.
@@ -130,5 +130,5 @@ val sim_c : Cyclesim.t_port_list = <abstr>
 - : unit = ()
 ```
 
-Similar to Hardcaml Verilator, Hardcaml C supports a Interface-based
+Like Hardcaml Verilator, Hardcaml C supports an Interface-based
 API. See [`Hardcaml_c.Cyclesim.With_interface`](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml_verilator/Hardcaml_verilator/index.html).

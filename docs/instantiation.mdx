@@ -75,7 +75,7 @@ val parameter : Parameter.t =
   {Hardcaml.Parameter.name = <abstr>; value = Hardcaml.Parameter.Value.Int 3}
 ```
 
-Each parameter is specified using a `name` and a `type` with value. Various
+Each parameter is specified using a `name` and a `type` with a alue. Various
 [types](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Parameter/Value/index.html)
 are supported including `Int`, `String`, `Bool`, `Real`
 and various bit and vector types associated with Verilog and VHDL -
@@ -105,15 +105,15 @@ Instantiations can reference hardware designs written in another
 hardware description language (HDL) such as Verilog or VHDL and
 connect them to a Hardcaml design.
 
-Such designs contains a hole from Hardcaml's point of view. As such it
+Such designs contain a hole from Hardcaml's point of view. As such it
 will no longer be possible to simulate them with `Cyclesim`.
 
-They can be *linked* with the external design by a HDL simulator or
+They can be *linked* with the external design by an HDL simulator or
 the Vendor implementation tools.
 
-In some cases you may be able to leverage
+In some cases, you may be able to leverage
 [`hardcaml_of_verilog`](http://github.com/janestreet/hardcaml_of_verilog)
-to convert a verilog design to a hardcaml circuit which can be
+to convert a Verilog design to a hardcaml circuit which can be
 simulated.
 
 ## Hardcaml sub-circuits

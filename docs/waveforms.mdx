@@ -11,7 +11,7 @@ In the [simple counter](counter_example.mdx) example we printed the
 value of the output ports during the simulation. Printing outputs or
 even modelling the expected behaviour of a circuit dynamically is
 sometimes the best way to test it. However, the majority of the time
-we just want to visualize the result. For that we can use waveforms.
+we just want to visualize the result. For that, we can use waveforms.
 
 The [`hardcaml_waveterm`](https://github.com/janestreet/hardcaml_waveterm)
 library can capture and print waveforms from
@@ -20,8 +20,8 @@ Hardcaml simulations.
 ## Printing results as waveforms
 
 We can capture a waveform with
-[`Waveform.ceate`](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml_waveterm/Hardcaml_waveterm/index.html).
-It takes as an argument a simulator, and returns a waveform and
+[`Waveform.create`](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml_waveterm/Hardcaml_waveterm/index.html).
+It takes as an argument a simulator and returns a waveform and
 modified simulator that captures the input and output port values.
 
 The waveform can be displayed with `Waveform.print`.

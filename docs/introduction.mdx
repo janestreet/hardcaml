@@ -8,7 +8,7 @@
 -->
 
 Hardcaml is a library for designing and simulating *Register Transfer Level*
-(RTL) hardware designs. Hardcaml designs can be turned into Verilog or VHDL for
+(RTL) hardware designs. Hardcaml designs can be converted to Verilog or VHDL for
 use with vendor synthesis and place and route tools.
 
 # Library Overview
@@ -18,7 +18,7 @@ use with vendor synthesis and place and route tools.
 The module type
 [`Comb.S`](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Comb/module-type-S/index.html)
 defines the [combinational logic](combinational_logic.mdx) primitives
-(i.e. logical operations, arithmetic, mulitplexers etc) for Hardcaml.
+(i.e. logical operations, arithmetic, multiplexers etc.) for Hardcaml.
 It is implemented by both the `Bits` and `Signal` modules. All
 operations work over vectors with a given bit width. Each operation
 has rules about allowable argument widths and will raise at run-time
@@ -26,7 +26,7 @@ if violated.
 
 [`Bits`](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Bits/index.html)
 implements a shallow embedding of the `Comb.S` API. This means
-it is used to directly compute values.
+it is used to compute values directly.
 
 <!--
 It seems we do not set the [am_testing] variable when running this code.
@@ -58,12 +58,12 @@ val adder : signal -> signal -> signal = <fun>
 ```
 
 Signals also provide functions related to [sequential logic](sequential_logic.mdx) (registers,
-memories, and statemachines).
+memories, and state machines).
 
 In summary
 
 - `Signal.t`s are used to construct hardware designs
-- `Bits.t`s can be used to conveniently *model* combinational hardware circuits
+- `Bits.t`s can be used to *model* combinational hardware circuits conveniently
 - As we shall see, `Bits.t`s are also used for input and output ports of
   hardware simulations.
 
@@ -71,7 +71,7 @@ In summary
 
 A [circuit](circuits.mdx) takes the output signals of a Hardcaml
 design and performs various sanity checks to ensure that it can be
-converted to hardware. In particular we must now provide input and
+converted to hardware. In particular, we must now provide input and
 output port names for our designs.
 
 ```ocaml
@@ -144,7 +144,7 @@ An interface is a grouping of signals with associated names and bit widths.
   [@@deriving sexp_of, hardcaml];;
 ```
 
-A large set of functions are generated which make working with
+A large set of functions are generated, which makes working with
 interfaces useful for constructing module ports or interacting with a
 hardware design in simulation.
 
@@ -169,19 +169,16 @@ getting a fully working design. Let's consider the process of creating a simple
 Xilinx FPGA design.
 
 1. Design and simulate the circuit with Hardcaml.
-2. Output a verilog (or VHDL) file.
-3. Create project in Vivado, the Xilinx FPGA synthesis, place and route tool.
-4. Add board level constaints (pins, timing etc).
+2. Output a Verilog (or VHDL) file.
+3. Create a project in Vivado, the Xilinx FPGA synthesis, place and route tool.
+4. Add board-level constraints (pins, timing etc.).
 5. Synthesize, place and route the design in Vivado.
 6. Run static timing analysis.  If this fails, you must correct the Hardcaml design.
 7. Generate a bitstream which programs the FPGA.
 
-For steps 1 and 2 we often use a project structure with a `bin`, `src`
+For steps 1 and 2, we often use a project structure with a `bin`, `src`
 and `test` directory.
 
-The hardware design logic will be contained in a library in `src`.
-
-`test` will contain a test library with testbenches, expect tests etc.
-
-Finally, `bin` will contain an application which when run will
-generate the Verilog code for input into the Vivado toolchain.
+* `src` a library containing the hardware design.
+* `test` a test library with testbenches, expect tests etc.
+* `bin` an application to generate RTL code for the Vivado toolchain.
