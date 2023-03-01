@@ -10,7 +10,7 @@
 *Prerequisite: [Hardcaml interfaces](hardcaml_interfaces.mdx)*
 
 In Hardcaml, module
-[hierarchy](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Hierarchy/index.html)
+[hierarchy](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Hierarchy/index.html)
 means we can partition a Hardcaml design
 into a tree of sub-circuits and write each one to its own Verilog or
 VHDL module when generating RTL.
@@ -22,16 +22,16 @@ This builds upon [instantiation](instantiation.mdx) and
 Module hierarchies provide the following benefits:
 
 - Controls the naming of signals within the design hierarchy.
-  - Timing reports / logic utilization reports from backend vendor
+  - Timing reports/logic utilization reports from backend vendor
     tools will be much easier to comprehend.
-  - Allows better organistation of waveforms which can group signals
+  - Allows better organisation of waveforms which can group signals
     according to the module hierarchy.
 - Reduces the size of the generated RTL file, where there is
   substantial logic duplication.
 
 # Introduction to `Scope.t`
 
-A [`Scope.t`](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Scope/index.html)
+A [`Scope.t`](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Scope/index.html)
 is a (mutable) object passed between the circuits that
 form a complete hardcaml design. It manages the current path in the
 hierarchy of circuits and records unique circuits as they are
@@ -53,7 +53,7 @@ end
 
 We define an input and output interface and a `create` function that
 creates the hardware logic. We also pass it a scope argument. The
-`hierarchical` function is mechanically derivied from the `create`
+`hierarchical` function is mechanically derived from the `create`
 function.
 
 ```ocaml
@@ -92,10 +92,10 @@ sub-circuit, just call `hierarchical` instead of `create`.
 
 Compared to the non-hierarchical design flow all we need to do is
 
-- Pass a [`Scope.t`](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Scope/index.html) argument.
+- Pass a [`Scope.t`](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Scope/index.html) argument.
 - Define the `hierarchical` function using the `Hierarchy.In_scope`
   functor.
-- Call `hierarchical` when we instantiate the it.
+- Call `hierarchical` when we instantiate it.
 
 Hardcaml will detect when (structurally) equivalent circuits are
 instantiated and generate a single Verilog (or VHDL) module for them.
@@ -134,7 +134,7 @@ of the waveform viewer.
 
 When we create a scope, we can choose how it should treat
 sub-circuits. By default, a hierarchical design is created. If we pass
-`flatten_design:true` then instead all sub-circuits will inlined into
+`flatten_design:true` then instead all sub-circuits will be inlined into
 their parents.
 
 ## Simulation

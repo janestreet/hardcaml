@@ -38,9 +38,9 @@ type width = int
 type signal =
   | Empty
   (* module interface *)
-  | Module_input of id * name * width
-  | Module_output of id * name * width * signal ref
-  | Module_tristate of id * name * width * signal list ref
+  | Module_input of id * name * width * Rtl_attribute.t list ref
+  | Module_output of id * name * width * signal ref * Rtl_attribute.t list ref
+  | Module_tristate of id * name * width * signal list ref * Rtl_attribute.t list ref
   (* internal wires *)
   | Internal_wire of id * width * signal ref
   | Internal_triwire of id * width * signal list ref
@@ -56,6 +56,8 @@ type signal =
       * (string * signal) list
   (* outputs (write; drive wires/module outputs *)
       * (string * signal) list (* tristate (write; drive triwires/module tristates *)
+      * string option
+      * Rtl_attribute.t list
   (* basic RTL operators *)
   | Rtl_op of id * width * rtl_op
 
@@ -112,6 +114,7 @@ let id' = ref 0
 let const_map = ref (initial_map ())
 let circuit' = ref None
 let circuits' = ref []
+let instance_names = Hash_set.create (module String)
 
 let id () =
   let id = !id' in
@@ -121,10 +124,10 @@ let id () =
 
 let get_id = function
   | Empty -> -1 (* less than any possible created id *)
-  | Module_input (id, _, _)
-  | Module_output (id, _, _, _)
-  | Module_tristate (id, _, _, _)
-  | Instantiation (id, _, _, _, _, _)
+  | Module_input (id, _, _, _)
+  | Module_output (id, _, _, _, _)
+  | Module_tristate (id, _, _, _, _)
+  | Instantiation (id, _, _, _, _, _, _, _)
   | Internal_triwire (id, _, _)
   | Internal_wire (id, _, _)
   | Rtl_op (id, _, _)
@@ -136,10 +139,10 @@ let signal_equal (s1 : signal) s2 = Int.equal (get_id s1) (get_id s2)
 
 let name t =
   match t with
-  | Module_input (_, name, _)
-  | Module_output (_, name, _, _)
-  | Module_tristate (_, name, _, _)
-  | Instantiation (_, name, _, _, _, _) -> name
+  | Module_input (_, name, _, _)
+  | Module_output (_, name, _, _, _)
+  | Module_tristate (_, name, _, _, _)
+  | Instantiation (_, name, _, _, _, _, _, _) -> name
   | Internal_triwire (id, _, _) | Internal_wire (id, _, _) | Rtl_op (id, _, _) ->
     "_" ^ Int.to_string id
   | Empty | Instantiation_output _ | Instantiation_tristate _ -> raise (Invalid_name t)
@@ -147,9 +150,9 @@ let name t =
 
 let width t =
   match t with
-  | Module_input (_, _, width)
-  | Module_output (_, _, width, _)
-  | Module_tristate (_, _, width, _)
+  | Module_input (_, _, width, _)
+  | Module_output (_, _, width, _, _)
+  | Module_tristate (_, _, width, _, _)
   | Internal_triwire (_, width, _)
   | Internal_wire (_, width, _)
   | Rtl_op (_, width, _) -> width
@@ -165,13 +168,14 @@ let circuit_exists name =
   | _ -> false
 ;;
 
-let circuit name =
+let start_circuit name =
   match !circuit' with
   | Some _ -> raise Circuit_already_started
   | None ->
     if circuit_exists name
     then raise (Circuit_already_exists name)
     else (
+      Hash_set.clear instance_names;
       id' := 0;
       const_map := initial_map ();
       circuit' := Some (empty name))
@@ -213,6 +217,13 @@ let get_circuit () =
 
 let find_circuit name = List.Assoc.find_exn !circuits' name ~equal:String.equal
 
+let create_circuit name f =
+  start_circuit name;
+  f ();
+  end_circuit ();
+  find_circuit name
+;;
+
 let add_sig s =
   let c = get_circuit () in
   c.signals <- s :: c.signals;
@@ -220,28 +231,43 @@ let add_sig s =
 ;;
 
 let ( >> ) a b = b a
-let mk_input name width = Module_input (id (), name, width) >> add_sig
-let mk_output name width = Module_output (id (), name, width, ref Empty) >> add_sig
-let mk_tristate name width = Module_tristate (id (), name, width, ref []) >> add_sig
+let mk_input name width = Module_input (id (), name, width, ref []) >> add_sig
+
+let mk_output name width =
+  Module_output (id (), name, width, ref Empty, ref []) >> add_sig
+;;
+
+let add_attribute signal attr =
+  match signal with
+  | Module_input (_, _, _, l)
+  | Module_output (_, _, _, _, l)
+  | Module_tristate (_, _, _, _, l) -> l := attr :: !l
+  | _ ->
+    raise_s
+      [%message
+        "Structural can only add_attribute on Module_input or Module_output for now"]
+;;
+
+let mk_tristate name width =
+  Module_tristate (id (), name, width, ref [], ref []) >> add_sig
+;;
+
 let mk_wire width = Internal_wire (id (), width, ref Empty) >> add_sig
 let mk_triwire width = Internal_triwire (id (), width, ref []) >> add_sig
 
 let ( <== ) a b =
   match a with
-  | Module_output (_, _, _, con) | Internal_wire (_, _, con) ->
+  | Module_output (_, _, _, con, _) | Internal_wire (_, _, con) ->
     (match !con with
      | Empty ->
        (match b with
         | Internal_wire _ | Module_input _ | Instantiation_output _ | Rtl_op _ -> con := b
         | _ -> raise (Cant_assign_wire_with b))
      | _ -> raise (Wire_already_assigned a))
-  | Module_tristate (_, _, _, con) | Internal_triwire (_, _, con) ->
+  | Module_tristate (_, _, _, con, _) | Internal_triwire (_, _, con) ->
     (match b with
-     | Module_tristate _ | Internal_triwire _ | Instantiation_tristate _ ->
-       con := b :: !con
-     | Rtl_op (_, _, Constant _) ->
-       (* need to be able to assign any type of constant *)
-       con := b :: !con
+     | Module_tristate _ | Internal_triwire _ | Instantiation_tristate _ | Rtl_op (_, _, _)
+       -> con := b :: !con
      | _ -> raise (Cant_assign_triwire_with b))
   | _ -> raise (Invalid_assignment_target a)
 ;;
@@ -262,13 +288,14 @@ let is_readwrite = function
 ;;
 
 let is_connected = function
-  | Module_output (_, _, _, con) | Internal_wire (_, _, con) -> not (signal_is_empty !con)
-  | Module_tristate (_, _, _, cons) | Internal_triwire (_, _, cons) ->
+  | Module_output (_, _, _, con, _) | Internal_wire (_, _, con) ->
+    not (signal_is_empty !con)
+  | Module_tristate (_, _, _, cons, _) | Internal_triwire (_, _, cons) ->
     not (List.is_empty !cons)
   | _ -> true
 ;;
 
-let inst ?(g = []) ?(i = []) ?(o = []) ?(t = []) name =
+let inst ?instance_name ?(attributes = []) ?(g = []) ?(i = []) ?(o = []) ?(t = []) name =
   let mod_id = id () in
   (* inputs: module inputs, wires *)
   List.iter i ~f:(fun (n, s) ->
@@ -281,7 +308,14 @@ let inst ?(g = []) ?(i = []) ?(o = []) ?(t = []) name =
     if not (is_readwrite s)
     then raise (Invalid_submodule_tristate_connection (name, n, s))
     else s <== Instantiation_tristate (mod_id, n));
-  ignore (Instantiation (mod_id, name, g, i, o, t) >> add_sig : signal)
+  Option.iter instance_name ~f:(fun instance_name ->
+    if String.is_prefix instance_name ~prefix:"_"
+    then
+      raise_s [%message "explicitly specified instance_names cannot start with a '_'"];
+    Hash_set.add instance_names instance_name);
+  ignore
+    (Instantiation (mod_id, name, g, i, o, t, instance_name, attributes) >> add_sig
+     : signal)
 ;;
 
 let ( ==> ) a b = a, b
@@ -480,10 +514,10 @@ module Base (C : Config) = struct
           (range : ((int * int) option[@sexp.option]))]
     in
     match t with
-    | Module_input (id, name, width) -> create "Module_input" ~id ~name ~width
-    | Module_output (id, name, width, _) -> create "Module_output" ~id ~name ~width
-    | Module_tristate (id, name, width, _) -> create "Module_tristate" ~id ~name ~width
-    | Instantiation (id, name, _, _, _, _) -> create "Instantiation" ~id ~name
+    | Module_input (id, name, width, _) -> create "Module_input" ~id ~name ~width
+    | Module_output (id, name, width, _, _) -> create "Module_output" ~id ~name ~width
+    | Module_tristate (id, name, width, _, _) -> create "Module_tristate" ~id ~name ~width
+    | Instantiation (id, name, _, _, _, _, _, _) -> create "Instantiation" ~id ~name
     | Internal_triwire (id, width, _) -> create "Internal_triwire" ~id ~width
     | Internal_wire (id, width, _) -> create "Internal_wire" ~id ~width
     | Rtl_op (id, width, Constant value) -> create "Constant" ~id ~width ~value
@@ -542,10 +576,40 @@ module Base2 = Base (struct
        ()
    ]} *)
 
+let get_attributes signal =
+  match signal with
+  | Module_input (_, _, _, attrs)
+  | Module_output (_, _, _, _, attrs)
+  | Module_tristate (_, _, _, _, attrs) -> !attrs
+  | _ -> []
+;;
+
+let attribute_value_to_string (v : Rtl_attribute.Value.t) =
+  match v with
+  | String s -> "\"" ^ s ^ "\""
+  | Int i -> Int.to_string i
+  | Bool b -> if b then "true" else "false"
+;;
+
+let attributes_to_string attrs =
+  let body =
+    List.map attrs ~f:(fun attr ->
+      let name = Rtl_attribute.name attr in
+      match Rtl_attribute.value attr with
+      | None -> name
+      | Some value -> Printf.sprintf "%s=%s" name (attribute_value_to_string value))
+    |> String.concat ~sep:","
+  in
+  Printf.sprintf "(* %s *)" body
+;;
+
 let write_verilog os circuit =
   let open Printf in
   let declare typ signal =
-    "  "
+    (match get_attributes signal with
+     | [] -> ""
+     | attrs -> "  " ^ attributes_to_string attrs ^ "\n")
+    ^ "  "
     ^ typ
     ^ " "
     ^ (if width signal = 1 then "" else sprintf "[%i:0] " (width signal - 1))
@@ -630,8 +694,8 @@ let write_verilog os circuit =
   (* write module outputs and inouts *)
   let assign_output s =
     match s with
-    | Module_output (_, _, _, con) -> if connects !con then assign s !con
-    | Module_tristate (_, _, _, cons) ->
+    | Module_output (_, _, _, con, _) -> if connects !con then assign s !con
+    | Module_tristate (_, _, _, cons, _) ->
       List.iter !cons ~f:(fun con -> if connects con then assign s con)
     | _ -> failwith "assign_output"
   in
@@ -639,7 +703,12 @@ let write_verilog os circuit =
   List.iter inouts ~f:assign_output;
   (* write instantiations *)
   let write_inst = function
-    | Instantiation (id, iname, g, i, o, t) ->
+    | Instantiation (id, iname, g, i, o, t, instance_name, attributes) ->
+      if not (List.is_empty attributes)
+      then (
+        os "  ";
+        os (attributes_to_string attributes);
+        os "\n");
       os ("  " ^ iname ^ "");
       if not (List.is_empty g)
       then (
@@ -658,7 +727,12 @@ let write_verilog os circuit =
                   | GUnquoted s -> s)
                 ^ ")")));
         os "\n  )");
-      os (" _" ^ Int.to_string id ^ "\n");
+      let instance_name =
+        match instance_name with
+        | None -> "_" ^ Int.to_string id
+        | Some instance_name -> instance_name
+      in
+      os (" " ^ instance_name ^ "\n");
       os "  (\n";
       os
         (seperator
@@ -733,5 +807,39 @@ module Lib = struct
       ~o:[ "o" ==> o ]
       ~t:[ "t" ==> t ];
     o
+  ;;
+end
+
+module With_interface (I : Interface.S) (O : Interface.S) (T : Interface.S) = struct
+  let create_circuit name f =
+    create_circuit name (fun () ->
+      let i = I.map2 I.port_names I.port_widths ~f:mk_input in
+      let o = O.map2 O.port_names O.port_widths ~f:mk_output in
+      let t = T.map2 T.port_names T.port_widths ~f:mk_tristate in
+      f i o t)
+  ;;
+
+  let inst ?instance_name ?attributes ?g name i o t =
+    let check_port_width name expected_width s =
+      if width s <> expected_width
+      then
+        raise_s
+          [%message
+            "Instantiation argument does not match provided interface port width!"
+              (name : string)
+              (expected_width : int)
+              (width s : int)]
+    in
+    I.iter3 I.port_names I.port_widths i ~f:check_port_width;
+    O.iter3 O.port_names O.port_widths o ~f:check_port_width;
+    T.iter3 T.port_names T.port_widths t ~f:check_port_width;
+    inst
+      ?instance_name
+      ?attributes
+      ?g
+      ~i:(I.to_list (I.zip I.port_names i))
+      ~o:(O.to_list (O.zip O.port_names o))
+      ~t:(T.to_list (T.zip T.port_names t))
+      name
   ;;
 end

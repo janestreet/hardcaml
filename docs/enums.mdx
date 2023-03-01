@@ -91,7 +91,7 @@ val a : Signal.t = (const (width 1) (value 0b1))
 
 You get several enum-specific features for defining circuits in the
 regular Signal-like API, notably the `match_` function for
-multiplexing on the enum value. Note that this differs from `mux` that
+multiplexing on the enum value. Note that this differs from `mux` which
 creates a multiplexer that returns a value of the type enum.
 
 ```ocaml
@@ -244,7 +244,7 @@ val this_is_undefined_and_will_not_raise : Signal.t Hello.Binary.t = <abstr>
 ```
 
 Enums are well supported in simulations too! Let's make a little state
-machine that increment or decrement a counter based on an enum's input
+machine that increments or decrements a counter based on an enum's input
 value. The module simulation will also output the previous clock
 cycle's enum input.
 

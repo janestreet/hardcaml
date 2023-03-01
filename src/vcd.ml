@@ -1,9 +1,6 @@
 open Base
 open Cyclesim
-module Out_channel = Stdio.Out_channel
-module Filename = Caml.Filename
 
-let printf = Stdio.printf
 let vcdmin = 33
 let vcdmax = 126
 let vcdcycle = 10
@@ -130,30 +127,3 @@ let wrap os sim =
   in
   Private.modify sim [ After, Reset, write_reset; After, At_clock_edge, write_cycle ]
 ;;
-
-module Gtkwave = struct
-  let wrap chan sim =
-    let o s =
-      Out_channel.output_string chan s;
-      Out_channel.flush chan
-    in
-    wrap o sim
-  ;;
-
-  let gtkwave ?(args = "") sim =
-    let fifoname = Filename.temp_file "sim" "fifo" in
-    printf "Created tempfile %s\n" fifoname;
-    Unix.unlink fifoname;
-    Unix.mkfifo fifoname 0o600;
-    printf "Made fifo, launching shmidcat and gtkwave\n";
-    ignore
-      (Unix.open_process_in ("shmidcat " ^ fifoname ^ " | gtkwave -v -I " ^ args)
-       : Stdio.In_channel.t);
-    let fifo = Out_channel.create fifoname in
-    Caml.at_exit (fun () ->
-      printf "Destroying FIFO\n";
-      Out_channel.close fifo;
-      Unix.unlink fifoname);
-    wrap fifo sim
-  ;;
-end

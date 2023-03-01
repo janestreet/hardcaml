@@ -7,10 +7,10 @@
 ```
 -->
 
-A Hardcaml [`Circuit.t`](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Circuit/index.html)
+A Hardcaml [`Circuit.t`](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Circuit/index.html)
 encodes both the RTL logic for a hardware
 design along with named input and output ports. Circuits can be
-converted to various different forms:
+converted into various different forms:
 
 * Verilog or VHDL
 * Simulation models
@@ -65,7 +65,7 @@ calculated by the simulation models and read by a testbench.
 
 # Instantiation
 
-Circuits may instantiate other circuits. Within a Hardcaml design one
+Circuits may instantiate other circuits. Within a Hardcaml design, one
 may write
 
 ```ocaml
@@ -82,8 +82,8 @@ val an_instantiation : Signal.t Base.Map.M(Base.String).t = <abstr>
 ```
 
 The given name corresponds to the module name of the instantiated
-circuit. `inputs` provide a port name and the signal which it is
-connected to. `outputs` also provide a port name and must specify the
+circuit. `inputs` provide a port name and the signal to which it is
+connected. `outputs` also provide a port name and must specify the
 width of the output port. The returned value is a map that can be
 queried to access the output ports.
 

@@ -59,32 +59,6 @@ let%expect_test "output wire is width 0 (or empty)" =
         (data_in empty)))) |}]
 ;;
 
-let%expect_test "file IO" =
-  let output output_mode =
-    Rtl.output
-      ~output_mode
-      Verilog
-      (Circuit.create_exn ~name:"test" [ output "x" (input "y" 1) ])
-  in
-  require_does_raise [%here] (fun () -> output (To_file "/foo"));
-  [%expect
-    {|
-    ("Error while initializing output mode."
-      (circuit_name test)
-      (language     Verilog)
-      (output_mode (To_file   /foo))
-      (exn         (Sys_error "/foo: Permission denied")))
-    |}];
-  require_does_raise [%here] (fun () -> output (In_directory "/foo"));
-  [%expect
-    {|
-    ("Error while writing circuit"
-      (circuit_name test)
-      (hierarchy_path (test))
-      (output ((language Verilog) (mode (In_directory /foo))))
-      (exn (Sys_error "/foo/test.v: No such file or directory"))) |}]
-;;
-
 let%expect_test "instantiation input is empty" =
   require_does_raise [%here] (fun () ->
     let a = Signal.empty in

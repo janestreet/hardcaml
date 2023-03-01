@@ -189,8 +189,6 @@ module Bits_module = struct
     | Bool_list
     | X_list
     | Bits
-    | Bits_int_array
-    | Mutable_Bits_int_array
     | BadPrimitives
   [@@deriving enumerate]
 
@@ -218,20 +216,6 @@ module Bits_module = struct
 
   let v_Bits = { name = "Bits"; short_name = "bits"; module_ = (module Bits) }
 
-  let v_Bits_int_array =
-    { name = "Bits_int_array"
-    ; short_name = "bits-old"
-    ; module_ = (module Bits_int_array)
-    }
-  ;;
-
-  let v_Mutable_ArraybitsInt =
-    { name = "Mutable.Bits_int_array"
-    ; short_name = "raw-old"
-    ; module_ = (module Bits_int_array.Mutable.Comb)
-    }
-  ;;
-
   let v_BadPrimitives =
     let module BadPrimitives = struct
       include Bits
@@ -251,8 +235,6 @@ module Bits_module = struct
     | Bool_list -> v_Bool_list
     | X_list -> v_X_list
     | Bits -> v_Bits
-    | Bits_int_array -> v_Bits_int_array
-    | Mutable_Bits_int_array -> v_Mutable_ArraybitsInt
     | BadPrimitives -> v_BadPrimitives
   ;;
 

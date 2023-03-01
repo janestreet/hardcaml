@@ -1,5 +1,5 @@
 include Base
-include Expect_test_helpers_core
+include Expect_test_helpers_base
 include Hardcaml
 module Command = Core.Command
 
@@ -7,8 +7,8 @@ let error_s = Or_error.error_s
 let force = Lazy.force
 let incr = Int.incr
 let print_endline = Stdio.print_endline
-let print_string = Caml.print_string
-let printf = Caml.Printf.printf
+let print_string = Stdlib.print_string
+let printf = Stdlib.Printf.printf
 let try_with = Or_error.try_with
 let require_does_not_raise = require_does_not_raise ~hide_positions:true
 let require_does_raise = require_does_raise ~hide_positions:true

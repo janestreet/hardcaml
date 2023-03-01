@@ -2,7 +2,7 @@ open! Import
 open! Bits
 module Bigstring = Base_bigstring
 
-let int64_of_bool_obj_magic b = Caml.Obj.magic b |> Int64.of_int
+let int64_of_bool_obj_magic b = Stdlib.Obj.magic b |> Int64.of_int
 let int64_of_bool_branching b = if b then 1L else 0L
 let test_values = [| 1L; 4L; 8L |]
 let result = Bigstring.init 8 ~f:(fun _ -> '\000')

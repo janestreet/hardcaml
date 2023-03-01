@@ -1,5 +1,5 @@
 open! Import
-open Hardcaml_waveterm
+open Hardcaml_waveterm_kernel
 
 let write_port address_width data_width =
   { Signal.write_clock = Signal.gnd
@@ -546,7 +546,7 @@ let%expect_test "simulation - write and read data on both ports" =
   read_enable1 := Bits.gnd;
   read_enable2 := Bits.gnd;
   Cyclesim.cycle simulator;
-  Waveform.expect ~display_height:42 ~display_width:86 ~wave_width:2 waves;
+  Waveform.print ~display_height:42 ~display_width:86 ~wave_width:2 waves;
   [%expect
     {|
     ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────┐
@@ -590,8 +590,7 @@ let%expect_test "simulation - write and read data on both ports" =
     │                  ││────────────────────────────────────┬───────────┬─────          │
     │q1                ││ 0000                               │0064       │0280           │
     │                  ││────────────────────────────────────┴───────────┴─────          │
-    └──────────────────┘└────────────────────────────────────────────────────────────────┘
-    686801b868b934ada9150f2a0ba8e580 |}]
+    └──────────────────┘└────────────────────────────────────────────────────────────────┘ |}]
 ;;
 
 let%expect_test "simulation - write on both ports - highest indexed port wins" =
@@ -627,7 +626,7 @@ let%expect_test "simulation - write on both ports - highest indexed port wins" =
   read_enable1 := Bits.gnd;
   read_enable2 := Bits.gnd;
   Cyclesim.cycle simulator;
-  Waveform.expect ~display_height:42 ~display_width:60 ~wave_width:2 waves;
+  Waveform.print ~display_height:42 ~display_width:60 ~wave_width:2 waves;
   [%expect
     {|
     ┌Signals──────┐┌Waves──────────────────────────────────────┐
@@ -671,8 +670,7 @@ let%expect_test "simulation - write on both ports - highest indexed port wins" =
     │             ││────────────────────────┬─────             │
     │q1           ││ 0000                   │00C8              │
     │             ││────────────────────────┴─────             │
-    └─────────────┘└───────────────────────────────────────────┘
-    94665fb9faac961a62778275ef035187 |}]
+    └─────────────┘└───────────────────────────────────────────┘ |}]
 ;;
 
 let%expect_test "simulation - demonstrate collision modes" =
@@ -699,7 +697,7 @@ let%expect_test "simulation - demonstrate collision modes" =
     write_enable1 := Bits.gnd;
     read_enable1 := Bits.gnd;
     Cyclesim.cycle simulator;
-    Waveform.expect ~display_height:42 ~display_width:60 ~wave_width:2 waves
+    Waveform.print ~display_height:42 ~display_width:60 ~wave_width:2 waves
   in
   test Read_before_write;
   [%expect
@@ -745,8 +743,7 @@ let%expect_test "simulation - demonstrate collision modes" =
     │             ││────────────────────────                   │
     │q1           ││ 0000                                      │
     │             ││────────────────────────                   │
-    └─────────────┘└───────────────────────────────────────────┘
-    06a9dfd651612712b72173621e600a7d |}];
+    └─────────────┘└───────────────────────────────────────────┘ |}];
   test Write_before_read;
   [%expect
     {|
@@ -791,6 +788,5 @@ let%expect_test "simulation - demonstrate collision modes" =
     │             ││────────────────────────                   │
     │q1           ││ 0000                                      │
     │             ││────────────────────────                   │
-    └─────────────┘└───────────────────────────────────────────┘
-    72ec4a27baa73035385dca7d2ff89e1b |}]
+    └─────────────┘└───────────────────────────────────────────┘ |}]
 ;;

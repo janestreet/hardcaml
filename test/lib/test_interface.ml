@@ -339,7 +339,22 @@ let%expect_test "apply_names" =
        const
        (names (y_))
        (width 8)
-       (value 0b00000000)))) |}]
+       (value 0b00000000)))) |}];
+  let of_always = I.Of_always.wire Signal.zero in
+  I.Of_always.apply_names ~prefix:"?" ~suffix:"!" of_always;
+  print_s [%sexp (of_always : Always.Variable.t I.t)];
+  [%expect
+    {|
+    ((x (
+       wire
+       (names (?x!))
+       (width   4)
+       (data_in empty)))
+     (y (
+       wire
+       (names (?y!))
+       (width   8)
+       (data_in empty)))) |}]
 ;;
 
 let%expect_test "assert_widths" =

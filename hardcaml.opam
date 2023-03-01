@@ -22,6 +22,7 @@ depends: [
   "ppxlib"           {>= "0.28.0"}
   "zarith"           {>= "1.11"}
 ]
+available: arch != "arm32" & arch != "x86_32"
 synopsis: "RTL Hardware Design in OCaml"
 description: "
 Hardcaml is an embedded DSL for designing and simulating hardware in OCaml.
@@ -30,4 +31,3 @@ order functions, lists, maps etc.  A built in simulator allows designs to
 be simulated within Hardcaml.  Designs are converted to either Verilog or
 VHDL to interact with standard back end tooling.
 "
-available: arch != "arm32" & arch != "x86_32"

@@ -1,4 +1,4 @@
 (library (name hardcaml) (public_name hardcaml) (c_names bits_stubs)
- (libraries base bin_prot bigarray dynlink core_kernel.flags stdio
-  topological_sort unix zarith)
+ (libraries base bin_prot bigarray core_kernel.flags stdio topological_sort
+  zarith)
  (preprocess (pps ppx_jane ppx_deriving_hardcaml0)))

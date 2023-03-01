@@ -52,8 +52,7 @@ let%expect_test "{to,of}_z resepects sign" =
   done
 ;;
 
-let%expect_test "roundtrips" =
-  let max_bit_width = 200 in
+let test_round_trip =
   (* Exhaustive test from 1 to 10 bits *)
   let test_round_trip_int (_, round_trip) =
     let round_trip width x =
@@ -84,7 +83,15 @@ let%expect_test "roundtrips" =
     test_round_trip_int t;
     test_round_trip_string t
   in
-  let int = 63, fun width x -> x |> Constant.to_int |> Constant.of_int ~width in
+  test_round_trip
+;;
+
+let%expect_test "roundtrips" =
+  let max_bit_width = 200 in
+  let int =
+    (* Test at 32 bits, which is compatible with 64 bit OCaml and js_of_ocaml *)
+    32, fun width x -> x |> Constant.to_int |> Constant.of_int ~width
+  in
   let binary_string =
     max_bit_width, fun _ x -> x |> Constant.to_binary_string |> Constant.of_binary_string
   in
@@ -344,7 +351,7 @@ let%expect_test "[Bits.num_bits_to_represent]" =
   [%expect {| (1 1 2 2 3 3 3 3 4 4) |}]
 ;;
 
-let%expect_test "" =
+let%expect_test "raw strings" =
   let test str ~width =
     let of_string = Constant.Raw.of_string ~width str |> Bits.of_constant in
     let of_bytes =

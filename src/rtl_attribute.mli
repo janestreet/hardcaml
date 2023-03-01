@@ -45,6 +45,10 @@ module Vivado : sig
   (** Similar to dont_touch *)
   val keep : bool -> t
 
+  (** io_buffer_type Vivado attribute. Applied to top level ports and instructs Vivado not
+      to infer the buffer type, instead using the attribute below. *)
+  val io_buffer_type : [ `IBUF | `OBUF | `None ] -> t
+
   module Ram_style : sig
     val block : t
     val distributed : t

@@ -4,7 +4,7 @@ open Base
 open Signal
 include Rtl_intf
 module Out_channel = Stdio.Out_channel
-module Filename = Caml.Filename
+module Filename = Stdlib.Filename
 
 let sprintf = Printf.sprintf
 

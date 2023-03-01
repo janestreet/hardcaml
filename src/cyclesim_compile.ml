@@ -450,7 +450,7 @@ module Compile = struct
        | Signal_lt ->
          let ltsmall () = set0 tgt (int64_of_bool (Int64.( < ) (get0 a) (get0 b))) in
          let lt64 () =
-           set0 tgt (int64_of_bool (Caml.Int64.unsigned_compare (get0 a) (get0 b) = -1))
+           set0 tgt (int64_of_bool (Stdlib.Int64.unsigned_compare (get0 a) (get0 b) = -1))
          in
          let ltbig () = Bits.Mutable.( <: ) tgt a b in
          let width = Bits.Mutable.width a in

@@ -8,14 +8,14 @@
 -->
 
 We now show a complete example which implements a bit-serial unsigned
-multipler. We will both implement the design and show how to test it.
+multiplier. We will both implement the design and show how to test it.
 
 # Algorithm
 
 Given two input numbers of bit-widths `N` and `M`, a bit serial
-multipler will produce a result of size `M+N` every M clock cycles.
+multiplier will produce a result of size `M+N` every M clock cycles.
 
-Given two input values `a` and `b` we consider each bit of `b` in turn
+Given two input values `a` and `b`, we consider each bit of `b` in turn
 and form a partial product.
 
 ```
@@ -136,7 +136,7 @@ val umul_sequential : signal -> signal -> signal -> int -> signal -> signal =
 
 # Testbench
 
-We will now test our multipler. First, let's create the required
+We will now test our multiplier. First, let's create the required
 `Circuit.t`.
 
 ```ocaml

@@ -158,12 +158,12 @@ let%expect_test "floating point operations in simulation" =
       ; hwop64 = Fops.Double.tanh
       }
     ; { name = "ceil"
-      ; fop = Caml.ceil
+      ; fop = Stdlib.ceil
       ; hwop32 = Fops.Float.ceil
       ; hwop64 = Fops.Double.ceil
       }
     ; { name = "floor"
-      ; fop = Caml.floor
+      ; fop = Stdlib.floor
       ; hwop32 = Fops.Float.floor
       ; hwop64 = Fops.Double.floor
       }

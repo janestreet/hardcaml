@@ -2,9 +2,9 @@
 
 Normally we write expect_tests which can output waveforms in ASCII
 when testing Hardcaml, but we can also use the interactive viewer tool
-to be able to view waveforms that run over a long number of cycles, or
-have a lot of signals. This is a very useful tool to use with
-debugging when initially designing a hardcaml circuit.
+to view waveforms that run for many cycles or
+have a lot of signals. This is a very useful debugging tool
+when initially designing a hardcaml circuit.
 
 ## Buliding a simulation application
 
@@ -41,7 +41,7 @@ Waveform-based expect tests are very information limited. We often
 either run very small simulations, show a small portion of a larger
 simulation, or zoom far out to capture general behaviour. Often we can
 see the behaviour of control signals but not the detailed values on
-data busses.
+data buses.
 
 To help with this, the `Hardcaml_waveterm` library can optionally
 serialize a waveform to disk. It provides an `expect` function which is

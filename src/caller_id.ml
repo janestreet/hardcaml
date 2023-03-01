@@ -1,5 +1,5 @@
 open Base
-module Printexc = Caml.Printexc
+module Printexc = Stdlib.Printexc
 
 module Mode = struct
   type t =
@@ -43,7 +43,7 @@ let get ?(skip = []) () =
     :: "scope.ml"
     :: "parameter.ml"
     :: "hierarchy.ml"
-    :: Caml.__FILE__
+    :: Stdlib.__FILE__
     :: skip
   in
   let stack = Printexc.get_callstack 16 in

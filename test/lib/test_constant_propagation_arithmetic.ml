@@ -617,13 +617,7 @@ let%expect_test "negate" =
       "negate"
         ~all_1_bit:(op1 1 ~f:negate : signal fn1 list)
         ~all_2_bits:(op1 2 ~f:negate : signal fn1 list)
-        ~all_3_bits:(op1 3 ~f:negate : signal fn1 list)
-        ~_63_bit_min_max:
-          ([ negate (of_int ~width:63 Int.max_value)
-           ; negate (of_int ~width:63 Int.min_value)
-           ; negate (of_int ~width:63 (Int.min_value + 1))
-           ]
-           : signal fn1 list)];
+        ~all_3_bits:(op1 3 ~f:negate : signal fn1 list)];
   [%expect
     {|
     (negate
@@ -643,9 +637,5 @@ let%expect_test "negate" =
         (3'b100 = 3'b100)
         (3'b101 = 3'b011)
         (3'b110 = 3'b010)
-        (3'b111 = 3'b001)))
-      (_63_bit_min_max (
-        (63'h3fffffffffffffff = 63'h4000000000000001)
-        (63'h4000000000000000 = 63'h4000000000000000)
-        (63'h4000000000000001 = 63'h3fffffffffffffff)))) |}]
+        (3'b111 = 3'b001)))) |}]
 ;;

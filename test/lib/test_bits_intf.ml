@@ -53,8 +53,6 @@ module type Test_bits = sig
       | Bool_list
       | X_list
       | Bits
-      | Bits_int_array
-      | Mutable_Bits_int_array
       (** Special module which breaks a few primtives by inverting the result.  Used to
           test the test-framework itself. *)
       | BadPrimitives

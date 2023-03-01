@@ -30,6 +30,8 @@ let sexp_of_const_function sexp_of_args (args, const_signal) =
   [%message "" ~_:(args : args) ~_:(const_signal : const_signal)]
 ;;
 
+type of_int = (int * int) * Signal.t
+
 let app1 f a = a, f a
 let app2 f a b = (a, b), f ~width:a b
 let of_int = app2 of_int
@@ -123,15 +125,11 @@ let%expect_test "minimum and maximum" =
   print_s
     [%message
       ""
-        ~of_int:(min_max of_int (module Int) : of_int min_max)
         ~of_int32:(min_max of_int32 (module Int32) : of_int32 min_max)
         ~of_int64:(min_max of_int64 (module Int64) : of_int64 min_max)];
   [%expect
     {|
-    ((of_int (
-       (min ((63 -4611686018427387904) 63'h4000000000000000))
-       (max ((63 4611686018427387903)  63'h3fffffffffffffff))))
-     (of_int32 (
+    ((of_int32 (
        (min ((32 -2147483648) 32'h80000000))
        (max ((32 2147483647)  32'h7fffffff))))
      (of_int64 (

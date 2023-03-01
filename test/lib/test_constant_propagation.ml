@@ -792,8 +792,8 @@ let%expect_test "bswap" =
     (0x1122 16'h2211) |}];
   bswap ~width:24 0x123456;
   [%expect {| (0x123456 24'h563412) |}];
-  bswap ~width:32 0xdeadbeef;
-  [%expect {| (0xdeadbeef 32'hefbeadde) |}]
+  bswap ~width:32 0x3eadbeef;
+  [%expect {| (0x3eadbeef 32'hefbead3e) |}]
 ;;
 
 let%expect_test "shifting" =

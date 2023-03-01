@@ -7,9 +7,8 @@
 : === flags ===
 : 
 :   -bits MODULE               . bits implementation to test: intlist, boollist,
-:                                xlist, bits, bits-old, raw-old, bad
-:   [-bits-ref MODULE]         . reference bits implementation (default is
-:                                [bits-int])
+:                                xlist, bits, bad
+:   [-bits-ref MODULE]         . reference bits implementation (default is [bits])
 :   [-first-error-only]        . stop running a primitive test after first error
 :   [-iterations N]            . number of test iterations (default is [10])
 :   [-log FILE]                . results file (default is [stdout])

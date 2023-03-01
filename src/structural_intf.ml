@@ -13,9 +13,9 @@ module type Structural = sig
   type signal =
     | Empty
     (* module interface *)
-    | Module_input of id * name * width
-    | Module_output of id * name * width * signal ref
-    | Module_tristate of id * name * width * signal list ref
+    | Module_input of id * name * width * Rtl_attribute.t list ref
+    | Module_output of id * name * width * signal ref * Rtl_attribute.t list ref
+    | Module_tristate of id * name * width * signal list ref * Rtl_attribute.t list ref
     (* internal wires *)
     | Internal_wire of id * width * signal ref
     | Internal_triwire of id * width * signal list ref
@@ -30,7 +30,10 @@ module type Structural = sig
     (* inputs (read) *)
         * (string * signal) list
     (* outputs (write; drive wires/module outputs *)
-        * (string * signal) list (* tristate (write; drive triwires/module tristates *)
+        * (string * signal) list
+    (* tristate (write; drive triwires/module tristates *)
+        * string option
+        * Rtl_attribute.t list
     (* basic RTL operators *)
     | Rtl_op of id * width * rtl_op
 
@@ -74,13 +77,18 @@ module type Structural = sig
   exception Circuit_already_started
 
   (** start circuit *)
-  val circuit : string -> unit
+  val start_circuit : string -> unit
 
   (** complete circuit, add to database *)
   val end_circuit : unit -> unit
 
   (** find circuit in database *)
   val find_circuit : string -> circuit
+
+  val create_circuit : string -> (unit -> unit) -> circuit
+
+  (** Add an attribute to the signal. Currently only works on input and outputs. *)
+  val add_attribute : signal -> Rtl_attribute.t -> unit
 
   val width : signal -> int
   val mk_input : string -> int -> signal
@@ -92,7 +100,9 @@ module type Structural = sig
   val is_connected : signal -> bool
 
   val inst
-    :  ?g:(string * generic) list
+    :  ?instance_name:string
+    -> ?attributes:Rtl_attribute.t list
+    -> ?g:(string * generic) list
     -> ?i:(string * signal) list
     -> ?o:(string * signal) list
     -> ?t:(string * signal) list
@@ -142,5 +152,22 @@ module type Structural = sig
       -> signal
 
     val tristate_buffer : en:signal -> i:signal -> t:signal -> signal
+  end
+
+  module With_interface (I : Interface.S) (O : Interface.S) (T : Interface.S) : sig
+    val create_circuit
+      :  string
+      -> (signal I.t -> signal O.t -> signal T.t -> unit)
+      -> circuit
+
+    val inst
+      :  ?instance_name:string
+      -> ?attributes:Rtl_attribute.t list
+      -> ?g:(string * generic) list
+      -> string
+      -> signal I.t
+      -> signal O.t
+      -> signal T.t
+      -> unit
   end
 end

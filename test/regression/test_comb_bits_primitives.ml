@@ -19,8 +19,8 @@ let command =
      and bits_ref =
        flag
          "-bits-ref"
-         (optional_with_default Bits_module.Bits_int_array Bits_module.arg_type)
-         ~doc:"MODULE reference bits implementation (default is [bits-int])"
+         (optional_with_default Bits_module.Bits Bits_module.arg_type)
+         ~doc:"MODULE reference bits implementation (default is [bits])"
      and first_error_only =
        flag
          "-first-error-only"

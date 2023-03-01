@@ -9,13 +9,13 @@
 
 # Writing State Machines
 
-The [Always DSL](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Always/index.html)
+The [Always DSL](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Always/index.html)
 is most commonly used to construct state machines or
-non-trivial sequential logic. Hardcaml is shipped with a
-[`Always.State_machine`](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Always/State_machine/index.html)
+non-trivial sequential logic. Hardcaml is shipped with an
+[`Always.State_machine`](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Always/State_machine/index.html)
 module to help create state machines.
 
-The main function to create state machine in hardcaml is as follows:
+A state machine is constructed with the following function:
 
 ```ocaml
 # open Base
@@ -29,8 +29,8 @@ The main function to create state machine in hardcaml is as follows:
 = <fun>
 ```
 
-This constructs a state machine object that can be used within an
-*Always block*. Lets look at an example.
+The value returned can be used within an *Always block*.
+Let's look at an example.
 
 ## Defining the State type
 
@@ -44,20 +44,20 @@ module States = struct
 end
 ```
 
-The `States` type must use the `sexp_of, compare, enumerate` derivers
+The `States` type must use the `sexp_of`, `compare` and `enumerate` derivers
 when defining a state machine.
 
-This statemachine will begin in the state `Wait_for_start` and wait
+This state machine will begin in the state `Wait_for_start` and wait
 for an external `start` signal. It will then transition to
 `Process_something`, `Process_something_else` and back to
-`Wait_for_start`. Just prior to transitioning back to `Wait_for_start`
+`Wait_for_start`. Just before transitioning back to `Wait_for_start`
 it will pulse a done signal.
 
 Although nothing useful is actually implemented here, we could imagine
-the processing states were waiting for network data, or accessing a
+the processing states were waiting for network data, accessing a
 RAM, or performing some multi-step computation.
 
-## Implementing the statemachine
+## Implementing the state machine
 
 ```ocaml
 let clock = Signal.input "clock" 1
@@ -109,14 +109,14 @@ What? It returns a unit type, so how do we retrieve the variable's
 values? Under the hood, the always DSL creates regular Hardcaml wires
 with an empty assignment. The call to `Always.compile` will assign
 these wires with the appropriate signals according to the conditions
-specified in the always block. For more information about wires see
+specified in the always block. For more information about wires, see
 the [Sequential Logic](sequential_logic.mdx) section. In particular,
-unassigned wires are fairly common if you miss out a variable
+unassigned wires are fairly common if you miss a variable
 assignment.
 
 ## Simulation
 
-[Simulating](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Cyclesim/index.html)
+[Simulating](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Cyclesim/index.html)
 a state machine is no different from simulating any other
 Hardcaml circuit. Let's walk through an example to see the
 Always DSL in action.
@@ -158,17 +158,17 @@ Always DSL in action.
 ((state Wait_for_start) (done_ false))
 ```
 
-# (Advanced) Metaprogramming with the Always DSL
+# Metaprogramming with the Always DSL
 
 As mentioned above, the
-[Always DSL](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Always/index.html)
+[Always DSL](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Always/index.html)
 is simply an `Always.t list`. The gives room for several creative behaviours.
 
 ## Function Abstractions
 
 Since we are really just generating `Always.t` lists from OCaml code,
-we can simply split out some parts of the DSL into a different
-function. For example:
+we can simply split out some parts of the DSL into different
+functions. For example:
 
 ```ocaml
 (* A useful mental model above is to treat `foo_branch` as a "C void
@@ -259,7 +259,7 @@ let main (stream_a : stream) (stream_b : stream) =
 ;;
 ```
 
-The beauty in this approach is that the repetitive tedious
+The beauty in this approach is that the repetitive
 hand-shaking code is replaced with a high order function call. On top
 of that if the handshaking protocol is modified, we can simply update
 the `handshake` function without having to rewrite it everywhere it is

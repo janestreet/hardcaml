@@ -292,6 +292,14 @@ module type S = sig
     (** Creates a interface container with wire variables, e.g. [Foo.Of_always.wire
         Signal.zero], which would yield wires defaulting to zero. *)
     val wire : (int -> Signal.t) -> Always.Variable.t t
+
+    (** Apply names to field of the interface. Add [prefix] and [suffix] if specified. *)
+    val apply_names
+      :  ?prefix:string (** Default is [""] *)
+      -> ?suffix:string (** Default is [""] *)
+      -> ?naming_op:(Signal.t -> string -> Signal.t) (** Default is [Signal.(--)] *)
+      -> Always.Variable.t t
+      -> unit
   end
 
   module Names_and_widths : Names_and_widths with type tag := tag

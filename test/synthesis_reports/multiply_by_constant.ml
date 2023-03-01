@@ -48,4 +48,5 @@ let command =
        let module Synth = Synth.Command.With_interface (Clz.With_regs.I_with_clock) (Clz.O)
        in
        Synth.run ~name:"multiply_by_constant" ~flags Clz.create)
+    ~behave_nicely_in_pipeline:false
 ;;

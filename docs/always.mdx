@@ -7,15 +7,15 @@
 ```
 -->
 
-The [`Always` DSL](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Always/index.html)
-is a DSL in Hardcaml that lets one describe circuits
+The [`Always` DSL](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Always/index.html)
+in Hardcaml lets one describe circuits
 in a similar style to a Verilog `always` block. Always blocks allow
 hardware multiplexer structures to be described in a somewhat
 imperative manner using variable assignments, if-else conditions,
 switches and a simple procedural macro construct.
 
-Complicated logic (such as in state machines) often becomes easier to
-reason about with this programming model.
+This programming model often makes complicated logic (such as
+state machines) easier to reason about.
 
 # The Always DSL
 
@@ -31,7 +31,7 @@ There are two key components when using the Always DSL:
 There are two kinds of variable declarations, namely wires and
 registers.
 
-A `reg` is one whose value is sequentially updated on an edge of the
+A `reg` is one whose value is sequentially updated on the edge of the
 clock signal provided within a `Reg_spec.t` type.
 
 ```ocaml
@@ -61,8 +61,8 @@ val foo : Always.Variable.t =
    internal = <abstr>}
 ```
 
-Variables may be assigned to within an Always block. To read the value
-of a variable, access the `value` field which provides a `Signal.t`
+Variables may be assigned within an Always block. To read the value
+of a variable, access the `value` field, which provides a `Signal.t`
 that can be used to form expressions.
 
 ```ocaml
@@ -70,13 +70,14 @@ that can be used to form expressions.
 - : Signal.t = (wire (width 1) (data_in empty))
 ```
 
-## 2. Writing the Always Program
+## 2. Writing an Always Program
 
 
 Having declared the variables, we can now write the actual
-'procedural' blocks. An Always program is made up of a set of
-assignments to variables which are optionally guarded by `if_`, `when` or
-`switch` conditional statements. For example:
+'procedural' blocks.
+
+An `Always` program comprises assignments to variables optionally
+guarded by `if_`, `when` or `switch` conditional statements. For example:
 
 ```ocaml
 let something =
@@ -114,13 +115,13 @@ block.
 - : Always.t list -> unit = <fun>
 ```
 
-There are two things going on here:
+Two things going on here:
 
-- Notice that `compile` returns a unit. Under the hood, variable
-  declaration create unassigned wires and compile connects them up
-  with the appropriate multiplexers.
-- Notice that the always DSL is really just a list of `Always.t`. This
-  means that we can play with various metaprogramming and abstraction
+- Notice that `compile` returns a unit. This is because variable
+  declarations create unassigned wires, and the compile function assigns them
+  to the appropriate multiplexers.
+- Notice that the always DSL is just a list of `Always.t`. This
+  means we can play with various metaprogramming and abstraction
   tricks within these program blocks.
 
 ## Example
@@ -155,26 +156,21 @@ let create =
 ;;
 ```
 
-## Caveats
+## Differences to Verilog Always blocks
 
 The semantics are similar to Verilog, with a few caveats:
 
 - Assignments are non-blocking. Hardcaml does not support blocking
   assignments.
-- In Verilog an always block can describe either registers or
-  combinational logic, but not both. With the Always DSL both can be
+- In Verilog, an always block can describe either registers or
+  combinational logic, but not both. With the Always DSL, both can be
   defined in a single block.
 - Hardcaml always blocks do not require a sensitivity list - the clocks
   driving the registers are bound to the register variable themselves.
 
-Notes to readers with a more software oriented background:
+## How values update
 
-- Similar to Verilog, this is still hardware, and not an imperative
-  program. The Always DSL still generates hardware, using conditions
-  from `when_` and `if_` as the selector input to multiplexers.
-- Similar to Verilog, asynchronous assignment means the assignment
-  followed by read might not do the same thing as an imperative
-  program.
+The reader might be surprised by the following example.
 
 ```ocaml
 let counter_thing enable =
@@ -192,3 +188,5 @@ let counter_thing enable =
   ]);
 ;;
 ```
+
+The rule is: the last assignment executed will set the next value.

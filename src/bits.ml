@@ -68,16 +68,80 @@ module Mutable = struct
 
   external add : t -> t -> t -> unit = "hardcaml_bits_add" [@@noalloc]
 
-  let ( +: ) dst a b =
+  (* Note; across the recursive call we turn [carry] into an int. This avoids an
+     allocation (same in the sub routine below) *)
+  let[@inline always] rec add_iter words dst a_in b_in i carry =
+    if i = words
+    then ()
+    else (
+      let a = unsafe_get_int64 a_in i in
+      let b = unsafe_get_int64 b_in i in
+      let lo =
+        Int64.((a land 0xFFFF_FFFFL) + (b land 0xFFFF_FFFFL) + Int64.of_int carry)
+      in
+      let carry = Int64.(lo lsr 32) in
+      let lo = Int64.(lo land 0xFFFF_FFFFL) in
+      let a = Int64.(a lsr 32) in
+      let b = Int64.(b lsr 32) in
+      let hi = Int64.(a + b + carry) in
+      let carry = Int64.(hi lsr 32) in
+      unsafe_set_int64 dst i Int64.(lo lor (hi lsl 32));
+      add_iter words dst a_in b_in (i + 1) (Int64.to_int_trunc carry))
+  ;;
+
+  let add_ocaml dst a b =
+    let words = words dst in
+    add_iter words dst a b 0 0;
+    mask dst
+  ;;
+
+  let add_stub dst a b =
     add dst a b;
     mask dst
   ;;
 
+  let ( +: ) =
+    match Sys.backend_type with
+    | Native | Bytecode -> add_stub
+    | Other _ -> add_ocaml
+  ;;
+
   external sub : t -> t -> t -> unit = "hardcaml_bits_sub" [@@noalloc]
 
-  let ( -: ) dst a b =
+  let sub_stub dst a b =
     sub dst a b;
     mask dst
+  ;;
+
+  let rec sub_iter words dst a_in b_in i borrow =
+    if i = words
+    then ()
+    else (
+      let a = unsafe_get_int64 a_in i in
+      let b = unsafe_get_int64 b_in i in
+      let lo =
+        Int64.((a land 0xFFFF_FFFFL) - (b land 0xFFFF_FFFFL) - Int64.of_int borrow)
+      in
+      let borrow = Int64.((lo lsr 32) land 1L) in
+      let lo = Int64.(lo land 0xFFFF_FFFFL) in
+      let a = Int64.(a lsr 32) in
+      let b = Int64.(b lsr 32) in
+      let hi = Int64.(a - b - borrow) in
+      let borrow = Int64.((hi lsr 32) land 1L) in
+      unsafe_set_int64 dst i Int64.(lo lor (hi lsl 32));
+      sub_iter words dst a_in b_in (i + 1) (Int64.to_int_trunc borrow))
+  ;;
+
+  let sub_ocaml dst a b =
+    let words = words dst in
+    sub_iter words dst a b 0 0;
+    mask dst
+  ;;
+
+  let ( -: ) =
+    match Sys.backend_type with
+    | Native | Bytecode -> sub_stub
+    | Other _ -> sub_ocaml
   ;;
 
   (* [eq], [neq], [lt] returns int rather than int64 to prevent allocation or any
@@ -113,7 +177,9 @@ module Mutable = struct
     if i < 0
     then 0 (* must be equal *)
     else (
-      match Caml.Int64.unsigned_compare (unsafe_get_int64 a i) (unsafe_get_int64 b i) with
+      match
+        Stdlib.Int64.unsigned_compare (unsafe_get_int64 a i) (unsafe_get_int64 b i)
+      with
       | -1 -> 1
       | 0 -> lt (i - 1) a b
       | _ -> 0)
@@ -268,17 +334,165 @@ module Mutable = struct
     mask dst
   ;;
 
-  external umul : t -> t -> t -> unit = "hardcaml_bits_umul" [@@noalloc]
-  external smul : t -> t -> t -> unit = "hardcaml_bits_smul" [@@noalloc]
+  (* Internal logic for performing signed and unsigned multiplication. Both OCaml and C
+     implementations are provided. *)
+  module Multiplication = struct
+    external umul : t -> t -> t -> unit = "hardcaml_bits_umul" [@@noalloc]
+    external smul : t -> t -> t -> unit = "hardcaml_bits_smul" [@@noalloc]
 
-  let ( *: ) dst a b =
-    umul dst a b;
-    mask dst
+    let[@inline always] unsafe_get32 d i =
+      Int64.( land ) (Int64.of_int32 (unsafe_get_int32 d i)) 0xFFFF_FFFFL
+    ;;
+
+    let[@inline always] unsafe_set32 d i v = unsafe_set_int32 d i (Int32.of_int64_trunc v)
+
+    (* C-implementation of the unsigned multiplier. *)
+    let umul_stub dst a b =
+      umul dst a b;
+      mask dst
+    ;;
+
+    (** Array multiplication. *)
+    let rec umul_inner_loop w u v m i j k =
+      if i = m
+      then k
+      else (
+        let u' = unsafe_get32 u i in
+        let v' = unsafe_get32 v j in
+        let w' = unsafe_get32 w (i + j) in
+        let t = Int64.((u' * v') + w' + k) in
+        unsafe_set32 w (i + j) t;
+        umul_inner_loop w u v m (i + 1) j Int64.(t lsr 32))
+    ;;
+
+    let rec umul_outer_loop w u v m n j =
+      if j = n
+      then ()
+      else (
+        let k = umul_inner_loop w u v m 0 j 0L in
+        unsafe_set32 w (j + m) k;
+        umul_outer_loop w u v m n (j + 1))
+    ;;
+
+    let umul_core w u v m n = umul_outer_loop w u v m n 0
+
+    (* The multiplier requires an output buffer which is not always the actual size of the
+       destination buffer. Rather than allocating a new buffer every time, we keep one
+       around and reallocate whenever a bigger multiplication happens. *)
+    let mul_dst () =
+      let dst = ref (create 64) in
+      let setup_dst w =
+        (* reallocating dst when the size changes is about 30ns (6%) quicker than
+           allocating - and probably avoids some GC churn. *)
+        if width !dst < w
+        then dst := create w
+        else
+          for i = 0 to words_of_width w - 1 do
+            unsafe_set_int64 !dst i 0L
+          done
+      in
+      dst, setup_dst
+    ;;
+
+    (* Sign extend the (top) word *)
+    let sign_extend width word =
+      let width = width land width_mask in
+      let top_bit_shift = width - 1 in
+      if width = 0 || Int64.equal Int64.(word land (1L lsl top_bit_shift)) 0L
+      then word
+      else Int64.((-1L lsl width) lor word)
+    ;;
+
+    (* The arguments to the signed multiplier need to be sign extended. We should not
+       mutate the inputs (I suppose we could if we put the zeros back at end). Similar to
+       the output buffer we keep and internal buffer around which resizes according to the
+       largest seen arguments. *)
+    let smul_arg () =
+      let arg = ref (create 64) in
+      let setup_arg arg_in =
+        let width_arg = width arg_in in
+        if width !arg < width_arg then arg := create width_arg;
+        let words = words_of_width width_arg in
+        for i = 0 to words - 2 do
+          unsafe_set_int64 !arg i (unsafe_get_int64 arg_in i)
+        done;
+        (* sign extend last word *)
+        unsafe_set_int64
+          !arg
+          (words - 1)
+          (sign_extend width_arg (unsafe_get_int64 arg_in (words - 1)))
+      in
+      arg, setup_arg
+    ;;
+
+    (* Setup the output buffer (clear it), perform the array multiplication, then copy to
+       the output dst. *)
+    let umul_ocaml =
+      let dst', setup_dst = mul_dst () in
+      fun dst a b ->
+        let dst_bits =
+          (words_of_width (width a) + words_of_width (width b)) * bits_per_word
+        in
+        setup_dst dst_bits;
+        umul_core !dst' a b (words a lsl 1) (words b lsl 1);
+        blit_data dst !dst';
+        mask dst
+    ;;
+
+    (* Signed multiplication in C *)
+    let smul_stub dst a b =
+      smul dst a b;
+      mask dst
+    ;;
+
+    (* A signed multiplication is done by correcting an unsigned result *)
+    let rec smul_signed_correct w v n m j b =
+      if j = n
+      then ()
+      else (
+        let jm = j + m in
+        let t = Int64.(unsafe_get32 w jm - unsafe_get32 v j - Int64.of_int_exn b) in
+        unsafe_set32 w jm t;
+        smul_signed_correct w v n m (j + 1) Int64.(t lsr 63 |> to_int_trunc))
+    ;;
+
+    let smul_core w u v m n =
+      umul_core w u v m n;
+      if Int64.equal (Int64.( land ) (unsafe_get32 u (m - 1)) 0x8000_0000L) 0x8000_0000L
+      then smul_signed_correct w v n m 0 0;
+      if Int64.equal (Int64.( land ) (unsafe_get32 v (n - 1)) 0x8000_0000L) 0x8000_0000L
+      then smul_signed_correct w u m n 0 0
+    ;;
+
+    (* Setup the output buffer (clear it), sign extend arguments, perform the array
+       multiplication, then copy to the output dst. *)
+    let smul_ocaml =
+      let dst', setup_dst = mul_dst () in
+      let a', setup_a = smul_arg () in
+      let b', setup_b = smul_arg () in
+      fun dst a b ->
+        let dst_bits =
+          (words_of_width (width a) + words_of_width (width b)) * bits_per_word
+        in
+        setup_dst dst_bits;
+        setup_a a;
+        setup_b b;
+        smul_core !dst' !a' !b' (words a lsl 1) (words b lsl 1);
+        blit_data dst !dst';
+        mask dst
+    ;;
+  end
+
+  let ( *: ) =
+    match Sys.backend_type with
+    | Native | Bytecode -> Multiplication.umul_stub
+    | Other _ -> Multiplication.umul_ocaml
   ;;
 
-  let ( *+ ) dst a b =
-    smul dst a b;
-    mask dst
+  let ( *+ ) =
+    match Sys.backend_type with
+    | Native | Bytecode -> Multiplication.smul_stub
+    | Other _ -> Multiplication.smul_ocaml
   ;;
 
   let num_words = words
@@ -398,8 +612,9 @@ include Bits0.Comparable
 let to_int x = Constant.to_int x
 let to_int32 x = Constant.to_int32 x
 let zero w = Bits0.create w
-let pp fmt t = Caml.Format.fprintf fmt "%s" (to_bstr t)
+let pp fmt t = Stdlib.Format.fprintf fmt "%s" (to_bstr t)
 
+(* Install pretty printer. *)
 module _ = Pretty_printer.Register (struct
     type nonrec t = Bits0.t
 

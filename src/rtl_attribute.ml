@@ -55,6 +55,17 @@ module Vivado = struct
   let mark_debug b = create "mark_debug" ~value:(true_or_false_string b)
   let keep b = create "keep" ~value:(true_or_false_string b)
 
+  let io_buffer_type typ =
+    create
+      "io_buffer_type"
+      ~value:
+        (Value.String
+           (match typ with
+            | `IBUF -> "IBUF"
+            | `OBUF -> "OBUF"
+            | `None -> "none"))
+  ;;
+
   module Ram_style = struct
     let block = create "RAM_STYLE" ~value:(String "block")
     let distributed = create "RAM_STYLE" ~value:(String "distributed")

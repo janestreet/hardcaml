@@ -1,7 +1,7 @@
 open! Import
 open! Signal
 open! Always
-open Hardcaml_waveterm
+open Hardcaml_waveterm_kernel
 
 let%expect_test "guarded assignment width mistmatch" =
   require_does_raise [%here] (fun () ->
@@ -213,7 +213,7 @@ let%expect_test "test statemachine encodings" =
     List.iter coins ~f:(fun (nickel, dime) -> cycle ~nickel ~dime);
     Cyclesim.cycle sim;
     Cyclesim.cycle sim;
-    Waveform.expect ~display_height:(if verbose then 39 else 12) ~wave_width:1 waves
+    Waveform.print ~display_height:(if verbose then 39 else 12) ~wave_width:1 waves
   in
   let nickel, dime = (true, false), (false, true) in
   run_sim ~verbose:true [ nickel; nickel; nickel; nickel ];
@@ -257,8 +257,7 @@ let%expect_test "test statemachine encodings" =
     │               ││────┬───┬───┬───┬───┬───┬───                       │
     │onehot_states  ││ 00 │01 │02 │04 │08 │10 │01                        │
     │               ││────┴───┴───┴───┴───┴───┴───                       │
-    └───────────────┘└───────────────────────────────────────────────────┘
-    625abb6069bb2d99af27a37b21ae7fcd |}];
+    └───────────────┘└───────────────────────────────────────────────────┘ |}];
   run_sim ~verbose:false [ nickel; dime; nickel ];
   [%expect
     {|
@@ -273,8 +272,7 @@ let%expect_test "test statemachine encodings" =
     │               ││────┘   └───┘   └───────                           │
     │ok             ││────────────────────────                           │
     │               ││                                                   │
-    └───────────────┘└───────────────────────────────────────────────────┘
-    4af33aedeead1a6a11c52befc5da2065 |}];
+    └───────────────┘└───────────────────────────────────────────────────┘ |}];
   run_sim ~verbose:false [ dime; dime ];
   [%expect
     {|
@@ -289,8 +287,7 @@ let%expect_test "test statemachine encodings" =
     │               ││────────────────────                               │
     │ok             ││────────────────────                               │
     │               ││                                                   │
-    └───────────────┘└───────────────────────────────────────────────────┘
-    80c15f0ea2ca16d90c8071c81af1c363 |}];
+    └───────────────┘└───────────────────────────────────────────────────┘ |}];
   run_sim ~verbose:false [ nickel; nickel; dime ];
   [%expect
     {|
@@ -305,6 +302,5 @@ let%expect_test "test statemachine encodings" =
     │               ││────┘       └───────────                           │
     │ok             ││────────────────────────                           │
     │               ││                                                   │
-    └───────────────┘└───────────────────────────────────────────────────┘
-    4af33aedeead1a6a11c52befc5da2065 |}]
+    └───────────────┘└───────────────────────────────────────────────────┘ |}]
 ;;

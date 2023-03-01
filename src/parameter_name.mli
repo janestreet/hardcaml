@@ -1,6 +1,5 @@
 (** RTL name of parameters on instantiated modules. *)
 
-
 open Base
 
 type t [@@deriving compare, sexp]

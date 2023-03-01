@@ -135,7 +135,6 @@ module Make (Prims : Primitives) = struct
   let ( -- ) a b = Prims.( -- ) a b
   let width = Prims.width
 
-
   let[@cold] raise_arg_greater_than_zero fn x =
     raise_s
       [%message.omit_nil
@@ -236,13 +235,6 @@ module Make (Prims : Primitives) = struct
   ;;
 
   let of_char c = of_int ~width:8 (Char.to_int c)
-  let constb = of_bit_string
-  let consti = of_int
-  let consti32 = of_int32
-  let consti64 = of_int64
-  let consthu = of_hex ~signedness:Unsigned
-  let consths = of_hex ~signedness:Signed
-  let constibl = of_bit_list
 
   let[@cold] raise_concat_empty s =
     raise_s
@@ -1113,10 +1105,6 @@ module Make (Prims : Primitives) = struct
     with
     | _ -> raise_of_string_convert_error b
   ;;
-
-  let const = of_string
-  let constv = of_verilog_format
-  let constd = of_decimal_string
 
   let rec random ~width =
     if width <= 16

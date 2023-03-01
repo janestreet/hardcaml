@@ -360,5 +360,4 @@ module type Signal = sig
 
   (** Pretty printer. *)
   val pp : Formatter.t -> t -> unit
-
 end

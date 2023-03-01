@@ -8,7 +8,7 @@
 -->
 
 Abstractly, Hardcaml
-[interfaces](https://ocaml.janestreet.com/ocaml-core/latest/doc/hardcaml/Hardcaml/Interface/index.html)
+[interfaces](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Interface/index.html)
 are made up of a polymorphic type and
 a set of functions conforming to the module type `Interface.S`. The
 type always represents a set of hardware signals, and the related
@@ -142,7 +142,7 @@ Mangling is used with nested interfaces.  Consider the nested example given prev
  world = {Simple_interface.foo = "foo"; bar = "bar"}}
 ```
 
-The port names of the nested fields for `hello` and `world` clash, which
+The port names of the nested fields for `hello` and `world` clash and
 would eventually lead to a circuit error.
 
 If we specify the rtlmangle option, the port names will be
@@ -170,18 +170,17 @@ end
 
 ## Comments
 
-There are severeal benefits for using interfaces over working with raw
+There are several benefits to using interfaces over working with raw
 simulations:
 
 - A nice [Simulation](simulation.mdx) that allows access to record
   fields directly instead of referring to port names via strings.
-- Allows the creation of [Module Hierarchices](module_hierarchy.mdx)
+- Allows the creation of [module Hierarchies](module_hierarchy.mdx)
   within your RTL design.
 
-There are currently some limiations on Hardcaml interfaces created
-with this manner:
+There are currently some limitations on Hardcaml interfaces created
+in this manner:
 
-- They can only be unidirectional wires
-- When declaring an interface, the concrete bit widths must be known
-  (although interfaces can be functorized, similar to parameters in
-  Verilog, to allow for compile-time calculation of these values).
+- They are unidirectional - groups of inputs or outputs need to be specified separately.
+- When declaring an interface, the concrete bit widths must be known. Functorization is required
+  if they need to be configurable.

@@ -171,7 +171,7 @@ let of_binary_string b =
         Bytes.set x index (to_int8 b 0 (count - bits) bits);
         convert b x (index + 1) (count - bits))
     in
-    let data = Caml.Bytes.make (words_of_width width lsl shift_bytes_to_words) '\000' in
+    let data = Stdlib.Bytes.make (words_of_width width lsl shift_bytes_to_words) '\000' in
     let data = convert b data 0 width in
     init_byte ~width ~f:(fun i -> Bytes.get data i))
 ;;
@@ -298,7 +298,7 @@ let to_bit_list = Bits.of_constant
 include Comparable
 
 (* Pretty printer *)
-let pp fmt t = Caml.Format.fprintf fmt "%s" (to_binary_string_hum t)
+let pp fmt t = Stdlib.Format.fprintf fmt "%s" (to_binary_string_hum t)
 
 module _ = Pretty_printer.Register (struct
     type nonrec t = t

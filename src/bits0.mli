@@ -49,7 +49,7 @@ val init_int64 : width:int -> f:(int -> int64) -> t
 (** Get the n-th byte of the constant. *)
 val unsafe_get_byte : t -> int -> char
 
-(** Get the n-th 64-bit word of the constant. [unsafe_get_word t pos] accesses
+(** Get the n-th 64-bit word of the constant. [unsafe_get_int64 t pos] accesses
     the data at the [pos * 8]-th byte of t.
 *)
 val unsafe_get_int64 : t -> int -> int64
@@ -57,5 +57,14 @@ val unsafe_get_int64 : t -> int -> int64
 (** Similar to [unsafe_get_int64], but for writing instead of reading. *)
 val unsafe_set_int64 : t -> int -> int64 -> unit
 
+(** Get the n-th 32-bit word of the constant. [unsafe_get_int32 t pos] accesses
+    the data at the [pos * 4]-th byte of t.
+*)
+val unsafe_get_int32 : t -> int -> int32
+
+val unsafe_set_int32 : t -> int -> int32 -> unit
+
 (** Maskout the unused bits to zeros *)
 val mask : t -> unit
+
+val blit_data : t -> t -> unit

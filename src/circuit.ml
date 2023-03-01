@@ -94,7 +94,10 @@ let check_ports_in_one_direction circuit_name direction ports =
   let port_names =
     List.map ports ~f:(fun s ->
       match Signal.names s with
-      | [ name ] -> name
+      | [ name ] ->
+        if String.is_empty name
+        then raise_s [%message "Port name is an empty string"]
+        else name
       | _ ->
         raise_s
           [%message

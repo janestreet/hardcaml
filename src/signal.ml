@@ -1333,7 +1333,7 @@ let ram_wbr ?name ?attributes ~write_port ~read_port size =
 ;;
 
 (* Pretty printer *)
-let pp fmt t = Caml.Format.fprintf fmt "%s" ([%sexp (t : t)] |> Sexp.to_string_hum)
+let pp fmt t = Stdlib.Format.fprintf fmt "%s" ([%sexp (t : t)] |> Sexp.to_string_hum)
 
 module _ = Pretty_printer.Register (struct
     type nonrec t = t

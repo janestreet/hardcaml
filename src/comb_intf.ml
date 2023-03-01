@@ -4,7 +4,7 @@ open Base
     [branching_factor] argument that controls the number of branches at each level of the
     circuit.  With [N] inputs and [branching_factor = 1] the depth is [N].  With
     [branching_factor = 2] the the depth is [ceil_log2 N].  Similarly for
-    [branching_factor = X], the depth is by [ceil_log_{X} N]. *)
+    [branching_factor = X], the depth is given by [ceil_log_{X} N]. *)
 type 'a optional_branching_factor = ?branching_factor:int (** default is 2 *) -> 'a
 
 type 'a with_valid = ('a, 'a) with_valid2
@@ -138,10 +138,7 @@ module type S = sig
   val of_constant : Constant.t -> t
   val to_constant : t -> Constant.t
 
-
   (** convert binary string to constant *)
-  val constb : string -> t
-
   val of_bit_string : string -> t
 
   (** convert integer to constant *)
@@ -188,17 +185,6 @@ module type S = sig
   (** Convert bits to a Zarith.t *)
   val to_z : t -> signedness:Constant.Signedness.t -> Zarith.Z.t
 
-  val constv : string -> t [@@deprecated "[since 2019-11] constv]"]
-  val consti : width:int -> int -> t [@@deprecated "[since 2019-11] consti]"]
-  val consti32 : width:int -> int32 -> t [@@deprecated "[since 2019-11] consti32]"]
-  val consti64 : width:int -> int64 -> t [@@deprecated "[since 2019-11] consti64]"]
-  val constibl : int list -> t [@@deprecated "[since 2019-11] constibl]"]
-  val consthu : width:int -> string -> t [@@deprecated "[since 2019-11] consthu]"]
-  val consths : width:int -> string -> t [@@deprecated "[since 2019-11] consths]"]
-  val const : string -> t [@@deprecated "[since 2019-11] const"]
-  val constd : width:int -> string -> t [@@deprecated "[since 2019-11] constd]"]
-
-
   (** [concat ts] concatenates a list of signals - the msb of the head of the list will
       become the msb of the result.
 
@@ -210,7 +196,6 @@ module type S = sig
   (** Similar to [concat_msb] except the lsb of the head of the list will become the lsb
       of the result. *)
   val concat_lsb : t list -> t
-
 
   (** same as [concat_msb] except empty signals are first filtered out *)
   val concat_msb_e : t list -> t
