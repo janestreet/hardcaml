@@ -35,8 +35,8 @@ module Config : sig
     (** Map over circuit outputs just before constructing the circuit. *)
     }
 
-  (** Perform combination loop checking, normalize uids, [Relaxed] port checks, and add
-      phantom inputs. *)
+  (** Perform combination loop checking, normalize uids, [Port_sets_and_widths] port checks,
+      and add phantom inputs. *)
   val default : t
 end
 
