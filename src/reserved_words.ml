@@ -3,28 +3,37 @@ open Base
 let keywords s = String.split_lines s |> List.map ~f:String.strip
 
 let verilog =
+  (* Taken from latest Verilog spec IEEE Std 1364-2005 (page 364, reserved keywords) *)
   keywords
-    {| and
-       always
+    {| always
+       and
        assign
-       attribute
+       automatic
        begin
        buf
        bufif0
        bufif1
        case
+       casex
+       casez
+       cell
        cmos
+       config
        deassign
        default
        defparam
+       design
        disable
+       edge
        else
-       endattribute
        end
        endcase
+       endconfig
        endfunction
-       endprimitive
+       endgenerate
        endmodule
+       endprimitive
+       endspecify
        endtable
        endtask
        event
@@ -33,35 +42,50 @@ let verilog =
        forever
        fork
        function
-       highhz0
-       highhz1
+       generate
+       genvar
+       highz0
+       highz1
        if
+       ifnone
+       incdir
+       include
        initial
        inout
        input
+       instance
        integer
        join
        large
+       liblist
+       library
+       localparam
+       macromodule
        medium
        module
        nand
        negedge
+       nmos
        nor
+       noshowcancelled
        not
        notif0
        notif1
-       nmos
        or
        output
        parameter
        pmos
        posedge
        primitive
-       pulldown
-       pullup
        pull0
        pull1
+       pulldown
+       pullup
+       pulsestyle_onevent
+       pulsestyle_ondetect
        rcmos
+       real
+       realtime
        reg
        release
        repeat
@@ -71,6 +95,8 @@ let verilog =
        rtranif0
        rtranif1
        scalared
+       showcancelled
+       signed
        small
        specify
        specparam
@@ -80,16 +106,19 @@ let verilog =
        supply1
        table
        task
+       time
        tran
        tranif0
        tranif1
-       time
        tri
+       tri0
+       tri1
        triand
        trior
        trireg
-       tri0
-       tri1
+       unsigned
+       use
+       uwire
        vectored
        wait
        wand
@@ -97,7 +126,9 @@ let verilog =
        weak1
        while
        wire
-       wor |}
+       wor
+       xnor
+       xor |}
 ;;
 
 let vhdl =

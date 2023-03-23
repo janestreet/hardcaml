@@ -89,7 +89,7 @@ let create
   empty <== reg ~enable ~clear_to:vdd (used_next ==:. 0);
   full <== reg ~enable (used_next ==:. actual_capacity);
   (* nearly full/empty flags *)
-  let nearly_empty = reg ~enable ~clear_to:vdd (used_next <:. nearly_empty) in
+  let nearly_empty = reg ~enable ~clear_to:vdd (used_next <=:. nearly_empty) in
   let nearly_full = reg ~enable (used_next >=:. nearly_full) in
   (* read/write addresses within fifo *)
   let addr_count enable name =
@@ -324,7 +324,12 @@ module With_interface (Config : Config) = struct
     include Interface.Make (struct
         include Fifo_intf.T
 
-        let t = { t with q = "q", Config.data_width; used = "used", used_bits }
+        let port_names_and_widths =
+          { port_names_and_widths with
+            q = "q", Config.data_width
+          ; used = "used", used_bits
+          }
+        ;;
       end)
   end
 

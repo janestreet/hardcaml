@@ -1,1 +1,0 @@
-include Test_bits_intf.Test_bits

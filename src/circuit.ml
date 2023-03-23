@@ -363,8 +363,8 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
              name(s)"
               (circuit : Summary.t)]
     in
-    inputs circuit |> List.iter ~f:(port I.Names_and_widths.t);
-    outputs circuit |> List.iter ~f:(port O.Names_and_widths.t)
+    inputs circuit |> List.iter ~f:(port I.Names_and_widths.port_names_and_widths);
+    outputs circuit |> List.iter ~f:(port O.Names_and_widths.port_names_and_widths)
   ;;
 
   let check_io_port_sets_and_widths_match circuit =
@@ -387,7 +387,10 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
 
   let create_exn ?(config = Config.default) ~name logic =
     let circuit_inputs =
-      let ports = List.map I.Names_and_widths.t ~f:(fun (n, b) -> n, Signal.input n b) in
+      let ports =
+        List.map I.Names_and_widths.port_names_and_widths ~f:(fun (n, b) ->
+          n, Signal.input n b)
+      in
       check_alist_of_one_direction name "Input" ports;
       I.Unsafe_assoc_by_port_name.of_alist ports
     in
@@ -408,7 +411,7 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
     in
     let circuit =
       if config.add_phantom_inputs
-      then set_phantom_inputs circuit I.Names_and_widths.t
+      then set_phantom_inputs circuit I.Names_and_widths.port_names_and_widths
       else circuit
     in
     (match config.port_checks with

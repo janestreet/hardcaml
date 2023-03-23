@@ -13,7 +13,7 @@ end
 module type Pre = sig
   include Pre_partial
 
-  val t : (string * int) t
+  val port_names_and_widths : (string * int) t
 end
 
 module type Ast = sig
@@ -83,8 +83,6 @@ module type Comb_monomorphic = sig
   (** Each field is set to the constant integer value provided. *)
   val of_int : int -> t
 
-  val const : int -> t [@@deprecated "[since 2019-11] interface const"]
-
   (** Pack interface into a vector. *)
   val pack : ?rev:bool -> t -> comb
 
@@ -123,12 +121,10 @@ module type Comb = sig
   (** [consts c] sets each field to the integer value in [c] using the declared field bit
       width. *)
   val of_ints : int interface -> t
-
-  val consts : int interface -> t [@@deprecated "[since 2019-11] interface consts"]
 end
 
 module type Names_and_widths = sig
-  val t : (string * int) list
+  val port_names_and_widths : (string * int) list
 
   type tag
 
@@ -192,6 +188,9 @@ module type S = sig
 
   (** Bit widths specified in the interface definition. *)
   val port_widths : int t
+
+  (** [const x] sets each port to [x] *)
+  val const : 'a -> 'a t
 
   type tag
 
@@ -374,7 +373,7 @@ module type Interface = sig
   (** Type of functions representing the implementation of a circuit from an input to
       output interface. *)
   module Create_fn (I : S) (O : S) : sig
-    type 'a t = 'a I.t -> 'a O.t [@@deriving sexp_of]
+    type t = Signal.t I.t -> Signal.t O.t [@@deriving sexp_of]
   end
 
   module Make (X : Pre) : S with type 'a t := 'a X.t
@@ -388,7 +387,7 @@ module type Interface = sig
   (** Recreate a Hardcaml Interface with the same type, but different port names / widths. *)
   module Update
       (Pre : Pre) (M : sig
-                     val t : (string * int) Pre.t
+                     val port_names_and_widths : (string * int) Pre.t
                    end) : S with type 'a t = 'a Pre.t
 
   (** Creates a new hardcaml interface by converting between functions. This can

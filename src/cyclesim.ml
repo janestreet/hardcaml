@@ -108,8 +108,8 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
       | Some x -> x
       | None -> ref (Bits.zero width)
     in
-    let to_input ports = I.map I.t ~f:(find_port ports) in
-    let to_output ports = O.map O.t ~f:(find_port ports) in
+    let to_input ports = I.map I.port_names_and_widths ~f:(find_port ports) in
+    let to_output ports = O.map O.port_names_and_widths ~f:(find_port ports) in
     Private.coerce sim ~to_input ~to_output
   ;;
 

@@ -58,7 +58,7 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
     (* ensure the passed inputs are of the correct widths. *)
     I.Of_signal.validate inputs;
     let inputs =
-      List.map2_exn I.Names_and_widths.t (I.to_list inputs) ~f:(fun (n, _) s -> n, s)
+      List.map2_exn I.Names_and_widths.port_names (I.to_list inputs) ~f:(fun n s -> n, s)
     in
     let t =
       create
@@ -70,7 +70,7 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
         ?attributes
         ~name
         ~inputs
-        ~outputs:O.Names_and_widths.t
+        ~outputs:O.Names_and_widths.port_names_and_widths
     in
     O.Unsafe_assoc_by_port_name.of_alist (Map.to_alist t)
   ;;

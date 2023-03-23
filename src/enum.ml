@@ -36,7 +36,7 @@ module Make_enums (Cases : Enum_intf.Cases) = struct
     let map2 a b ~f = f a b
     let iter a ~f = f a
     let iter2 a b ~f = f a b
-    let t = port_name, width
+    let port_names_and_widths = port_name, width
 
     let ast : Ast.t =
       [ { Ast.Field.name = port_name

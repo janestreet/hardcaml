@@ -13,17 +13,18 @@ module Make (Cases : Cases) = struct
       let port_width = number_of
     end)
 
-  let to_int = Cases.Variants.to_rank
+  let rank_of_case =
+    let alist = List.mapi Cases.all ~f:(fun i c -> c, i) in
+    fun c -> List.Assoc.find_exn alist ~equal:[%compare.equal: Cases.t] c
+  ;;
 
-  let of_int =
+  let case_of_rank =
     let arr = Array.of_list Cases.all in
     Array.get arr
   ;;
 
   module Flags = struct
-    let flags =
-      List.map Cases.all ~f:(fun v -> Flags.create ~bit:(Cases.Variants.to_rank v))
-    ;;
+    let flags = List.mapi Cases.all ~f:(fun i _ -> Flags.create ~bit:i)
 
     include Flags.Make (struct
         let allow_intersecting = false
@@ -38,7 +39,7 @@ module Make (Cases : Cases) = struct
 
     let of_cases =
       let arr = Array.of_list flags in
-      fun t -> Array.get arr (to_int t)
+      fun t -> Array.get arr (rank_of_case t)
     ;;
 
     let to_string t = Sexp.to_string (sexp_of_t t)
@@ -67,7 +68,7 @@ module Make (Cases : Cases) = struct
   let to_cases_list (t : Bits.t t) =
     let bits = Bits.bits_lsb t in
     List.filter_mapi bits ~f:(fun index bit ->
-      if Bits.is_vdd bit then Some (of_int index) else None)
+      if Bits.is_vdd bit then Some (case_of_rank index) else None)
   ;;
 
   let to_flags (t : Bits.t t) =
@@ -87,7 +88,7 @@ module Make (Cases : Cases) = struct
   ;;
 
   let is_set (type a) (module Comb : Comb.S with type t = a) (s : a t) v =
-    Comb.(s.:(Cases.Variants.to_rank v))
+    Comb.(s.:(rank_of_case v))
   ;;
 
   let mux2 (type a) (module Comb : Comb.S with type t = a) (sel : a) (s : a t) (t : a t) =

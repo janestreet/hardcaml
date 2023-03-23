@@ -153,14 +153,15 @@ let expand_array_init_str ~loc vname mapid mid label_declaration =
  * Expand t label
 *)
 
-let expand_t_label_array var loc label_declaration name prefix suffix mangle = function
+let expand_port_names_and_widths_label_array var loc label_declaration name prefix suffix mangle = function
   (* 'a *)
   | Ptyp_var(v) when String.equal v var ->
     let rtlident = mk_rtlident ~loc name prefix suffix in
     expand_array_init ~loc rtlident label_declaration
   (* 'a Module.t *)
-  | Ptyp_constr (({ txt = Ldot(mname, _); _ } as mid), [ { ptyp_desc = Ptyp_var(v); _ } ])
+  | Ptyp_constr (({ txt = Ldot(mname, _); loc } ), [ { ptyp_desc = Ptyp_var(v); _ } ])
     when String.equal v var ->
+    let mid = { txt = Ldot(mname, "port_names_and_widths"); loc} in
     let mangled =
       [%expr
         Ppx_deriving_hardcaml_runtime.concat
@@ -172,16 +173,16 @@ let expand_t_label_array var loc label_declaration name prefix suffix mangle = f
   (* Default *)
   | _ ->
     raise_errorf ~loc
-      "[%s] expand_t_label_array: only supports abstract record labels"
+      "[%s] expand_port_names_and_widths_label_array: only supports abstract record labels"
       deriver
 
-let expand_t_label_list var loc label_declaration name prefix suffix mangle desc =
+let expand_port_names_and_widths_label_list var loc label_declaration name prefix suffix mangle desc =
   let ainit =
-    expand_t_label_array var loc label_declaration name prefix suffix mangle desc
+    expand_port_names_and_widths_label_array var loc label_declaration name prefix suffix mangle desc
   in
   [%expr Ppx_deriving_hardcaml_runtime.Array.to_list [%e ainit]]
 
-let expand_t_label opts var
+let expand_port_names_and_widths_label opts var
       ({ pld_name = { txt; loc; _ }; pld_type; _ } as label_declaration) =
   let rtlname   = get_rtlname   ~loc txt  label_declaration
   and rtlprefix = get_rtlprefix ~loc opts label_declaration
@@ -195,23 +196,24 @@ let expand_t_label opts var
       and rtlident = mk_rtlident ~loc rtlname rtlprefix rtlsuffix in
       pexp_tuple ~loc [ rtlident; nbits ]
     (* 'a Module.t *)
-    | Ptyp_constr (({ txt = Ldot(mname, _); _ } as mid),
+    | Ptyp_constr (({ txt = Ldot(mname, _); loc } ),
                    [ { ptyp_desc = Ptyp_var(v); _ } ]) when String.equal v var ->
+      let mid = { txt = Ldot(mname, "port_names_and_widths"); loc} in
       let mangled = mangle_name ~loc rtlname rtlmangle in
       let rtlident = mk_rtlident ~loc mangled rtlprefix rtlsuffix in
       let mapid = pexp_ident ~loc (Located.mk ~loc (Ldot (mname, "map"))) in
       [%expr [%e mapid] [%e pexp_ident ~loc mid] ~f:(fun (_n, _b) -> [%e rtlident], _b)]
     (* 'a list, 'a Module.t list *)
     | Ptyp_constr ({ txt = Lident("list"); _ }, [ { ptyp_desc; _ } ]) ->
-      expand_t_label_list var loc label_declaration
+      expand_port_names_and_widths_label_list var loc label_declaration
         rtlname rtlprefix rtlsuffix rtlmangle ptyp_desc
     (* 'a array, 'a Module.t array *)
     | Ptyp_constr ({ txt = Lident("array"); _ }, [ { ptyp_desc; _ } ]) ->
-      expand_t_label_array var loc label_declaration
+      expand_port_names_and_widths_label_array var loc label_declaration
         rtlname rtlprefix rtlsuffix rtlmangle ptyp_desc
     (* Default *)
     | _ ->
-      raise_errorf ~loc "[%s] expand_t_label: only supports abstract record labels" deriver
+      raise_errorf ~loc "[%s] expand_port_names_and_widths_label: only supports abstract record labels" deriver
   in
   (Located.mk ~loc (Lident txt), expr)
 
@@ -577,8 +579,8 @@ let record_fields (iter_or_map : Iter_or_map.t) ~loc fields =
 let str_of_type ~options ({ ptype_loc = loc; _ } as type_decl) =
   match type_decl.ptype_kind, type_decl.ptype_params with
   | Ptype_record labels, [ ({ ptyp_desc = Ptyp_var(var); _ }, _) ] ->
-    let str_t_labels       = List.map labels ~f:(expand_t_label options var) in
-    let str_t              = pexp_record ~loc str_t_labels None in
+    let str_port_names_and_widths_labels = List.map labels ~f:(expand_port_names_and_widths_label options var) in
+    let str_port_names_and_widths = pexp_record ~loc str_port_names_and_widths_labels None in
     let str_map iter_or_map =
       let fields = List.map labels ~f:(expand_map_label iter_or_map var) in
       [%expr fun x ~f -> [%e record_fields iter_or_map ~loc fields]] in
@@ -592,19 +594,19 @@ let str_of_type ~options ({ ptype_loc = loc; _ } as type_decl) =
     let str_ast_labels () = List.map labels ~f:(expand_ast_label options var) in
     let str_ast () = build_expr_list (str_ast_labels ()) in
     [ pstr_value ~loc Nonrecursive
-        ([ value_binding ~loc ~pat:(pvar ~loc "t")       ~expr:str_t
-         ; value_binding ~loc ~pat:(pvar ~loc "iter")    ~expr:(str_map Iter)
-         ; value_binding ~loc ~pat:(pvar ~loc "iter2")   ~expr:(str_map2 Iter)
-         ; value_binding ~loc ~pat:(pvar ~loc "map")     ~expr:(str_map Map)
-         ; value_binding ~loc ~pat:(pvar ~loc "map2")    ~expr:(str_map2 Map)
-         ; value_binding ~loc ~pat:(pvar ~loc "to_list") ~expr:str_to_list ]
+        ([ value_binding ~loc ~pat:(pvar ~loc "port_names_and_widths") ~expr:str_port_names_and_widths
+         ; value_binding ~loc ~pat:(pvar ~loc "iter")                  ~expr:(str_map Iter)
+         ; value_binding ~loc ~pat:(pvar ~loc "iter2")                 ~expr:(str_map2 Iter)
+         ; value_binding ~loc ~pat:(pvar ~loc "map")                   ~expr:(str_map Map)
+         ; value_binding ~loc ~pat:(pvar ~loc "map2")                  ~expr:(str_map2 Map)
+         ; value_binding ~loc ~pat:(pvar ~loc "to_list")               ~expr:str_to_list ]
          @ if options.ast
          then [ value_binding ~loc ~pat:(pvar ~loc "ast") ~expr:(str_ast ())]
          else [ ])
     ; [%stri include Ppx_deriving_hardcaml_runtime.Interface.Make (struct
         type nonrec 'a t = 'a t
         let sexp_of_t = sexp_of_t
-        let t = t
+        let port_names_and_widths = port_names_and_widths
         let iter = iter
         let iter2 = iter2
         let map = map

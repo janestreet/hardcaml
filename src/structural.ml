@@ -266,14 +266,16 @@ let ( <== ) a b =
      | _ -> raise (Wire_already_assigned a))
   | Module_tristate (_, _, _, con, _) | Internal_triwire (_, _, con) ->
     (match b with
-     | Module_tristate _ | Internal_triwire _ | Instantiation_tristate _ | Rtl_op (_, _, _)
-       -> con := b :: !con
+     | Module_tristate _ | Internal_triwire _ | Instantiation_tristate _
+     | Rtl_op (_, _, _)
+     | Internal_wire _ -> con := b :: !con
      | _ -> raise (Cant_assign_triwire_with b))
   | _ -> raise (Invalid_assignment_target a)
 ;;
 
 let is_readable = function
-  | Module_input _ | Internal_wire _ | Rtl_op _ -> true
+  | Module_input _ | Internal_wire _ | Rtl_op _ | Module_tristate _ | Internal_triwire _
+    -> true
   | _ -> false
 ;;
 
@@ -310,8 +312,7 @@ let inst ?instance_name ?(attributes = []) ?(g = []) ?(i = []) ?(o = []) ?(t = [
     else s <== Instantiation_tristate (mod_id, n));
   Option.iter instance_name ~f:(fun instance_name ->
     if String.is_prefix instance_name ~prefix:"_"
-    then
-      raise_s [%message "explicitly specified instance_names cannot start with a '_'"];
+    then raise_s [%message "explicitly specified instance_names cannot start with a '_'"];
     Hash_set.add instance_names instance_name);
   ignore
     (Instantiation (mod_id, name, g, i, o, t, instance_name, attributes) >> add_sig

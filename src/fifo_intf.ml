@@ -76,22 +76,26 @@ module type S = sig
   (** [create ~clock ~clear ~wr ~d ~rd capacity] builds a FIFO with [capacity] elements
       which is written with [d] when [wr] is high and read when [rd] is high.
 
-      The default reset configuration is to use a synchronous [clr] signal.  An asynchronous
-      [rst] may be optionally provided.  One of [clr] or [rst] must be non-empty.
+      The default reset configuration is to use a synchronous [clr] signal. An
+      asynchronous [rst] may be optionally provided. One of [clr] or [rst] must be
+      non-empty.
 
-      Optional overflow and underflow checking may be used.  Data will not be written(/read)
-      when the fifo is [full](/[empty]) regardles or the [wr]/([rd]) signals.
+      Optional overflow and underflow checking may be used. Data will not be
+      written(/read) when the fifo is [full](/[empty]) regardles or the [wr]/([rd])
+      signals.
 
-      [nearly_emtpy] and [nearly_full] may be programmed to go high when the fifo is nearing
-      an underflow or overflow state.
+      [nearly_emtpy] and [nearly_full] may be programmed to go high when the fifo is
+      nearing an underflow or overflow state.
 
-      The [showahead] mode changes the read behaviour of the FIFO. When showahead is [false]
-      read data is available 1 cycle after [rd] is high. With showahead [true] the data is
-      available on the same cycle as [rd] is high. To support [showahead] behaviour the
-      timing of the [full]/[empty] flag also changes (although they still correctly indicate
-      when it is safe to read or write to the FIFO). [showahead] mode has some extra cost in
-      terms of extra logic. The implementation ensures the output is registered and timing
-      performance is good - nearly as fast as the underlying RAM allows..
+      The [showahead] mode changes the read behaviour of the FIFO. When showahead is
+      [false] read data is available 1 cycle after [rd] is high. With showahead [true] the
+      data is available when the fifo is not [empty] (you can also think of this as data
+      being available on the same cycle that [rd] is asserted). To support [showahead]
+      behaviour the timing of the [full]/[empty] flag changes (although they still
+      correctly indicate when it is safe to read or write to the FIFO). [showahead] mode
+      has some extra cost in terms of extra logic. The implementation ensures the output
+      is registered and timing performance is good - nearly as fast as the underlying RAM
+      allows.
 
       Note; [showahead] is sometimes referred to as "first word fall through". It uses the
       write-before-read ram mode which is problematic in synthesis so we include special
@@ -142,13 +146,13 @@ module type S = sig
 
     (** Create a normal or showahead fifo using different read-before-write or
         write-before-read (semantically) rams. *)
-    val create : Signal.t Interface.Create_fn(I)(O).t create_params
+    val create : Interface.Create_fn(I)(O).t create_params
 
     (** Create fifo using read-before-write ram only. It may still be used in showahead
         mode and include an extra register stage. Latency is slightly higher than the
         version built by [create]. *)
     val classic
       :  ?extra_reg:bool (* default is false *)
-      -> Signal.t Interface.Create_fn(I)(O).t create_params
+      -> Interface.Create_fn(I)(O).t create_params
   end
 end

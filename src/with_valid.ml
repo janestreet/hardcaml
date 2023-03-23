@@ -39,8 +39,9 @@ module Fields = struct
       let map2 a b ~f = M.map2 a b ~f:(map2 ~f)
       let iter2 a b ~f = M.iter2 a b ~f:(iter2 ~f)
 
-      let t =
-        M.map M.t ~f:(fun (n, w) -> { value = n ^ "$value", w; valid = n ^ "$valid", 1 })
+      let port_names_and_widths =
+        M.map M.port_names_and_widths ~f:(fun (n, w) ->
+          { value = n ^ "$value", w; valid = n ^ "$valid", 1 })
       ;;
 
       let to_list t = M.map t ~f:to_list |> M.to_list |> List.concat
@@ -81,7 +82,12 @@ module Wrap = struct
         M.iter2 ~f a.value b.value
       ;;
 
-      let t = { valid = "valid", 1; value = M.map M.t ~f:(fun (n, w) -> "value$" ^ n, w) }
+      let port_names_and_widths =
+        { valid = "valid", 1
+        ; value = M.map M.port_names_and_widths ~f:(fun (n, w) -> "value$" ^ n, w)
+        }
+      ;;
+
       let to_list t = t.valid :: M.to_list t.value
     end
 
@@ -111,6 +117,6 @@ struct
   include Interface.Make (struct
       include T
 
-      let t = { value = "value", X.width; valid = "valid", 1 }
+      let port_names_and_widths = { value = "value", X.width; valid = "valid", 1 }
     end)
 end

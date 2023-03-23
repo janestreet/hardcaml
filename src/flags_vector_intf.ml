@@ -8,10 +8,6 @@ open Base
 module type Cases = sig
   type t [@@deriving sexp_of, compare, enumerate]
 
-  module Variants : sig
-    val to_rank : t -> int
-  end
-
   val port_name : string
 end
 

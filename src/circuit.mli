@@ -35,7 +35,7 @@ module Config : sig
     (** Map over circuit outputs just before constructing the circuit. *)
     }
 
-  (** Perform combination loop checking, normalize uids, [Relaxed] port checks, and add
+  (** Perform combinational loop checks, uid normalization, strict port checks, and add
       phantom inputs. *)
   val default : t
 end
@@ -106,7 +106,7 @@ val create_with_interface
   -> t
 
 module With_interface (I : Interface.S) (O : Interface.S) : sig
-  type create = Signal.t Interface.Create_fn(I)(O).t
+  type create = Interface.Create_fn(I)(O).t
 
   (** Create a circuit with [inputs] and [outputs] automatically defined and labelled
       according to the input ([I]) and output ([O]) interfaces. *)

@@ -13,10 +13,13 @@ include struct
 end
 
 module Create_fn (I : S) (O : S) = struct
-  type 'a t = 'a I.t -> 'a O.t
+  type t = Signal.t I.t -> Signal.t O.t
 
-  let sexp_of_t _ _ =
-    [%message "" ~inputs:(I.t : (string * int) I.t) ~outputs:(O.t : (string * int) O.t)]
+  let sexp_of_t _ =
+    [%message
+      ""
+        ~inputs:(I.port_names_and_widths : (string * int) I.t)
+        ~outputs:(O.port_names_and_widths : (string * int) O.t)]
   ;;
 end
 
@@ -108,8 +111,9 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
 
   type tag = int
 
-  let port_names = map t ~f:fst
-  let port_widths = map t ~f:snd
+  let port_names = map port_names_and_widths ~f:fst
+  let port_widths = map port_names_and_widths ~f:snd
+  let const c = map port_names ~f:(Fn.const c)
   let to_list_rev x = to_list x |> List.rev
   let zip a b = map2 a b ~f:(fun a b -> a, b)
   let zip3 a b c = map2 (zip a b) c ~f:(fun (a, b) c -> a, b, c)
@@ -143,7 +147,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
 
   let scan t ~init ~f =
     (* slightly contorted implementation which avoids depending on the ordering of map. *)
-    let result = map X.t ~f:(fun _ -> ref None) in
+    let result = map port_names ~f:(fun _ -> ref None) in
     let acc = ref init in
     iter2 t result ~f:(fun t result ->
       let acc', field = f !acc t in
@@ -153,7 +157,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   ;;
 
   let scan2 a b ~init ~f = scan (zip a b) ~init ~f:(fun c (a, b) -> f c a b)
-  let tags = scan t ~init:0 ~f:(fun acc _ -> acc + 1, acc)
+  let tags = scan port_names ~init:0 ~f:(fun acc _ -> acc + 1, acc)
   let to_alist x = to_list (map2 tags x ~f:(fun tag x -> tag, x))
   let field_by_tag t tag = List.Assoc.find (to_alist t) tag ~equal:Int.equal
 
@@ -207,7 +211,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   let of_interface_list ts =
     List.fold
       (List.rev ts)
-      ~init:(map t ~f:(fun _ -> []))
+      ~init:(map port_names ~f:(fun _ -> []))
       ~f:(fun ac t -> map2 t ac ~f:(fun h t -> h :: t))
   ;;
 
@@ -249,21 +253,22 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     let widths t = map t ~f:Comb.width
 
     let assert_widths x =
-      iter2 (widths x) t ~f:(fun actual_width (port_name, expected_width) ->
-        if actual_width <> expected_width
-        then
-          raise_s
-            [%message
-              "Port width mismatch in interface"
-                (port_name : string)
-                (expected_width : int)
-                (actual_width : int)])
+      iter2
+        (widths x)
+        port_names_and_widths
+        ~f:(fun actual_width (port_name, expected_width) ->
+          if actual_width <> expected_width
+          then
+            raise_s
+              [%message
+                "Port width mismatch in interface"
+                  (port_name : string)
+                  (expected_width : int)
+                  (actual_width : int)])
     ;;
 
     let of_int i = map port_widths ~f:(fun b -> Comb.of_int ~width:b i)
     let of_ints i = map2 port_widths i ~f:(fun width -> Comb.of_int ~width)
-    let const = of_int
-    let consts = of_ints
 
     let pack ?(rev = false) t =
       if rev then to_list t |> Comb.concat_msb else to_list_rev t |> Comb.concat_msb
@@ -386,7 +391,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   end
 
   module Names_and_widths = struct
-    let t = to_list t
+    let port_names_and_widths = to_list port_names_and_widths
     let port_names = to_list port_names
     let port_widths = to_list port_widths
     let tags = to_list tags
@@ -410,13 +415,13 @@ end
 
 module Update
     (Pre : Interface_intf.Pre) (M : sig
-                                  val t : (string * int) Pre.t
+                                  val port_names_and_widths : (string * int) Pre.t
                                 end) =
 struct
   module T = struct
     include Pre
 
-    let t = M.t
+    let port_names_and_widths = M.port_names_and_widths
   end
 
   include (T : Interface_intf.Pre with type 'a t = 'a T.t)
@@ -429,7 +434,7 @@ module Empty = struct
   include Make (struct
       type nonrec 'a t = 'a t [@@deriving sexp_of]
 
-      let t = None
+      let port_names_and_widths = None
       let iter _ ~f:_ = ()
       let iter2 _ _ ~f:_ = ()
       let map _ ~f:_ = None
@@ -451,7 +456,7 @@ struct
   include Make (struct
       type nonrec 'a t = 'a t [@@deriving sexp_of]
 
-      let t = M.t_of_repr Repr.t
+      let port_names_and_widths = M.t_of_repr Repr.port_names_and_widths
       let map t ~f = M.t_of_repr (Repr.map (M.repr_of_t t) ~f)
       let map2 a b ~f = M.t_of_repr (Repr.map2 (M.repr_of_t a) (M.repr_of_t b) ~f)
       let iter t ~f = Repr.iter (M.repr_of_t t) ~f
@@ -469,7 +474,7 @@ struct
     type 'a t = 'a
 
     let sexp_of_t sexp_of_a a = [%sexp_of: string * a] (S.port_name, a)
-    let t = S.port_name, S.port_width
+    let port_names_and_widths = S.port_name, S.port_width
     let map t ~f = f t
     let iter t ~f = f t
     let map2 s t ~f = f s t

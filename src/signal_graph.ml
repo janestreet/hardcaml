@@ -72,8 +72,7 @@ let outputs ?(validate = false) t =
           (match deps output_signal with
            | [] | [ Empty ] ->
              raise_s
-               [%message
-                 "circuit output signal is not driven" (output_signal : Signal.t)]
+               [%message "circuit output signal is not driven" (output_signal : Signal.t)]
            | _ ->
              (match names output_signal with
               | [ _ ] -> ()
@@ -89,8 +88,7 @@ let outputs ?(validate = false) t =
                       (output_signal : Signal.t)]))
         | _ ->
           raise_s
-            [%message
-              "circuit output signal must be a wire" (output_signal : Signal.t)]);
+            [%message "circuit output signal must be a wire" (output_signal : Signal.t)]);
     t)
 ;;
 
@@ -332,9 +330,7 @@ let fan_out_map ?(deps = Signal.deps) t =
       (* [signal] is in the fan_out of all of its [deps] *)
       List.fold (deps signal) ~init:map ~f:(fun map source ->
         let source = Signal.uid source in
-        let fan_out =
-          Map.find map source |> Option.value ~default:Signal.Uid_set.empty
-        in
+        let fan_out = Map.find map source |> Option.value ~default:Signal.Uid_set.empty in
         Map.set map ~key:source ~data:(Set.add fan_out target)))
 ;;
 
@@ -360,8 +356,7 @@ let topological_sort ?(deps = Signal.deps) (graph : t) =
   let nodes, edges =
     fold graph ~init:([], []) ~f:(fun (nodes, edges) to_ ->
       ( to_ :: nodes
-      , List.map (deps to_) ~f:(fun from -> { Topological_sort.Edge.from; to_ }) @ edges
-      ))
+      , List.map (deps to_) ~f:(fun from -> { Topological_sort.Edge.from; to_ }) @ edges ))
   in
   Topological_sort.sort (module Node) ~what:Nodes_and_edge_endpoints ~nodes ~edges
   |> Or_error.ok_exn

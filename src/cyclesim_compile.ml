@@ -454,7 +454,11 @@ module Compile = struct
          in
          let ltbig () = Bits.Mutable.( <: ) tgt a b in
          let width = Bits.Mutable.width a in
-         if width <= 63 then Some ltsmall else if width = 64 then Some lt64 else Some ltbig)
+         if width <= 63
+         then Some ltsmall
+         else if width = 64
+         then Some lt64
+         else Some ltbig)
     | Wire _ ->
       if not (Schedule.Aliases.is_alias aliases (Signal.uid signal))
       then raise_s [%message "Expecting all non-input wires to be compiled into aliases"];

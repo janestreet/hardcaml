@@ -37,7 +37,7 @@ end
     The scope argument controls construction of a flat or modular design as required for
     simulation or syntheis. *)
 module In_scope (I : Interface.S) (O : Interface.S) : sig
-  type create = Scope.t -> Signal.t Interface.Create_fn(I)(O).t
+  type create = Scope.t -> Interface.Create_fn(I)(O).t
 
   (** Create a Hardcaml child design and link it into the parent design.  This will not
       form a hierarchical structure, but the signal naming will still be scoped. *)

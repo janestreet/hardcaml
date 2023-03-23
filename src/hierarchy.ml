@@ -86,7 +86,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
 end
 
 module In_scope (I : Interface.S) (O : Interface.S) = struct
-  type create = Scope.t -> Signal.t Interface.Create_fn(I)(O).t
+  type create = Scope.t -> Interface.Create_fn(I)(O).t
 
   let create ~scope ~name create_fn inputs =
     let scope = Scope.sub_scope scope name in
