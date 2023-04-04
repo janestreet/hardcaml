@@ -116,6 +116,14 @@ let circuit' = ref None
 let circuits' = ref []
 let instance_names = Hash_set.create (module String)
 
+let reset_circuit_database () =
+  id' := 0;
+  const_map := initial_map ();
+  circuit' := None;
+  circuits' := [];
+  Hash_set.clear instance_names
+;;
+
 let id () =
   let id = !id' in
   Int.incr id';

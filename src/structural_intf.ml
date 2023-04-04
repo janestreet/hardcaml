@@ -76,6 +76,9 @@ module type Structural = sig
   exception No_circuit
   exception Circuit_already_started
 
+  (** Clears the circuit database and resets all internal state back to initial values. *)
+  val reset_circuit_database : unit -> unit
+
   (** start circuit *)
   val start_circuit : string -> unit
 

@@ -1,0 +1,11 @@
+Test parameter instantiation of VHDL/Verilog from VHDL/Verilog.
+
+Build [hardcaml/test/bin/runtest] to generate the Hardcaml wrappers.  Then
+
+$ vlib work
+$ vsim -c -do "sim_parameters.do"
+
+This will run both the vhdl and verilog toplevel designs.
+The results that are printed show how the sub-modules view the passed
+parameters and need to be checked by hand.
+

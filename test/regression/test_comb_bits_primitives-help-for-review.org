@@ -1,0 +1,22 @@
+* test_comb_bits_primitives.exe
+
+: Test [Bits] module primitives.
+: 
+:   test_comb_bits_primitives.exe 
+: 
+: === flags ===
+: 
+:   -bits MODULE               . bits implementation to test: intlist, boollist,
+:                                xlist, bits, bad
+:   [-bits-ref MODULE]         . reference bits implementation (default is [bits])
+:   [-first-error-only]        . stop running a primitive test after first error
+:   [-iterations N]            . number of test iterations (default is [10])
+:   [-log FILE]                . results file (default is [stdout])
+:   [-max-bit-width N]         . (default is 100)
+:   [-min-bit-width N]         . (default is 1)
+:   [-primitives PRIM,...]     . primitives to test: add, sub, mulu, muls, and,
+:                                or, xor, not, eq, lt, sel, mux, cat
+:   [-verbose]                 . print every test
+:   [-build-info]              . print info about this build and exit
+:   [-version]                 . print the version of this build and exit
+:   [-help], -?                . print this help text and exit
