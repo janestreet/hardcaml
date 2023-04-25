@@ -1,4 +1,5 @@
 opam-version: "2.0"
+version: "v0.16.0"
 maintainer: "Jane Street developers"
 authors: ["Jane Street Group, LLC"]
 homepage: "https://github.com/janestreet/hardcaml"
@@ -10,14 +11,14 @@ build: [
   ["dune" "build" "-p" name "-j" jobs]
 ]
 depends: [
-  "ocaml" {>= "4.14.0"}
-  "base"
-  "bin_prot"
-  "core_kernel"
-  "ppx_jane"
-  "ppx_sexp_conv"
-  "stdio"
-  "topological_sort"
+  "ocaml"            {>= "4.14.0"}
+  "base"             {>= "v0.16" & < "v0.17"}
+  "bin_prot"         {>= "v0.16" & < "v0.17"}
+  "core_kernel"      {>= "v0.16" & < "v0.17"}
+  "ppx_jane"         {>= "v0.16" & < "v0.17"}
+  "ppx_sexp_conv"    {>= "v0.16" & < "v0.17"}
+  "stdio"            {>= "v0.16" & < "v0.17"}
+  "topological_sort" {>= "v0.16" & < "v0.17"}
   "dune"             {>= "2.0.0"}
   "ppxlib"           {>= "0.28.0"}
   "zarith"           {>= "1.11"}
