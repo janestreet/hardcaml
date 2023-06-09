@@ -739,17 +739,6 @@ module Base = struct
   ;;
 
   let concat_msb a =
-    (* automatically concatenate successive constants *)
-    let rec optimise_consts l =
-      match l with
-      | [] -> []
-      | [ a ] -> [ a ]
-      | a :: b :: tl ->
-        if is_const a && is_const b
-        then optimise_consts (of_bits Bits.(const_value a @: const_value b) :: tl)
-        else a :: optimise_consts (b :: tl)
-    in
-    let a = optimise_consts a in
     match a with
     | [ a ] -> a
     | _ ->
@@ -845,7 +834,7 @@ module Const_prop = struct
       Bits.to_int d = 1
     ;;
 
-    let cst b = of_string (Bits.to_string b)
+    let cst b = of_constant (Bits.to_constant b)
 
     let ( +: ) a b =
       match is_const a, is_const b with
@@ -939,16 +928,18 @@ module Const_prop = struct
     ;;
 
     let concat_msb l =
-      let rec f l nl =
-        match l with
-        | [] -> List.rev nl
-        | h :: t when is_const h ->
-          (match nl with
-           | h' :: t' when is_const h' -> f t (cst (Bits.concat_msb [ cv h'; cv h ]) :: t')
-           | _ -> f t (h :: nl))
-        | h :: t -> f t (h :: nl)
+      let optimise_consts l =
+        List.group l ~break:(fun a b -> not (Bool.equal (is_const a) (is_const b)))
+        |> List.map ~f:(function
+          | [] -> []
+          | [ x ] -> [ x ]
+          | h :: _ as l ->
+            if is_const h
+            then [ List.map l ~f:const_value |> Bits.concat_msb |> cst ]
+            else l)
+        |> List.concat
       in
-      concat_msb (f l [])
+      concat_msb (optimise_consts l)
     ;;
 
     (* {[

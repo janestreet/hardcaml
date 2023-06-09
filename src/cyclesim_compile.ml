@@ -536,8 +536,8 @@ module Compile = struct
       let zero = Bits.Mutable.create (Signal.width signal) in
       let mem_read () =
         let data =
-          try mem.(mutable_to_int addr) with
-          | _ -> zero
+          let addr = mutable_to_int addr in
+          if 0 <= addr && addr < Array.length mem then Array.unsafe_get mem addr else zero
         in
         Bits.Mutable.copy ~dst:tgt ~src:data
       in

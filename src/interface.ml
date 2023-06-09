@@ -216,7 +216,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   ;;
 
   let to_interface_list t =
-    let lengths = map t ~f:List.length in
+    let lengths = map t ~f:(List.length :> _ -> _) in
     let distinct_lengths = fold lengths ~init:(Set.empty (module Int)) ~f:Set.add in
     match Set.to_list distinct_lengths with
     | [] -> []

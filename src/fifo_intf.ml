@@ -101,8 +101,14 @@ module type S = sig
       write-before-read ram mode which is problematic in synthesis so we include special
       logic that performs collision detection.
 
-      The [used] output indicates the number of elements currently in the FIFO. *)
-  val create : ?showahead:bool (** default is [false] *) -> T.create_fifo
+      The [used] output indicates the number of elements currently in the FIFO.
+
+      [read_latency] can be assigned to insert pipelining on the output of the FIFO to
+      improve timing. *)
+  val create
+    :  ?read_latency:int
+    -> ?showahead:bool (** default is [false] *)
+    -> T.create_fifo
 
 
   (** {3 Functions to derive fifo architectures from other architecetures.} *)
@@ -126,6 +132,14 @@ module type S = sig
       data is registered. Has 3 cycles of latency, but is slightly faster than [create
       ~showahead:true] - it seems to only be limited by the underlying RAM frequency. *)
   val create_showahead_with_extra_reg : create_fifo
+
+  (** Creates a FIFO where [read_latency] is used to add pipelining to the output and
+      improve timing, but exposes FIFO data as if operating in showahead mode which is
+      convenient for interface with AXI streams.
+
+      Latency on this FIFO will be [read_latency+1] cycles per read, but allows use of
+      much larger FIFOs. *)
+  val create_showahead_with_read_latency : read_latency:int -> create_fifo
 
   module type Config = Config
 

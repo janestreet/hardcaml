@@ -16,6 +16,8 @@ module I = struct
   [@@deriving sexp_of, hardcaml]
 end
 
+let used_bits = 3
+
 module O = struct
   type 'a t =
     { q : 'a [@bits 32]
@@ -23,18 +25,22 @@ module O = struct
     ; empty : 'a
     ; nearly_full : 'a
     ; nearly_empty : 'a
-    ; used : 'a [@bits 3]
+    ; used : 'a [@bits used_bits]
     }
   [@@deriving sexp_of, hardcaml]
 end
 
 open Hardcaml
 
-let wrap ~create_fn (i : _ I.t) =
+let wrap ?(capacity = 4) ~create_fn (i : _ I.t) =
+  let open Signal in
+  assert (num_bits_to_represent capacity <= used_bits);
   let { Fifo.q; full; empty; nearly_full; nearly_empty; used } =
-    create_fn ~capacity:4 ~clock:i.clock ~clear:i.clear ~wr:i.wr ~d:i.d ~rd:i.rd
+    create_fn ~capacity ~clock:i.clock ~clear:i.clear ~wr:i.wr ~d:i.d ~rd:i.rd
   in
-  let o = { O.q; full; empty; nearly_full; nearly_empty; used } in
+  let o =
+    { O.q; full; empty; nearly_full; nearly_empty; used = uresize used used_bits }
+  in
   o
 ;;
 
@@ -48,7 +54,7 @@ let display_rules =
     |> List.concat)
 ;;
 
-let fill_then_empty (waves, sim) =
+let fill_then_empty ?(wave_width = 1) (waves, sim) =
   let inputs : _ I.t = Cyclesim.inputs sim in
   let outputs : _ O.t = Cyclesim.outputs sim in
   inputs.clear := Bits.vdd;
@@ -68,13 +74,17 @@ let fill_then_empty (waves, sim) =
   inputs.d := Bits.of_int ~width:32 0;
   Cyclesim.cycle sim;
   inputs.rd := Bits.vdd;
-  for _ = 1 to wr_count do
-    Cyclesim.cycle sim
+  let rd_count = ref 0 in
+  let timeout = ref 100 in
+  while !rd_count <> wr_count && !timeout <> 0 do
+    if Bits.is_gnd !(outputs.empty) then Int.incr rd_count;
+    Cyclesim.cycle sim;
+    Int.decr timeout
   done;
   inputs.rd := Bits.gnd;
   Cyclesim.cycle sim;
   Cyclesim.cycle sim;
-  Waveform.print ~display_width:87 ~display_height:27 ~wave_width:1 ~display_rules waves
+  Waveform.print ~display_width:87 ~display_height:27 ~wave_width ~display_rules waves
 ;;
 
 let%expect_test "classic" =
@@ -296,5 +306,42 @@ let%expect_test "non-default nearly empty/full threshold values" =
     │                  ││────────┬───┬───┬───┬───┬───────┬───┬───┬───┬───┬───────         │
     │used              ││ 0      │1  │2  │3  │4  │5      │4  │3  │2  │1  │0               │
     │                  ││────────┴───┴───┴───┴───┴───────┴───┴───┴───┴───┴───────         │
+    └──────────────────┘└─────────────────────────────────────────────────────────────────┘ |}]
+;;
+
+let%expect_test "showahead with read_latency" =
+  let module Sim = Cyclesim.With_interface (I) (O) in
+  wrap ~capacity:3 ~create_fn:(Fifo.create_showahead_with_read_latency ~read_latency:5 ())
+  |> Sim.create
+  |> Waveform.create
+  |> fill_then_empty ~wave_width:0;
+  [%expect
+    {|
+    ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
+    │clock             ││┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌│
+    │                  ││ └┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘│
+    │clear             ││──┐                                                              │
+    │                  ││  └───────────────────────────────────────────────────────       │
+    │wr                ││  ┌───────┐                                                      │
+    │                  ││──┘       └───────────────────────────────────────────────       │
+    │                  ││──┬─┬─┬─┬─┬───────────────────────────────────────────────       │
+    │d                 ││ 0│.│.│.│.│0                                                     │
+    │                  ││──┴─┴─┴─┴─┴───────────────────────────────────────────────       │
+    │rd                ││            ┌─────────────────────────────────────────┐          │
+    │                  ││────────────┘                                         └───       │
+    │                  ││────────────────┬───────────┬───────────┬───────────┬─────       │
+    │q                 ││ 0              │10         │20         │30         │40          │
+    │                  ││────────────────┴───────────┴───────────┴───────────┴─────       │
+    │full              ││          ┌───────┐                                              │
+    │                  ││──────────┘       └───────────────────────────────────────       │
+    │empty             ││────────────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌───       │
+    │                  ││                └─┘         └─┘         └─┘         └─┘          │
+    │nearly_full       ││        ┌─────────────────────┐                                  │
+    │                  ││────────┘                     └───────────────────────────       │
+    │nearly_empty      ││  ┌─────┐                     ┌───────────────────────────       │
+    │                  ││──┘     └─────────────────────┘                                  │
+    │                  ││────┬─┬─┬─┬───────┬───────────┬───────────┬───────────┬───       │
+    │used              ││ 0  │1│2│3│4      │3          │2          │1          │0         │
+    │                  ││────┴─┴─┴─┴───────┴───────────┴───────────┴───────────┴───       │
     └──────────────────┘└─────────────────────────────────────────────────────────────────┘ |}]
 ;;

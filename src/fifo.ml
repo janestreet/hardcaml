@@ -37,6 +37,7 @@ let capacity_and_used_bits showahead ram_capacity =
 ;;
 
 let create
+      ?read_latency
       ?(showahead = false)
       ?(nearly_empty = 1)
       ?nearly_full
@@ -62,6 +63,15 @@ let create
   then
     raise_s
       [%message "[Fifo.create] requires either a synchronous clear or asynchronous reset"];
+  (* Check if read_latency is set that its value makes sense. *)
+  Option.iter read_latency ~f:(fun read_latency ->
+    if showahead && read_latency <> 0
+    then
+      raise_s
+        [%message
+          "Cannot set showahead = true and read_latency <> 0 for Fifo."
+            (read_latency : int)
+            (showahead : bool)]);
   let reg_spec = Reg_spec.create ~clock ~clear ~reset () in
   let reg ?clear_to ~enable d = reg (Reg_spec.override reg_spec ?clear_to) ~enable d in
   let abits = address_bits_for ram_capacity in
@@ -121,12 +131,14 @@ let create
     else (
       let ra, _ = addr_count rd "READ_ADDRESS" in
       let wa, _ = addr_count wr "WRITE_ADDRESS" in
+      let spec = Reg_spec.create ~clock ~clear () in
       ram_rbw
         ~attributes:ram_attributes
         ram_capacity
         ~write_port:
           { write_clock = clock; write_enable = wr; write_address = wa; write_data = d }
-        ~read_port:{ read_clock = clock; read_enable = rd; read_address = ra })
+        ~read_port:{ read_clock = clock; read_enable = rd; read_address = ra }
+      |> pipeline spec ~n:(Option.value read_latency ~default:1 - 1))
   in
   { q; full; empty; nearly_full; nearly_empty; used }
 ;;
@@ -247,6 +259,68 @@ let create_showahead_from_classic
     | Kinded_fifo.Showahead fifo -> fifo
 ;;
 
+let create_showahead_with_read_latency
+      ~read_latency
+      ?nearly_empty
+      ?nearly_full
+      ?overflow_check
+      ?reset
+      ?underflow_check
+      ?ram_attributes
+      ?scope
+      ()
+      ~capacity
+      ~clock
+      ~clear
+      ~wr
+      ~d
+      ~rd
+  =
+  let spec = Reg_spec.create ~clock ~clear () in
+  let fifo_rd_en = wire 1 in
+  let fifo =
+    create
+      ~showahead:false
+      ~read_latency
+      ?nearly_empty
+      ?nearly_full
+      ?overflow_check
+      ?reset
+      ?underflow_check
+      ?ram_attributes
+      ?scope
+      ()
+      ~capacity
+      ~clock
+      ~clear
+      ~wr
+      ~d
+      ~rd:fifo_rd_en
+  in
+  let read_pipeline = pipeline spec fifo_rd_en ~n:read_latency in
+  let read_in_progress =
+    reg_fb spec ~width:1 ~f:(fun q -> mux2 read_pipeline gnd (fifo_rd_en |: q))
+  in
+  let dout_valid =
+    reg_fb spec ~width:1 ~f:(fun q -> mux2 (rd &: q) gnd (q |: read_pipeline))
+  in
+  let dout = reg ~enable:(~:dout_valid |: (dout_valid &: rd)) spec fifo.q in
+  fifo_rd_en
+  <== (~:(fifo.empty) &: ~:read_in_progress &: (~:dout_valid |: (dout_valid &: rd)));
+  { fifo with
+    q = dout
+  ; empty = ~:dout_valid
+  ; used =
+      reg_fb
+        spec
+        ~width:(num_bits_to_represent (capacity + 1))
+        ~f:(fun q ->
+          let read = rd &: dout_valid
+          and write = wr &: ~:(fifo.full) in
+          mux2 (write &: ~:read) (q +:. 1) (mux2 (read &: ~:write) (q -:. 1) q))
+  }
+;;
+
 let create_showahead_with_extra_reg
       ?nearly_empty
       ?nearly_full
@@ -363,11 +437,11 @@ module With_interface (Config : Config) = struct
 
   let classic ?(extra_reg = false) =
     match extra_reg, Config.showahead with
-    | false, false -> create_fn ~f:(create ~showahead:false)
+    | false, false -> create_fn ~f:(create ~showahead:false ?read_latency:None)
     | true, false -> create_fn ~f:create_classic_with_extra_reg
     | false, true -> create_fn ~f:create_showahead_from_classic
     | true, true -> create_fn ~f:create_showahead_with_extra_reg
   ;;
 
-  let create = create_fn ~f:(create ~showahead:Config.showahead)
+  let create = create_fn ~f:(create ~showahead:Config.showahead ?read_latency:None)
 end
