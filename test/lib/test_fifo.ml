@@ -35,7 +35,16 @@ open Hardcaml
 let wrap ?(capacity = 4) ~create_fn (i : _ I.t) =
   let open Signal in
   assert (num_bits_to_represent capacity <= used_bits);
-  let { Fifo.q; full; empty; nearly_full; nearly_empty; used } =
+  let { Fifo.q
+      ; full
+      ; empty
+      ; nearly_full
+      ; nearly_empty
+      ; used
+      ; wr_rst_busy = _
+      ; rd_rst_busy = _
+      }
+    =
     create_fn ~capacity ~clock:i.clock ~clear:i.clear ~wr:i.wr ~d:i.d ~rd:i.rd
   in
   let o =

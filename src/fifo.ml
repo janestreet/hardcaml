@@ -140,7 +140,15 @@ let create
         ~read_port:{ read_clock = clock; read_enable = rd; read_address = ra }
       |> pipeline spec ~n:(Option.value read_latency ~default:1 - 1))
   in
-  { q; full; empty; nearly_full; nearly_empty; used }
+  { q
+  ; full
+  ; empty
+  ; nearly_full
+  ; nearly_empty
+  ; used
+  ; rd_rst_busy = gnd
+  ; wr_rst_busy = gnd
+  }
 ;;
 
 let create_classic_with_extra_reg

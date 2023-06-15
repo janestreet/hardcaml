@@ -14,6 +14,8 @@ module T = struct
     ; nearly_full : 'a
     ; nearly_empty : 'a
     ; used : 'a
+    ; rd_rst_busy : 'a
+    ; wr_rst_busy : 'a
     }
   [@@deriving sexp_of, hardcaml]
 
