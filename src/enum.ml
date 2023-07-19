@@ -130,6 +130,16 @@ module Make_enums (Cases : Enum_intf.Cases) = struct
       let is lhs rhs = lhs ==: of_enum rhs
     end
 
+    module Make_comb (X : Comb.S) = struct
+      include Make_comb (X)
+
+      let ( ==: ) = ( ==: ) (module X)
+      let of_enum = of_enum (module X)
+      let of_raw = of_raw (module X)
+      let match_ = match_ (module X)
+      let is lhs rhs = lhs ==: of_enum rhs
+    end
+
     module Of_always = struct
       include Of_always
 

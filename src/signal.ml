@@ -1154,11 +1154,11 @@ let memory size ~write_port ~read_address =
         "[Signal.memory] width of read and write addresses differ"
           ~write_address_width:(width wa : int)
           ~read_address_width:(width read_address : int)];
-  if size > 1 lsl width write_port.write_address
+  if address_bits_for size <> width write_port.write_address
   then
     raise_s
       [%message
-        "[Signal.memory] size greater than what can be addressed"
+        "[Signal.memory] size does not match what can be addressed"
           (size : int)
           ~address_width:(width wa : int)];
   let spec =
@@ -1205,11 +1205,11 @@ let multiport_memory ?name ?(attributes = []) size ~write_ports ~read_addresses 
     else (
       let expected = write_ports.(0) in
       (* cannot address all elements of the memory *)
-      if size > 1 lsl width expected.write_address
+      if address_bits_for size <> width expected.write_address
       then
         raise_s
           [%message
-            "[Signal.multiport_memory] size is greater than what can be addressed by \
+            "[Signal.multiport_memory] size does not match what can be addressed by \
              write port"
               (size : int)
               ~address_width:(width expected.write_address : int)];
@@ -1254,12 +1254,12 @@ let multiport_memory ?name ?(attributes = []) size ~write_ports ~read_addresses 
     then raise_s [%message "[Signal.multiport_memory] requires at least one read port"]
     else (
       let expected = read_addresses.(0) in
-      if size > 1 lsl width expected
+      if address_bits_for size <> width expected
       then
         raise_s
           [%message
-            "[Signal.multiport_memory] size is greater than what can be addressed by \
-             read port"
+            "[Signal.multiport_memory] size does not match what can be addressed by read \
+             port"
               (size : int)
               ~address_width:(width expected : int)];
       Array.iteri read_addresses ~f:(fun port read_address ->

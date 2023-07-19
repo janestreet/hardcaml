@@ -17,9 +17,19 @@ let%expect_test "exceptions" =
       ~read_addresses:[| Signal.of_int ~width:3 0 |]);
   [%expect
     {|
-    ("[Signal.multiport_memory] size is greater than what can be addressed by write port"
+    ("[Signal.multiport_memory] size does not match what can be addressed by write port"
      (size          16)
      (address_width 3)) |}];
+  require_does_raise [%here] (fun () ->
+    Signal.multiport_memory
+      16
+      ~write_ports:[| write_port 5 8 |]
+      ~read_addresses:[| Signal.of_int ~width:3 0 |]);
+  [%expect
+    {|
+    ("[Signal.multiport_memory] size does not match what can be addressed by write port"
+     (size          16)
+     (address_width 5)) |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory
       16
@@ -27,7 +37,7 @@ let%expect_test "exceptions" =
       ~read_addresses:[| Signal.of_int ~width:3 0 |]);
   [%expect
     {|
-    ("[Signal.multiport_memory] size is greater than what can be addressed by read port"
+    ("[Signal.multiport_memory] size does not match what can be addressed by read port"
      (size          16)
      (address_width 3)) |}];
   require_does_raise [%here] (fun () ->
@@ -37,9 +47,9 @@ let%expect_test "exceptions" =
       ~read_addresses:[| Signal.of_int ~width:5 0 |]);
   [%expect
     {|
-    ("[Signal.multiport_memory] width of read and write addresses differ"
-     (write_address_width 4)
-     (read_address_width  5)) |}];
+    ("[Signal.multiport_memory] size does not match what can be addressed by read port"
+     (size          16)
+     (address_width 5)) |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory
       16

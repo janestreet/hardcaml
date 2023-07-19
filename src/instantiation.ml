@@ -1,5 +1,31 @@
 open Base
 
+let module_name_special_chars = String.to_list "_$"
+let instance_name_special_chars = String.to_list "_$.[]"
+
+let validate_module_or_instantiation_name ~special_chars name =
+  let is_special c = List.mem special_chars c ~equal:Char.equal in
+  let alpha_or_special c = Char.is_alpha c || is_special c in
+  let alphanum_or_special c = Char.is_alphanum c || is_special c in
+  if String.length name = 0
+  then raise_s [%message "Module or instance names cannot be empty"];
+  if not (alpha_or_special name.[0])
+  then
+    raise_s
+      [%message
+        "First letter of module or instance names should be alpha or special"
+          (name : string)
+          (special_chars : char list)];
+  if not (String.fold name ~init:true ~f:(fun ok c -> ok && alphanum_or_special c))
+  then
+    raise_s
+      [%message
+        "Invalid module or instance name - should only contain alphanumeric or special \
+         characters"
+          (name : string)
+          (special_chars : char list)]
+;;
+
 let create
       ?(lib = "work")
       ?(arch = "rtl")
@@ -16,6 +42,10 @@ let create
        let inputs = List.filter (fun (_, s) -> s <> Empty) inputs in
        let outputs = List.filter (fun (_, b) -> b <> 0) outputs in
      ]} *)
+  validate_module_or_instantiation_name ~special_chars:module_name_special_chars name;
+  Option.iter
+    instance
+    ~f:(validate_module_or_instantiation_name ~special_chars:instance_name_special_chars);
   let width = List.fold outputs ~init:0 ~f:(fun a (_, i) -> a + i) in
   let deps = List.map inputs ~f:snd in
   let outputs, _ =
@@ -84,3 +114,9 @@ let create_with_interface
   let module I = With_interface (I) (O) in
   I.create
 ;;
+
+module Expert = struct
+  let validate_module_name n =
+    validate_module_or_instantiation_name ~special_chars:module_name_special_chars n
+  ;;
+end

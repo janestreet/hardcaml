@@ -130,6 +130,7 @@ let check_port_names_are_well_formed circuit_name inputs outputs =
 ;;
 
 let create_exn ?(config = Config.default) ~name outputs =
+  Instantiation.Expert.validate_module_name name;
   let assertions =
     match config.assertions with
     | Some assertions -> Assertion_manager.finalize assertions

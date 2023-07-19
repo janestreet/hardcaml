@@ -39,3 +39,8 @@ val create_with_interface
   -> name:string
   -> 'i
   -> 'o
+
+module Expert : sig
+  (* Check that name only contains alphanumeric or underscore characters.  *)
+  val validate_module_name : string -> unit
+end

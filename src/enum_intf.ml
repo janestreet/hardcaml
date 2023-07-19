@@ -83,6 +83,16 @@ module type S_enum = sig
       -> Always.t
   end
 
+  module Make_comb (X : Comb.S) : sig
+    include module type of Make_comb (X) (** @inline *)
+
+    val is : t -> Cases.t -> comb
+    val ( ==: ) : t -> t -> comb
+    val of_enum : Cases.t -> comb outer
+    val of_raw : comb -> comb outer
+    val match_ : ?default:comb -> comb outer -> (Cases.t * comb) list -> comb
+  end
+
   (** Set an input port in simulation to a concrete Cases value. *)
   val sim_set : Bits.t ref t -> Cases.t -> unit
 

@@ -481,3 +481,103 @@ let%expect_test "Try generate a Verilog circuit with a signal using a reserved n
 
     endmodule |}]
 ;;
+
+let%expect_test "Try to generate a Verilog module name with dashes" =
+  let input = Signal.input "in" 32 in
+  let a = wire 32 -- "a" in
+  a <== input;
+  Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+    let circuit = Circuit.create_exn ~name:"mod-with-dash" [ output "out" a ] in
+    Rtl.print Verilog circuit);
+  [%expect
+    {|
+    ("Invalid module or instance name - should only contain alphanumeric or special characters"
+     (name mod-with-dash)
+     (special_chars (_ $))) |}]
+;;
+
+let%expect_test "Try to generate a Verilog module name that starts with a number" =
+  let input = Signal.input "in" 32 in
+  let a = wire 32 -- "a" in
+  a <== input;
+  Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+    let circuit = Circuit.create_exn ~name:"999" [ output "out" a ] in
+    Rtl.print Verilog circuit);
+  [%expect
+    {|
+    ("First letter of module or instance names should be alpha or special"
+     (name 999)
+     (special_chars (_ $))) |}]
+;;
+
+let%expect_test "Module name rules apply to instantiations also" =
+  Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+    let input = Signal.input "in" 32 in
+    let outputs =
+      Instantiation.create ~name:"a^b" ~inputs:[ "a", input ] ~outputs:[ "b", 1 ] ()
+    in
+    let circuit =
+      Circuit.create_exn ~name:"foo" [ output "out" (Map.find_exn outputs "b") ]
+    in
+    Rtl.print Verilog circuit);
+  [%expect
+    {|
+    ("Invalid module or instance name - should only contain alphanumeric or special characters"
+     (name a^b)
+     (special_chars (_ $))) |}]
+;;
+
+let%expect_test "Try to generate Verilog port names with dashes" =
+  let input = input "in-with-dash" 32 in
+  let a = wire 32 -- "a" in
+  a <== input;
+  Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+    let circuit = Circuit.create_exn ~name:"mod" [ output "out-with-dash" a ] in
+    Rtl.print Verilog circuit);
+  [%expect
+    {|
+    ("Error while writing circuit"
+      (circuit_name mod)
+      (hierarchy_path (mod))
+      (output ((language Verilog) (mode (To_channel <stdout>))))
+      (exn (
+        "illegal port name"
+        (name       in-with-dash)
+        (legal_name in_with_dash)
+        (note       "Hardcaml will not change ports names.")
+        (port (
+          wire
+          (names (in-with-dash))
+          (width   32)
+          (data_in empty)))))) |}]
+;;
+
+let%expect_test "Try to generate Verilog net names with dashes" =
+  let input = Signal.input "in" 32 in
+  let a = wire 32 -- "a-with-dash" in
+  a <== input;
+  let circuit = Circuit.create_exn ~name:"mod" [ output "out" a ] in
+  Rtl.print Verilog circuit;
+  [%expect
+    {|
+    module mod (
+        in,
+        out
+    );
+
+        input [31:0] in;
+        output [31:0] out;
+
+        /* signal declarations */
+        wire [31:0] a_with_dash;
+
+        /* logic */
+        assign a_with_dash = in;
+
+        /* aliases */
+
+        /* output assignments */
+        assign out = a_with_dash;
+
+    endmodule |}]
+;;
