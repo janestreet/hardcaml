@@ -230,7 +230,7 @@ number of possible cases.
 # let this_will_raise_due_to_a_width_mismatch =
     Hello.Binary.Of_signal.of_raw (Signal.of_int ~width:30 10)
   ;;
-Exception: (Failure "Width mismatch. Enum expects 3, but obtained 30").
+Exception: Failure "Width mismatch. Enum expects 3, but obtained 30".
 
 # let this_is_valid_and_fine =
     Hello.Binary.Of_signal.of_raw (Signal.of_int ~width:3 0)

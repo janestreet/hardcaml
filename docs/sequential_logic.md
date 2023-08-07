@@ -51,7 +51,8 @@ val new_spec : Signal.register =
    reg_reset_edge = Hardcaml__.Edge.Rising; reg_reset_value = empty;
    reg_clear = (wire (names (clear)) (width 1) (data_in empty));
    reg_clear_level = Hardcaml__.Level.High;
-   reg_clear_value = (const (names (vdd)) (width 1) (value 0b1));
+   reg_clear_value =
+    (const (names (vdd)) (loc src/signal.ml:368:16) (width 1) (value 0b1));
    reg_enable = empty}
 ```
 
