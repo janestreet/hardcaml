@@ -120,6 +120,6 @@ simulated.
 
 We can also instantiate sub-circuits that we actually do have a
 Hardcaml implementation of. This approach is used to describe
-[module hierarchies](module_hierarchy.mdx) in Hardcaml.
+[module hierarchies](module_hierarchy.md) in Hardcaml.
 
 Hardcaml can link such designs together allowing them to be simulated.

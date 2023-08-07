@@ -17,7 +17,7 @@ use with vendor synthesis and place and route tools.
 
 The module type
 [`Comb.S`](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Comb/module-type-S/index.html)
-defines the [combinational logic](combinational_logic.mdx) primitives
+defines the [combinational logic](combinational_logic.md) primitives
 (i.e. logical operations, arithmetic, multiplexers etc.) for Hardcaml.
 It is implemented by both the `Bits` and `Signal` modules. All
 operations work over vectors with a given bit width. Each operation
@@ -57,7 +57,7 @@ val adder : signal -> signal -> signal = <fun>
 - : signal = (add (width 2) (arguments (0b01 0b10)))
 ```
 
-Signals also provide functions related to [sequential logic](sequential_logic.mdx) (registers,
+Signals also provide functions related to [sequential logic](sequential_logic.md) (registers,
 memories, and state machines).
 
 In summary
@@ -69,7 +69,7 @@ In summary
 
 ## `Circuit`s
 
-A [circuit](circuits.mdx) takes the output signals of a Hardcaml
+A [circuit](circuits.md) takes the output signals of a Hardcaml
 design and performs various sanity checks to ensure that it can be
 converted to hardware. In particular, we must now provide input and
 output port names for our designs.
@@ -83,7 +83,7 @@ val circuit : Hardcaml.Circuit.t = <abstr>
 
 ## `Rtl` generation
 
-A circuit can be [converted to RTL](rtl_generation.mdx) with Verilog or VHDL.
+A circuit can be [converted to RTL](rtl_generation.md) with Verilog or VHDL.
 
 ```ocaml
 # Hardcaml.Rtl.print Verilog circuit
@@ -114,7 +114,7 @@ endmodule
 
 ## Simulation with `Cyclesim`
 
-Circuits can be [simulated with the `Cyclesim` module](simulation.mdx).
+Circuits can be [simulated with the `Cyclesim` module](simulation.md).
 
 ```ocaml
 let sim = Hardcaml.Cyclesim.create circuit;;
@@ -150,16 +150,16 @@ hardware design in simulation.
 
 ## Waveforms
 
-`Hardcaml_waveterm` will output [waveforms](waveforms.mdx) of a simulation run as ASCII text.
+`Hardcaml_waveterm` will output [waveforms](waveforms.md) of a simulation run as ASCII text.
 Alongside an interactive viewer application, waveforms can also be printed as
 part of expect tests.
 
 # Examples
 
-* [Simple counter](counter_example.mdx)
-* [Serial multiplier](serial_multiplier_example.mdx)
+* [Simple counter](counter_example.md)
+* [Serial multiplier](serial_multiplier_example.md)
 
-See the [serial multiplier](serial_multiplier_example.mdx) in
+See the [serial multiplier](serial_multiplier_example.md) in
 particular for an example of using many of these features.
 
 # Getting working hardware

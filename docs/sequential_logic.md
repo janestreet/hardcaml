@@ -86,7 +86,7 @@ val q_out_after_3_clocks : Signal.t =
 
 # Registers with feedback
 
-We noted [previously](combinational_logic.mdx) that combinational
+We noted [previously](combinational_logic.md) that combinational
 logic could not contain cycles.  We can lift this restriction with
 sequential logic so long as the cycle passes through a register (or memory).
 
@@ -162,7 +162,7 @@ Caller_id.set_mode Top_of_stack
 State machines are just a complex combination of registers and
 multiplexers, so it is possible to build them directly with the
 primitives described here - but not very conveniently. Rather, we
-recommend using the [Always DSL](always.mdx).
+recommend using the [Always DSL](always.md).
 
 # Memories
 

@@ -95,8 +95,8 @@ and read an output like so:
 
 # Visualizing Simulation Waveforms
 
-See the pages on [waveforms](waveforms.mdx) and using the
-[interactive viewer](waveterm_interactive_viewer.mdx) for more information.
+See the pages on [waveforms](waveforms.md) and using the
+[interactive viewer](waveterm_interactive_viewer.md) for more information.
 
 
 # Limitations
