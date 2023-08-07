@@ -4,6 +4,7 @@
 ```ocaml
 # Hardcaml.Caller_id.set_mode Disabled
 - : unit = ()
+# #require "hardcaml_verilator,hardcaml_c";;
 ```
 -->
 

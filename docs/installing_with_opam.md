@@ -33,6 +33,11 @@ utop command makes things nicer to play with
 #install_printer Bits.pp
 ```
 
+For the `Signal` API the following pretty printer is recommended:
+```
+#install_printer Signal.pp
+```
+
 # Dune
 
 The following is an example dune file for linking to Hardcaml

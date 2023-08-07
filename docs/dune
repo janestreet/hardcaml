@@ -1,0 +1,5 @@
+(mdx
+	(package hardcaml)
+	(libraries base stdio compiler-libs.toplevel compiler-libs.common ppx_compare ppx_enumerate ppx_sexp_conv ppx_sexp_message)
+	(preludes init.ml)
+)
