@@ -1,8 +1,19 @@
-(library (name hardcaml) (public_name hardcaml) (c_names bits_stubs)
+(library
+ (foreign_stubs
+  (language c)
+  (names bits_stubs))
+ (name hardcaml)
+ (public_name hardcaml)
  (libraries base bin_prot bigarray core_kernel.flags stdio topological_sort
-  zarith)
- (preprocess (pps ppx_jane ppx_deriving_hardcaml0))
- (ocamlopt_flags :standard (:include ocamlopt-flags)))
+   zarith)
+ (preprocess
+  (pps ppx_jane ppx_deriving_hardcaml0))
+ (ocamlopt_flags
+  :standard
+  (:include ocamlopt-flags)))
 
-(rule (targets ocamlopt-flags) (deps)
- (action (bash "echo '()' > ocamlopt-flags")))
+(rule
+ (targets ocamlopt-flags)
+ (deps)
+ (action
+  (bash "echo '()' > ocamlopt-flags")))
