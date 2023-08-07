@@ -42,6 +42,7 @@ module Signal_graph = Signal_graph
 module Structural = Structural
 module Vcd = Vcd
 module With_valid = With_valid
+module Zarith = Zarith
 
 (** These are exposed for code that does [@@deriving sexp_of, hardcaml]. *)
 let sexp_of_array = Base.sexp_of_array
