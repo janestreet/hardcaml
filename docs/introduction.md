@@ -16,7 +16,7 @@ use with vendor synthesis and place and route tools.
 ## `Comb.S`, `Bits` and `Signal`s
 
 The module type
-[`Comb.S`](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Comb/module-type-S/index.html)
+[`Comb.S`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Comb/module-type-S/index.html)
 defines the [combinational logic](combinational_logic.mdx) primitives
 (i.e. logical operations, arithmetic, multiplexers etc.) for Hardcaml.
 It is implemented by both the `Bits` and `Signal` modules. All
@@ -24,7 +24,7 @@ operations work over vectors with a given bit width. Each operation
 has rules about allowable argument widths and will raise at run-time
 if violated.
 
-[`Bits`](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Bits/index.html)
+[`Bits`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Bits/index.html)
 implements a shallow embedding of the `Comb.S` API. This means
 it is used to compute values directly.
 
@@ -44,7 +44,7 @@ val adder : t -> t -> t = <fun>
 - : t = 11
 ```
 
-[`Signal`](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Signal/index.html)
+[`Signal`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Signal/index.html)
 implements a deep embedding. This means it records the structure of a
 computation as a graph.
 

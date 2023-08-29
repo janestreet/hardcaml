@@ -51,11 +51,13 @@ let%expect_test "To_file" =
         /* logic */
         inner
             the_inner
-            ( .a(a), .b(_6) );
+            ( .a(a),
+              .b(_6) );
         assign _1 = _6;
         inner
             the_inner_0
-            ( .a(a), .b(_8) );
+            ( .a(a),
+              .b(_8) );
         assign _3 = _8;
         assign _9 = _3 | _1;
 
@@ -80,7 +82,8 @@ let%expect_test "To_file" =
         /* logic */
         middle
             the_middle
-            ( .a(a), .b(_5) );
+            ( .a(a),
+              .b(_5) );
         assign _2 = _5;
 
         /* aliases */

@@ -35,7 +35,7 @@ type ('i, 'o) t =
   ; digest : Digest.t ref
   ; circuit : Circuit.t option
   }
-[@@deriving fields]
+[@@deriving fields ~getters]
 
 let sexp_of_t sexp_of_i sexp_of_o t =
   [%message

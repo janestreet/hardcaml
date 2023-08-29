@@ -10,7 +10,7 @@
 *Prerequisite: [Hardcaml interfaces](hardcaml_interfaces.mdx)*
 
 In Hardcaml, module
-[hierarchy](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Hierarchy/index.html)
+[hierarchy](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Hierarchy/index.html)
 means we can partition a Hardcaml design
 into a tree of sub-circuits and write each one to its own Verilog or
 VHDL module when generating RTL.
@@ -31,7 +31,7 @@ Module hierarchies provide the following benefits:
 
 # Introduction to `Scope.t`
 
-A [`Scope.t`](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Scope/index.html)
+A [`Scope.t`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Scope/index.html)
 is a (mutable) object passed between the circuits that
 form a complete hardcaml design. It manages the current path in the
 hierarchy of circuits and records unique circuits as they are
@@ -92,7 +92,7 @@ sub-circuit, just call `hierarchical` instead of `create`.
 
 Compared to the non-hierarchical design flow all we need to do is
 
-- Pass a [`Scope.t`](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Scope/index.html) argument.
+- Pass a [`Scope.t`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Scope/index.html) argument.
 - Define the `hierarchical` function using the `Hierarchy.In_scope`
   functor.
 - Call `hierarchical` when we instantiate it.

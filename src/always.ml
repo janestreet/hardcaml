@@ -16,7 +16,7 @@ module Variable = struct
     { value : Signal.t
     ; internal : Internal.t
     }
-  [@@deriving fields]
+  [@@deriving fields ~getters]
 
   let sexp_of_t { value; internal = _ } = [%message "" ~_:(value : Signal.t)]
   let uid t = Signal.uid t.internal.assigns_to_wire

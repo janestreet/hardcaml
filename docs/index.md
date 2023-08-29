@@ -4,7 +4,7 @@ Welcome to [Hardcaml](https://github.com/janestreet/hardcaml)!
 
 # Getting Started
 
-Introducing the [key modules](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/index.html)
+Introducing the [key modules](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/index.html)
 and concepts in Hardcaml.
 
 * [Introduction](introduction.mdx)

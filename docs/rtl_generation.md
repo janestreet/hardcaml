@@ -7,8 +7,8 @@
 ```
 -->
 
-You can [convert](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Rtl/index.html)
-a Hardcaml [`Circuit`](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Circuit/index.html)
+You can [convert](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Rtl/index.html)
+a Hardcaml [`Circuit`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Circuit/index.html)
 to either Verilog or VHDL.
 
 The following is a trivial example.

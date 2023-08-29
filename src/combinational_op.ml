@@ -9,7 +9,7 @@ type t =
   ; output_widths : int list
   ; create_fn : create_fn
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~getters, sexp_of]
 
 let create ~name ~input_widths ~output_widths ~create_fn () =
   if List.is_empty output_widths

@@ -143,7 +143,7 @@ or unsigned will lead to the same result.
 
 The following describes several key functions. See the
 documentation for
-[`Comb.S`](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Comb/module-type-S/index.html)
+[`Comb.S`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Comb/module-type-S/index.html)
 for other useful functions.
 
 ## Arithmetic

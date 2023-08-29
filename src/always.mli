@@ -93,7 +93,7 @@ module Variable : sig
     { value : Signal.t
     ; internal : internal
     }
-  [@@deriving fields, sexp_of]
+  [@@deriving fields ~getters, sexp_of]
 
   (** create a wire *)
   val wire : default:Signal.t -> t

@@ -35,7 +35,7 @@ type t =
   ; fan_in : Signal.Uid_set.t Map.M(Signal.Uid).t Lazy.t
   ; assertions : Signal.t Map.M(String).t
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~getters, sexp_of]
 
 module Summary = struct
   let sexp_of_signal signal = Signal.sexp_of_signal_recursive ~depth:0 signal

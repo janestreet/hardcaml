@@ -30,7 +30,7 @@ type t =
   ; instantiation_mangler : Mangler.t
   ; property_manager : Property_manager.t
   }
-[@@deriving fields, sexp_of]
+[@@deriving fields ~getters, sexp_of]
 
 (* Choose whether mangling of instantiation names is case sensitive or not. *)
 let case_sensitive = false

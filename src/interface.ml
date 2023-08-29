@@ -336,6 +336,25 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
       let ts = distribute_valids ts in
       map (of_interface_list ts) ~f:(fun t -> Comb.onehot_select ?branching_factor t)
     ;;
+
+    let validate t =
+      let (_ : unit X.t) =
+        map3 port_names port_widths t ~f:(fun port_name port_width signal ->
+          if Comb.width signal <> port_width
+          then (
+            let signal_width = Comb.width signal in
+            Or_error.error_s
+              [%message
+                "Interface validation failed!"
+                  (port_name : string)
+                  (port_width : int)
+                  (signal_width : int)])
+          else Ok ())
+        |> or_error_all
+        |> Or_error.ok_exn
+      in
+      ()
+    ;;
   end
 
   module type Comb = Comb with type 'a interface := 'a t
@@ -368,25 +387,6 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
 
     let apply_names ?(prefix = "") ?(suffix = "") ?(naming_op = Signal.( -- )) t =
       map2 t port_names ~f:(fun s n -> naming_op s (prefix ^ n ^ suffix))
-    ;;
-
-    let validate t =
-      let (_ : unit X.t) =
-        map3 port_names port_widths t ~f:(fun port_name port_width signal ->
-          if Signal.width signal <> port_width
-          then (
-            let signal_width = Signal.width signal in
-            Or_error.error_s
-              [%message
-                "Interface validation failed!"
-                  (port_name : string)
-                  (port_width : int)
-                  (signal_width : int)])
-          else Ok ())
-        |> or_error_all
-        |> Or_error.ok_exn
-      in
-      ()
     ;;
   end
 
@@ -463,27 +463,6 @@ struct
       let iter2 a b ~f = Repr.iter2 (M.repr_of_t a) (M.repr_of_t b) ~f
       let to_list t = Repr.to_list (M.repr_of_t t)
     end)
-end
-
-module Value (S : sig
-    val port_name : string
-    val port_width : int
-  end) =
-struct
-  module T = struct
-    type 'a t = 'a
-
-    let sexp_of_t sexp_of_a a = [%sexp_of: string * a] (S.port_name, a)
-    let port_names_and_widths = S.port_name, S.port_width
-    let map t ~f = f t
-    let iter t ~f = f t
-    let map2 s t ~f = f s t
-    let iter2 s t ~f = f s t
-    let to_list t = [ t ]
-  end
-
-  include T
-  include Make (T)
 end
 
 module type S_with_ast = sig

@@ -15,7 +15,7 @@ type t =
   ; inputs : Signal.t list
   ; aliases : Aliases.t
   }
-[@@deriving fields]
+[@@deriving fields ~getters]
 
 let find_elements circuit =
   Signal_graph.depth_first_search

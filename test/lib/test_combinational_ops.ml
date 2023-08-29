@@ -156,7 +156,10 @@ let%expect_test "internal representation" =
         assign _7 = _6[15:8];
         add_sub
             the_add_sub
-            ( .i0(a), .i1(b), .o1(_6[15:8]), .o0(_6[7:0]) );
+            ( .i0(a),
+              .i1(b),
+              .o1(_6[15:8]),
+              .o0(_6[7:0]) );
         assign _8 = _6[7:0];
 
         /* aliases */
@@ -194,7 +197,10 @@ let%expect_test "internal representation (mutable)" =
         assign _7 = _6[15:8];
         add_sub_mutable
             the_add_sub_mutable
-            ( .i0(a), .i1(b), .o1(_6[15:8]), .o0(_6[7:0]) );
+            ( .i0(a),
+              .i1(b),
+              .o1(_6[15:8]),
+              .o0(_6[7:0]) );
         assign _8 = _6[7:0];
 
         /* aliases */

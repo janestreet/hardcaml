@@ -437,6 +437,7 @@ module VerilogCore : Rtl_internal = struct
   ;;
 
   let name_with_comment n s = n ^ get_comment s
+  let spaces n = String.init n ~f:(Fn.const ' ')
 
   let decl t n b =
     let decl s n b =
@@ -586,7 +587,9 @@ module VerilogCore : Rtl_internal = struct
       raise_unexpected ~while_:"writing logic assignments" ~got_signal:s
     | Not { arg; _ } -> io (t4 ^ "assign " ^ sn ^ " = ~ " ^ name arg ^ ";\n")
     | Cat { args; _ } ->
-      let cat = sep ", " (List.map args ~f:(fun s -> name s)) in
+      let cat =
+        sep (",\n" ^ spaces (String.length sn + 16)) (List.map args ~f:(fun s -> name s))
+      in
       io (t4 ^ "assign " ^ sn ^ " = { " ^ cat ^ " };\n")
     | Mux { select; cases; _ } ->
       (match cases with
@@ -724,15 +727,11 @@ module VerilogCore : Rtl_internal = struct
       | Std_logic_vector v | Std_ulogic_vector v ->
         Printf.sprintf
           "%i'b%s"
-          (Parameter.Std_logic_vector.width v)
-          (Parameter.Std_logic_vector.to_string v)
+          (Logic.Std_logic_vector.width v)
+          (Logic.Std_logic_vector.to_string v)
       | Bit_vector v ->
-        Printf.sprintf
-          "%i'b%s"
-          (Parameter.Bit_vector.width v)
-          (Parameter.Bit_vector.to_string v)
-      | Std_logic b | Std_ulogic b ->
-        Printf.sprintf "4'd%i" (Parameter.Std_logic.to_int b)
+        Printf.sprintf "%i'b%s" (Logic.Bit_vector.width v) (Logic.Bit_vector.to_string v)
+      | Std_logic b | Std_ulogic b -> Printf.sprintf "4'd%i" (Logic.Std_logic.to_int b)
     in
     if not (List.is_empty i.inst_generics)
     then (
@@ -740,7 +739,7 @@ module VerilogCore : Rtl_internal = struct
         let generic (p : Parameter.t) =
           assoc (Parameter_name.to_string p.name) (param_string p)
         in
-        sep ", " (List.map i.inst_generics ~f:generic)
+        sep (",\n" ^ spaces 10) (List.map i.inst_generics ~f:generic)
       in
       io (t8 ^ "#( " ^ generics ^ " )\n"));
     io (t8 ^ inst_name ^ "\n");
@@ -774,7 +773,7 @@ module VerilogCore : Rtl_internal = struct
         List.map i.inst_outputs ~f:(fun (n, (w, l)) ->
           write_port_reference n s ~indexes:(w + l - 1, l))
     in
-    io (t8 ^ "( " ^ sep ", " (in_ports @ out_ports) ^ " );\n")
+    io (t8 ^ "( " ^ sep (",\n" ^ spaces 10) (in_ports @ out_ports) ^ " );\n")
   ;;
 
   let assign io t f = io (t4 ^ "assign " ^ t ^ " = " ^ f ^ ";\n")
@@ -1074,20 +1073,20 @@ module VhdlCore : Rtl_internal = struct
     let param_string (p : Parameter.t) =
       match p.value with
       | String v -> "\"" ^ v ^ "\""
-      | Bit_vector v -> "\"" ^ Parameter.Bit_vector.to_string v ^ "\""
+      | Bit_vector v -> "\"" ^ Logic.Bit_vector.to_string v ^ "\""
       | Std_logic_vector v ->
         String.concat
-          [ "std_logic_vector'(\""; Parameter.Std_logic_vector.to_string v; "\")" ]
+          [ "std_logic_vector'(\""; Logic.Std_logic_vector.to_string v; "\")" ]
       | Std_ulogic_vector v ->
         String.concat
-          [ "std_ulogic_vector'(\""; Parameter.Std_logic_vector.to_string v; "\")" ]
+          [ "std_ulogic_vector'(\""; Logic.Std_logic_vector.to_string v; "\")" ]
       | Int v -> Int.to_string v
       (* floats must be printed with a trailing number in vhdl (ie [11.0] not [11.]) and
          [%f] seems to do that. *)
       | Real v -> sprintf "%f" v
       | Bool v -> if v then "true" else "false"
       | Bit b -> if b then "'1'" else "'0'"
-      | Std_ulogic b | Std_logic b -> sprintf "'%c'" (Parameter.Std_logic.to_char b)
+      | Std_ulogic b | Std_logic b -> sprintf "'%c'" (Logic.Std_logic.to_char b)
     in
     if not (List.is_empty i.inst_generics)
     then (

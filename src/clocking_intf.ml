@@ -1,0 +1,39 @@
+module type S = sig
+  type 'a t =
+    { clock : 'a
+    ; clear : 'a
+    }
+  [@@deriving sexp_of, hardcaml]
+
+  val add_clear : Signal.t t -> Signal.t -> Signal.t t
+  val to_spec : Signal.t t -> Reg_spec.t
+  val to_spec_no_clear : Signal.t t -> Reg_spec.t
+  val reg : Signal.t t -> ?enable:Signal.t -> Signal.t -> Signal.t
+  val reg_no_clear : Signal.t t -> ?enable:Signal.t -> Signal.t -> Signal.t
+  val pipeline : ?enable:Signal.t -> Signal.t t -> n:int -> Signal.t -> Signal.t
+
+  val reg_fb
+    :  ?enable:Signal.t
+    -> Signal.t t
+    -> width:int
+    -> f:(Signal.t -> Signal.t)
+    -> Signal.t
+
+  module Var : sig
+    val reg : ?enable:Signal.t -> Signal.t t -> width:int -> Always.Variable.t
+
+    val reg_with_default
+      :  ?enable:Signal.t
+      -> Signal.t t
+      -> width:int
+      -> clear_to:int
+      -> Always.Variable.t
+  end
+end
+
+module type Clocking = sig
+  module type S = S
+
+  module Make () : S
+  include S
+end

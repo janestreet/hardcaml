@@ -6,7 +6,7 @@ module Entry = struct
     ; mangled_name : string
     ; circuit : Circuit.t
     }
-  [@@deriving fields]
+  [@@deriving fields ~getters]
 end
 
 type t =

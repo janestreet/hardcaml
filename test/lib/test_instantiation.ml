@@ -31,7 +31,8 @@ let%expect_test "Intstantiation in Verilog with single bit output" =
         /* logic */
         example
             the_example
-            ( .a(a), .b(_5) );
+            ( .a(a),
+              .b(_5) );
         assign _2 = _5;
 
         /* aliases */
@@ -136,7 +137,10 @@ let%expect_test "Intstantiation in Verilog with multiple inputs and outputs" =
         assign _7 = _6[4:1];
         example
             the_example
-            ( .a(a), .b(b), .d(_6[4:1]), .c(_6[0:0]) );
+            ( .a(a),
+              .b(b),
+              .d(_6[4:1]),
+              .c(_6[0:0]) );
         assign _8 = _6[0:0];
 
         /* aliases */

@@ -282,7 +282,10 @@ let%expect_test "hierarchical" =
           (* keep_hierarchy="yes" *)
           inner
               inner_0
-              ( .a(_8), .b(_5), .d(_12[1:1]), .c(_12[0:0]) );
+              ( .a(_8),
+                .b(_5),
+                .d(_12[1:1]),
+                .c(_12[0:0]) );
           assign _14 = _12[0:0];
           assign _5 = b;
           assign _8 = a;
@@ -335,7 +338,13 @@ let%expect_test "hierarchical" =
           assign _8 = a;
           middle
               the_middle
-              ( .a(_8), .b(_6), .x(_11[4:4]), .d1(_11[3:3]), .c1(_11[2:2]), .d0(_11[1:1]), .c0(_11[0:0]) );
+              ( .a(_8),
+                .b(_6),
+                .x(_11[4:4]),
+                .d1(_11[3:3]),
+                .c1(_11[2:2]),
+                .d0(_11[1:1]),
+                .c0(_11[0:0]) );
           assign _16 = _11[0:0];
 
           /* aliases */
@@ -412,7 +421,10 @@ let%expect_test "hierarchical" =
         (* keep_hierarchy="yes" *)
         inner
             inner_0
-            ( .a(_8), .b(_5), .d(_12[1:1]), .c(_12[0:0]) );
+            ( .a(_8),
+              .b(_5),
+              .d(_12[1:1]),
+              .c(_12[0:0]) );
         assign _14 = _12[0:0];
         assign _5 = b;
         assign _8 = a;
@@ -465,7 +477,13 @@ let%expect_test "hierarchical" =
         assign _8 = a;
         middle
             the_middle
-            ( .a(_8), .b(_6), .x(_11[4:4]), .d1(_11[3:3]), .c1(_11[2:2]), .d0(_11[1:1]), .c0(_11[0:0]) );
+            ( .a(_8),
+              .b(_6),
+              .x(_11[4:4]),
+              .d1(_11[3:3]),
+              .c1(_11[2:2]),
+              .d0(_11[1:1]),
+              .c0(_11[0:0]) );
         assign _16 = _11[0:0];
 
         /* aliases */
@@ -542,7 +560,10 @@ let%expect_test "hierarchical" =
         (* keep_hierarchy="yes" *)
         inner
             inner_0
-            ( .a(_8), .b(_5), .d(_12[1:1]), .c(_12[0:0]) );
+            ( .a(_8),
+              .b(_5),
+              .d(_12[1:1]),
+              .c(_12[0:0]) );
         assign _14 = _12[0:0];
         assign _5 = b;
         assign _8 = a;
@@ -595,7 +616,13 @@ let%expect_test "hierarchical" =
         assign _8 = a;
         middle
             the_middle
-            ( .a(_8), .b(_6), .x(_11[4:4]), .d1(_11[3:3]), .c1(_11[2:2]), .d0(_11[1:1]), .c0(_11[0:0]) );
+            ( .a(_8),
+              .b(_6),
+              .x(_11[4:4]),
+              .d1(_11[3:3]),
+              .c1(_11[2:2]),
+              .d0(_11[1:1]),
+              .c0(_11[0:0]) );
         assign _16 = _11[0:0];
 
         /* aliases */

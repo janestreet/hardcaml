@@ -355,7 +355,7 @@ let%expect_test "test instantiation" =
             ; Parameter.create ~name:"float_param" ~value:(Real 1.2)
             ; Parameter.create
                 ~name:"bit_vector_param"
-                ~value:(Bit_vector (Parameter.Bit_vector.of_string "11001"))
+                ~value:(Bit_vector (Logic.Bit_vector.of_string "11001"))
             ]
           ~inputs:[ "i1", input "a" 3; "i2", input "b" 2 ]
           ~outputs:[ "o1", 4; "o2", 3 ])

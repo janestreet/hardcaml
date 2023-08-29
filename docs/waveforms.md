@@ -20,7 +20,7 @@ Hardcaml simulations.
 ## Printing results as waveforms
 
 We can capture a waveform with
-[`Waveform.create`](https://v3.ocaml.org/p/hardcaml_waveterm/v0.15.0/doc/Hardcaml_waveterm/index.html).
+[`Waveform.create`](https://ocaml.org/p/hardcaml_waveterm/latest/doc/Hardcaml_waveterm/index.html).
 It takes as an argument a simulator and returns a waveform and
 modified simulator that captures the input and output port values.
 
@@ -161,7 +161,7 @@ The `Waveform.print` function takes optional arguments which control the renderi
 ```
 
 The signals are shown in the order of the first matching
-[`display_rule`](https://v3.ocaml.org/p/hardcaml_waveterm/v0.15.0/doc/Hardcaml_waveterm/Display_rule/index.html).
+[`display_rule`](https://ocaml.org/p/hardcaml_waveterm/latest/doc/Hardcaml_waveterm/Display_rule/index.html).
 The way the value is shown is configured with the
-[`wave_format`](https://v3.ocaml.org/p/hardcaml_waveterm/v0.15.0/doc/Hardcaml_waveterm/Wave_format/index.html)
+[`wave_format`](https://ocaml.org/p/hardcaml_waveterm/latest/doc/Hardcaml_waveterm/Wave_format/index.html)
 argument. Groups of signals can be specified using regular expressions.

@@ -7,7 +7,7 @@
 ```
 -->
 
-A Hardcaml [`Circuit.t`](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Circuit/index.html)
+A Hardcaml [`Circuit.t`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Circuit/index.html)
 encodes both the RTL logic for a hardware
 design along with named input and output ports. Circuits can be
 converted into various different forms:

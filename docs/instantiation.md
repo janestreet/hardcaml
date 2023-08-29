@@ -7,7 +7,7 @@
 ```
 -->
 
-An [instantiation](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Instantiation/index.html)
+An [instantiation](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Instantiation/index.html)
 creates a placeholder for a named sub-circuit with
 specified input and output ports.
 
@@ -76,7 +76,7 @@ val parameter : Parameter.t =
 ```
 
 Each parameter is specified using a `name` and a `type` with a value. Various
-[types](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Parameter/Value/index.html)
+[types](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Parameter/Value/index.html)
 are supported including `Int`, `String`, `Bool`, `Real`
 and various bit and vector types associated with Verilog and VHDL -
 `Bit`, `Std_logic_vector` etc.

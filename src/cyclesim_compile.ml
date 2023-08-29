@@ -145,7 +145,6 @@ end = struct
     ; name_to_uid : Signal.Uid.t Map.M(String).t
     ; aliases : Schedule.Aliases.t
     }
-  [@@deriving fields]
 
   let uid = Signal.uid
 

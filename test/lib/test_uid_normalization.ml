@@ -205,7 +205,11 @@ let%expect_test "verilog with normalization" =
         assign _20 = _18[5:3];
         blah
             the_blah
-            ( .a(a), .b(b), .e(_18[8:6]), .d(_18[5:3]), .c(_18[2:0]) );
+            ( .a(a),
+              .b(b),
+              .e(_18[8:6]),
+              .d(_18[5:3]),
+              .c(_18[2:0]) );
         assign _19 = _18[2:0];
         assign _21 = _19 | _20;
         assign _23 = _21 | _22;

@@ -1,10 +1,5 @@
 open Base
 
-module type Arg = sig
-  val port_name : string
-  val port_width : int
-end
-
 module type S = sig
   include Interface.S
 
@@ -22,9 +17,8 @@ end
 module type S_untyped = S with type 'a t = 'a
 
 module type Scalar = sig
-  module type Arg = Arg
   module type S = S
   module type S_untyped = S_untyped
 
-  module Make (X : Arg) : S_untyped
+  module Make (X : Value.Arg) : S_untyped
 end

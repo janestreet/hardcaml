@@ -8,7 +8,7 @@
 -->
 
 Abstractly, Hardcaml
-[interfaces](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/Interface/index.html)
+[interfaces](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Interface/index.html)
 are made up of a polymorphic type and
 a set of functions conforming to the module type `Interface.S`. The
 type always represents a set of hardware signals, and the related

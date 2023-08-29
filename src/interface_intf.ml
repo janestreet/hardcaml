@@ -80,6 +80,9 @@ module type Comb_monomorphic = sig
   (** Raise if the widths of [t] do not match those specified in the interface. *)
   val assert_widths : t -> unit
 
+  (** Checks the port widths of the signals in the interface. Raises if they mismatch. *)
+  val validate : t -> unit
+
   (** Each field is set to the constant integer value provided. *)
   val of_int : int -> t
 
@@ -173,9 +176,6 @@ module type Of_signal_functions = sig
     -> ?naming_op:(Signal.t -> string -> Signal.t) (** Default is [Signal.(--)] *)
     -> t
     -> t
-
-  (** Checks the port widths of the signals in the interface. Raises if they mismatch. *)
-  val validate : t -> unit
 end
 
 module type S = sig
@@ -377,12 +377,6 @@ module type Interface = sig
   end
 
   module Make (X : Pre) : S with type 'a t := 'a X.t
-
-  (** An interface for a single value *)
-  module Value (S : sig
-      val port_name : string
-      val port_width : int
-    end) : S with type 'a t = 'a
 
   (** Recreate a Hardcaml Interface with the same type, but different port names / widths. *)
   module Update

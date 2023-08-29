@@ -1,5 +1,6 @@
 open! Import
-open! Parameter
+open Parameter
+open Logic
 
 let show t = print_s [%sexp (t : t)]
 let is_subset ts1 ts2 = print_s [%sexp (is_subset ts1 ts2 : bool)]
@@ -219,14 +220,34 @@ let%expect_test "instantiation in verilog" =
 
         /* logic */
         test_parameters_verilog
-            #( .an_int(7), .a_bool(1'b1), .a_string("world"), .a_real(3.900000), .a_bit(1'b1), .a_bit_vector(4'b1100), .a_std_logic(4'd5), .a_std_ulogic(4'd3), .a_std_logic_vector(4'b1010), .a_std_ulogic_vector(4'b1011) )
+            #( .an_int(7),
+              .a_bool(1'b1),
+              .a_string("world"),
+              .a_real(3.900000),
+              .a_bit(1'b1),
+              .a_bit_vector(4'b1100),
+              .a_std_logic(4'd5),
+              .a_std_ulogic(4'd3),
+              .a_std_logic_vector(4'b1010),
+              .a_std_ulogic_vector(4'b1011) )
             the_test_parameters_verilog
-            ( .a(a), .b(_7[1:0]) );
+            ( .a(a),
+              .b(_7[1:0]) );
         assign _1 = _7;
         test_parameters_vhdl
-            #( .an_int(7), .a_bool(1'b1), .a_string("world"), .a_real(3.900000), .a_bit(1'b1), .a_bit_vector(4'b1100), .a_std_logic(4'd5), .a_std_ulogic(4'd3), .a_std_logic_vector(4'b1010), .a_std_ulogic_vector(4'b1011) )
+            #( .an_int(7),
+              .a_bool(1'b1),
+              .a_string("world"),
+              .a_real(3.900000),
+              .a_bit(1'b1),
+              .a_bit_vector(4'b1100),
+              .a_std_logic(4'd5),
+              .a_std_ulogic(4'd3),
+              .a_std_logic_vector(4'b1010),
+              .a_std_ulogic_vector(4'b1011) )
             the_test_parameters_vhdl
-            ( .a(a), .b(_9[1:0]) );
+            ( .a(a),
+              .b(_9[1:0]) );
         assign _4 = _9;
 
         /* aliases */

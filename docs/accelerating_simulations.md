@@ -29,7 +29,7 @@ compiles a Hardcaml circuit simulation to the Verilator backend, with
 custom-generated C++ bindings. All these are done under the hood
 whilst exposing the Cyclesim API to the end user.
 
-To use [`Hardcaml_verilator`](https://v3.ocaml.org/p/hardcaml_verilator/v0.15.0/doc/Hardcaml_verilator/index.html),
+To use [`Hardcaml_verilator`](https://ocaml.org/p/hardcaml_verilator/latest/doc/Hardcaml_verilator/index.html),
 [Verilator](https://www.veripool.org/wiki/verilator) and g++ have to be
 installed on your system.
 
@@ -97,7 +97,7 @@ benches that are agnostic to the backend, whether it is Hardcaml's
 Cyclesim, Hardcaml Verilator, or Hardcaml C.
 
 `Hardcaml_verilator` also supports an Interface-based API. See
-[`Hardcaml_verilator.With_interface`](https://v3.ocaml.org/p/hardcaml_verilator/v0.15.0/doc/Hardcaml_verilator/With_interface/index.html).
+[`Hardcaml_verilator.With_interface`](https://ocaml.org/p/hardcaml_verilator/latest/doc/Hardcaml_verilator/With_interface/index.html).
 
 # `Hardcaml_c`
 
@@ -132,4 +132,4 @@ val sim_c : Cyclesim.t_port_list = <abstr>
 ```
 
 Like Hardcaml Verilator, Hardcaml C supports an Interface-based
-API. See [`Hardcaml_c.Cyclesim.With_interface`](https://v3.ocaml.org/p/hardcaml_c/v0.15.0/doc/Hardcaml_c/Cyclesim/With_interface/index.html).
+API. See [`Hardcaml_c.Cyclesim.With_interface`](https://ocaml.org/p/hardcaml_c/latest/doc/Hardcaml_c/Cyclesim/With_interface/index.html).

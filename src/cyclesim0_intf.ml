@@ -75,7 +75,7 @@ module type Cyclesim0 = sig
     ; digest : Digest.t ref
     ; circuit : Circuit.t option
     }
-  [@@deriving fields, sexp_of]
+  [@@deriving fields ~getters, sexp_of]
 
   type t_port_list = (Port_list.t, Port_list.t) t
 

@@ -1,11 +1,10 @@
 open Base
 
-module type Arg = Scalar_intf.Arg
 module type S = Scalar_intf.S
 module type S_untyped = Scalar_intf.S_untyped
 
-module Make (X : Arg) = struct
-  include Interface.Value (X)
+module Make (X : Value.Arg) = struct
+  include Value.Make (X)
 
   let num_bits = X.port_width
 

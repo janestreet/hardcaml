@@ -158,7 +158,11 @@ let%expect_test "Instantiation blackbox" =
         assign _8 = clk;
         fir_filter
             fir_filter
-            ( .clk(_8), .clr(_6), .enable(_4), .d(_2), .q(_12[31:0]) );
+            ( .clk(_8),
+              .clr(_6),
+              .enable(_4),
+              .d(_2),
+              .q(_12[31:0]) );
         assign _9 = _12;
 
         /* aliases */
@@ -219,7 +223,11 @@ let%expect_test "Instantiation blackbox" =
         assign _8 = clk;
         fir_filter
             fir_filter
-            ( .clk(_8), .clr(_6), .enable(_4), .d(_2), .q(_12[31:0]) );
+            ( .clk(_8),
+              .clr(_6),
+              .enable(_4),
+              .d(_2),
+              .q(_12[31:0]) );
         assign _9 = _12;
 
         /* aliases */
