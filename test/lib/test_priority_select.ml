@@ -6,7 +6,7 @@ let cases index =
   index
   |> Bits.bits_lsb
   |> List.mapi ~f:(fun i valid ->
-    { With_valid.valid; value = Bits.of_int ~width:8 (i + 1) })
+       { With_valid.valid; value = Bits.of_int ~width:8 (i + 1) })
 ;;
 
 let sexp_of_int_with_valid (i : int With_valid.t) =
@@ -29,7 +29,7 @@ let test ~branching_factor ~case_count =
             (cases index
              |> Bits.priority_select ~branching_factor
              |> With_valid.map ~f:Bits.to_int
-             : int_with_valid)]
+              : int_with_valid)]
   done
 ;;
 
@@ -186,7 +186,7 @@ let test_with_default ~branching_factor ~case_count =
             (cases index
              |> Bits.priority_select_with_default ~branching_factor ~default:(Bits.ones 8)
              |> Bits.to_int
-             : int)]
+              : int)]
   done
 ;;
 

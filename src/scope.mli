@@ -42,7 +42,7 @@ val create
   -> ?auto_label_hierarchical_ports:bool (** default [false] *)
   -> ?trace_properties:bool (** default [false] *)
   -> ?naming_scheme:Naming_scheme.t
-  (** defaults to [Full_path] when [flatten_design] is [true] and [No_path] otherwise. *)
+       (** defaults to [Full_path] when [flatten_design] is [true] and [No_path] otherwise. *)
   -> ?name:string
   -> unit
   -> t

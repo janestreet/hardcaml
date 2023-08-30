@@ -37,7 +37,7 @@ let%expect_test "set of [Bits.t]s" =
   print_s
     [%sexp
       (Set.of_list (module Bits) (List.map [ "0"; "1"; "01"; "11" ] ~f:of_bit_string)
-       : Set.M(Bits).t)];
+        : Set.M(Bits).t)];
   [%expect {|
     (0 1 01 11) |}]
 ;;
@@ -421,8 +421,8 @@ module Make (R : Require) = struct
     List.iter config.prims ~f:(fun op ->
       let rec loop i =
         if i < config.iterations
-        && (T.run op here config.min_bit_width config.max_bit_width
-            || not stop_on_first_primitive_error)
+           && (T.run op here config.min_bit_width config.max_bit_width
+               || not stop_on_first_primitive_error)
         then loop (i + 1)
       in
       loop 0)

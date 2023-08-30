@@ -104,16 +104,16 @@ let g_clock = clock
 let g_enable = enable
 
 let reg_error
-      ?clock
-      ?clock_edge
-      ?reset
-      ?reset_edge
-      ?reset_to
-      ?clear
-      ?clear_level
-      ?clear_to
-      ?enable
-      here
+  ?clock
+  ?clock_edge
+  ?reset
+  ?reset_edge
+  ?reset_to
+  ?clear
+  ?clear_level
+  ?clear_to
+  ?enable
+  here
   =
   require_does_raise here (fun () ->
     reg

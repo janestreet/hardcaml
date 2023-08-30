@@ -2,8 +2,8 @@ open! Core
 module Synth = Hardcaml_xilinx_reports
 
 module Make (Bits : sig
-    val bits : int
-  end) =
+  val bits : int
+end) =
 struct
   open Hardcaml.Signal
 
@@ -41,13 +41,13 @@ struct
                (`Combinational create_with_priority_mux)
                scope
                i)
-            .count
+              .count
           ; (With_regs.hier
                ~name:"rec_decomp"
                (`Combinational create_recursive_decomp)
                scope
                i)
-            .count
+              .count
           ]
     }
   ;;

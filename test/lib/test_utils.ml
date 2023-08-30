@@ -9,7 +9,7 @@ let%expect_test "list_of_string" =
 let%expect_test "int_of_hchar" =
   [%sexp
     (List.map ~f:Constant.int_of_hex_char @@ String.to_list "0123456789abcdefABCDEF"
-     : int list)]
+      : int list)]
   |> print_s;
   [%expect {| (0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 10 11 12 13 14 15) |}]
 ;;
@@ -100,9 +100,9 @@ let%expect_test "roundtrips" =
   let hex_string =
     ( max_bit_width
     , fun width x ->
-      x
-      |> Constant.to_hex_string ~signedness:Unsigned
-      |> Constant.of_hex_string ~signedness:Unsigned ~width )
+        x
+        |> Constant.to_hex_string ~signedness:Unsigned
+        |> Constant.of_hex_string ~signedness:Unsigned ~width )
   in
   let z =
     ( max_bit_width
@@ -134,7 +134,7 @@ let%expect_test "int_of_bstr" =
   let int_of_bstr s = Constant.of_binary_string s |> Constant.to_int in
   [%sexp
     ([ int_of_bstr "0"; int_of_bstr "1"; int_of_bstr "110"; int_of_bstr "11111111" ]
-     : int list)]
+      : int list)]
   |> print_s;
   [%expect {| (0 1 6 255) |}]
 ;;
@@ -147,7 +147,7 @@ let%expect_test "int32_of_bstr" =
      ; int32_of_bstr "110"
      ; int32_of_bstr "11111111"
      ]
-     : int32 list)]
+      : int32 list)]
   |> print_s;
   [%expect {| (0 1 6 255) |}]
 ;;
@@ -160,7 +160,7 @@ let%expect_test "int64_of_bstr" =
      ; int64_of_bstr "110"
      ; int64_of_bstr "11111111"
      ]
-     : int64 list)]
+      : int64 list)]
   |> print_s;
   [%expect {| (0 1 6 255) |}]
 ;;
@@ -169,7 +169,7 @@ let%expect_test "bstr_of_int" =
   let bstr_of_int width x = Constant.of_int ~width x |> Constant.to_binary_string in
   [%sexp
     ([ bstr_of_int 1 0; bstr_of_int 2 1; bstr_of_int 3 6; bstr_of_int 8 255 ]
-     : string list)]
+      : string list)]
   |> print_s;
   [%expect {| (0 01 110 11111111) |}]
 ;;
@@ -178,7 +178,7 @@ let%expect_test "bstr_of_int32" =
   let bstr_of_int32 width x = Constant.of_int32 ~width x |> Constant.to_binary_string in
   [%sexp
     ([ bstr_of_int32 1 0l; bstr_of_int32 2 1l; bstr_of_int32 3 6l; bstr_of_int32 8 255l ]
-     : string list)]
+      : string list)]
   |> print_s;
   [%expect {| (0 01 110 11111111) |}]
 ;;
@@ -187,7 +187,7 @@ let%expect_test "bstr_of_int64" =
   let bstr_of_int64 width x = Constant.of_int64 ~width x |> Constant.to_binary_string in
   [%sexp
     ([ bstr_of_int64 1 0L; bstr_of_int64 2 1L; bstr_of_int64 3 6L; bstr_of_int64 8 255L ]
-     : string list)]
+      : string list)]
   |> print_s;
   [%expect {| (0 01 110 11111111) |}]
 ;;
@@ -196,7 +196,7 @@ let%expect_test "intbitslist_of_bstr" =
   let intbitslist_of_bstr x = Constant.of_binary_string x |> Constant.to_bit_list in
   [%sexp
     (List.map ~f:intbitslist_of_bstr [ "0"; "1"; "1100"; "0011"; "101011101010011" ]
-     : int list list)]
+      : int list list)]
   |> print_s;
   [%expect
     {|
@@ -218,7 +218,7 @@ let%expect_test "bstr_of_intbitslist" =
        ; [ 0; 0; 1; 1 ]
        ; [ 1; 0; 1; 0; 1; 1; 1; 0; 1; 0; 1; 0; 0; 1; 1 ]
        ]
-     : string list)]
+      : string list)]
   |> print_s;
   [%expect {|
     (0 1 1100 0011 101011101010011) |}]
@@ -240,7 +240,7 @@ let bstr_of_hstr signedness width x =
 let%expect_test "bstr_of_hstr signed" =
   [%sexp
     (List.map ~f:(bstr_of_hstr Signed 64) [ "1"; "B"; "1f3"; "FFFFFFFFFFFFFFFF" ]
-     : string list)]
+      : string list)]
   |> print_s;
   [%expect
     {|
@@ -253,7 +253,7 @@ let%expect_test "bstr_of_hstr signed" =
 let%expect_test "bstr_of_hstr unsigned" =
   [%sexp
     (List.map ~f:(bstr_of_hstr Unsigned 64) [ "1"; "B"; "1f3"; "FFFFFFFFFFFFFFFF" ]
-     : string list)]
+      : string list)]
   |> print_s;
   [%expect
     {|
@@ -272,7 +272,7 @@ let%expect_test "hstr_of_bstr signed" =
     (List.map
        ~f:(hstr_of_bstr Signed)
        [ "1"; "110101"; "00101100100101"; "1111111111111111" ]
-     : string list)]
+      : string list)]
   |> print_s;
   [%expect {| (f f5 0b25 ffff) |}]
 ;;
@@ -282,7 +282,7 @@ let%expect_test "hstr_of_bstr unsigned" =
     (List.map
        ~f:(hstr_of_bstr Unsigned)
        [ "1"; "110101"; "00101100100101"; "1111111111111111" ]
-     : string list)]
+      : string list)]
   |> print_s;
   [%expect {| (1 35 0b25 ffff) |}]
 ;;
@@ -301,7 +301,7 @@ let%expect_test "bstr_of_abits_int64" =
        ; 65, [| 0L; 1L |]
        ; 64, [| 0xfedcba9876543210L |]
        ]
-     : string list)]
+      : string list)]
   |> print_s;
   [%expect
     {|
@@ -325,7 +325,7 @@ let%expect_test "abits_int64_of_bstr" =
        ; "10000000000000000000000000000000000000000000000000000000000000000"
        ; "1111111011011100101110101001100001110110010101000011001000010000"
        ]
-     : int64 array list)]
+      : int64 array list)]
   |> print_s;
   [%expect
     {|

@@ -165,7 +165,7 @@ and instantiation =
   { inst_name : string (* name of circuit *)
   ; inst_instance : string (* instantiation label *)
   ; inst_generics : Parameter.t list
-  (* [ Parameter.create ~name:"ram_type" ~value:(String "auto") ] *)
+      (* [ Parameter.create ~name:"ram_type" ~value:(String "auto") ] *)
   ; inst_inputs : (string * t) list (* name and input signal *)
   ; inst_outputs : (string * (int * int)) list (* name, width and low index of output *)
   ; inst_lib : string
@@ -420,11 +420,11 @@ let to_string signal =
 ;;
 
 let structural_compare
-      ?(check_names = true)
-      ?(check_deps = true)
-      ?(initial_deps = Set.empty (module Uid))
-      a
-      b
+  ?(check_names = true)
+  ?(check_deps = true)
+  ?(initial_deps = Set.empty (module Uid))
+  a
+  b
   =
   let rec structural_compare set a b =
     if Set.mem set (uid a)
@@ -536,9 +536,9 @@ and sexp_of_register_recursive ?show_uids ~depth reg =
       ~enable:(sexp_of_opt reg.reg_enable reg.reg_enable : (Sexp.t option[@sexp.option]))]
 
 and sexp_of_memory_recursive
-      ?show_uids
-      ~depth
-      (size, write_address, read_address, write_enable)
+  ?show_uids
+  ~depth
+  (size, write_address, read_address, write_enable)
   =
   let sexp_of_signal s = sexp_of_signal_recursive ?show_uids ~depth:(depth - 1) s in
   [%message
@@ -611,18 +611,18 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
     let width = width signal in
     let loc = caller_id signal in
     let create
-          ?value
-          ?arguments
-          ?select
-          ?data
-          ?range
-          ?instantiation
-          ?register
-          ?memory
-          ?multiport_memory
-          ?mem_read_port
-          ?data_in
-          constructor
+      ?value
+      ?arguments
+      ?select
+      ?data
+      ?range
+      ?instantiation
+      ?register
+      ?memory
+      ?multiport_memory
+      ?mem_read_port
+      ?data_in
+      constructor
       =
       [%message
         constructor
@@ -931,12 +931,12 @@ module Const_prop = struct
       let optimise_consts l =
         List.group l ~break:(fun a b -> not (Bool.equal (is_const a) (is_const b)))
         |> List.map ~f:(function
-          | [] -> []
-          | [ x ] -> [ x ]
-          | h :: _ as l ->
-            if is_const h
-            then [ List.map l ~f:const_value |> Bits.concat_msb |> cst ]
-            else l)
+             | [] -> []
+             | [ x ] -> [ x ]
+             | h :: _ as l ->
+               if is_const h
+               then [ List.map l ~f:const_value |> Bits.concat_msb |> cst ]
+               else l)
         |> List.concat
       in
       concat_msb (optimise_consts l)
@@ -1066,16 +1066,16 @@ module Reg_spec_ = struct
   type t = register [@@deriving sexp_of]
 
   let override
-        ?clock
-        ?clock_edge
-        ?reset
-        ?reset_edge
-        ?reset_to
-        ?clear
-        ?clear_level
-        ?clear_to
-        ?global_enable
-        spec
+    ?clock
+    ?clock_edge
+    ?reset
+    ?reset_edge
+    ?reset_to
+    ?clear
+    ?clear_level
+    ?clear_to
+    ?global_enable
+    spec
     =
     { reg_clock = Option.value clock ~default:spec.reg_clock
     ; reg_clock_edge = Option.value clock_edge ~default:spec.reg_clock_edge
@@ -1284,8 +1284,8 @@ let multiport_memory ?name ?(attributes = []) size ~write_ports ~read_addresses 
   let deps =
     Array.to_list read_addresses
     :: List.map (Array.to_list write_ports) ~f:(fun (w : write_port) ->
-      let { write_clock; write_address; write_data; write_enable } = w in
-      [ write_clock; write_address; write_data; write_enable ])
+         let { write_clock; write_address; write_data; write_enable } = w in
+         [ write_clock; write_address; write_data; write_enable ])
     |> List.concat
   in
   let mem =
@@ -1320,15 +1320,15 @@ let ram_wbr ?name ?attributes ~write_port ~read_port size =
      ?attributes
      ~write_ports:[| write_port |]
      ~read_addresses:[| reg spec ~enable:read_port.read_enable read_port.read_address |]).(
-    0)
+  0)
 ;;
 
 (* Pretty printer *)
 let pp fmt t = Stdlib.Format.fprintf fmt "%s" ([%sexp (t : t)] |> Sexp.to_string_hum)
 
 module _ = Pretty_printer.Register (struct
-    type nonrec t = t
+  type nonrec t = t
 
-    let module_name = "Hardcaml.Signal"
-    let to_string = to_bstr
-  end)
+  let module_name = "Hardcaml.Signal"
+  let to_string = to_bstr
+end)

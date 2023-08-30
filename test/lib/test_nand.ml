@@ -4,10 +4,10 @@
 open! Import
 
 module Make_nand_gates (X : sig
-    module Bits : Comb.S
+  module Bits : Comb.S
 
-    val nand : Bits.t -> Bits.t -> Bits.t
-  end) : Comb.Gates with type t = X.Bits.t = struct
+  val nand : Bits.t -> Bits.t -> Bits.t
+end) : Comb.Gates with type t = X.Bits.t = struct
   include X.Bits
 
   let ( ~: ) a = X.nand a a
@@ -21,10 +21,10 @@ module Make_nand_gates (X : sig
 end
 
 module Bits_nand = Comb.Make (Comb.Make_primitives (Make_nand_gates (struct
-                                                      module Bits = Bits
+  module Bits = Bits
 
-                                                      let nand a b = Bits.(~:(a &: b))
-                                                    end)))
+  let nand a b = Bits.(~:(a &: b))
+end)))
 
 let%expect_test "3 bit adder, bits" =
   for a = 0 to 7 do
@@ -33,7 +33,7 @@ let%expect_test "3 bit adder, bits" =
         ""
           ~_:
             (List.init 8 ~f:(fun b -> Bits_nand.(of_int ~width:3 a +: of_int ~width:3 b))
-             : Bits.t list)]
+              : Bits.t list)]
   done;
   [%expect
     {|
@@ -48,19 +48,19 @@ let%expect_test "3 bit adder, bits" =
 ;;
 
 module Asic_nand = Comb.Make (Comb.Make_primitives (Make_nand_gates (struct
-                                                      module Bits = Signal
+  module Bits = Signal
 
-                                                      let nand a b =
-                                                        assert (Bits.width a = Bits.width b);
-                                                        Map.find_exn
-                                                          (Instantiation.create
-                                                             ()
-                                                             ~name:"nand"
-                                                             ~inputs:[ "a", a; "b", b ]
-                                                             ~outputs:[ "c", Bits.width a ])
-                                                          "c"
-                                                      ;;
-                                                    end)))
+  let nand a b =
+    assert (Bits.width a = Bits.width b);
+    Map.find_exn
+      (Instantiation.create
+         ()
+         ~name:"nand"
+         ~inputs:[ "a", a; "b", b ]
+         ~outputs:[ "c", Bits.width a ])
+      "c"
+  ;;
+end)))
 
 let%expect_test "3 bit adder, ASIC style, verilog" =
   let open Signal in
@@ -494,25 +494,25 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
 ;;
 
 module Fpga_nand = Comb.Make (Comb.Make_primitives (Make_nand_gates (struct
-                                                      module Bits = Signal
-                                                      open Signal
+  module Bits = Signal
+  open Signal
 
-                                                      let nand_lut a b =
-                                                        Map.find_exn
-                                                          (Instantiation.create
-                                                             ()
-                                                             ~name:"LUT2"
-                                                             ~parameters:[ Parameter.create ~name:"INIT" ~value:(String "1110") ]
-                                                             ~inputs:[ "I", a @: b ]
-                                                             ~outputs:[ "O", 1 ])
-                                                          "O"
-                                                      ;;
+  let nand_lut a b =
+    Map.find_exn
+      (Instantiation.create
+         ()
+         ~name:"LUT2"
+         ~parameters:[ Parameter.create ~name:"INIT" ~value:(String "1110") ]
+         ~inputs:[ "I", a @: b ]
+         ~outputs:[ "O", 1 ])
+      "O"
+  ;;
 
-                                                      let nand a b =
-                                                        assert (width a = width b);
-                                                        concat_msb (List.map2_exn (bits_msb a) (bits_msb b) ~f:nand_lut)
-                                                      ;;
-                                                    end)))
+  let nand a b =
+    assert (width a = width b);
+    concat_msb (List.map2_exn (bits_msb a) (bits_msb b) ~f:nand_lut)
+  ;;
+end)))
 
 let%expect_test "3 bit adder, FPGA style, verilog" =
   (* Not sayin' this is an efficient way to go about this... *)

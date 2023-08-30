@@ -14,7 +14,7 @@ let find_name_exn ts name =
   print_s
     [%sexp
       (try_with (fun () -> find_name_exn ts (Parameter_name.of_string name))
-       : Value.t Or_error.t)]
+        : Value.t Or_error.t)]
 ;;
 
 let t1 = { name = Parameter_name.of_string "N1"; value = Int 1 }

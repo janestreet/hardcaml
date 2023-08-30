@@ -54,8 +54,8 @@ module Trace = struct
   let op2 bits ~f =
     List.concat
     @@ List.init (1 lsl bits) ~f:(fun x ->
-      List.init (1 lsl bits) ~f:(fun y ->
-        f (of_int ~width:bits x) (of_int ~width:bits y)))
+         List.init (1 lsl bits) ~f:(fun y ->
+           f (of_int ~width:bits x) (of_int ~width:bits y)))
   ;;
 
   let op1 bits ~f = List.init (1 lsl bits) ~f:(fun y -> f (of_int ~width:bits y))
@@ -71,7 +71,7 @@ module Trace = struct
           ([ of_int ~width:8 22 +: of_int ~width:8 33
            ; of_int ~width:123 22345 +: of_int ~width:123 (-22345)
            ]
-           : signal op2 list)
+            : signal op2 list)
         ~int_on_right:
           ([ of_int ~width:7 27 +:. 12; of_int ~width:7 27 +:. -12 ] : int op2 list)]
   ;;
@@ -87,7 +87,7 @@ module Trace = struct
           ([ of_int ~width:8 22 +: of_int ~width:8 33
            ; of_int ~width:123 22345 +: of_int ~width:123 (-22345)
            ]
-           : signal op2 list)]
+            : signal op2 list)]
   ;;
 
   let binary_op_tests_with_one_constant name f =
@@ -112,12 +112,12 @@ module Trace = struct
            ; of_int ~width:2 3 *: of_int ~width:5 8
            ; of_int ~width:2 3 *: of_int ~width:5 16
            ]
-           : signal op2 list)
+            : signal op2 list)
         ~misc:
           ([ of_int ~width:8 22 *: of_int ~width:8 33
            ; of_int ~width:7 27 *: of_int ~width:4 12
            ]
-           : signal op2 list)]
+            : signal op2 list)]
   ;;
 end
 
@@ -133,7 +133,7 @@ let%expect_test "concat" =
           (List.map
              ~f:(fn1 concat_msb)
              [ [ vdd; gnd ]; [ vdd; gnd; vdd ]; [ one 4; ones 3; zero 2 ] ]
-           : signal list fn1 list)
+            : signal list fn1 list)
         ~concat_e:
           (List.map
              ~f:(fn1 concat_msb_e)
@@ -142,7 +142,7 @@ let%expect_test "concat" =
              ; [ empty; vdd; empty; gnd ]
              ; [ of_int ~width:3 2; empty; of_int ~width:2 1 ]
              ]
-           : signal list fn1 list)
+            : signal list fn1 list)
         ~concat_op:(binary_op_tests_no_rhs_int "@:" ( @: ) : Sexp.t)];
   [%expect
     {|
@@ -237,7 +237,7 @@ let%expect_test "repeat" =
       "repeat"
         ~_:
           ([ repeat vdd 3; repeat (of_string "01") 4; repeat (of_int ~width:8 123) 1 ]
-           : (signal, int) fn2 list)];
+            : (signal, int) fn2 list)];
   [%expect
     {|
     (repeat (
@@ -357,13 +357,13 @@ let%expect_test "tree" =
              2
              (reduce ~f:( +: ))
              (List.map ~f:(of_int ~width:10) [ 10; 20; 30; 40; 50; 60; 70 ])
-           : signal list fn1)
+            : signal list fn1)
         ~add_branch_3:
           (tree
              3
              (reduce ~f:( +: ))
              (List.map ~f:(of_int ~width:10) [ 10; 20; 30; 40; 50; 60; 70 ])
-           : signal list fn1)];
+            : signal list fn1)];
   [%expect
     {|
     ("tree with different branching factors"
@@ -380,7 +380,7 @@ let%expect_test "binary_to_onehot" =
       "binary_to_onehot"
         ~_:
           (List.init 4 ~f:(fun i -> binary_to_onehot (of_int ~width:2 i))
-           : signal fn1 list)];
+            : signal fn1 list)];
   [%expect
     {|
     (binary_to_onehot (
@@ -397,7 +397,7 @@ let%expect_test "onehot_to_binary" =
       "onehot_to_binary"
         ~_:
           (List.init 4 ~f:(fun i -> onehot_to_binary (of_int ~width:4 (1 lsl i)))
-           : signal fn1 list)];
+            : signal fn1 list)];
   [%expect
     {|
     (onehot_to_binary (
@@ -483,22 +483,22 @@ let%expect_test "resizing" =
       ""
         ~uresize_0:
           (List.init 3 ~f:(fun i -> uresize (of_bit_string "0") (i + 1))
-           : (signal, int) fn2 list)
+            : (signal, int) fn2 list)
         ~uresize_1:
           (List.init 3 ~f:(fun i -> uresize (of_bit_string "1") (i + 1))
-           : (signal, int) fn2 list)
+            : (signal, int) fn2 list)
         ~uresize_100:
           (List.init 5 ~f:(fun i -> uresize (of_bit_string "100") (i + 1))
-           : (signal, int) fn2 list)
+            : (signal, int) fn2 list)
         ~sresize_0:
           (List.init 3 ~f:(fun i -> sresize (of_bit_string "0") (i + 1))
-           : (signal, int) fn2 list)
+            : (signal, int) fn2 list)
         ~sresize_1:
           (List.init 3 ~f:(fun i -> sresize (of_bit_string "1") (i + 1))
-           : (signal, int) fn2 list)
+            : (signal, int) fn2 list)
         ~sresize_100:
           (List.init 5 ~f:(fun i -> sresize (of_bit_string "100") (i + 1))
-           : (signal, int) fn2 list)
+            : (signal, int) fn2 list)
         ~ue:(op1 2 ~f:(fn1 ue) : signal fn1 list)
         ~se:(op1 2 ~f:(fn1 se) : signal fn1 list)];
   [%expect
@@ -569,33 +569,33 @@ let%expect_test "select" =
       "select"
         ~_0_up:
           (List.init 4 ~f:(fun i -> fn3 select (of_string "1100") i 0)
-           : (signal, int, int) fn3 list)
+            : (signal, int, int) fn3 list)
         ~_3_down:
           (List.init 4 ~f:(fun i -> fn3 select (of_string "1100") 3 (3 - i))
-           : (signal, int, int) fn3 list)
+            : (signal, int, int) fn3 list)
         ~middle:(fn3 select (of_string "0110") 2 1 : (signal, int, int) fn3)
         ~_64_bit_boundary:
           (fn3 select (of_hex ~width:68 "18000000000000000") 65 62
-           : (signal, int, int) fn3)
+            : (signal, int, int) fn3)
         ~bit:
           (List.init 4 ~f:(fun i -> fn2 bit (of_string "1100") i)
-           : (signal, int) fn2 list)
+            : (signal, int) fn2 list)
         ~lsbs:(List.init 4 ~f:(fun i -> fn1 lsbs (one (i + 2))) : signal fn1 list)
         ~msbs:(List.init 4 ~f:(fun i -> fn1 msbs (one (i + 2))) : signal fn1 list)
         ~lsb:(List.init 4 ~f:(fun i -> fn1 lsb (one (i + 1))) : signal fn1 list)
         ~msb:(List.init 4 ~f:(fun i -> fn1 msb (one (i + 1))) : signal fn1 list)
         ~drop_bottom:
           (List.init 4 ~f:(fun i -> fn2 drop_bottom (of_string "11100") (i + 1))
-           : (signal, int) fn2 list)
+            : (signal, int) fn2 list)
         ~drop_top:
           (List.init 4 ~f:(fun i -> fn2 drop_top (of_string "11100") (i + 1))
-           : (signal, int) fn2 list)
+            : (signal, int) fn2 list)
         ~sel_bottom:
           (List.init 5 ~f:(fun i -> fn2 sel_bottom (of_string "11100") (i + 1))
-           : (signal, int) fn2 list)
+            : (signal, int) fn2 list)
         ~sel_top:
           (List.init 5 ~f:(fun i -> fn2 sel_top (of_string "11100") (i + 1))
-           : (signal, int) fn2 list)
+            : (signal, int) fn2 list)
         ~bits_of_101:(bits_msb (of_string "101") : signal list)];
   [%expect
     {|
@@ -678,11 +678,11 @@ let%expect_test "insert" =
         ~insert_010_into_0s:
           (List.init 6 ~f:(fun at_offset ->
              insert ~into:(zero 8) (of_string "010") ~at_offset)
-           : signal list)
+            : signal list)
         ~insert_010_into_1s:
           (List.init 6 ~f:(fun at_offset ->
              insert ~into:(ones 8) (of_string "010") ~at_offset)
-           : signal list)];
+            : signal list)];
   [%expect
     {|
     (insert
@@ -702,7 +702,7 @@ let%expect_test "split_in_half" =
       "split"
         ~_:
           (List.init 8 ~f:(fun b -> split_in_half_msb (create (b + 2)))
-           : left_and_right list)];
+            : left_and_right list)];
   [%expect
     {|
     (split (
@@ -808,23 +808,23 @@ let%expect_test "shifting" =
         ~log_shift_sll:
           (List.init 4 ~f:(fun i ->
              fn2 (log_shift sll) (of_string "001") (of_int ~width:2 i))
-           : (signal, signal) fn2 list)
+            : (signal, signal) fn2 list)
         ~log_shift_srl:
           (List.init 4 ~f:(fun i ->
              fn2 (log_shift srl) (of_string "100") (of_int ~width:2 i))
-           : (signal, signal) fn2 list)
+            : (signal, signal) fn2 list)
         ~log_shift_sra:
           (List.init 4 ~f:(fun i ->
              fn2 (log_shift sra) (of_string "100") (of_int ~width:2 i))
-           : (signal, signal) fn2 list)
+            : (signal, signal) fn2 list)
         ~log_shift_rotl:
           (List.init 4 ~f:(fun i ->
              fn2 (log_shift rotl) (of_string "001") (of_int ~width:2 i))
-           : (signal, signal) fn2 list)
+            : (signal, signal) fn2 list)
         ~log_shift_rotr:
           (List.init 4 ~f:(fun i ->
              fn2 (log_shift rotr) (of_string "001") (of_int ~width:2 i))
-           : (signal, signal) fn2 list)];
+            : (signal, signal) fn2 list)];
   [%expect
     {|
     (shifting

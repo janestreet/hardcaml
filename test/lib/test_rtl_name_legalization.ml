@@ -9,8 +9,7 @@ let%expect_test "rtl name legalization" =
     |> print_s
   in
   require_does_not_raise ~cr:CR_someday [%here] (fun () -> show "");
-  [%expect
-    {|
+  [%expect {|
     ("unexpectedly raised" (Invalid_argument "index out of bounds")) |}];
   (* underscore really is a valid verilog name... *)
   show "_";

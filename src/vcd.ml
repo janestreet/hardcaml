@@ -79,9 +79,9 @@ module Var = struct
   ;;
 
   let write_four_state_vector
-        chan
-        ({ typ = _; name = _; id = _; width } as t)
-        (four_state : Logic.Four_state_vector.t)
+    chan
+    ({ typ = _; name = _; id = _; width } as t)
+    (four_state : Logic.Four_state_vector.t)
     =
     if Logic.Four_state_vector.width four_state <> width
     then

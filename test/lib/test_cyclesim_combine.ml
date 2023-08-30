@@ -42,7 +42,7 @@ let%expect_test "Port sets differ - inputs" =
   require_does_not_raise [%here] (fun () ->
     ignore
       (Cyclesim.combine ~port_sets_may_differ:true (xor_sim ()) (foo_in_sim ())
-       : _ Cyclesim.t));
+        : _ Cyclesim.t));
   [%expect {| |}]
 ;;
 
@@ -52,7 +52,7 @@ let%expect_test "Port sets differ - outputs" =
   require_does_not_raise [%here] (fun () ->
     ignore
       (Cyclesim.combine ~port_sets_may_differ:true (xor_sim ()) (foo_out_sim ())
-       : _ Cyclesim.t));
+        : _ Cyclesim.t));
   [%expect {| |}]
 ;;
 

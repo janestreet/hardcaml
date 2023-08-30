@@ -410,7 +410,6 @@ module type S = sig
   (** create string from signal *)
   val to_string : t -> string
 
-
   (** [to_int t] treats [t] as unsigned and resizes it to fit exactly within an OCaml
       [Int.t].
 
@@ -419,7 +418,6 @@ module type S = sig
         the resulting [Int.t] is set), then the result is negative.
       - If [t] is [Signal.t] and not a constant value, an exception is raised. *)
   val to_int : t -> int
-
 
   (** [to_sint t] treats [t] as signed and resizes it to fit exactly within an OCaml
       [Int.t].

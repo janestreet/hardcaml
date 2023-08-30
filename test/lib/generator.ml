@@ -175,9 +175,9 @@ let gen_input_data circuit =
   let inputs =
     Circuit.inputs circuit
     |> List.filter ~f:(fun signal ->
-      match List.hd_exn (Signal.names signal) with
-      | "reset" | "clock" -> false
-      | _ -> true)
+         match List.hd_exn (Signal.names signal) with
+         | "reset" | "clock" -> false
+         | _ -> true)
   in
   let names = List.map inputs ~f:(fun signal -> List.hd_exn (Signal.names signal)) in
   let widths = List.map inputs ~f:Signal.width in

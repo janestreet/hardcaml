@@ -14,7 +14,7 @@ let%expect_test "[mux]" =
           (length : int)
           ~_:
             (try_with (fun () -> mux sel (List.init length ~f:(fun i -> of_int ~width i)))
-             : t Or_error.t)]
+              : t Or_error.t)]
   done;
   [%expect
     {|
@@ -51,7 +51,7 @@ let%expect_test "mux" =
       "mux"
         ~_:
           (List.init 4 ~f:(fun i -> mux (of_int ~width:2 i) data4)
-           : (signal, signal list) fn2 list)];
+            : (signal, signal list) fn2 list)];
   [%expect
     {|
     (mux (
@@ -68,7 +68,7 @@ let%expect_test "mux2" =
       "check all combinations with mux2"
         ~_:
           (op1 1 ~f:(fun s -> op1 1 ~f:(fun t -> op1 1 ~f:(fun f -> mux2 s t f)))
-           : (signal, signal, signal) fn3 list list list)];
+            : (signal, signal, signal) fn3 list list list)];
   [%expect
     {|
     ("check all combinations with mux2" (

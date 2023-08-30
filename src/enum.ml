@@ -20,8 +20,8 @@ module Make_enums (Cases : Enum_intf.Cases) = struct
   ;;
 
   module Make_pre (M : sig
-      val how : [ `Binary | `One_hot ]
-    end) =
+    val how : [ `Binary | `One_hot ]
+  end) =
   struct
     let port_name, width =
       match M.how with
@@ -66,15 +66,15 @@ module Make_enums (Cases : Enum_intf.Cases) = struct
   end
 
   module Make_interface (M : sig
-      val how : [ `Binary | `One_hot ]
+    val how : [ `Binary | `One_hot ]
 
-      val match_
-        :  (module Comb.S with type t = 'a)
-        -> ?default:'a
-        -> 'a
-        -> (Cases.t * 'a) list
-        -> 'a
-    end) =
+    val match_
+      :  (module Comb.S with type t = 'a)
+      -> ?default:'a
+      -> 'a
+      -> (Cases.t * 'a) list
+      -> 'a
+  end) =
   struct
     module Pre = Make_pre (M)
     include Pre
@@ -191,48 +191,48 @@ module Make_enums (Cases : Enum_intf.Cases) = struct
   ;;
 
   module Binary = Make_interface (struct
-      let how = `Binary
+    let how = `Binary
 
-      let match_
-            (type a)
-            (module Comb : Comb.S with type t = a)
-            ?(default : a option)
-            selector
-            cases
-        =
-        let out_cases = Array.create ~len:num_enums default in
-        List.iter cases ~f:(fun (enum, value) -> out_cases.(to_rank enum) <- Some value);
-        let cases =
-          List.map (Array.to_list out_cases) ~f:(function
-            | None -> raise_non_exhaustive_mux ()
-            | Some case -> case)
-        in
-        Comb.mux selector cases
-      ;;
-    end)
+    let match_
+      (type a)
+      (module Comb : Comb.S with type t = a)
+      ?(default : a option)
+      selector
+      cases
+      =
+      let out_cases = Array.create ~len:num_enums default in
+      List.iter cases ~f:(fun (enum, value) -> out_cases.(to_rank enum) <- Some value);
+      let cases =
+        List.map (Array.to_list out_cases) ~f:(function
+          | None -> raise_non_exhaustive_mux ()
+          | Some case -> case)
+      in
+      Comb.mux selector cases
+    ;;
+  end)
 
   module One_hot = Make_interface (struct
-      let how = `One_hot
+    let how = `One_hot
 
-      let match_
-            (type a)
-            (module Comb : Comb.S with type t = a)
-            ?(default : a option)
-            selector
-            cases
-        =
-        let out_cases = Array.create ~len:num_enums default in
-        List.iter cases ~f:(fun (enum, value) -> out_cases.(to_rank enum) <- Some value);
-        let cases =
-          List.map (Array.to_list out_cases) ~f:(function
-            | None -> raise_non_exhaustive_mux ()
-            | Some case -> case)
-        in
-        List.map2_exn (Comb.bits_lsb selector) cases ~f:(fun valid value : _ with_valid2 ->
-          { valid; value })
-        |> Comb.onehot_select
-      ;;
-    end)
+    let match_
+      (type a)
+      (module Comb : Comb.S with type t = a)
+      ?(default : a option)
+      selector
+      cases
+      =
+      let out_cases = Array.create ~len:num_enums default in
+      List.iter cases ~f:(fun (enum, value) -> out_cases.(to_rank enum) <- Some value);
+      let cases =
+        List.map (Array.to_list out_cases) ~f:(function
+          | None -> raise_non_exhaustive_mux ()
+          | Some case -> case)
+      in
+      List.map2_exn (Comb.bits_lsb selector) cases ~f:(fun valid value : _ with_valid2 ->
+        { valid; value })
+      |> Comb.onehot_select
+    ;;
+  end)
 end
 
 module Make_binary (Cases : Enum_intf.Cases) = struct

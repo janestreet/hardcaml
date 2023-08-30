@@ -38,7 +38,7 @@ module type Signal = sig
     ; s_width : int
     ; mutable s_attributes : Rtl_attribute.t list
     ; mutable s_comment : string option
-    (** Making this mutable turns hardcaml from pretty functional to pretty imperative.
+        (** Making this mutable turns hardcaml from pretty functional to pretty imperative.
         however, if used carefully and only with the library, we can provide a
         potentially easier way of changing the graph structure in some cases *)
     ; mutable s_deps : t list
@@ -139,8 +139,7 @@ module type Signal = sig
     ; reg_clear : t (** synchronous clear *)
     ; reg_clear_level : Level.t (** synchronous clear level *)
     ; reg_clear_value : t (** sychhronous clear value *)
-    ;
-      reg_enable : t (** global system enable *)
+    ; reg_enable : t (** global system enable *)
     }
 
   and memory =
@@ -152,18 +151,16 @@ module type Signal = sig
 
   and instantiation =
     { inst_name : string (** name of circuit *)
-    ; inst_instance : string
-    (** instantiation label *)
+    ; inst_instance : string (** instantiation label *)
     ; inst_generics : Parameter.t list (** [Parameter.int ...] *)
     ; inst_inputs : (string * t) list (** name and input signal *)
     ; inst_outputs : (string * (int * int)) list
-    (** name, width and low index of output *)
+        (** name, width and low index of output *)
     ; inst_lib : string
     ; inst_arch : string
     }
 
   type signal = t
-
 
   (** returns the (private) signal_id.  For internal use only. *)
   val signal_id : t -> signal_id option
@@ -234,7 +231,6 @@ module type Signal = sig
 
   (** return the (binary) string representing a constants value *)
   val const_value : t -> Bits.t
-
 
   (** creates a new signal uid *)
   val new_id : unit -> Uid.t

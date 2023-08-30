@@ -40,7 +40,7 @@ module Variable = struct
     if depth = 0
     then
       if (* use a wire - need to derive the default value *)
-        Signal.is_empty spec.reg_reset_value
+         Signal.is_empty spec.reg_reset_value
       then wire ~default:(Signal.zero width)
       else wire ~default:spec.reg_reset_value
     else (
@@ -179,11 +179,11 @@ module State_machine = struct
   end
 
   let create
-        ?(encoding = Encoding.Binary)
-        ?(enable = Signal.vdd)
-        (type a)
-        (module State : State with type t = a)
-        reg_spec
+    ?(encoding = Encoding.Binary)
+    ?(enable = Signal.vdd)
+    (type a)
+    (module State : State with type t = a)
+    reg_spec
     =
     let module State = struct
       include State

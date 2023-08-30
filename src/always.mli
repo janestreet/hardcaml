@@ -144,7 +144,7 @@ module State_machine : sig
     { current : Signal.t
     ; is : 'a -> Signal.t
     ; set_next : 'a -> always
-    (** [switch cases] does a switch on all possible states.  The cases must be exhaustive
+        (** [switch cases] does a switch on all possible states.  The cases must be exhaustive
         and irredundant.  If the cases are non-exhaustive, one can supply [~default] to
         make them exhaustive. *)
     ; switch : ?default:always list -> 'a cases -> always

@@ -506,102 +506,102 @@ module Mutable = struct
   let copy_bits = copy
 
   module Comb = Comb.Make (struct
-      type t = Bits0.t
+    type t = Bits0.t
 
-      let equal = Bits0.Comparable.equal
-      let empty = empty
-      let is_empty = is_empty
-      let width = width
-      let of_constant = of_constant
-      let to_constant = to_constant
-      let add_widths w y = w + width y
+    let equal = Bits0.Comparable.equal
+    let empty = empty
+    let is_empty = is_empty
+    let width = width
+    let of_constant = of_constant
+    let to_constant = to_constant
+    let add_widths w y = w + width y
 
-      let concat_msb l =
-        let w = List.fold l ~init:0 ~f:add_widths in
-        let c = create w in
-        concat c l;
-        c
-      ;;
+    let concat_msb l =
+      let w = List.fold l ~init:0 ~f:add_widths in
+      let c = create w in
+      concat c l;
+      c
+    ;;
 
-      (* this is specialised to return an element from the input list, rather than
+    (* this is specialised to return an element from the input list, rather than
          construct a new output. *)
-      let mux sel l =
-        let idx = to_int sel in
-        mux_find idx 0 l
-      ;;
+    let mux sel l =
+      let idx = to_int sel in
+      mux_find idx 0 l
+    ;;
 
-      let select s h l =
-        let w = h - l + 1 in
-        let c = create w in
-        select c s h l;
-        c
-      ;;
+    let select s h l =
+      let w = h - l + 1 in
+      let c = create w in
+      select c s h l;
+      c
+    ;;
 
-      let ( -- ) = ( -- )
+    let ( -- ) = ( -- )
 
-      let ( &: ) a b =
-        let c = create (width a) in
-        ( &: ) c a b;
-        c
-      ;;
+    let ( &: ) a b =
+      let c = create (width a) in
+      ( &: ) c a b;
+      c
+    ;;
 
-      let ( |: ) a b =
-        let c = create (width a) in
-        ( |: ) c a b;
-        c
-      ;;
+    let ( |: ) a b =
+      let c = create (width a) in
+      ( |: ) c a b;
+      c
+    ;;
 
-      let ( ^: ) a b =
-        let c = create (width a) in
-        ( ^: ) c a b;
-        c
-      ;;
+    let ( ^: ) a b =
+      let c = create (width a) in
+      ( ^: ) c a b;
+      c
+    ;;
 
-      let ( ~: ) a =
-        let c = create (width a) in
-        ( ~: ) c a;
-        c
-      ;;
+    let ( ~: ) a =
+      let c = create (width a) in
+      ( ~: ) c a;
+      c
+    ;;
 
-      let ( +: ) a b =
-        let c = create (width a) in
-        ( +: ) c a b;
-        c
-      ;;
+    let ( +: ) a b =
+      let c = create (width a) in
+      ( +: ) c a b;
+      c
+    ;;
 
-      let ( -: ) a b =
-        let c = create (width a) in
-        ( -: ) c a b;
-        c
-      ;;
+    let ( -: ) a b =
+      let c = create (width a) in
+      ( -: ) c a b;
+      c
+    ;;
 
-      let ( *: ) a b =
-        let c = create (width a + width b) in
-        ( *: ) c a b;
-        c
-      ;;
+    let ( *: ) a b =
+      let c = create (width a + width b) in
+      ( *: ) c a b;
+      c
+    ;;
 
-      let ( *+ ) a b =
-        let c = create (width a + width b) in
-        ( *+ ) c a b;
-        c
-      ;;
+    let ( *+ ) a b =
+      let c = create (width a + width b) in
+      ( *+ ) c a b;
+      c
+    ;;
 
-      let ( ==: ) a b =
-        let c = create 1 in
-        ( ==: ) c a b;
-        c
-      ;;
+    let ( ==: ) a b =
+      let c = create 1 in
+      ( ==: ) c a b;
+      c
+    ;;
 
-      let ( <: ) a b =
-        let c = create 1 in
-        ( <: ) c a b;
-        c
-      ;;
+    let ( <: ) a b =
+      let c = create 1 in
+      ( <: ) c a b;
+      c
+    ;;
 
-      let to_string = to_string
-      let sexp_of_t (s : t) = [%sexp (to_constant s |> Constant.to_binary_string : string)]
-    end)
+    let to_string = to_string
+    let sexp_of_t (s : t) = [%sexp (to_constant s |> Constant.to_binary_string : string)]
+  end)
 end
 
 include (Mutable.Comb : Comb.S with type t := Bits0.t)
@@ -616,8 +616,8 @@ let pp fmt t = Stdlib.Format.fprintf fmt "%s" (to_bstr t)
 
 (* Install pretty printer. *)
 module _ = Pretty_printer.Register (struct
-    type nonrec t = Bits0.t
+  type nonrec t = Bits0.t
 
-    let module_name = "Hardcaml.Bits"
-    let to_string = to_bstr
-  end)
+  let module_name = "Hardcaml.Bits"
+  let to_string = to_bstr
+end)

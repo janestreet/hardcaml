@@ -52,9 +52,9 @@ type signal =
       * name
       * (string * generic) list
       * (string * signal) list
-  (* inputs (read) *)
+      (* inputs (read) *)
       * (string * signal) list
-  (* outputs (write; drive wires/module outputs *)
+      (* outputs (write; drive wires/module outputs *)
       * (string * signal) list (* tristate (write; drive triwires/module tristates *)
       * string option
       * Rtl_attribute.t list
@@ -204,7 +204,7 @@ let check_unique_io_names c =
          if Set.mem set name
          then raise (IO_name_already_exists name)
          else Set.add set name)
-     : Set.M(String).t);
+      : Set.M(String).t);
   ()
 ;;
 
@@ -324,7 +324,7 @@ let inst ?instance_name ?(attributes = []) ?(g = []) ?(i = []) ?(o = []) ?(t = [
     Hash_set.add instance_names instance_name);
   ignore
     (Instantiation (mod_id, name, g, i, o, t, instance_name, attributes) >> add_sig
-     : signal)
+      : signal)
 ;;
 
 let ( ==> ) a b = a, b
@@ -540,25 +540,25 @@ module Base (C : Config) = struct
 end
 
 module Base0 = Base (struct
-    let structural_const = false
-    let structural_mux = false
-    let structural_concat = false
-    let structural_select = false
-  end)
+  let structural_const = false
+  let structural_mux = false
+  let structural_concat = false
+  let structural_select = false
+end)
 
 module Base1 = Base (struct
-    let structural_const = false
-    let structural_mux = true
-    let structural_concat = true
-    let structural_select = true
-  end)
+  let structural_const = false
+  let structural_mux = true
+  let structural_concat = true
+  let structural_select = true
+end)
 
 module Base2 = Base (struct
-    let structural_const = true
-    let structural_mux = true
-    let structural_concat = true
-    let structural_select = true
-  end)
+  let structural_const = true
+  let structural_mux = true
+  let structural_concat = true
+  let structural_select = true
+end)
 
 (* {[
      let remove_unconnected circuit =
@@ -730,10 +730,10 @@ let write_verilog os circuit =
                 ^ n
                 ^ "("
                 ^ (match g with
-                  | GInt i -> Int.to_string i
-                  | GFloat f -> Float.to_string f
-                  | GString s -> "\"" ^ s ^ "\""
-                  | GUnquoted s -> s)
+                   | GInt i -> Int.to_string i
+                   | GFloat f -> Float.to_string f
+                   | GString s -> "\"" ^ s ^ "\""
+                   | GUnquoted s -> s)
                 ^ ")")));
         os "\n  )");
       let instance_name =

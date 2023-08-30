@@ -257,7 +257,7 @@ module Io_ports = struct
     let internal_ports =
       List.concat
       @@ List.map internal_ports ~f:(fun signal ->
-        List.map (names signal) ~f:(fun name -> name, Maps.find_data_exn maps signal))
+           List.map (names signal) ~f:(fun name -> name, Maps.find_data_exn maps signal))
     in
     { in_ports; out_ports; internal_ports }
   ;;
@@ -690,7 +690,7 @@ module Last_layer = struct
         List.map diff ~f:(fun uid ->
           ( uid
           , try Some (Circuit.find_signal_exn circuit uid) with
-          | _ -> None ))
+            | _ -> None ))
       in
       raise_s
         [%message
@@ -711,7 +711,7 @@ module Compute_digest = struct
     let total_length =
       digest_length
       + List.fold ports ~init:0 ~f:(fun total bits ->
-        total + Bits.number_of_data_bytes !bits)
+          total + Bits.number_of_data_bytes !bits)
     in
     let digestable_string = Bytes.init total_length ~f:(Fn.const '\000') in
     let build_digestable_string () =

@@ -61,8 +61,8 @@ let op1 op name (width : Width.t) =
 ;;
 
 module F (P : sig
-    val width : Width.t
-  end) =
+  val width : Width.t
+end) =
 struct
   let database = Combinational_ops_database.create ()
   let n s = String.concat ~sep:"_" [ "float"; Int.to_string (Width.num_bits P.width); s ]
@@ -109,9 +109,9 @@ struct
 end
 
 module Float = F (struct
-    let width = Width.W32
-  end)
+  let width = Width.W32
+end)
 
 module Double = F (struct
-    let width = Width.W64
-  end)
+  let width = Width.W64
+end)

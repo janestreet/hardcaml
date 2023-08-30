@@ -230,7 +230,7 @@ let%expect_test "[pack], [unpack]" =
     [%sexp
       (I.Of_bits.pack
          (I.map2 I.port_widths { x = -1; y = 0 } ~f:(fun width -> Bits.of_int ~width))
-       : Bits.t)];
+        : Bits.t)];
   [%expect {| 000000001111 |}];
   print_s [%sexp (I.Of_bits.(unpack (Bits.of_bit_string "000000001111")) : Bits.t I.t)];
   [%expect {|
@@ -242,7 +242,7 @@ let%expect_test "[pack], [unpack]" =
          pack
            ~rev:true
            (I.map2 I.port_widths { x = -1; y = 0 } ~f:(fun width -> Bits.of_int ~width)))
-       : Bits.t)];
+        : Bits.t)];
   [%expect {| 111100000000 |}];
   print_s
     [%sexp
@@ -400,7 +400,7 @@ let%expect_test "priority_select" =
   require_does_raise [%here] (fun () ->
     ignore
       (I.Of_bits.(priority_select priority_sel_tests.(0).(0))
-       : (Bits.t, Bits.t I.t) With_valid.t2));
+        : (Bits.t, Bits.t I.t) With_valid.t2));
   [%expect {| "[priority_select] requires at least one input" |}];
   Array.iter priority_sel_tests.(1) ~f:(fun test ->
     print_s
@@ -443,7 +443,7 @@ let%expect_test "priority_select_with_default" =
   require_does_raise [%here] (fun () ->
     ignore
       (I.Of_bits.(priority_select_with_default ~default priority_sel_tests.(0).(0))
-       : Bits.t I.t));
+        : Bits.t I.t));
   [%expect {| "[priority_select_with_default] requires at least one input" |}];
   Array.iter priority_sel_tests.(1) ~f:(fun test ->
     print_s [%sexp (I.Of_bits.(priority_select_with_default ~default test) : Bits.t I.t)]);

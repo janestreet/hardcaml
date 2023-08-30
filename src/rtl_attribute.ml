@@ -1,6 +1,5 @@
 open Base
 
-
 module Value = struct
   type t =
     | Int of int
@@ -33,8 +32,6 @@ module Vivado = struct
   ;;
 
   let async_reg b = create "ASYNC_REG" ~value:(true_or_false_string b)
-
-
   let dont_touch b = create "dont_touch" ~value:(true_or_false_string b)
   let keep_hierarchy b = create "keep_hierarchy" ~value:(yes_or_no_string b)
 

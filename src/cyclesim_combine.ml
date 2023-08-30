@@ -18,10 +18,10 @@ let default_on_error error =
 ;;
 
 let combine
-      ?(port_sets_may_differ = false)
-      ?(on_error = default_on_error)
-      (s0 : _ t)
-      (s1 : _ t)
+  ?(port_sets_may_differ = false)
+  ?(on_error = default_on_error)
+  (s0 : _ t)
+  (s1 : _ t)
   =
   let si =
     Set.to_list

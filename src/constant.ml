@@ -129,8 +129,8 @@ let to_hex_string ~signedness t =
     | 1 | 2 | 3 ->
       hex_of_bin
         ((match signedness with
-           | Signed -> String.init (4 - len) ~f:(fun _ -> s.[0])
-           | Unsigned -> String.init (4 - len) ~f:(fun _ -> '0'))
+          | Signed -> String.init (4 - len) ~f:(fun _ -> s.[0])
+          | Unsigned -> String.init (4 - len) ~f:(fun _ -> '0'))
          ^ s)
     | 4 -> hex_of_bin s
     | _ ->
@@ -279,18 +279,18 @@ module Make_bit_list (Bit : Bit) = struct
     to_binary_string t
     |> String.to_list
     |> List.map ~f:(function
-      | '0' -> Bit.gnd
-      | _ -> Bit.vdd)
+         | '0' -> Bit.gnd
+         | _ -> Bit.vdd)
   ;;
 end
 
 module Bits = Make_bit_list (struct
-    type t = int
+  type t = int
 
-    let vdd = 1
-    let gnd = 0
-    let equal = Int.equal
-  end)
+  let vdd = 1
+  let gnd = 0
+  let equal = Int.equal
+end)
 
 let of_bit_list = Bits.to_constant
 let to_bit_list = Bits.of_constant
@@ -301,8 +301,8 @@ include Comparable
 let pp fmt t = Stdlib.Format.fprintf fmt "%s" (to_binary_string_hum t)
 
 module _ = Pretty_printer.Register (struct
-    type nonrec t = t
+  type nonrec t = t
 
-    let module_name = "Hardcaml.Constant"
-    let to_string t = to_binary_string_hum t
-  end)
+  let module_name = "Hardcaml.Constant"
+  let to_string t = to_binary_string_hum t
+end)

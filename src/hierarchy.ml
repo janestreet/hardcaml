@@ -1,9 +1,9 @@
 open Base
 
 let validate_circuit_against_interface
-      (type i)
-      (module I : Interface.S_Of_signal with type Of_signal.t = i)
-      circuit
+  (type i)
+  (module I : Interface.S_Of_signal with type Of_signal.t = i)
+  circuit
   =
   let circuit_inputs =
     Circuit.inputs circuit
@@ -25,16 +25,16 @@ let validate_circuit_against_interface
 ;;
 
 let hierarchy
-      (type i o)
-      (module I : Interface.S_Of_signal with type Of_signal.t = i)
-      (module O : Interface.S_Of_signal with type Of_signal.t = o)
-      ?attributes
-      ?config
-      ?instance
-      db
-      ~name
-      create_fn
-      inputs
+  (type i o)
+  (module I : Interface.S_Of_signal with type Of_signal.t = i)
+  (module O : Interface.S_Of_signal with type Of_signal.t = o)
+  ?attributes
+  ?config
+  ?instance
+  db
+  ~name
+  create_fn
+  inputs
   =
   let create_inst = Instantiation.create_with_interface (module I) (module O) in
   let create_circuit_exn = Circuit.create_with_interface (module I) (module O) in
@@ -50,16 +50,16 @@ let create ~scope ~name create_fn inputs =
 ;;
 
 let hierarchical
-      (type i o)
-      (module I : Interface.S_Of_signal with type Of_signal.t = i)
-      (module O : Interface.S_Of_signal with type Of_signal.t = o)
-      ?config
-      ?instance
-      ?attributes
-      ~(scope : Scope.t)
-      ~name
-      create_fn
-      inputs
+  (type i o)
+  (module I : Interface.S_Of_signal with type Of_signal.t = i)
+  (module O : Interface.S_Of_signal with type Of_signal.t = o)
+  ?config
+  ?instance
+  ?attributes
+  ~(scope : Scope.t)
+  ~name
+  create_fn
+  inputs
   =
   let hierarchy = hierarchy ?attributes (module I) (module O) in
   let instance =

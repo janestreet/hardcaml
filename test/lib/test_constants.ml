@@ -8,15 +8,14 @@ let sexp_of_const_signal ?(depth = 1) signal =
   | _ ->
     if is_const signal
     then
-      if
-        width signal <= 8
+      if width signal <= 8
       then [%sexp (Int.to_string (width signal) ^ "'b" ^ Signal.to_bstr signal : string)]
       else
         [%sexp
           (Int.to_string (width signal)
            ^ "'h"
            ^ (Signal.to_constant signal |> Constant.to_hex_string ~signedness:Unsigned)
-           : string)]
+            : string)]
     else (
       match names signal with
       | [] ->
@@ -53,7 +52,7 @@ let%expect_test "of_bit_string" =
       "binary string to signal conversion"
         ~of_bit_string:
           (List.map ~f:of_bit_string [ "0"; "1"; "10"; "111"; "10101" ]
-           : string const_function list)];
+            : string const_function list)];
   [%expect
     {|
     ("binary string to signal conversion" (
@@ -280,19 +279,19 @@ let%expect_test "of_string" =
            ; of_string "3'b1"
            ; of_string "10'b1010101010"
            ]
-           : string const_function list)
+            : string const_function list)
         ~decimal:
           ([ of_string "16'd65535"; of_string "17'd65536" ] : string const_function list)
         ~hex:
           ([ of_string "5'h4"; of_string "5'h8"; of_string "5'H4"; of_string "5'H8" ]
-           : string const_function list)
+            : string const_function list)
         ~decimal:
           ([ raw_of_string "16'd65535"
            ; raw_of_string "17'd65536"
            ; raw_of_string "4'd-1"
            ; raw_of_string "20'd-247223"
            ]
-           : string const_function list)];
+            : string const_function list)];
   [%expect
     {|
     ("verilog style constant conversion"
@@ -331,7 +330,7 @@ let%expect_test "of_bit_list" =
       "int bits list to signal conversion"
         ~_:
           (List.map ~f:of_bit_list [ [ 0 ]; [ 1 ]; [ 0; 1 ]; [ 1; 1; 1 ] ]
-           : int list const_function list)];
+            : int list const_function list)];
   [%expect
     {|
     ("int bits list to signal conversion" (

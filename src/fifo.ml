@@ -1,6 +1,5 @@
 open Base
 open Signal
-
 include Fifo_intf.T
 module Kinded_fifo = Fifo_intf.Kinded_fifo
 
@@ -37,22 +36,22 @@ let capacity_and_used_bits showahead ram_capacity =
 ;;
 
 let create
-      ?read_latency
-      ?(showahead = false)
-      ?(nearly_empty = 1)
-      ?nearly_full
-      ?(overflow_check = true)
-      ?(reset = Signal.empty)
-      ?(underflow_check = true)
-      ?(ram_attributes = [ Rtl_attribute.Vivado.Ram_style.block ])
-      ?scope
-      ()
-      ~capacity:ram_capacity
-      ~clock
-      ~clear
-      ~wr
-      ~d
-      ~rd
+  ?read_latency
+  ?(showahead = false)
+  ?(nearly_empty = 1)
+  ?nearly_full
+  ?(overflow_check = true)
+  ?(reset = Signal.empty)
+  ?(underflow_check = true)
+  ?(ram_attributes = [ Rtl_attribute.Vivado.Ram_style.block ])
+  ?scope
+  ()
+  ~capacity:ram_capacity
+  ~clock
+  ~clear
+  ~wr
+  ~d
+  ~rd
   =
   let ( -- ) =
     match scope with
@@ -152,20 +151,20 @@ let create
 ;;
 
 let create_classic_with_extra_reg
-      ?nearly_empty
-      ?nearly_full
-      ?overflow_check
-      ?reset
-      ?underflow_check
-      ?ram_attributes
-      ?scope
-      ()
-      ~capacity
-      ~clock
-      ~clear
-      ~wr
-      ~d
-      ~rd
+  ?nearly_empty
+  ?nearly_full
+  ?overflow_check
+  ?reset
+  ?underflow_check
+  ?ram_attributes
+  ?scope
+  ()
+  ~capacity
+  ~clock
+  ~clear
+  ~wr
+  ~d
+  ~rd
   =
   let spec = Reg_spec.create ~clock ~clear () in
   let fifo_valid = wire 1 in
@@ -205,15 +204,15 @@ let create_classic_with_extra_reg
 ;;
 
 let showahead_fifo_of_classic_fifo
-      (create_fifo :
-         capacity:int
-       -> write_clock:Signal.t
-       -> read_clock:Signal.t
-       -> clear:Signal.t
-       -> wr:Signal.t
-       -> d:Signal.t
-       -> rd:Signal.t
-       -> (Signal.t, [ `Classic ]) Kinded_fifo.t)
+  (create_fifo :
+    capacity:int
+    -> write_clock:Signal.t
+    -> read_clock:Signal.t
+    -> clear:Signal.t
+    -> wr:Signal.t
+    -> d:Signal.t
+    -> rd:Signal.t
+    -> (Signal.t, [ `Classic ]) Kinded_fifo.t)
   =
   Staged.stage (fun ~capacity ~write_clock ~read_clock ~clear ~wr ~d ~rd ->
     let spec = Reg_spec.create ~clock:read_clock ~clear () in
@@ -228,14 +227,14 @@ let showahead_fifo_of_classic_fifo
 ;;
 
 let create_showahead_from_classic
-      ?nearly_empty
-      ?nearly_full
-      ?overflow_check
-      ?reset
-      ?underflow_check
-      ?ram_attributes
-      ?scope
-      ()
+  ?nearly_empty
+  ?nearly_full
+  ?overflow_check
+  ?reset
+  ?underflow_check
+  ?ram_attributes
+  ?scope
+  ()
   =
   let create_fifo ~capacity ~write_clock ~read_clock ~clear ~wr ~d ~rd =
     assert (Signal.equal write_clock read_clock);
@@ -268,21 +267,21 @@ let create_showahead_from_classic
 ;;
 
 let create_showahead_with_read_latency
-      ~read_latency
-      ?nearly_empty
-      ?nearly_full
-      ?overflow_check
-      ?reset
-      ?underflow_check
-      ?ram_attributes
-      ?scope
-      ()
-      ~capacity
-      ~clock
-      ~clear
-      ~wr
-      ~d
-      ~rd
+  ~read_latency
+  ?nearly_empty
+  ?nearly_full
+  ?overflow_check
+  ?reset
+  ?underflow_check
+  ?ram_attributes
+  ?scope
+  ()
+  ~capacity
+  ~clock
+  ~clear
+  ~wr
+  ~d
+  ~rd
   =
   let spec = Reg_spec.create ~clock ~clear () in
   let fifo_rd_en = wire 1 in
@@ -330,20 +329,20 @@ let create_showahead_with_read_latency
 ;;
 
 let create_showahead_with_extra_reg
-      ?nearly_empty
-      ?nearly_full
-      ?overflow_check
-      ?reset
-      ?underflow_check
-      ?ram_attributes
-      ?scope
-      ()
-      ~capacity
-      ~clock
-      ~clear
-      ~wr
-      ~d
-      ~rd
+  ?nearly_empty
+  ?nearly_full
+  ?overflow_check
+  ?reset
+  ?underflow_check
+  ?ram_attributes
+  ?scope
+  ()
+  ~capacity
+  ~clock
+  ~clear
+  ~wr
+  ~d
+  ~rd
   =
   let spec = Reg_spec.create ~clock ~clear () in
   let fifo_rd_en = wire 1 in
@@ -404,27 +403,27 @@ module With_interface (Config : Config) = struct
     type nonrec 'a t = 'a t
 
     include Interface.Make (struct
-        include Fifo_intf.T
+      include Fifo_intf.T
 
-        let port_names_and_widths =
-          { port_names_and_widths with
-            q = "q", Config.data_width
-          ; used = "used", used_bits
-          }
-        ;;
-      end)
+      let port_names_and_widths =
+        { port_names_and_widths with
+          q = "q", Config.data_width
+        ; used = "used", used_bits
+        }
+      ;;
+    end)
   end
 
   let create_fn
-        ?nearly_empty
-        ?nearly_full
-        ?overflow_check
-        ?reset
-        ?underflow_check
-        ?ram_attributes
-        ?scope
-        ~f
-        (i : _ I.t)
+    ?nearly_empty
+    ?nearly_full
+    ?overflow_check
+    ?reset
+    ?underflow_check
+    ?ram_attributes
+    ?scope
+    ~f
+    (i : _ I.t)
     =
     f
       ?nearly_empty

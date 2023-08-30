@@ -38,7 +38,7 @@ module T = struct
      -> d:Signal.t
      -> rd:Signal.t
      -> Signal.t t)
-      create_params
+    create_params
 end
 
 module Kinded_fifo = struct
@@ -111,7 +111,6 @@ module type S = sig
     :  ?read_latency:int
     -> ?showahead:bool (** default is [false] *)
     -> T.create_fifo
-
 
   (** {3 Functions to derive fifo architectures from other architecetures.} *)
 

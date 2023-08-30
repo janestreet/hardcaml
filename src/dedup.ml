@@ -268,11 +268,11 @@ let fix_mem_read_ports signals =
            | _ -> assert false
          in
          driver
-         := Mem_read_port
-              { signal_id = { signal_id with s_deps = [ memory; read_address ] }
-              ; memory
-              ; read_address
-              }
+           := Mem_read_port
+                { signal_id = { signal_id with s_deps = [ memory; read_address ] }
+                ; memory
+                ; read_address
+                }
        | _ -> ())
     | _ -> ())
 ;;
@@ -280,8 +280,8 @@ let fix_mem_read_ports signals =
 let compress_wires signals =
   Signal_graph.create signals
   |> Signal_graph.iter ~f:(function
-    | Signal.Wire { driver; _ } -> driver := unwrap_wire !driver
-    | _ -> ())
+       | Signal.Wire { driver; _ } -> driver := unwrap_wire !driver
+       | _ -> ())
 ;;
 
 let canonicalize signals =

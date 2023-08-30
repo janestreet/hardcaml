@@ -5,8 +5,8 @@ type atomic_proposition = Signal.t [@@deriving sexp_of]
 let name s =
   "bool("
   ^ (match List.hd (Signal.names s) with
-    | Some s -> s
-    | None -> "_" ^ Int64.to_string (Signal.uid s))
+     | Some s -> s
+     | None -> "_" ^ Int64.to_string (Signal.uid s))
   ^ ")"
 ;;
 

@@ -27,11 +27,11 @@ module type Structural = sig
         * name
         * (string * generic) list
         * (string * signal) list
-    (* inputs (read) *)
+        (* inputs (read) *)
         * (string * signal) list
-    (* outputs (write; drive wires/module outputs *)
+        (* outputs (write; drive wires/module outputs *)
         * (string * signal) list
-    (* tristate (write; drive triwires/module tristates *)
+        (* tristate (write; drive triwires/module tristates *)
         * string option
         * Rtl_attribute.t list
     (* basic RTL operators *)
@@ -129,14 +129,13 @@ module type Structural = sig
   (** progressively more structural APIs *)
   module Base0 : Comb.Primitives with type t = signal
 
-
   (** includes mux, concat, select *)
   module Base1 : Comb.Primitives with type t = signal
-    [@@deprecated "[since 2017-11] Waiting on further work."]
+  [@@deprecated "[since 2017-11] Waiting on further work."]
 
   (** includes consts *)
   module Base2 : Comb.Primitives with type t = signal
-    [@@deprecated "[since 2017-11] Waiting on further work."]
+  [@@deprecated "[since 2017-11] Waiting on further work."]
 
   val write_verilog : (string -> unit) -> circuit -> unit
 

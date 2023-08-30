@@ -71,9 +71,9 @@ module VerilogNames = struct
       (* alpha, num, _, $ are ok, replace invalid chars with '_' *)
       str_map
         (fun c ->
-           if is_alpha c || is_num c || Char.equal c '_' || Char.equal c '$'
-           then c
-           else '_')
+          if is_alpha c || is_num c || Char.equal c '_' || Char.equal c '$'
+          then c
+          else '_')
         name
     else legalize (prefix ^ name)
   ;;
@@ -241,9 +241,7 @@ module SignalNameManager (S : SignalNaming) () = struct
   ;;
 
   let add_mem signal nm =
-    let name =
-      List.hd_exn (names_of_signal signal)
-    in
+    let name = List.hd_exn (names_of_signal signal) in
     let name_arr = mangle (name ^ "_mem") nm in
     let name_typ = mangle (name ^ "_type") nm in
     let name_t1 = mangle (name ^ "_blk") nm in
@@ -1323,8 +1321,8 @@ module Output = struct
              level module. *)
           ( Out_channel.output_string out_channel
           , fun () ->
-            if Hierarchy_path.is_top_circuit hierarchy_path circuit
-            then Out_channel.close out_channel )
+              if Hierarchy_path.is_top_circuit hierarchy_path circuit
+              then Out_channel.close out_channel )
       in
       let ret = Language.output blackbox t.language output circuit in
       close ();
@@ -1350,11 +1348,11 @@ module Blackbox = struct
 end
 
 let output_with_name_map
-      ?output_mode
-      ?database
-      ?(blackbox = Blackbox.None)
-      language
-      circuit
+  ?output_mode
+  ?database
+  ?(blackbox = Blackbox.None)
+  language
+  circuit
   =
   let output_mode =
     Option.value
@@ -1410,7 +1408,7 @@ let output_with_name_map
 let output ?output_mode ?database ?blackbox language circuit =
   ignore
     (output_with_name_map ?output_mode ?database ?blackbox language circuit
-     : signals_name_map_t)
+      : signals_name_map_t)
 ;;
 
 let print ?database ?blackbox language circuit =

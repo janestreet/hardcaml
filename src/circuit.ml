@@ -28,7 +28,7 @@ type t =
   ; outputs : Signal.t list
   ; phantom_inputs : (string * int) list
   ; signal_graph : Signal_graph.t
-  (* [fan_in] and [fan_out] are lazily computed.  One might worry that this would interact
+      (* [fan_in] and [fan_out] are lazily computed.  One might worry that this would interact
      poorly with signals, which have some mutable components (e.g. wires).  But those have
      already been set by the time a circuit is created, so a circuit is not mutable. *)
   ; fan_out : Signal.Uid_set.t Map.M(Signal.Uid).t Lazy.t
@@ -273,8 +273,8 @@ let structural_compare ?check_names c0 c1 =
          (outputs c1)
          ~init:(Uid_set.empty, true)
          ~f:(fun (set, b) s t ->
-           let set, b' = Signal.structural_compare ?check_names ~initial_deps:set s t in
-           set, b && b'))
+         let set, b' = Signal.structural_compare ?check_names ~initial_deps:set s t in
+         set, b && b'))
   in
   num_ports_match inputs
   && num_ports_match outputs
@@ -318,7 +318,7 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
       let expected_but_not_in_circuit = Set.diff expected_ports actual_ports in
       let in_circuit_but_not_expected = Set.diff actual_ports expected_ports in
       if (not (Set.is_empty expected_but_not_in_circuit))
-      || not (Set.is_empty in_circuit_but_not_expected)
+         || not (Set.is_empty in_circuit_but_not_expected)
       then
         raise_s
           [%message
@@ -383,7 +383,7 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
   let check_alist_of_one_direction name direction alist =
     ignore
       (check_ports_in_one_direction name direction (List.map ~f:snd alist)
-       : Set.M(String).t)
+        : Set.M(String).t)
   ;;
 
   let create_exn ?(config = Config.default) ~name logic =
@@ -424,9 +424,9 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
 end
 
 let create_with_interface
-      (type i o)
-      (module I : Interface.S_Of_signal with type Of_signal.t = i)
-      (module O : Interface.S_Of_signal with type Of_signal.t = o)
+  (type i o)
+  (module I : Interface.S_Of_signal with type Of_signal.t = i)
+  (module O : Interface.S_Of_signal with type Of_signal.t = o)
   =
   let module C = With_interface (I) (O) in
   C.create_exn

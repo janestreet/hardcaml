@@ -22,17 +22,17 @@ let find_elements circuit =
     (Circuit.signal_graph circuit)
     ~init:([], [], [], [], [])
     ~f_before:(fun (regs, mems, consts, inputs, comb_signals) signal ->
-      if Signal.is_empty signal
-      then regs, mems, consts, inputs, comb_signals
-      else if Signal.is_reg signal
-      then signal :: regs, mems, consts, inputs, comb_signals
-      else if Signal.is_const signal
-      then regs, mems, signal :: consts, inputs, comb_signals
-      else if Circuit.is_input circuit signal
-      then regs, mems, consts, signal :: inputs, comb_signals
-      else if Signal.is_mem signal
-      then regs, signal :: mems, consts, inputs, comb_signals
-      else regs, mems, consts, inputs, signal :: comb_signals)
+    if Signal.is_empty signal
+    then regs, mems, consts, inputs, comb_signals
+    else if Signal.is_reg signal
+    then signal :: regs, mems, consts, inputs, comb_signals
+    else if Signal.is_const signal
+    then regs, mems, signal :: consts, inputs, comb_signals
+    else if Circuit.is_input circuit signal
+    then regs, mems, consts, signal :: inputs, comb_signals
+    else if Signal.is_mem signal
+    then regs, signal :: mems, consts, inputs, comb_signals
+    else regs, mems, consts, inputs, signal :: comb_signals)
 ;;
 
 let rec unwrap_signal (signal : Signal.t) =

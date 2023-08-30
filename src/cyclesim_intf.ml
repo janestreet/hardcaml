@@ -115,7 +115,7 @@ module type Cyclesim = sig
 
   module Private :
     Cyclesim0.Private
-    with type ('i, 'o) t := ('i, 'o) t
-     and type port_list = Port_list.t
-     and type t_port_list := t_port_list
+      with type ('i, 'o) t := ('i, 'o) t
+       and type port_list = Port_list.t
+       and type t_port_list := t_port_list
 end

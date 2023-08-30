@@ -88,20 +88,20 @@ module Private = struct
   type nonrec task = task
 
   let create
-        ?circuit
-        ~in_ports
-        ~out_ports_before_clock_edge
-        ~out_ports_after_clock_edge
-        ~internal_ports
-        ~reset
-        ~cycle_check
-        ~cycle_before_clock_edge
-        ~cycle_at_clock_edge
-        ~cycle_after_clock_edge
-        ~lookup_reg
-        ~lookup_mem
-        ~assertions
-        ()
+    ?circuit
+    ~in_ports
+    ~out_ports_before_clock_edge
+    ~out_ports_after_clock_edge
+    ~internal_ports
+    ~reset
+    ~cycle_check
+    ~cycle_before_clock_edge
+    ~cycle_at_clock_edge
+    ~cycle_after_clock_edge
+    ~lookup_reg
+    ~lookup_mem
+    ~assertions
+    ()
     =
     { in_ports
     ; out_ports_before_clock_edge

@@ -27,15 +27,15 @@ let validate_module_or_instantiation_name ~special_chars name =
 ;;
 
 let create
-      ?(lib = "work")
-      ?(arch = "rtl")
-      ?instance
-      ?(parameters = [])
-      ?(attributes = [])
-      ()
-      ~name
-      ~inputs
-      ~outputs
+  ?(lib = "work")
+  ?(arch = "rtl")
+  ?instance
+  ?(parameters = [])
+  ?(attributes = [])
+  ()
+  ~name
+  ~inputs
+  ~outputs
   =
   (* filter empty/0 width IOs *)
   (* {[
@@ -74,7 +74,7 @@ let create
     ignore (Signal.add_attribute signal attribute : Signal.t));
   List.map outputs ~f:(fun (name, (width, offset)) ->
     ( name
-      , (* We need to create a distinct output signal - if there is only one output then
+    , (* We need to create a distinct output signal - if there is only one output then
            the instantiation and the output signal share a uid which confuses the logic
            for associating attrributes correctly. *)
       if one_output
@@ -107,9 +107,9 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
 end
 
 let create_with_interface
-      (type i o)
-      (module I : Interface.S_Of_signal with type Of_signal.t = i)
-      (module O : Interface.S_Of_signal with type Of_signal.t = o)
+  (type i o)
+  (module I : Interface.S_Of_signal with type Of_signal.t = i)
+  (module O : Interface.S_Of_signal with type Of_signal.t = o)
   =
   let module I = With_interface (I) (O) in
   I.create

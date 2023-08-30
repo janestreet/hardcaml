@@ -104,8 +104,7 @@ end
 module Memory = struct
   module T = struct
     type t =
-      {
-        data_width : int
+      { data_width : int
       ; depth : int
       ; total_bits : int
       }

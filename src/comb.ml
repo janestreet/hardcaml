@@ -173,10 +173,10 @@ module Make (Prims : Primitives) = struct
   end
 
   let[@cold] raise_const_width_greater_than_zero
-               (type t)
-               (module X : Sexp_of_t with type t = t)
-               width
-               (const : t)
+    (type t)
+    (module X : Sexp_of_t with type t = t)
+    width
+    (const : t)
     =
     raise_s
       [%message.omit_nil
@@ -379,7 +379,7 @@ module Make (Prims : Primitives) = struct
         ""
           ~_:
             (String.concat [ "["; function_; "] got inputs of different widths" ]
-             : string)
+              : string)
           ~_:(inputs : Prims.t list)
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
@@ -404,7 +404,7 @@ module Make (Prims : Primitives) = struct
         ""
           ~_:
             (String.concat [ "["; function_; "] got inputs of different widths" ]
-             : string)
+              : string)
           ~_:(inputs : Prims.t list)
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;

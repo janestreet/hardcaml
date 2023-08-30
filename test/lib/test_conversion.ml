@@ -221,6 +221,6 @@ let%expect_test "to_bstr" =
       (List.map
          ~f:(fun c -> of_string c |> to_bstr)
          [ "0"; "1"; "0000"; "1111"; "10011"; "1101000101010101011010" ]
-       : string list)];
+        : string list)];
   [%expect {| (0 1 0000 1111 10011 1101000101010101011010) |}]
 ;;

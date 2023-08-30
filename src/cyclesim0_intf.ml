@@ -82,18 +82,18 @@ module type Cyclesim0 = sig
   module Config : sig
     type t =
       { is_internal_port : (Signal.t -> bool) option
-      (** Passed each signal in the design which has a name. Returns [true] if the
+          (** Passed each signal in the design which has a name. Returns [true] if the
           simulator should expose it for reading in the testbench (or display in a
           waveform). *)
       ; combinational_ops_database : Combinational_ops_database.t
-      (** Database of instantiations which may be replace by a combinational operation. *)
+          (** Database of instantiations which may be replace by a combinational operation. *)
       ; compute_digest : bool
-      (** Compute an md5 digest of the outputs of a simulation run. Enabled by default
+          (** Compute an md5 digest of the outputs of a simulation run. Enabled by default
           within inlined tests. *)
       ; deduplicate_signals : bool
-      (** Perform a pass which finds structurally equal signals and shares them. *)
+          (** Perform a pass which finds structurally equal signals and shares them. *)
       ; store_circuit : bool
-      (** Stores the post-processed circuit that is used to compile the
+          (** Stores the post-processed circuit that is used to compile the
           simulation. This should generally be set to false, so that the Circuit
           can be garbage collected once the simulation is constructed.
       *)
@@ -108,7 +108,7 @@ module type Cyclesim0 = sig
 
   module Private :
     Private
-    with type ('i, 'o) t = ('i, 'o) t
-     and type port_list = Port_list.t
-     and type t_port_list = t_port_list
+      with type ('i, 'o) t = ('i, 'o) t
+       and type port_list = Port_list.t
+       and type t_port_list = t_port_list
 end

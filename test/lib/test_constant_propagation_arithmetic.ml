@@ -389,7 +389,7 @@ let%expect_test "[-:] with one constant" =
 let%expect_test "multiplication" =
   print_s
   @@ [%message
-    "" ~_:(mul_op_tests "*:" ( *: ) : Sexp.t) ~_:(mul_op_tests "*+" ( *+ ) : Sexp.t)];
+       "" ~_:(mul_op_tests "*:" ( *: ) : Sexp.t) ~_:(mul_op_tests "*+" ( *+ ) : Sexp.t)];
   [%expect
     {|
     ((*:

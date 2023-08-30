@@ -21,7 +21,7 @@ let%expect_test "no inputs" =
          ~input_widths:[]
          ~output_widths:[ 1 ]
          ~create_fn:(fun _ _ -> ())
-       : Combinational_op.t));
+        : Combinational_op.t));
   [%expect {| |}]
 ;;
 
@@ -77,8 +77,8 @@ let create_op_functional () =
     ~output_widths:[ num_bits; num_bits ]
     ~create_fn:
       (Combinational_op.create_fn_of_bits (function
-         | [ a; b ] -> Bits.[ a +: b; a -: b ]
-         | _ -> raise_s [%message "invalid arguments"]))
+        | [ a; b ] -> Bits.[ a +: b; a -: b ]
+        | _ -> raise_s [%message "invalid arguments"]))
 ;;
 
 let create_op_mutable () =
@@ -88,11 +88,11 @@ let create_op_mutable () =
     ~input_widths:[ num_bits; num_bits ]
     ~output_widths:[ num_bits; num_bits ]
     ~create_fn:(fun i o ->
-      match i, o with
-      | [ a; b ], [ c; d ] ->
-        Bits.Mutable.( +: ) c a b;
-        Bits.Mutable.( -: ) d a b
-      | _ -> raise_s [%message "invalid arguments"])
+    match i, o with
+    | [ a; b ], [ c; d ] ->
+      Bits.Mutable.( +: ) c a b;
+      Bits.Mutable.( -: ) d a b
+    | _ -> raise_s [%message "invalid arguments"])
 ;;
 
 let%expect_test "sexp_of" =

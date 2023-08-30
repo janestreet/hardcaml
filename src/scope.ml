@@ -36,12 +36,12 @@ type t =
 let case_sensitive = false
 
 let create
-      ?(flatten_design = false)
-      ?(auto_label_hierarchical_ports = false)
-      ?(trace_properties = false)
-      ?naming_scheme
-      ?name
-      ()
+  ?(flatten_design = false)
+  ?(auto_label_hierarchical_ports = false)
+  ?(trace_properties = false)
+  ?naming_scheme
+  ?name
+  ()
   =
   let naming_scheme =
     match (naming_scheme : Naming_scheme.t option) with
@@ -122,4 +122,3 @@ let assert_signal_in_always scope asn_name asn =
   add_assertion scope asn_name (Always.Variable.value asn_var);
   Always.( <-- ) asn_var asn
 ;;
-
