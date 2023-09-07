@@ -13,7 +13,10 @@ module Make () = struct
   let reg t ?enable d = Signal.reg ?enable (to_spec t) d
   let reg_no_clear t ?enable d = Signal.reg ?enable (to_spec_no_clear t) d
   let reg_fb ?enable t ~width ~f = Signal.reg_fb ?enable (to_spec t) ~width ~f
-  let pipeline ?enable t ~n d = Signal.pipeline ?enable (to_spec t) ~n d
+
+  let pipeline ?attributes ?enable t ~n d =
+    Signal.pipeline ?attributes ?enable (to_spec t) ~n d
+  ;;
 
   module Var = struct
     let reg ?enable clocking ~width =

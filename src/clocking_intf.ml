@@ -10,7 +10,14 @@ module type S = sig
   val to_spec_no_clear : Signal.t t -> Reg_spec.t
   val reg : Signal.t t -> ?enable:Signal.t -> Signal.t -> Signal.t
   val reg_no_clear : Signal.t t -> ?enable:Signal.t -> Signal.t -> Signal.t
-  val pipeline : ?enable:Signal.t -> Signal.t t -> n:int -> Signal.t -> Signal.t
+
+  val pipeline
+    :  ?attributes:Rtl_attribute.t list
+    -> ?enable:Signal.t
+    -> Signal.t t
+    -> n:int
+    -> Signal.t
+    -> Signal.t
 
   val reg_fb
     :  ?enable:Signal.t

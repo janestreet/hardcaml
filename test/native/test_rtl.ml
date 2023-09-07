@@ -1,4 +1,4 @@
-open Base
+open! Base
 open Hardcaml
 open Signal
 open Expect_test_helpers_base

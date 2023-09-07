@@ -62,7 +62,7 @@ module Config = struct
     { is_internal_port = None
     ; combinational_ops_database = empty_ops_database
     ; compute_digest = Exported_for_specific_uses.am_testing
-    ; deduplicate_signals = true
+    ; deduplicate_signals = false
     ; store_circuit = false
     }
   ;;
@@ -71,7 +71,7 @@ module Config = struct
     { is_internal_port = Some (Fn.const on)
     ; combinational_ops_database = empty_ops_database
     ; compute_digest = Exported_for_specific_uses.am_testing
-    ; deduplicate_signals = true
+    ; deduplicate_signals = false
     ; store_circuit = false
     }
   ;;
