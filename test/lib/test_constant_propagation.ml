@@ -692,7 +692,7 @@ let%expect_test "insert" =
         8'b11111010 8'b11110101 8'b11101011 8'b11010111 8'b10101111 8'b01011111))) |}]
 ;;
 
-let%expect_test "split_in_half" =
+let%expect_test "split_in_half_msb" =
   let create b = concat_msb_e [ ones ((b + 1) / 2); zero (b / 2) ] in
   let sexp_of_left_and_right (left, right) =
     [%message "" (left : signal) (right : signal)]
@@ -714,7 +714,64 @@ let%expect_test "split_in_half" =
       ((left 4'b1111)  (right 3'b000))
       ((left 4'b1111)  (right 4'b0000))
       ((left 5'b11111) (right 4'b0000)))) |}];
-  [%expect {| |}]
+  print_s
+    [%message
+      "split"
+        ~_:
+          (List.init 8 ~f:(fun b -> b + 1, split_in_half_msb ~msbs:(b + 1) (zero 9))
+            : (int * left_and_right) list)];
+  [%expect
+    {|
+    (split (
+      (1 ((left 1'b0)        (right 8'b00000000)))
+      (2 ((left 2'b00)       (right 7'b0000000)))
+      (3 ((left 3'b000)      (right 6'b000000)))
+      (4 ((left 4'b0000)     (right 5'b00000)))
+      (5 ((left 5'b00000)    (right 4'b0000)))
+      (6 ((left 6'b000000)   (right 3'b000)))
+      (7 ((left 7'b0000000)  (right 2'b00)))
+      (8 ((left 8'b00000000) (right 1'b0))))) |}]
+;;
+
+let%expect_test "split_in_half_lsb" =
+  let create b = concat_msb_e [ ones (b / 2); zero ((b + 1) / 2) ] in
+  let sexp_of_left_and_right (left, right) =
+    [%message "" (left : signal) (right : signal)]
+  in
+  print_s
+    [%message
+      "split"
+        ~_:
+          (List.init 8 ~f:(fun b -> split_in_half_lsb (create (b + 2)))
+            : left_and_right list)];
+  [%expect
+    {|
+    (split (
+      ((left 1'b1)    (right 1'b0))
+      ((left 1'b1)    (right 2'b00))
+      ((left 2'b11)   (right 2'b00))
+      ((left 2'b11)   (right 3'b000))
+      ((left 3'b111)  (right 3'b000))
+      ((left 3'b111)  (right 4'b0000))
+      ((left 4'b1111) (right 4'b0000))
+      ((left 4'b1111) (right 5'b00000)))) |}];
+  print_s
+    [%message
+      "split"
+        ~_:
+          (List.init 8 ~f:(fun b -> b + 1, split_in_half_lsb ~lsbs:(b + 1) (zero 9))
+            : (int * left_and_right) list)];
+  [%expect
+    {|
+    (split (
+      (1 ((left 8'b00000000) (right 1'b0)))
+      (2 ((left 7'b0000000)  (right 2'b00)))
+      (3 ((left 6'b000000)   (right 3'b000)))
+      (4 ((left 5'b00000)    (right 4'b0000)))
+      (5 ((left 4'b0000)     (right 5'b00000)))
+      (6 ((left 3'b000)      (right 6'b000000)))
+      (7 ((left 2'b00)       (right 7'b0000000)))
+      (8 ((left 1'b0)        (right 8'b00000000))))) |}]
 ;;
 
 let%expect_test "split_lsb" =

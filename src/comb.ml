@@ -585,11 +585,14 @@ module Make (Prims : Primitives) = struct
       build 1 s empty n
   ;;
 
-  (* It doesn't seem worth providing an [_lsb] variant for this function - it just flips
-     the order of the tuple which can be done in the let binding anyway. *)
-  let split_in_half_msb s =
-    let w = width s in
-    select s (w - 1) (w / 2), select s ((w / 2) - 1) 0
+  let split_in_half_msb ?msbs s =
+    let msbs = Option.value msbs ~default:((width s + 1) / 2) in
+    sel_top s msbs, drop_top s msbs
+  ;;
+
+  let split_in_half_lsb ?lsbs s =
+    let lsbs = Option.value lsbs ~default:((width s + 1) / 2) in
+    drop_bottom s lsbs, sel_bottom s lsbs
   ;;
 
   let[@cold] raise_split_empty_input () =
@@ -1130,7 +1133,7 @@ module Make (Prims : Primitives) = struct
     Char.of_int_exn (to_int x)
   ;;
 
-  module type TypedMath = TypedMath with type t := t
+  module type Typed_math = Typed_math with type t := t
 
   (* General arithmetic on unsigned signals.  Operands and results are resized to fit a
      appropriate. *)

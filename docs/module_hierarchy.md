@@ -7,7 +7,7 @@
 ```
 -->
 
-*Prerequisite: [Hardcaml interfaces](hardcaml_interfaces.mdx)*
+*Prerequisite: [Hardcaml interfaces](hardcaml_interfaces.md)*
 
 In Hardcaml, module
 [hierarchy](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Hierarchy/index.html)
@@ -15,8 +15,8 @@ means we can partition a Hardcaml design
 into a tree of sub-circuits and write each one to its own Verilog or
 VHDL module when generating RTL.
 
-This builds upon [instantiation](instantiation.mdx) and
-[circuit databases](rtl_generation.mdx) by adding a new type called
+This builds upon [instantiation](instantiation.md) and
+[circuit databases](rtl_generation.md) by adding a new type called
 `Scope.t` and a design pattern for defining circuits.
 
 Module hierarchies provide the following benefits:
@@ -139,7 +139,7 @@ their parents.
 
 ## Simulation
 
-For Hardcaml [simulation](simulation.mdx) to work, we need to flatten
+For Hardcaml [simulation](simulation.md) to work, we need to flatten
 the design.
 
 ```ocaml

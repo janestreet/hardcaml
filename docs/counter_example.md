@@ -151,7 +151,7 @@ dout='00000000'
 
 ### With the Always DSL
 
-We can also describe the counter with the [Always DSL](./always.mdx).
+We can also describe the counter with the [Always DSL](./always.md).
 
 Note that we could have encoded the clear and increment logic when we
 constructed the `Always.Variable.reg`. The Always fragment would then

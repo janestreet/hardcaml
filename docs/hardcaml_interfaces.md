@@ -25,7 +25,7 @@ and automatically generates all the boilerplate code required for
 interfaces. The record type should have a single polymorphic type, and
 each field should be of that type.
 
-Some simple [setup](installing_with_opam.mdx) is required to use
+Some simple [setup](installing_with_opam.md) is required to use
 hardcaml interfaces, namely installing `ppx_deriving_hardcaml` and
 adding it as a preprocessor.
 
@@ -179,9 +179,9 @@ end
 There are several benefits to using interfaces over working with raw
 simulations:
 
-- A nice [Simulation](simulation.mdx) that allows access to record
+- A nice [Simulation](simulation.md) that allows access to record
   fields directly instead of referring to port names via strings.
-- Allows the creation of [module Hierarchies](module_hierarchy.mdx)
+- Allows the creation of [module Hierarchies](module_hierarchy.md)
   within your RTL design.
 
 There are currently some limitations on Hardcaml interfaces created

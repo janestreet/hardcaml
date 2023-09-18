@@ -110,7 +110,7 @@ values? Under the hood, the always DSL creates regular Hardcaml wires
 with an empty assignment. The call to `Always.compile` will assign
 these wires with the appropriate signals according to the conditions
 specified in the always block. For more information about wires, see
-the [Sequential Logic](sequential_logic.mdx) section. In particular,
+the [Sequential Logic](sequential_logic.md) section. In particular,
 unassigned wires are fairly common if you miss a variable
 assignment.
 

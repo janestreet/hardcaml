@@ -14,3 +14,12 @@ module Value (S : Value_arg) : Interface.S with type 'a t = 'a
 module type Scalar = Scalar.S
 
 module Scalar (S : Value_arg) : Scalar with type 'a t = 'a
+
+module type Arg_with_length = sig
+  include Value_arg
+
+  val length : int
+end
+
+module List (A : Arg_with_length) : Interface.S with type 'a t = 'a list
+module Array (A : Arg_with_length) : Interface.S with type 'a t = 'a array

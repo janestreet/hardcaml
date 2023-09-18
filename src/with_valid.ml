@@ -9,6 +9,10 @@ type ('a, 'b) t2 = ('a, 'b) Comb.with_valid2 =
 module T = struct
   type 'a t = ('a, 'a) t2 [@@deriving sexp, bin_io]
 
+  let value (type t) (module Comb : Comb.S with type t = t) { valid; value } ~default =
+    Comb.mux2 valid value default
+  ;;
+
   let map x ~f = { valid = f x.valid; value = f x.value }
   let map2 x y ~f = { valid = f x.valid y.valid; value = f x.value y.value }
 
@@ -30,6 +34,15 @@ end
 include T
 
 module Fields = struct
+  module type S = sig
+    type 'a value
+    type nonrec 'a t = 'a t value
+
+    include Interface.S with type 'a t := 'a t
+
+    val value : (module Comb.S with type t = 'a) -> 'a t -> default:'a value -> 'a value
+  end
+
   module Make (M : Interface.Pre) = struct
     module Pre = struct
       type nonrec 'a t = 'a t M.t [@@deriving sexp_of]
@@ -49,13 +62,10 @@ module Fields = struct
 
     include Pre
     include Interface.Make (Pre)
-  end
 
-  module type S = sig
-    type 'a value
-    type nonrec 'a t = 'a t value
-
-    include Interface.S with type 'a t := 'a t
+    let value (type a) (module Comb : Comb.S with type t = a) t ~default =
+      M.map2 t default ~f:(fun { value; valid } default -> Comb.mux2 valid value default)
+    ;;
   end
 
   module M (X : T1) = struct
@@ -64,7 +74,18 @@ module Fields = struct
 end
 
 module Wrap = struct
+  module type S = sig
+    type 'a value
+    type nonrec 'a t = ('a, 'a value) t2
+
+    include Interface.S with type 'a t := ('a, 'a value) t2
+
+    val value : (module Comb.S with type t = 'a) -> 'a t -> default:'a value -> 'a value
+  end
+
   module Make (M : Interface.Pre) = struct
+    type 'a value = 'a M.t
+
     module Pre = struct
       type nonrec 'a t = ('a, 'a M.t) t2 [@@deriving sexp_of]
 
@@ -93,18 +114,18 @@ module Wrap = struct
 
     include Pre
     include Interface.Make (Pre)
+
+    let value (type a) (module Comb : Comb.S with type t = a) { valid; value } ~default =
+      let module I = Interface.Make (M) in
+      let module Comb = I.Make_comb (Comb) in
+      Comb.mux2 valid value default
+    ;;
   end
 
   module M (X : T1) = struct
     type nonrec 'a t = ('a, 'a X.t) t2
 
-    module type S = Interface.S with type 'a t = 'a t
-  end
-
-  module type S = sig
-    type 'a value
-
-    include Interface.S with type 'a t = ('a, 'a value) t2
+    module type S = S with type 'a value := 'a X.t
   end
 end
 

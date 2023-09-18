@@ -7,9 +7,9 @@
 ```
 -->
 
-With standard Hardcaml [simulations](simulation.mdx) we are forced to manage input and
+With standard Hardcaml [simulations](simulation.md) we are forced to manage input and
 output ports manually using the
-strings. [Interfaces](hardcaml_interfaces.mdx) allow us to automate
+strings. [Interfaces](hardcaml_interfaces.md) allow us to automate
 much of this work and are particularly useful as circuits get more
 complex.
 

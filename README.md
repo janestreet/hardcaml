@@ -19,7 +19,7 @@ $ opam install hardcaml ppx_deriving_hardcaml hardcaml_waveterm
 
 # Documentation
 
-* [Manual](https://github.com/janestreet/hardcaml/blob/master/docs/index.mdx)
+* [Manual](https://github.com/janestreet/hardcaml/blob/master/docs/index.md)
 * [API Docs](https://v3.ocaml.org/p/hardcaml/v0.15.0/doc/Hardcaml/index.html)
 
 # Tools and libraries

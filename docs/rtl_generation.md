@@ -96,7 +96,7 @@ nothing further is done. This is useful when instantiating external IP
 
 If the optional `database` argument is provided, then instantiations
 are looked up in a `Circuit_database.t`. This allows a
-[module hierarchy](module_hierarchy.mdx) specified in Hardcaml to
+[module hierarchy](module_hierarchy.md) specified in Hardcaml to
 be reflected in the generated Verilog or VHDL code. Only the top-level
 module needs to be provided, and the RTL generator will traverse the
 hierarchy as appropriate.

@@ -91,5 +91,5 @@ Sub-circuits can be Hardcaml circuits or written in some other RTL
 design language like Verilog.
 
 In later (advanced) sections we will show how to use
-circuits and [instantiations](instantiation.mdx)
-to support [hierarchical](module_hierarchy.mdx) Hardcaml designs.
+circuits and [instantiations](instantiation.md)
+to support [hierarchical](module_hierarchy.md) Hardcaml designs.

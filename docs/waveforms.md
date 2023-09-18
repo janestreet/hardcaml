@@ -7,7 +7,7 @@
 ```
 -->
 
-In the [simple counter](counter_example.mdx) example we printed the
+In the [simple counter](counter_example.md) example we printed the
 value of the output ports during the simulation. Printing outputs or
 even modelling the expected behaviour of a circuit dynamically is
 sometimes the best way to test it. However, the majority of the time

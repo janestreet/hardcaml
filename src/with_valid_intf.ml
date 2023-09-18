@@ -11,6 +11,7 @@ module type With_valid = sig
 
   type 'a t = ('a, 'a) t2 [@@deriving sexp, bin_io]
 
+  val value : (module Comb.S with type t = 'a) -> 'a t -> default:'a -> 'a
   val map : 'a t -> f:('a -> 'b) -> 'b t
   val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
   val iter : 'a t -> f:('a -> unit) -> unit
@@ -21,14 +22,16 @@ module type With_valid = sig
 
   (** Create a new hardcaml interface with type ['a With_valid.t X.t] *)
   module Fields : sig
-    module Make (X : Interface.Pre) : Interface.S with type 'a t = 'a t X.t
-
     module type S = sig
       type 'a value
       type nonrec 'a t = 'a t value
 
       include Interface.S with type 'a t := 'a t
+
+      val value : (module Comb.S with type t = 'a) -> 'a t -> default:'a value -> 'a value
     end
+
+    module Make (X : Interface.Pre) : S with type 'a value := 'a X.t
 
     module M (X : T1) : sig
       module type S = S with type 'a value := 'a X.t
@@ -37,18 +40,21 @@ module type With_valid = sig
 
   (** Create a new hardcaml interface with type [('a, 'a X.t) With_valid.t2]. *)
   module Wrap : sig
-    module Make (X : Interface.Pre) : Interface.S with type 'a t = ('a, 'a X.t) t2
+    module type S = sig
+      type 'a value
+      type nonrec 'a t = ('a, 'a value) t2
+
+      include Interface.S with type 'a t := 'a t
+
+      val value : (module Comb.S with type t = 'a) -> 'a t -> default:'a value -> 'a value
+    end
+
+    module Make (X : Interface.Pre) : S with type 'a value = 'a X.t
 
     module M (X : T1) : sig
       type nonrec 'a t = ('a, 'a X.t) t2
 
-      module type S = Interface.S with type 'a t = 'a t
-    end
-
-    module type S = sig
-      type 'a value
-
-      include Interface.S with type 'a t = ('a, 'a value) t2
+      module type S = S with type 'a value := 'a X.t
     end
   end
 

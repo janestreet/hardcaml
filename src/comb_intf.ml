@@ -14,21 +14,45 @@ and ('a, 'b) with_valid2 =
   ; value : 'b
   }
 
-module type TypedMath = sig
+(** Types wrappers for vectors which differentiate their signedness.
+
+    Operator argument widths are more flexible as we know how to resize them. Results are
+    sized to avoid truncation.
+*)
+module type Typed_math = sig
+  (** Base signal or bits type *)
   type t
+
+  (** Typed wrapper for [t]. *)
   type v
 
+  (** Convert to [v] from a [Comb.t]. *)
   val of_signal : t -> v
+
+  (** Convert [v] to a [Comb.t]. *)
   val to_signal : v -> t
+
+  (** Addition. Arguments are extended appropriately and result is 1 bit wider to avoid
+      truntraction. *)
   val ( +: ) : v -> v -> v
+
+  (** Subtraction. Arguments are extended appropriately and result is 1 bit wider to avoid
+      truntraction. *)
   val ( -: ) : v -> v -> v
+
+  (** Mulitplication. *)
   val ( *: ) : v -> v -> v
+
+  (** {2 Comparison operations}.  Arguments need not be the same width. *)
+
   val ( <: ) : v -> v -> v
   val ( >: ) : v -> v -> v
   val ( <=: ) : v -> v -> v
   val ( >=: ) : v -> v -> v
   val ( ==: ) : v -> v -> v
   val ( <>: ) : v -> v -> v
+
+  (** Resize argument to given width.  Appropriate extension is performed. *)
   val resize : v -> int -> v
 end
 
@@ -453,9 +477,22 @@ module type S = sig
   (** repeat signal n times *)
   val repeat : t -> int -> t
 
-  (** split signal in half. The most significant bits will be in the left half of the
-      returned tuple. *)
-  val split_in_half_msb : t -> t * t
+  (** Split signal in half. The most significant bits will be in the left half of the
+      returned tuple.
+
+      - If [msbs] is not provided, the signal will be split in half with the MSB part
+        possibly containing one more bit.
+      - If [msbs] is provided, [msbs] most significant bits will be split off. *)
+  val split_in_half_msb : ?msbs:int -> t -> t * t
+
+  (** Same as [split_in_half_msb],  but
+
+      - If [lsbs] is not provided, the LSB part might have one more bit.
+      - If [lsbs] is provided, [lsbs] least significant bits will be split off.
+
+      The most significant bits will still be in the left half of the tuple.
+  *)
+  val split_in_half_lsb : ?lsbs:int -> t -> t * t
 
   (** Split signal into a list of signals with width equal to [part_width]. The least
       significant bits are at the head of the returned list. If [exact] is [true] the
@@ -608,21 +645,19 @@ module type S = sig
   (** create random constant vector of given width *)
   val random : width:int -> t
 
-  module type TypedMath = TypedMath with type t := t
+  module type Typed_math = Typed_math with type t := t
 
-  (* General arithmetic on unsigned signals.  Operands and results are resized
-     to fit as appropriate. *)
-  module Unsigned : TypedMath
+  (** Unsigned vectors. *)
+  module Unsigned : Typed_math
 
-  (* General arithmetic on signed signals.  Operands and results are resized to fit as
-     appropriate. *)
-  module Signed : TypedMath
+  (** Signed vectors. *)
+  module Signed : Typed_math
 
-  (** Unsigned operations compatible with type t *)
-  module Uop : TypedMath with type v := t
+  (** Unsigned vector operations (ie may operate on [Bits.t] or [Signal.t] directly). *)
+  module Uop : Typed_math with type v := t
 
-  (** Signed operations compatible with type t *)
-  module Sop : TypedMath with type v := t
+  (** Signed vector operations (ie may operate on [Bits.t] or [Signal.t] directly). *)
+  module Sop : Typed_math with type v := t
 end
 
 module type Comb = sig
