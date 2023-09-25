@@ -18,6 +18,21 @@ module Make () = struct
     Signal.pipeline ?attributes ?enable (to_spec t) ~n d
   ;;
 
+  module Cdc = struct
+    let stretch spec ~n d =
+      let open Signal in
+      assert (width d = 1);
+      if n <= 1
+      then Core.(raise_s [%message "stretch length must be >1" (n : int)])
+      else (
+        let n = n - 1 in
+        d |: lsb (reg_fb spec ~width:n ~f:(fun s -> mux2 d (ones n) (srl s 1))))
+    ;;
+
+    let stretch_no_clear t ~n d = stretch (to_spec_no_clear t) ~n d
+    let stretch t ~n d = stretch (to_spec t) ~n d
+  end
+
   module Var = struct
     let reg ?enable clocking ~width =
       Always.Variable.reg ?enable (to_spec clocking) ~width

@@ -36,6 +36,15 @@ module type S = sig
       -> clear_to:int
       -> Always.Variable.t
   end
+
+  (** Utility functions for clock domain crossings. *)
+  module Cdc : sig
+    (** Take a single cycle input pulse, and stretch it for [n] cycles. The output goes
+        high on the same cycle as the input. *)
+    val stretch : Signal.t t -> n:int -> Signal.t -> Signal.t
+
+    val stretch_no_clear : Signal.t t -> n:int -> Signal.t -> Signal.t
+  end
 end
 
 module type Clocking = sig
