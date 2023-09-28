@@ -1,7 +1,7 @@
 (** Interfaces specify the widths and names of a group of signals, and some functions for
     manipulating the signals as a group.
 
-    They are generally used with [ppx_deriving_hardcaml] as follows
+    They are generally used with [ppx_hardcaml] as follows
 
     {[
       type t = { ... } [@@deriving sexp_of, hardcaml]

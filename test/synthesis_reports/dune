@@ -1,3 +1,3 @@
 (executables (names synthesis_reports)
  (libraries core_unix.command_unix hardcaml hardcaml_xilinx_reports)
- (preprocess (pps ppx_jane ppx_deriving_hardcaml)))
+ (preprocess (pps ppx_jane ppx_hardcaml)))

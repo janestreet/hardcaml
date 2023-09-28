@@ -77,7 +77,6 @@ val cycle : ('a, 'b) Cyclesim.t -> int -> int -> unit = <fun>
 # let sim_verilator =
     Hardcaml_verilator.create
        ~clock_names:[ "clock" ]
-       ~optimizations:true
        circuit
   ;;
 val sim_verilator : Cyclesim.t_port_list = <abstr>
@@ -98,6 +97,16 @@ Cyclesim, Hardcaml Verilator, or Hardcaml C.
 
 `Hardcaml_verilator` also supports an Interface-based API. See
 [`Hardcaml_verilator.With_interface`](https://ocaml.org/p/hardcaml_verilator/latest/doc/Hardcaml_verilator/With_interface/index.html).
+
+## Compilation options
+
+Some verilator configuration options are exposed via [`Hardcaml_verilator.Config`]. In
+particular, it is possible to split the generated C++ code into much smaller chunks and
+use many more gcc processes which can drastically improve compilation time. See the config
+module for some presets.
+
+The code supports both version 4 and 5 of verilator - set the config value
+[verilator_version] appropriately.
 
 # `Hardcaml_c`
 

@@ -175,7 +175,7 @@ module type S = sig
       and [signedness] is [Signed] then the result is sign extended. Otherwise the result
       is zero padded. *)
   val of_hex
-    :  ?signedness:Constant.Signedness.t (** default is [Unsigned] *)
+    :  ?signedness:Signedness.t (** default is [Unsigned] *)
     -> width:int
     -> string
     -> t
@@ -184,7 +184,7 @@ module type S = sig
       and [signedness] is [Signed] then the result is sign extended. Otherwise the result
       is zero padded. *)
   val of_octal
-    :  ?signedness:Constant.Signedness.t (** default is [Unsigned] *)
+    :  ?signedness:Signedness.t (** default is [Unsigned] *)
     -> width:int
     -> string
     -> t
@@ -207,7 +207,7 @@ module type S = sig
   val of_bool : bool -> t
 
   (** Convert bits to a Zarith.t *)
-  val to_z : t -> signedness:Constant.Signedness.t -> Zarith.Z.t
+  val to_z : t -> signedness:Signedness.t -> Zarith.Z.t
 
   (** [concat ts] concatenates a list of signals - the msb of the head of the list will
       become the msb of the result.

@@ -4,13 +4,6 @@ open Base
 
 type t = Bits0.t [@@deriving compare, sexp, bin_io]
 
-module Signedness : sig
-  type t =
-    | Signed
-    | Unsigned
-  [@@deriving sexp_of]
-end
-
 (* The empty constant. Contains no bits. *)
 val empty : t
 

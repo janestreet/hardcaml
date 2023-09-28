@@ -4,7 +4,7 @@ Hardcaml can be installed with opam. I recommend the following
 packages to get started
 
 ```
-opam install hardcaml hardcaml_waveterm ppx_deriving_hardcaml
+opam install hardcaml hardcaml_waveterm ppx_hardcaml
 ```
 
 This will install the core Hardcaml library, a waveform viewer which
@@ -41,5 +41,5 @@ The following is an example dune file for linking to Hardcaml
 (library
   (name my_hardcaml_lib)
   (libraries base hardcaml)
-  (preprocess (pps ppx_jane ppx_deriving_hardcaml)))
+  (preprocess (pps ppx_jane ppx_hardcaml)))
 ```

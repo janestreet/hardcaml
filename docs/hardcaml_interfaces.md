@@ -19,14 +19,14 @@ More concretely, they are almost always made up of a record type where
 each field corresponds to some hardware signal. This is then used to
 describe the input and output ports of some hardware circuit.
 
-[`ppx_deriving_hardcaml`](https://github.com/janestreet/ppx_deriving_hardcaml)
+[`ppx_hardcaml`](https://github.com/janestreet/ppx_hardcaml)
 annotates an OCaml record that has type declarations
 and automatically generates all the boilerplate code required for
 interfaces. The record type should have a single polymorphic type, and
 each field should be of that type.
 
 Some simple [setup](installing_with_opam.md) is required to use
-hardcaml interfaces, namely installing `ppx_deriving_hardcaml` and
+hardcaml interfaces, namely installing `ppx_hardcaml` and
 adding it as a preprocessor.
 
 ```ocaml

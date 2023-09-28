@@ -132,7 +132,7 @@ c = 30
 - : unit = ()
 ```
 
-## Interfaces with `ppx_deriving_hardcaml`
+## Interfaces with `ppx_hardcaml`
 
 An interface is a grouping of signals with associated names and bit widths.
 

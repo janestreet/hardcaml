@@ -5,13 +5,6 @@ let char_zero = Char.to_int '0'
 let char_a = Char.to_int 'a'
 let char_A = Char.to_int 'A'
 
-module Signedness = struct
-  type t =
-    | Signed
-    | Unsigned
-  [@@deriving sexp_of]
-end
-
 module Raw = struct
   let of_bytes bytes ~width =
     init_byte ~width ~f:(fun i ->

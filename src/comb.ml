@@ -210,12 +210,12 @@ module Make (Prims : Primitives) = struct
     of_constant (Constant.of_int64 ~width v)
   ;;
 
-  let of_hex ?(signedness = Constant.Signedness.Unsigned) ~width v =
+  let of_hex ?(signedness = Signedness.Unsigned) ~width v =
     if width <= 0 then raise_const_width_greater_than_zero (module String) width v;
     of_constant (Constant.of_hex_string ~signedness ~width v)
   ;;
 
-  let of_octal ?(signedness = Constant.Signedness.Unsigned) ~width v =
+  let of_octal ?(signedness = Signedness.Unsigned) ~width v =
     if width <= 0 then raise_const_width_greater_than_zero (module String) width v;
     of_constant (Constant.of_octal_string ~signedness ~width v)
   ;;

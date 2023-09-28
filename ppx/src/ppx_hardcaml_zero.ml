@@ -118,17 +118,16 @@ let get_doc ~loc label_declaration =
 let mk_rtlident ~loc name prefix suffix =
   match prefix, suffix with
   | None, None -> [%expr [%e name]]
-  | Some pre, None -> [%expr Ppx_deriving_hardcaml_runtime.concat [ [%e pre]; [%e name] ]]
-  | None, Some suf -> [%expr Ppx_deriving_hardcaml_runtime.concat [ [%e name]; [%e suf] ]]
+  | Some pre, None -> [%expr Ppx_hardcaml_runtime.concat [ [%e pre]; [%e name] ]]
+  | None, Some suf -> [%expr Ppx_hardcaml_runtime.concat [ [%e name]; [%e suf] ]]
   | Some pre, Some suf ->
-    [%expr Ppx_deriving_hardcaml_runtime.concat [ [%e pre]; [%e name]; [%e suf] ]] [@metaloc
-                                                                                     loc]
+    [%expr Ppx_hardcaml_runtime.concat [ [%e pre]; [%e name]; [%e suf] ]] [@metaloc loc]
 ;;
 
 let mangle_name ~loc name mangle =
   match mangle with
   | Some separator ->
-    [%expr Ppx_deriving_hardcaml_runtime.concat [ [%e name]; [%e separator]; _n ]]
+    [%expr Ppx_hardcaml_runtime.concat [ [%e name]; [%e separator]; _n ]]
   | None -> [%expr _n]
 ;;
 
@@ -140,16 +139,15 @@ let expand_array_init ~loc vname label_declaration =
   let nbits = get_bits ~loc label_declaration in
   let length = get_length ~loc label_declaration in
   [%expr
-    Ppx_deriving_hardcaml_runtime.Array.init [%e length] ~f:(fun _i ->
-      ( Ppx_deriving_hardcaml_runtime.concat
-          [ [%e vname]; Ppx_deriving_hardcaml_runtime.Int.to_string _i ]
+    Ppx_hardcaml_runtime.Array.init [%e length] ~f:(fun _i ->
+      ( Ppx_hardcaml_runtime.concat [ [%e vname]; Ppx_hardcaml_runtime.Int.to_string _i ]
       , [%e nbits] ))]
 ;;
 
 let expand_array_init_str ~loc vname mapid mid label_declaration =
   let length = get_length ~loc label_declaration in
   [%expr
-    Ppx_deriving_hardcaml_runtime.Array.init [%e length] ~f:(fun _i ->
+    Ppx_hardcaml_runtime.Array.init [%e length] ~f:(fun _i ->
       [%e mapid] [%e pexp_ident ~loc mid] ~f:(fun (_n, _b) -> [%e vname], _b))]
 ;;
 
@@ -176,10 +174,8 @@ let expand_port_names_and_widths_label_array
     let mid = { txt = Ldot (mname, "port_names_and_widths"); loc } in
     let mangled =
       [%expr
-        Ppx_deriving_hardcaml_runtime.concat
-          [ [%e mangle_name ~loc name mangle]
-          ; Ppx_deriving_hardcaml_runtime.Int.to_string _i
-          ]]
+        Ppx_hardcaml_runtime.concat
+          [ [%e mangle_name ~loc name mangle]; Ppx_hardcaml_runtime.Int.to_string _i ]]
     in
     let rtlident = mk_rtlident ~loc mangled prefix suffix in
     let mapid = pexp_ident ~loc (Located.mk ~loc (Ldot (mname, "map"))) in
@@ -214,7 +210,7 @@ let expand_port_names_and_widths_label_list
       mangle
       desc
   in
-  [%expr Ppx_deriving_hardcaml_runtime.Array.to_list [%e ainit]]
+  [%expr Ppx_hardcaml_runtime.Array.to_list [%e ainit]]
 ;;
 
 let expand_port_names_and_widths_label
@@ -302,26 +298,26 @@ module Iter_or_map = struct
 
   let array_map t loc =
     match t with
-    | Iter -> [%expr Ppx_deriving_hardcaml_runtime.Array.iter]
-    | Map -> [%expr Ppx_deriving_hardcaml_runtime.Array.map]
+    | Iter -> [%expr Ppx_hardcaml_runtime.Array.iter]
+    | Map -> [%expr Ppx_hardcaml_runtime.Array.map]
   ;;
 
   let array_init t loc =
     match t with
-    | Iter -> [%expr Ppx_deriving_hardcaml_runtime.Array.for_]
-    | Map -> [%expr Ppx_deriving_hardcaml_runtime.Array.init]
+    | Iter -> [%expr Ppx_hardcaml_runtime.Array.for_]
+    | Map -> [%expr Ppx_hardcaml_runtime.Array.init]
   ;;
 
   let list_map t loc =
     match t with
-    | Iter -> [%expr Ppx_deriving_hardcaml_runtime.List.iter]
-    | Map -> [%expr Ppx_deriving_hardcaml_runtime.List.map]
+    | Iter -> [%expr Ppx_hardcaml_runtime.List.iter]
+    | Map -> [%expr Ppx_hardcaml_runtime.List.map]
   ;;
 
   let list_map2_exn t loc =
     match t with
-    | Iter -> [%expr Ppx_deriving_hardcaml_runtime.List.iter2_exn]
-    | Map -> [%expr Ppx_deriving_hardcaml_runtime.List.map2_exn]
+    | Iter -> [%expr Ppx_hardcaml_runtime.List.iter2_exn]
+    | Map -> [%expr Ppx_hardcaml_runtime.List.map2_exn]
   ;;
 end
 
@@ -445,8 +441,8 @@ let expand_map2_label_array iter_or_map var loc ident0 ident1 = function
         (Array.length [%e ident0])
         ~f:(fun _i ->
           f
-            (Ppx_deriving_hardcaml_runtime.Array.get [%e ident0] _i)
-            (Ppx_deriving_hardcaml_runtime.Array.get [%e ident1] _i))]
+            (Ppx_hardcaml_runtime.Array.get [%e ident0] _i)
+            (Ppx_hardcaml_runtime.Array.get [%e ident1] _i))]
   (* 'a Module.t *)
   | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
     when String.equal v var ->
@@ -458,8 +454,8 @@ let expand_map2_label_array iter_or_map var loc ident0 ident1 = function
         (Array.length [%e ident0])
         ~f:(fun _i ->
           [%e mapid]
-            (Ppx_deriving_hardcaml_runtime.Array.get [%e ident0] _i)
-            (Ppx_deriving_hardcaml_runtime.Array.get [%e ident1] _i)
+            (Ppx_hardcaml_runtime.Array.get [%e ident0] _i)
+            (Ppx_hardcaml_runtime.Array.get [%e ident1] _i)
             ~f)]
   (* Default *)
   | _ ->
@@ -516,9 +512,8 @@ let expand_to_list_label_list var loc ident = function
     when String.equal v var ->
     let to_list_id = pexp_ident ~loc (Located.mk ~loc (Ldot (mname, "to_list"))) in
     [%expr
-      Ppx_deriving_hardcaml_runtime.List.concat
-        (Ppx_deriving_hardcaml_runtime.List.map [%e ident] ~f:(fun _e ->
-           [%e to_list_id] _e))]
+      Ppx_hardcaml_runtime.List.concat
+        (Ppx_hardcaml_runtime.List.map [%e ident] ~f:(fun _e -> [%e to_list_id] _e))]
   (* Default *)
   | _ ->
     raise_errorf
@@ -531,7 +526,7 @@ let expand_to_list_label_array var loc ident desc =
   expand_to_list_label_list
     var
     loc
-    [%expr Ppx_deriving_hardcaml_runtime.Array.to_list [%e ident]]
+    [%expr Ppx_hardcaml_runtime.Array.to_list [%e ident]]
     desc
 ;;
 
@@ -653,7 +648,7 @@ let expand_ast_label
       | Some doc -> [%expr Some [%e pexp_constant ~loc (Pconst_string (doc, loc, None))]]
     in
     [%expr
-      { Ppx_deriving_hardcaml_runtime.Interface.Ast.Field.name = [%e field_name]
+      { Ppx_hardcaml_runtime.Interface.Ast.Field.name = [%e field_name]
       ; type_ = [%e type_]
       ; sequence = [%e sequence]
       ; doc = [%e doc]
@@ -713,7 +708,7 @@ let str_of_type ~options ({ ptype_loc = loc; _ } as type_decl) =
     let str_to_list_labels = List.map labels ~f:(expand_to_list_label var) in
     let str_to_list_args = build_expr_list str_to_list_labels in
     let str_to_list =
-      [%expr fun x -> Ppx_deriving_hardcaml_runtime.List.concat [%e str_to_list_args]]
+      [%expr fun x -> Ppx_hardcaml_runtime.List.concat [%e str_to_list_args]]
     in
     let str_ast_labels () = List.map labels ~f:(expand_ast_label options var) in
     let str_ast () = build_expr_list (str_ast_labels ()) in
@@ -735,7 +730,7 @@ let str_of_type ~options ({ ptype_loc = loc; _ } as type_decl) =
          then [ value_binding ~loc ~pat:(pvar ~loc "ast") ~expr:(str_ast ()) ]
          else [])
     ; [%stri
-        include Ppx_deriving_hardcaml_runtime.Interface.Make (struct
+        include Ppx_hardcaml_runtime.Interface.Make (struct
           type nonrec 'a t = 'a t
 
           let sexp_of_t = sexp_of_t
@@ -753,13 +748,116 @@ let str_of_type ~options ({ ptype_loc = loc; _ } as type_decl) =
 let sig_of_type ~ast ({ ptype_loc = loc; _ } as type_decl) =
   match type_decl.ptype_kind, type_decl.ptype_params with
   | Ptype_record _, [ ({ ptyp_desc = Ptyp_var _; _ }, _) ] ->
-    let intf =
-      [%sigi: include Ppx_deriving_hardcaml_runtime.Interface.S with type 'a t := 'a t]
-    in
+    let intf = [%sigi: include Ppx_hardcaml_runtime.Interface.S with type 'a t := 'a t] in
     if ast
-    then [ intf; [%sigi: val ast : Ppx_deriving_hardcaml_runtime.Interface.Ast.t] ]
+    then [ intf; [%sigi: val ast : Ppx_hardcaml_runtime.Interface.Ast.t] ]
     else [ intf ]
   | _, _ -> raise_errorf ~loc "[%s] sig_of_type: only supports record types" deriver
+;;
+
+let declare_let_binding_extension ~name ~generate_naming_function =
+  let pattern =
+    (* Matches let bindings. The __' also captures the location of the [rec] flag, if
+       present. The second __ captures the bindings, and the final __ captures the [rhs]
+       of the let binding. *)
+    Ast_pattern.(single_expr_payload (pexp_let __' __ __))
+  in
+  Extension.declare_with_path_arg
+    name
+    Expression
+    pattern
+    (fun ~loc ~path:_ ~arg recursive_flag bindings rhs ->
+    (* We don't support recursive let bindings *)
+    (match recursive_flag.txt with
+     | Recursive ->
+       Location.raise_errorf ~loc:recursive_flag.loc "[let rec] not supported."
+     | Nonrecursive -> ());
+    (* Wrap all the bindings in a naming function. Turns:
+          {v
+             let x = 0
+             and y = 1
+             in rhs
+          v}
+          into:
+          {v
+             let x = (generated_naming_function) 0
+             and y = (generated_naming_function) 1
+             in rhs
+          v}
+          We only support simple bindings like the above right now. Bindings like:
+
+          let { x; y } = something in rhs
+
+          aren't supported. *)
+    let bindings =
+      List.map bindings ~f:(fun { pvb_pat; pvb_expr; pvb_attributes; pvb_loc } ->
+        (* The [pvb_pat] must be a simple assignment to a name right now. Maybe we
+              can add support for structure unpacking later. *)
+        let loc = { pvb_loc with loc_ghost = true } in
+        match pvb_pat.ppat_desc with
+        | Ppat_var { txt; loc = _ } ->
+          { pvb_pat
+          ; pvb_expr =
+              [%expr [%e generate_naming_function ~arg ~loc ~name:txt] [%e pvb_expr]]
+          ; pvb_attributes
+          ; pvb_loc
+          }
+        | _ ->
+          Location.raise_errorf
+            ~loc:pvb_pat.ppat_loc
+            "This form of let binding is not currently supported")
+    in
+    pexp_let ~loc Nonrecursive bindings rhs)
+;;
+
+let hardcaml_name () =
+  declare_let_binding_extension
+    ~name:"hw"
+    ~generate_naming_function:(fun ~arg ~loc ~name ->
+    match arg with
+    | None ->
+      [%expr
+        fun signal_to_name ->
+          Hardcaml.Scope.naming scope signal_to_name [%e estring ~loc name]]
+    | Some { loc = _; txt = module_of_type_of_expression_being_named } ->
+      let apply_names =
+        String.concat
+          ~sep:"."
+          (Longident.flatten_exn module_of_type_of_expression_being_named
+           @ [ "apply_names" ])
+      in
+      [%expr
+        fun intf_to_name ->
+          (* Ignore the result of 'apply_names'. Of_always.apply_names returns a unit,
+               but Of_signal.apply_names just returns a Signal that we want to ignore. It
+               is assumed that a scope named [scope] is present when calling this
+               fucntion. *)
+          let (_ : _) =
+            [%e evar ~loc apply_names]
+              ~prefix:[%e estring ~loc (name ^ "$")]
+              ~naming_op:(Hardcaml.Scope.naming scope)
+              intf_to_name
+          in
+          intf_to_name])
+;;
+
+let hardcaml_name_var () =
+  declare_let_binding_extension
+    ~name:"hw_var"
+    ~generate_naming_function:(fun ~arg ~loc ~name ->
+    match arg with
+    | None ->
+      [%expr
+        fun (variable_to_name : Hardcaml.Always.Variable.t) ->
+          let (_ : Hardcaml.Signal.t) =
+            Hardcaml.Scope.naming scope variable_to_name.value [%e estring ~loc name]
+          in
+          variable_to_name]
+    | Some _ ->
+      Location.raise_errorf
+        ~loc
+        "[hw_var] does not take a module argument. It is only used with plain \
+         [Variable.t]s - use [let%%hw.Your_type_here.Of_always] instead")
 ;;
 
 let () =
@@ -785,5 +883,11 @@ let () =
          ~deps:[ Ppx_sexp_conv.sexp_of ]
          (fun ~loc:_ ~path:_ (_, type_declarations) ast ->
            List.concat_map type_declarations ~f:(sig_of_type ~ast)))
-  |> Deriving.ignore
+  |> Deriving.ignore;
+  Driver.register_transformation
+    "hardcaml_naming"
+    ~rules:
+      [ Context_free.Rule.extension (hardcaml_name ())
+      ; Context_free.Rule.extension (hardcaml_name_var ())
+      ]
 ;;

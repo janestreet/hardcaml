@@ -1,6 +1,7 @@
 module Always = Always
 module Architecture = Architecture
 module Assertion_manager = Assertion_manager
+module Async_fifo = Async_fifo
 module Bits = Bits
 module Bits_list = Bits_list
 module Build_mode = Build_mode
@@ -39,6 +40,7 @@ module Scope = Scope
 module Side = Side
 module Signal = Signal
 module Signal_graph = Signal_graph
+module Signedness = Signedness
 module Structural = Structural
 module Types = Types
 module Vcd = Vcd
