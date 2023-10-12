@@ -14,10 +14,12 @@ let%expect_test "[sexp_of_t]" =
      (inputs         ())
      (outputs        ())
      (phantom_inputs ())
-     (signal_graph   ())
-     (fan_out        ())
-     (fan_in         ())
-     (assertions     ())) |}]
+     (signal_graph (
+       (outputs ())
+       (upto    ())))
+     (fan_out    ())
+     (fan_in     ())
+     (assertions ())) |}]
 ;;
 
 let%expect_test "[sexp_of_t] with an output" =
@@ -43,11 +45,13 @@ let%expect_test "[sexp_of_t] with an output" =
        (width   1)
        (data_in 0b1))))
      (phantom_inputs ())
-     (signal_graph ((
-       wire
-       (names (output))
-       (width   1)
-       (data_in 0b1))))
+     (signal_graph (
+       (outputs ((
+         wire
+         (names (output))
+         (width   1)
+         (data_in 0b1))))
+       (upto ())))
      (fan_out ((2 (1))))
      (fan_in ((1 (2)) (2 ())))
      (assertions ())) |}]
@@ -83,11 +87,13 @@ let%expect_test "[sexp_of_t] with an input" =
        (width   1)
        (data_in input))))
      (phantom_inputs ())
-     (signal_graph ((
-       wire
-       (names (output))
-       (width   1)
-       (data_in input))))
+     (signal_graph (
+       (outputs ((
+         wire
+         (names (output))
+         (width   1)
+         (data_in input))))
+       (upto ())))
      (fan_out (
        (0 (1))
        (1 (2))))
@@ -129,11 +135,13 @@ let%expect_test "[sexp_of_t] with an operator" =
        (width   1)
        (data_in not))))
      (phantom_inputs ())
-     (signal_graph ((
-       wire
-       (names (output))
-       (width   1)
-       (data_in not))))
+     (signal_graph (
+       (outputs ((
+         wire
+         (names (output))
+         (width   1)
+         (data_in not))))
+       (upto ())))
      (fan_out (
        (0 (1))
        (1 (3))
@@ -272,11 +280,13 @@ let%expect_test "phantom inputs" =
        (width   1)
        (data_in a))))
      (phantom_inputs ((c 1)))
-     (signal_graph ((
-       wire
-       (names (b))
-       (width   1)
-       (data_in a))))
+     (signal_graph (
+       (outputs ((
+         wire
+         (names (b))
+         (width   1)
+         (data_in a))))
+       (upto ())))
      (fan_out (
        (0 (1))
        (1 (2))))
@@ -313,11 +323,13 @@ let%expect_test "phantom inputs" =
        (width   1)
        (data_in a))))
      (phantom_inputs ((c 1)))
-     (signal_graph ((
-       wire
-       (names (b))
-       (width   1)
-       (data_in a))))
+     (signal_graph (
+       (outputs ((
+         wire
+         (names (b))
+         (width   1)
+         (data_in a))))
+       (upto ())))
      (fan_out (
        (0 (1))
        (1 (2))))

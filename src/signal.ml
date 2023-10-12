@@ -195,15 +195,37 @@ let signal_id s =
 ;;
 
 let signal_id_exn s =
-  match signal_id s with
-  | None -> raise_s [%message "Cannot get [signal_id] from empty signal"]
-  | Some s -> s
+  match s with
+  | Empty -> raise_s [%message "Cannot get [signal_id] from empty signal"]
+  | Const { signal_id; _ }
+  | Select { signal_id; _ }
+  | Reg { signal_id; _ }
+  | Mem { signal_id; _ }
+  | Multiport_mem { signal_id; _ }
+  | Mem_read_port { signal_id; _ }
+  | Wire { signal_id; _ }
+  | Inst { signal_id; _ }
+  | Op2 { signal_id; _ }
+  | Mux { signal_id; _ }
+  | Cat { signal_id; _ }
+  | Not { signal_id; _ } -> signal_id
 ;;
 
 let uid s =
-  match signal_id s with
-  | None -> 0L
-  | Some s -> s.s_id
+  match s with
+  | Empty -> 0L
+  | Const { signal_id; _ }
+  | Select { signal_id; _ }
+  | Reg { signal_id; _ }
+  | Mem { signal_id; _ }
+  | Multiport_mem { signal_id; _ }
+  | Mem_read_port { signal_id; _ }
+  | Wire { signal_id; _ }
+  | Inst { signal_id; _ }
+  | Op2 { signal_id; _ }
+  | Mux { signal_id; _ }
+  | Cat { signal_id; _ }
+  | Not { signal_id; _ } -> signal_id.s_id
 ;;
 
 let deps s =
@@ -260,6 +282,8 @@ let names s =
   | None -> raise_s [%message "cannot get [names] from the empty signal"]
   | Some s -> s.s_names
 ;;
+
+let set_names s names = Option.iter (signal_id s) ~f:(fun s -> s.s_names <- names)
 
 let attributes s =
   match signal_id s with

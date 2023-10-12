@@ -174,6 +174,9 @@ module type Signal = sig
   (** returns the list of names assigned to the signal *)
   val names : t -> string list
 
+  (** Set the given names on the signal.  Wipes any names currently set. *)
+  val set_names : t -> string list -> unit
+
   (** Add an attribute to node. This is currently supported only in Verilog. *)
   val add_attribute : t -> Rtl_attribute.t -> t
 

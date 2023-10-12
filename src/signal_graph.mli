@@ -1,13 +1,18 @@
 (** A [Signal_graph.t] is a created from a list of signals, and defined by tracing back
     to inputs (unassigned wires or constants).  Functions are provided for traversing
-    the graph. *)
+    the graph.
+
+    When traversing using [depth_first_seach] we can specify [upto] which means the search
+    will stop when it reaches any signal in the given list (which is also /not/ included
+    as part of the search).
+*)
 
 open Base
 
 type t [@@deriving sexp_of]
 
 (** Create a [Signal_graph.t] from a list of signals (commonly, circuit outputs). *)
-val create : Signal.t list -> t
+val create : ?upto:Signal.t list -> Signal.t list -> t
 
 (** Traverse the graph and find all inputs.  Badly formed inputs (no name, or multiple
     names) return an error. *)

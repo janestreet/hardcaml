@@ -3,9 +3,15 @@ open Base
 let uid = Signal.uid
 let deps = Signal.deps
 
-type t = Signal.t list [@@deriving sexp_of]
+type t =
+  { outputs : Signal.t list
+  ; upto : Set.M(Signal.Uid).t
+  }
+[@@deriving sexp_of]
 
-let create t = t
+let create ?(upto = []) t =
+  { outputs = t; upto = Set.of_list (module Signal.Uid) (List.map upto ~f:Signal.uid) }
+;;
 
 let depth_first_search
   ?(deps = deps)
@@ -26,7 +32,7 @@ let depth_first_search
   and search t acc ~set =
     List.fold t ~init:(acc, set) ~f:(fun (arg, set) s -> search1 s ~set arg)
   in
-  fst (search t init ~set:(Set.empty (module Signal.Uid)))
+  fst (search t.outputs init ~set:t.upto)
 ;;
 
 let fold t ~init ~f = depth_first_search t ~init ~f_before:f
@@ -61,11 +67,11 @@ let inputs graph =
       | _ -> acc))
 ;;
 
-let outputs ?(validate = false) t =
+let outputs ?(validate = false) (t : t) =
   Or_error.try_with (fun () ->
     if validate
     then
-      List.iter t ~f:(fun (output_signal : Signal.t) ->
+      List.iter t.outputs ~f:(fun (output_signal : Signal.t) ->
         let open Signal in
         match output_signal with
         | Wire _ ->
@@ -89,7 +95,7 @@ let outputs ?(validate = false) t =
         | _ ->
           raise_s
             [%message "circuit output signal must be a wire" (output_signal : Signal.t)]);
-    t)
+    t.outputs)
 ;;
 
 let detect_combinational_loops t =
@@ -128,7 +134,7 @@ let detect_combinational_loops t =
     in
     (* We only need to check from the given outputs, and all dependents of registers,
        memories etc. *)
-    List.iter ~f:dfs (List.concat (t :: List.map initial_visited ~f:deps)))
+    List.iter ~f:dfs (List.concat (t.outputs :: List.map initial_visited ~f:deps)))
 ;;
 
 (* [normalize_uids] maintains a table mapping signals in the input graph to
@@ -318,7 +324,7 @@ let normalize_uids t =
         let new_wire = new_signal old_wire in
         Signal.(new_wire <== new_driver))
     | signal -> expecting_a_wire signal);
-  List.map t ~f:new_signal
+  { t with outputs = List.map t.outputs ~f:new_signal }
 ;;
 
 let fan_out_map ?(deps = Signal.deps) t =
@@ -408,7 +414,7 @@ let last_layer_of_nodes ~is_input graph =
       let in_layer, is_in_layer' = visit_signal (in_layer, is_in_layer) signal in
       in_layer, is_in_layer || is_in_layer')
   in
-  let in_layer, _ = fold_signals (Map.empty (module Signal.Uid), false) graph in
+  let in_layer, _ = fold_signals (Map.empty (module Signal.Uid), false) graph.outputs in
   (* Drop nodes not in the final layer. That will track back to an input or constant but
      not be affected by a register or memory. *)
   Map.to_alist in_layer

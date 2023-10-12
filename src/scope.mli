@@ -20,16 +20,22 @@ end
     - [No_path]    - Nothing is added to the name.
     - [Local_path] - Only the name of the enclosing module is added to the name.
     - [Full_path]  - The full path is included in the name
+    - [Auto]       - The full path is tracked in the scope, but names have no path.
 
     Generally hierarchical names are taken from the circuit name, though it is possible to
     specify a different instantiation name. These names are mangled so they are unique
-    within each scope. *)
+    within each scope.
+
+    [Auto] mode works in conjunction with the [Hierarchy] module to automatically rewrite
+    names with full paths without having to work with explicit path names.
+*)
 module Naming_scheme : sig
   type t =
+    | Auto
     | Full_path
     | Local_path
     | No_path
-  [@@deriving sexp_of]
+  [@@deriving equal, sexp_of]
 end
 
 type t [@@deriving sexp_of]

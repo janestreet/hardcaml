@@ -12,10 +12,11 @@ end
 
 module Naming_scheme = struct
   type t =
+    | Auto
     | Full_path
     | Local_path
     | No_path
-  [@@deriving sexp_of]
+  [@@deriving equal, sexp_of]
 end
 
 type t =
@@ -73,7 +74,7 @@ let sub_scope scope name =
     path = Path.push scope.path name
   ; name_path =
       (match scope.naming_scheme with
-       | Full_path -> Path.push scope.path name
+       | Full_path | Auto -> Path.push scope.path name
        | Local_path -> Path.push (Path.create ()) name
        | No_path -> Path.create ())
   ; instantiation_mangler = Mangler.create ~case_sensitive
@@ -81,12 +82,15 @@ let sub_scope scope name =
 ;;
 
 let name ?(sep = Path.default_path_seperator) scope n =
-  let path = name_path scope in
-  match path with
-  | [] -> n
+  match scope.naming_scheme with
+  | Auto -> n
   | _ ->
-    let path = Path.to_string ~sep path in
-    path ^ sep ^ n
+    let path = name_path scope in
+    (match path with
+     | [] -> n
+     | _ ->
+       let path = Path.to_string ~sep path in
+       path ^ sep ^ n)
 ;;
 
 let instance (scope : t) = List.hd scope.path

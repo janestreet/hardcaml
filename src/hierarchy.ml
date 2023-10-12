@@ -88,10 +88,27 @@ end
 module In_scope (I : Interface.S) (O : Interface.S) = struct
   type create = Scope.t -> Interface.Create_fn(I)(O).t
 
+  let names s =
+    try Signal.names s with
+    | _ -> []
+  ;;
+
+  (* Traverse the contents of a sub-circuit and rewrite names with the local path. The
+     full paths build up as we move up the hierarchy. *)
+  let auto_labelling ~instance ~inputs ~outputs =
+    Signal_graph.iter
+      (Signal_graph.create ~upto:(I.to_list inputs) (O.to_list outputs))
+      ~f:(fun s ->
+        Signal.set_names s (List.map (names s) ~f:(fun n -> instance ^ "$" ^ n)));
+    outputs
+  ;;
+
+  let auto_naming scope = Scope.Naming_scheme.equal (Scope.naming_scheme scope) Auto
+
   let create ~scope ~name create_fn inputs =
     let scope = Scope.sub_scope scope name in
     let label_ports = Scope.auto_label_hierarchical_ports scope in
-    let ( -- ) = Scope.naming scope in
+    let ( -- ) = if auto_naming scope then Signal.( -- ) else Scope.naming scope in
     let ( -- ) p s n = Signal.wireof s -- (p ^ Scope.Path.default_path_seperator ^ n) in
     let inputs =
       if label_ports then I.map2 inputs I.port_names ~f:(( -- ) "i") else inputs
@@ -109,7 +126,14 @@ module In_scope (I : Interface.S) (O : Interface.S) = struct
       | Some name -> name
     in
     if Scope.flatten_design scope
-    then create ~scope ~name:instance create_fn inputs
+    then
+      if auto_naming scope
+      then
+        auto_labelling
+          ~instance
+          ~inputs
+          ~outputs:(create ~scope ~name:instance create_fn inputs)
+      else create ~scope ~name:instance create_fn inputs
     else (
       let scope = Scope.sub_scope scope instance in
       let instance = Scope.instance scope in
