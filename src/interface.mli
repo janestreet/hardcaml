@@ -4,7 +4,7 @@
     They are generally used with [ppx_hardcaml] as follows
 
     {[
-      type t = { ... } [@@deriving sexp_of, hardcaml]
+      type t = { ... } [@@deriving hardcaml]
     ]}
 
     The [sexp_of] is required, and must appear before [hardcaml].  This syntax

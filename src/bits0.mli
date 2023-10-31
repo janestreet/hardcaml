@@ -24,6 +24,7 @@ val shift_bytes_to_words : int
 val width_mask : int
 val words_of_width : int -> int
 val bytes_of_width : int -> int
+val offset_for_data : int
 
 (* The empty constant. Contains no bits. *)
 val empty : t

@@ -34,11 +34,10 @@ let%expect_test "looping wire" =
   [%expect
     {|
     (Error (
-      "combinational loop" (
-        through_signal (
-          wire
-          (width   1)
-          (data_in wire))))) |}]
+      "Combinational loop" ((
+        wire
+        (width   1)
+        (data_in wire))))) |}]
 ;;
 
 let%expect_test "combinational loop" =
@@ -50,7 +49,11 @@ let%expect_test "combinational loop" =
   [%expect
     {|
     (Error (
-      "combinational loop" (through_signal (add (width 2) (arguments (a wire)))))) |}]
+      "Combinational loop" (
+        (add (width 2) (arguments (a wire)))
+        (wire
+          (width   2)
+          (data_in add))))) |}]
 ;;
 
 let%expect_test "long combinational loop through logic" =
@@ -68,22 +71,59 @@ let%expect_test "long combinational loop through logic" =
   [%expect
     {|
     (Error (
-      "combinational loop" (through_signal (and (width 2) (arguments (or c)))))) |}];
+      "Combinational loop" (
+        (xor (width 2) (arguments (xor and)))
+        (wire
+          (width   2)
+          (data_in xor))
+        (add (width 2) (arguments (wire a)))
+        (or  (width 2) (arguments (add  b)))
+        (and (width 2) (arguments (or   c)))
+        (xor (width 2) (arguments (and  mux)))))) |}];
   test [ e ];
   [%expect
     {|
     (Error (
-      "combinational loop" (through_signal (and (width 2) (arguments (or c)))))) |}];
+      "Combinational loop" (
+        (xor (width 2) (arguments (xor and)))
+        (wire
+          (width   2)
+          (data_in xor))
+        (add (width 2) (arguments (wire a)))
+        (or  (width 2) (arguments (add  b)))
+        (and (width 2) (arguments (or   c)))
+        (add (width 2) (arguments (and  c)))
+        (mux
+          (width  2)
+          (select select)
+          (data (or add)))
+        (xor (width 2) (arguments (and mux)))))) |}];
   test [ f ];
   [%expect
     {|
     (Error (
-      "combinational loop" (through_signal (and (width 2) (arguments (or c)))))) |}];
+      "Combinational loop" (
+        (xor (width 2) (arguments (xor and)))
+        (wire
+          (width   2)
+          (data_in xor))
+        (add (width 2) (arguments (wire a)))
+        (or  (width 2) (arguments (add  b)))
+        (and (width 2) (arguments (or   c)))
+        (and (width 2) (arguments (and  mux)))))) |}];
   test [ g ];
   [%expect
     {|
     (Error (
-      "combinational loop" (through_signal (xor (width 2) (arguments (xor and)))))) |}]
+      "Combinational loop" (
+        (xor (width 2) (arguments (xor and)))
+        (wire
+          (width   2)
+          (data_in xor))
+        (add (width 2) (arguments (wire a)))
+        (or  (width 2) (arguments (add  b)))
+        (and (width 2) (arguments (or   c)))
+        (xor (width 2) (arguments (and  mux)))))) |}]
 ;;
 
 let%expect_test "combinational loop in 2nd arg" =
@@ -95,7 +135,11 @@ let%expect_test "combinational loop in 2nd arg" =
   [%expect
     {|
     (Error (
-      "combinational loop" (through_signal (add (width 2) (arguments (a wire)))))) |}]
+      "Combinational loop" (
+        (add (width 2) (arguments (a wire)))
+        (wire
+          (width   2)
+          (data_in add))))) |}]
 ;;
 
 let%expect_test "loop through register" =
@@ -144,7 +188,11 @@ let%expect_test "combinational loop before a register" =
   [%expect
     {|
     (Error (
-      "combinational loop" (through_signal (and (width 2) (arguments (a wire)))))) |}]
+      "Combinational loop" (
+        (and (width 2) (arguments (a wire)))
+        (wire
+          (width   2)
+          (data_in and))))) |}]
 ;;
 
 let%expect_test "combinational loop between registers" =
@@ -158,8 +206,11 @@ let%expect_test "combinational loop between registers" =
   [%expect
     {|
     (Error (
-      "combinational loop" (
-        through_signal (and (width 2) (arguments (register wire)))))) |}]
+      "Combinational loop" (
+        (and (width 2) (arguments (register wire)))
+        (wire
+          (width   2)
+          (data_in and))))) |}]
 ;;
 
 let%expect_test "combinational loop inside register loop" =
@@ -175,12 +226,11 @@ let%expect_test "combinational loop inside register loop" =
   [%expect
     {|
     (Error (
-      "combinational loop" (
-        through_signal (
-          wire
-          (names (wire_in_loop))
-          (width   2)
-          (data_in wire_in_loop))))) |}]
+      "Combinational loop" ((
+        wire
+        (names (wire_in_loop))
+        (width   2)
+        (data_in wire_in_loop))))) |}]
 ;;
 
 let%expect_test "looping memory" =
@@ -198,7 +248,18 @@ let%expect_test "looping memory" =
   in
   w <== a;
   test [ a ];
-  [%expect {| (Ok ()) |}]
+  [%expect
+    {|
+    (Error (
+      "Combinational loop" (
+        (memory_read_port
+          (width 4)
+          ((memory         multiport_memory)
+           (read_addresses select)))
+        (wire
+          (width   4)
+          (data_in memory_read_port))
+        (select (width 1) (range (2 2)) (data_in wire))))) |}]
 ;;
 
 let%expect_test "looping instantiation" =

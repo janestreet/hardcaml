@@ -1,7 +1,7 @@
 open Base
 
 module type Bits = sig
-  type t [@@deriving compare, sexp_of]
+  type t = private Constant.t [@@deriving compare, sexp_of]
 
   include Comb.S with type t := t
   include Comparator.S with type t := t
@@ -32,6 +32,7 @@ module type Bits = sig
     type bits
     type t = private bytes
 
+    val number_of_data_bytes : t -> int
     val empty : t
     val width : t -> int
     val to_string : t -> string

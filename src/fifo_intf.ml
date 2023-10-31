@@ -17,7 +17,7 @@ module T = struct
     ; rd_rst_busy : 'a
     ; wr_rst_busy : 'a
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 
   type 'a create_params =
     ?nearly_empty:int (** default is [1] **)
@@ -154,7 +154,7 @@ module type S = sig
         ; d : 'a
         ; rd : 'a
         }
-      [@@deriving sexp_of, hardcaml]
+      [@@deriving hardcaml]
     end
 
     module O : Interface.S with type 'a t = 'a t

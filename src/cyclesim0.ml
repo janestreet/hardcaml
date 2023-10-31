@@ -4,6 +4,18 @@ module Port_list = struct
   type t = (string * Bits.t ref) list [@@deriving sexp_of]
 end
 
+module Traced = struct
+  type t =
+    { signal : Signal.t
+    ; names : string list
+    }
+
+  let sexp_of_t { signal; names } =
+    let sexp_of_signal = Signal.sexp_of_signal_recursive ~show_uids:false ~depth:1 in
+    [%message (signal : signal) (names : string list)]
+  ;;
+end
+
 type task = unit -> unit
 
 module Digest = struct
@@ -19,7 +31,6 @@ type ('i, 'o) t =
   { in_ports : Port_list.t
   ; out_ports_before_clock_edge : Port_list.t
   ; out_ports_after_clock_edge : Port_list.t
-  ; internal_ports : Port_list.t
   ; inputs : 'i
   ; outputs_after_clock_edge : 'o
   ; outputs_before_clock_edge : 'o
@@ -28,6 +39,8 @@ type ('i, 'o) t =
   ; cycle_before_clock_edge : task
   ; cycle_at_clock_edge : task
   ; cycle_after_clock_edge : task
+  ; traced : Traced.t list
+  ; lookup : Signal.t -> Bits.Mutable.t option
   ; lookup_reg : string -> Bits.Mutable.t option
   ; lookup_mem : string -> Bits.Mutable.t array option
   ; assertions : Bits.Mutable.t Map.M(String).t
@@ -46,6 +59,7 @@ let sexp_of_t sexp_of_i sexp_of_o t =
 ;;
 
 type t_port_list = (Port_list.t, Port_list.t) t
+type traced = Traced.t list
 
 module Config = struct
   type t =
@@ -67,8 +81,12 @@ module Config = struct
     }
   ;;
 
-  let trace on =
-    { is_internal_port = Some (Fn.const on)
+  let trace how =
+    { is_internal_port =
+        (match how with
+         | `Everything -> Some (Fn.const true)
+         | `All_named -> Some (fun s -> not (List.is_empty (Signal.names s)))
+         | `Ports_only -> None)
     ; combinational_ops_database = empty_ops_database
     ; compute_digest = Exported_for_specific_uses.am_testing
     ; deduplicate_signals = false
@@ -76,7 +94,7 @@ module Config = struct
     }
   ;;
 
-  let trace_all = trace true
+  let trace_all = trace `All_named
 end
 
 module type Private = Cyclesim0_intf.Private
@@ -86,18 +104,20 @@ module Private = struct
   type nonrec port_list = Port_list.t
   type nonrec t_port_list = t_port_list
   type nonrec task = task
+  type nonrec traced = traced
 
   let create
     ?circuit
     ~in_ports
     ~out_ports_before_clock_edge
     ~out_ports_after_clock_edge
-    ~internal_ports
     ~reset
     ~cycle_check
     ~cycle_before_clock_edge
     ~cycle_at_clock_edge
     ~cycle_after_clock_edge
+    ~traced
+    ~lookup
     ~lookup_reg
     ~lookup_mem
     ~assertions
@@ -106,7 +126,6 @@ module Private = struct
     { in_ports
     ; out_ports_before_clock_edge
     ; out_ports_after_clock_edge
-    ; internal_ports
     ; inputs = in_ports
     ; outputs_before_clock_edge = out_ports_before_clock_edge
     ; outputs_after_clock_edge = out_ports_after_clock_edge
@@ -116,6 +135,8 @@ module Private = struct
     ; cycle_at_clock_edge
     ; cycle_after_clock_edge
     ; assertions
+    ; traced
+    ; lookup
     ; lookup_reg
     ; lookup_mem
     ; violated_assertions = Hashtbl.create (module String)

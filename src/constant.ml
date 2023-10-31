@@ -290,6 +290,10 @@ let to_bit_list = Bits.of_constant
 
 include Comparable
 
+module Expert = struct
+  let offset_for_data = Bits0.offset_for_data
+end
+
 (* Pretty printer *)
 let pp fmt t = Stdlib.Format.fprintf fmt "%s" (to_binary_string_hum t)
 

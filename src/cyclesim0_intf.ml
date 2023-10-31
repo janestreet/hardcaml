@@ -4,6 +4,7 @@ module type Private = sig
   type ('i, 'o) t
   type port_list
   type t_port_list
+  type traced
   type task = unit -> unit
 
   val create
@@ -11,12 +12,13 @@ module type Private = sig
     -> in_ports:port_list
     -> out_ports_before_clock_edge:port_list
     -> out_ports_after_clock_edge:port_list
-    -> internal_ports:port_list
     -> reset:task
     -> cycle_check:task
     -> cycle_before_clock_edge:task
     -> cycle_at_clock_edge:task
     -> cycle_after_clock_edge:task
+    -> traced:traced
+    -> lookup:(Signal.t -> Bits.Mutable.t option)
     -> lookup_reg:(string -> Bits.Mutable.t option)
     -> lookup_mem:(string -> Bits.Mutable.t array option)
     -> assertions:Bits.Mutable.t Map.M(String).t
@@ -47,6 +49,14 @@ module type Cyclesim0 = sig
     type t = (string * Bits.t ref) list [@@deriving sexp_of]
   end
 
+  module Traced : sig
+    type t =
+      { signal : Signal.t
+      ; names : string list
+      }
+    [@@deriving sexp_of]
+  end
+
   module Digest : sig
     type t = Md5_lib.t [@@deriving sexp_of, compare, equal]
 
@@ -59,7 +69,6 @@ module type Cyclesim0 = sig
     { in_ports : Port_list.t
     ; out_ports_before_clock_edge : Port_list.t
     ; out_ports_after_clock_edge : Port_list.t
-    ; internal_ports : Port_list.t
     ; inputs : 'i
     ; outputs_after_clock_edge : 'o
     ; outputs_before_clock_edge : 'o
@@ -68,6 +77,8 @@ module type Cyclesim0 = sig
     ; cycle_before_clock_edge : task
     ; cycle_at_clock_edge : task
     ; cycle_after_clock_edge : task
+    ; traced : Traced.t list
+    ; lookup : Signal.t -> Bits.Mutable.t option
     ; lookup_reg : string -> Bits.Mutable.t option
     ; lookup_mem : string -> Bits.Mutable.t array option
     ; assertions : Bits.Mutable.t Map.M(String).t
@@ -100,7 +111,7 @@ module type Cyclesim0 = sig
       }
 
     val default : t
-    val trace : bool -> t
+    val trace : [ `Everything | `All_named | `Ports_only ] -> t
     val trace_all : t
   end
 
@@ -111,4 +122,5 @@ module type Cyclesim0 = sig
       with type ('i, 'o) t = ('i, 'o) t
        and type port_list = Port_list.t
        and type t_port_list = t_port_list
+       and type traced = Traced.t list
 end

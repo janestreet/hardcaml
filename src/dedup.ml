@@ -35,7 +35,6 @@ let structure_kind (signal : Signal.t) =
   | Signal.Wire _ -> Structure_kind.Wire (Signal.names signal)
   | Signal.Select { high; low; _ } -> Structure_kind.Select (high, low)
   | Signal.Reg _ -> Structure_kind.Dont_dedup (Signal.uid signal)
-  | Signal.Mem _ -> Structure_kind.Dont_dedup (Signal.uid signal)
   | Signal.Multiport_mem _ -> Structure_kind.Dont_dedup (Signal.uid signal)
   | Signal.Mem_read_port _ -> Structure_kind.Mem_read_port
   | Signal.Inst _ -> Structure_kind.Dont_dedup (Signal.uid signal)
@@ -106,7 +105,6 @@ let map_children signal ~f =
       ; memory = f memory
       ; read_address = f read_address
       }
-  | Signal.Mem _ -> failwith "Mem is unsupported"
   | Signal.Inst _ -> signal
 ;;
 
@@ -194,16 +192,6 @@ let transform_sequential_signal canonical signal =
     ; s_deps = List.map signal_id.Signal.s_deps ~f:get_canonical
     }
   in
-  let rewrite_memory memory =
-    let { Signal.mem_size; mem_read_address; mem_write_address; mem_write_data } =
-      memory
-    in
-    { Signal.mem_size
-    ; mem_read_address = get_canonical mem_read_address
-    ; mem_write_address = get_canonical mem_write_address
-    ; mem_write_data = get_canonical mem_write_data
-    }
-  in
   let rewrite_write_port { Signal.write_clock; write_address; write_enable; write_data } =
     { Signal.write_clock = get_canonical write_clock
     ; write_address = get_canonical write_address
@@ -223,13 +211,6 @@ let transform_sequential_signal canonical signal =
       { signal_id = rewrite_signal_id signal_id
       ; size
       ; write_ports = Array.map write_ports ~f:rewrite_write_port
-      }
-  | Signal.Mem { signal_id; extra_uid; memory; register } ->
-    Signal.Mem
-      { signal_id = rewrite_signal_id signal_id
-      ; register = rewrite_register register
-      ; memory = rewrite_memory memory
-      ; extra_uid
       }
   | Inst { signal_id; extra_uid; instantiation } ->
     Signal.Inst
@@ -291,7 +272,7 @@ let canonicalize signals =
   (* we replace all sequential elements with wires, to be able to transform them later *)
   let sequential_wires = Hashtbl.create (module Signal.Uid) in
   List.iter
-    (Signal_graph.topological_sort ~deps:children (Signal_graph.create signals))
+    (Signal_graph.topological_sort_exn ~deps:children (Signal_graph.create signals))
     ~f:(fun signal ->
       let my_hash = signal_hash hash_memo signal in
       let signal_with_canonical_children =

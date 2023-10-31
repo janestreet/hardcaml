@@ -75,6 +75,16 @@ module Config = struct
     ; modify_outputs = Fn.id
     }
   ;;
+
+  let default_for_simulations =
+    { detect_combinational_loops = false
+    ; normalize_uids = false
+    ; assertions = None
+    ; port_checks = Port_sets_and_widths
+    ; add_phantom_inputs = true
+    ; modify_outputs = Fn.id
+    }
+  ;;
 end
 
 let ok_exn = Or_error.ok_exn
@@ -237,7 +247,7 @@ let set_phantom_inputs circuit phantom_inputs =
 ;;
 
 let with_name t ~name = { t with name }
-let uid_equal a b = Int64.equal (Signal.uid a) (Signal.uid b)
+let uid_equal a b = Signal.Uid.equal (Signal.uid a) (Signal.uid b)
 let is_input t signal = List.mem t.inputs signal ~equal:uid_equal
 let is_output t signal = List.mem t.outputs signal ~equal:uid_equal
 let find_signal_exn t uid = Map.find_exn t.signal_by_uid uid

@@ -5,7 +5,7 @@ module T = struct
     { lhs : 'a
     ; rhs : 'a
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 module M (Data : Interface.S) = struct

@@ -25,11 +25,11 @@ module Test_component = struct
       ; a : 'a [@bits 4]
       ; b : 'a [@bits 4]
       }
-    [@@deriving sexp_of, hardcaml]
+    [@@deriving hardcaml]
   end
 
   module O = struct
-    type 'a t = { c : 'a [@bits 4] } [@@deriving sexp_of, hardcaml]
+    type 'a t = { c : 'a [@bits 4] } [@@deriving hardcaml]
   end
 
   let create (i : _ I.t) =
@@ -106,7 +106,7 @@ let%expect_test "Signal attributes on top of signals in Verilog" =
 
         (* bla,bar=10 *)
         input [3:0] b;
-        (* baz=true *)
+        (* baz=1 *)
         input [3:0] a;
         output [3:0] result;
 
@@ -129,14 +129,53 @@ let%expect_test "Signal attributes on top of signals in Verilog" =
 ;;
 
 let%expect_test "Signal attributes on top of signals in VHDL" =
-  require_does_raise [%here] (fun () -> rtl_write_null Vhdl [ output ]);
+  require_does_not_raise [%here] (fun () -> rtl_write_null Vhdl [ output ]);
   [%expect
     {|
-    ("Error while writing circuit"
-      (circuit_name test)
-      (hierarchy_path (test))
-      (output ((language Vhdl) (mode (To_channel <stdout>))))
-      (exn "Signal attributes are not supported in VHDL yet")) |}]
+    library ieee;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_std.all;
+
+    entity test is
+        port (
+            b : in std_logic_vector (3 downto 0);
+            a : in std_logic_vector (3 downto 0);
+            result : out std_logic_vector (3 downto 0)
+        );
+    end entity;
+
+    architecture rtl of test is
+
+        -- conversion functions
+        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
+        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
+        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
+        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
+        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
+        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
+        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
+        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
+
+        -- signal declarations
+        constant hc_5 : std_logic_vector (3 downto 0) := "0011";
+        signal hc_4 : std_logic_vector (3 downto 0);
+        signal tmp : std_logic_vector (3 downto 0);
+
+    begin
+
+        -- logic
+        hc_4 <= hc_slv(hc_uns(a) + hc_uns(b));
+        tmp <= hc_slv(hc_uns(hc_4) + hc_uns(hc_5));
+
+        -- aliases
+
+        -- output assignments
+        result <= tmp;
+
+    end architecture; |}]
 ;;
 
 let%expect_test "Test Rtl attributes on the pipeline construct" =
@@ -146,11 +185,11 @@ let%expect_test "Test Rtl attributes on the pipeline construct" =
         { clk : 'a
         ; a : 'a [@bits 4]
         }
-      [@@deriving sexp_of, hardcaml]
+      [@@deriving hardcaml]
     end
 
     module O = struct
-      type 'a t = { b : 'a [@bits 4] } [@@deriving sexp_of, hardcaml]
+      type 'a t = { b : 'a [@bits 4] } [@@deriving hardcaml]
     end
 
     let create (i : _ I.t) =

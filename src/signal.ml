@@ -30,14 +30,46 @@ type signal_op = Signal_op.t =
 [@@deriving sexp_of, compare, hash]
 
 module Uid = struct
+  module I = Int
+
   module T = struct
-    type t = int64 [@@deriving compare, hash, sexp_of]
+    type t = I.t [@@deriving compare, sexp_of]
+
+    (* We need a hash function compatible with native code and javascript. Currently the
+       only type which allows this is [Int64]. So we perform a conversion to int64 here,
+       and reach out directly to the (unboxed) hash_fold function in base to implement it.
+       This allows zero alloc operation even in fast-build mode. *)
+
+    external fold_int64
+      :  Base.Hash.state
+      -> (int64[@unboxed])
+      -> Base.Hash.state
+      = "Base_internalhash_fold_int64" "Base_internalhash_fold_int64_unboxed"
+      [@@noalloc]
+
+    let hash_fold_t state t = fold_int64 state (Int64.of_int_exn t)
+    let hash t = Hash.get_hash_value (hash_fold_t (Hash.alloc ()) t)
   end
 
   include T
   include Comparator.Make (T)
 
+  let zero = I.of_int 0
+  let one = I.of_int 1
   let equal = [%compare.equal: t]
+  let to_int t = I.to_int_exn t
+  let to_string t = I.to_string t
+
+  let generator () =
+    let id = ref one in
+    let new_id () =
+      let x = !id in
+      (id := I.(!id + one));
+      x
+    in
+    let reset_id () = id := one in
+    `New new_id, `Reset reset_id
+  ;;
 end
 
 module Uid_map = Map.M (Uid)
@@ -98,12 +130,6 @@ and t =
       ; register : register
       ; d : t
       }
-  | Mem of
-      { signal_id : signal_id
-      ; extra_uid : Uid.t
-      ; register : register
-      ; memory : memory
-      }
   | Multiport_mem of
       { signal_id : signal_id
       ; size : int
@@ -154,13 +180,6 @@ and register =
   ; reg_enable : t
   }
 
-and memory =
-  { mem_size : int
-  ; mem_read_address : t
-  ; mem_write_address : t
-  ; mem_write_data : t
-  }
-
 and instantiation =
   { inst_name : string (* name of circuit *)
   ; inst_instance : string (* instantiation label *)
@@ -183,7 +202,6 @@ let signal_id s =
   | Const { signal_id; _ }
   | Select { signal_id; _ }
   | Reg { signal_id; _ }
-  | Mem { signal_id; _ }
   | Multiport_mem { signal_id; _ }
   | Mem_read_port { signal_id; _ }
   | Wire { signal_id; _ }
@@ -200,7 +218,6 @@ let signal_id_exn s =
   | Const { signal_id; _ }
   | Select { signal_id; _ }
   | Reg { signal_id; _ }
-  | Mem { signal_id; _ }
   | Multiport_mem { signal_id; _ }
   | Mem_read_port { signal_id; _ }
   | Wire { signal_id; _ }
@@ -213,11 +230,10 @@ let signal_id_exn s =
 
 let uid s =
   match s with
-  | Empty -> 0L
+  | Empty -> Uid.zero
   | Const { signal_id; _ }
   | Select { signal_id; _ }
   | Reg { signal_id; _ }
-  | Mem { signal_id; _ }
   | Multiport_mem { signal_id; _ }
   | Mem_read_port { signal_id; _ }
   | Wire { signal_id; _ }
@@ -234,7 +250,6 @@ let deps s =
   | Wire { driver; _ } -> [ !driver ]
   | Select _
   | Reg _
-  | Mem _
   | Multiport_mem _
   | Mem_read_port _
   | Inst _
@@ -352,11 +367,6 @@ let is_not = function
 ;;
 
 let is_mem = function
-  | Mem _ | Multiport_mem _ -> true
-  | _ -> false
-;;
-
-let is_multiport_mem = function
   | Multiport_mem _ -> true
   | _ -> false
 ;;
@@ -371,16 +381,7 @@ let is_mem_read_port = function
   | _ -> false
 ;;
 
-let new_id, reset_id =
-  let id = ref 1L in
-  let new_id () =
-    let x = !id in
-    id := Int64.( + ) !id 1L;
-    x
-  in
-  let reset_id () = id := 1L in
-  new_id, reset_id
-;;
+let `New new_id, `Reset reset_id = Uid.generator ()
 
 let make_id w deps =
   { s_id = new_id ()
@@ -412,12 +413,12 @@ let to_string signal =
   in
   let deps s =
     List.fold (deps s) ~init:"" ~f:(fun a s ->
-      let s = Int64.to_string (uid s) in
+      let s = Uid.to_string (uid s) in
       if String.is_empty a then s else a ^ "," ^ s)
   in
   let sid s =
     "id:"
-    ^ Int64.to_string (uid s)
+    ^ Uid.to_string (uid s)
     ^ " bits:"
     ^ Int.to_string (width s)
     ^ " names:"
@@ -433,11 +434,10 @@ let to_string signal =
   | Not _ -> "Op[" ^ sid signal ^ "] = " ^ "not"
   | Cat _ -> "Op[" ^ sid signal ^ "] = " ^ "cat"
   | Mux _ -> "Op[" ^ sid signal ^ "] = " ^ "mux"
-  | Wire { driver; _ } -> "Wire[" ^ sid signal ^ "] -> " ^ Int64.to_string (uid !driver)
+  | Wire { driver; _ } -> "Wire[" ^ sid signal ^ "] -> " ^ Uid.to_string (uid !driver)
   | Select { high; low; _ } ->
     "Select[" ^ sid signal ^ "] " ^ Int.to_string high ^ ".." ^ Int.to_string low
   | Reg _ -> "Reg[" ^ sid signal ^ "]"
-  | Mem _ -> "Mem[" ^ sid signal ^ "]"
   | Multiport_mem _ -> "Multiport_mem[" ^ sid signal ^ "]"
   | Mem_read_port _ -> "Mem_read_port[" ^ sid signal ^ "]"
   | Inst _ -> "Inst" ^ sid signal ^ "]"
@@ -463,7 +463,6 @@ let structural_compare
         | Select { high = h0; low = l0; _ }, Select { high = h1; low = l1; _ } ->
           h0 = h1 && l0 = l1
         | Reg _, Reg _ -> true
-        | Mem { memory = m0; _ }, Mem { memory = m1; _ } -> m0.mem_size = m1.mem_size
         | Multiport_mem { size = mem_size0; _ }, Multiport_mem { size = mem_size1; _ } ->
           mem_size0 = mem_size1
         | Mem_read_port _, Mem_read_port _ -> true
@@ -605,7 +604,6 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
     | Select _ -> "select"
     | Inst _ -> "instantiation"
     | Reg _ -> "register"
-    | Mem _ -> "memory"
     | Multiport_mem _ -> "multiport_memory"
     | Mem_read_port _ -> "memory_read_port"
   in
@@ -686,16 +684,6 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
       (match deps signal with
        | data :: _ -> create tag ~register ~data_in:data
        | deps -> create "REGISTER IS BADLY FORMED" ~arguments:deps)
-    | Mem { register; memory; _ } ->
-      create
-        tag
-        ~register
-        ~data_in:memory.mem_write_data
-        ~memory:
-          ( memory.mem_size
-          , memory.mem_write_address
-          , memory.mem_read_address
-          , register.reg_enable )
     | Multiport_mem { size = mem_size; write_ports; _ } ->
       create tag ~multiport_memory:(mem_size, write_ports)
     | Mem_read_port { memory; read_address; _ } ->
@@ -1159,64 +1147,6 @@ let rec pipeline ?(attributes = []) spec ~n ?enable d =
       (reg spec ?enable (pipeline ~attributes ~n:(n - 1) spec ?enable d))
 ;;
 
-let memory size ~write_port ~read_address =
-  let we = write_port.write_enable in
-  let wa = write_port.write_address in
-  let d = write_port.write_data in
-  if width write_port.write_enable <> 1
-  then
-    raise_s
-      [%message
-        "[Signal.memory] width of write enable must be 1"
-          ~write_enable_width:(width we : int)];
-  if size <= 0
-  then raise_s [%message "[Signal.memory] size must be greater than 0" (size : int)];
-  if width read_address <> width wa
-  then
-    raise_s
-      [%message
-        "[Signal.memory] width of read and write addresses differ"
-          ~write_address_width:(width wa : int)
-          ~read_address_width:(width read_address : int)];
-  if address_bits_for size <> width write_port.write_address
-  then
-    raise_s
-      [%message
-        "[Signal.memory] size does not match what can be addressed"
-          (size : int)
-          ~address_width:(width wa : int)];
-  let spec =
-    form_spec
-      { reg_empty with reg_clock = write_port.write_clock }
-      write_port.write_enable
-      write_port.write_data
-  in
-  let deps =
-    [ d
-    ; write_port.write_address
-    ; read_address
-    ; write_port.write_enable
-    ; spec.reg_clock
-    ; spec.reg_reset
-    ; spec.reg_reset_value
-    ; spec.reg_clear
-    ; spec.reg_clear_value
-    ; spec.reg_enable
-    ]
-  in
-  Mem
-    { signal_id = make_id (width d) deps
-    ; extra_uid = new_id ()
-    ; register = spec
-    ; memory =
-        { mem_size = size
-        ; mem_write_address = wa
-        ; mem_read_address = read_address
-        ; mem_write_data = d
-        }
-    }
-;;
-
 let multiport_memory ?name ?(attributes = []) size ~write_ports ~read_addresses =
   (* size > 0 *)
   if size <= 0
@@ -1321,6 +1251,11 @@ let multiport_memory ?name ?(attributes = []) size ~write_ports ~read_addresses 
   Array.map read_addresses ~f:(fun r ->
     Mem_read_port
       { signal_id = make_id data_width [ r; mem ]; memory = mem; read_address = r })
+;;
+
+let memory size ~write_port ~read_address =
+  (multiport_memory size ~write_ports:[| write_port |] ~read_addresses:[| read_address |]).(
+  0)
 ;;
 
 let ram_rbw ?name ?attributes ~write_port ~read_port size =

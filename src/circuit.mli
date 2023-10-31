@@ -38,6 +38,11 @@ module Config : sig
   (** Perform combinational loop checks, uid normalization, strict port checks, and add
       phantom inputs. *)
   val default : t
+
+  (** Deftault checks for simulations. Drop combinational loop checks (the simulation
+      scheduler will do that anyway) and uid normalization. Used by
+      [Cyclesim.With_interface]. *)
+  val default_for_simulations : t
 end
 
 (** create circuit data structure  *)

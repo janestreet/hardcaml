@@ -6,7 +6,7 @@ module Inner = struct
       { a : 'a
       ; b : 'a
       }
-    [@@deriving sexp_of, hardcaml]
+    [@@deriving hardcaml]
   end
 
   module O = struct
@@ -14,7 +14,7 @@ module Inner = struct
       { c : 'a
       ; d : 'a
       }
-    [@@deriving sexp_of, hardcaml]
+    [@@deriving hardcaml]
   end
 
   open Signal
@@ -33,7 +33,7 @@ module Middle = struct
       { o : 'a Inner.O.t array [@length 2]
       ; x : 'a
       }
-    [@@deriving sexp_of, hardcaml]
+    [@@deriving hardcaml]
   end
 
   module Inner_inst = Hierarchy.In_scope (Inner.I) (Inner.O)
@@ -658,7 +658,7 @@ module Floating_outer = struct
       { foo : 'a
       ; inner : 'a Floating_inner.I.t
       }
-    [@@deriving sexp_of, hardcaml]
+    [@@deriving hardcaml]
   end
 
   module O = Floating_inner.O

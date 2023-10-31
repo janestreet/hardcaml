@@ -41,4 +41,4 @@ val inputs : t -> Signal.t list
 (** Returns information about alias nodes. *)
 val aliases : t -> Aliases.t
 
-val create : Circuit.t -> Signal.t list -> t
+val create : Circuit.t -> t

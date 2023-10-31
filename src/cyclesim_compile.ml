@@ -1,3 +1,5 @@
+[@@@ocaml.flambda_o3]
+
 open Base
 open! Cyclesim0
 module Schedule = Cyclesim_schedule
@@ -5,134 +7,45 @@ module Schedule = Cyclesim_schedule
 let uid = Signal.uid
 let names = Signal.names
 
-module Mangle_names = struct
-  module IntPair = struct
-    module T = struct
-      type t = Signal.Uid.t * int [@@deriving compare, sexp_of]
-    end
-
-    include T
-    include Comparator.Make (T)
-  end
-
-  let port_names_map ports =
-    List.fold
-      ports
-      ~init:(Map.empty (module IntPair))
-      ~f:(fun map signal ->
-        Map.set map ~key:(uid signal, 0) ~data:(List.hd_exn (names signal)))
-  ;;
-
-  let init_mangler_and_port_names ports reserved =
-    (* initialise the mangler with all reserved words and module ports *)
+(* Find all nodes we wish to trace, and generate unique names. *)
+module Traced_nodes = struct
+  let create_mangler circuit =
     let mangler = Mangler.create ~case_sensitive:true in
-    Mangler.add_identifiers_exn
-      mangler
-      (List.map ports ~f:(fun x -> List.hd_exn (names x)) @ reserved);
-    (* initialize the name map with inputs and outputs *)
-    let name_map = port_names_map ports in
-    mangler, name_map
+    let io_port_names =
+      Circuit.inputs circuit @ Circuit.outputs circuit
+      |> List.map ~f:(fun s -> Signal.names s |> List.hd_exn)
+    in
+    Mangler.add_identifiers_exn mangler io_port_names;
+    mangler
   ;;
 
-  (* Mangle all names - creating a map of signal uid's to names.  First, add all inputs,
-     outputs and reserved words - they must not be mangled or things get very confusing.
-     Then the rest of the signals. *)
-  let create reserved prefix circuit =
-    let inputs = Circuit.inputs circuit in
-    let outputs = Circuit.outputs circuit in
-    let ios = inputs @ outputs in
-    let ioset = Set.of_list (module Signal.Uid) (List.map ios ~f:uid) in
-    (* initialise the mangler with all reserved words and the inputs+outputs *)
-    let mangler, name_map = init_mangler_and_port_names ios reserved in
-    (* add name to mangler and name map *)
-    let generated_name map uid =
-      let name = Mangler.mangle mangler (prefix ^ Int64.to_string uid) in
-      Map.set map ~key:(uid, 0) ~data:name
-    in
-    let add_name map signal =
-      let is_io signal = Set.mem ioset (uid signal) in
-      if is_io signal || Signal.is_empty signal
-      then (* IO signal names are handled seperately (they are not mangled) *)
-        map
-      else if List.is_empty (names signal)
-      then (* generated name *)
-        generated_name map (uid signal)
-      else
-        (* mangle signal names *)
-        fst
-          (List.fold (names signal) ~init:(map, 0) ~f:(fun (map, i) name ->
-             let name = Mangler.mangle mangler name in
-             Map.set map ~key:(uid signal, i) ~data:name, i + 1))
-    in
-    (* add special case for memories and instantiations *)
-    let add_name map (signal : Signal.t) =
-      match signal with
-      | Mem { extra_uid; _ } -> add_name (generated_name map extra_uid) signal
-      | Inst { extra_uid; _ } -> add_name (generated_name map extra_uid) signal
-      | _ -> add_name map signal
-    in
-    let name_map =
-      Signal_graph.depth_first_search
-        (Signal_graph.create outputs)
-        ~init:name_map
-        ~f_before:add_name
-    in
-    let lookup name index = Map.find_exn name_map (name, index) in
-    Staged.stage lookup
+  let create_node mangler signal =
+    let names = Signal.names signal |> List.map ~f:(Mangler.mangle mangler) in
+    { Traced.signal; names }
   ;;
-end
 
-(* internally traced nodes *)
-module Internal_ports = struct
   let create circuit ~is_internal_port =
-    (* create name mangler *)
-    let name = Staged.unstage (Mangle_names.create [] "_" circuit) in
-    let i =
-      match is_internal_port with
-      | None -> []
-      | Some f ->
-        Signal_graph.filter (Circuit.signal_graph circuit) ~f:(fun s ->
-          (not (Circuit.is_input circuit s))
-          && (not (Circuit.is_output circuit s))
-          && (not (Signal.is_empty s))
-          && f s)
-    in
-    (* Create a wire for each node, and give it the mangled names.  NOTE: these wire are
-       required to make registers 'look' like they are updating correctly in simulation,
-       however, they are not specifically needed for combinatorial nodes.  It does make the
-       name mangling scheme a wee bit easier though. *)
-    let dangler_uid = ref Int64.(shift_right_logical max_value 1) in
-    let dangler s_width =
-      let open Signal in
-      Int64.incr dangler_uid;
-      Wire
-        { signal_id =
-            { s_id = !dangler_uid
-            ; s_names = []
-            ; s_attributes = []
-            ; s_comment = None
-            ; s_width
-            ; s_deps = []
-            ; caller_id = None
-            }
-        ; driver = ref Empty
-        }
-    in
-    List.map i ~f:(fun s ->
-      let w = dangler (Signal.width s) in
-      Signal.( <== ) w s;
-      List.iteri (names s) ~f:(fun i _ ->
-        ignore (Signal.( -- ) w (name (uid s) i) : Signal.t));
-      w)
+    match is_internal_port with
+    | None -> []
+    | Some f ->
+      let mangler = create_mangler circuit in
+      Signal_graph.filter (Circuit.signal_graph circuit) ~f:(fun s ->
+        (not (Circuit.is_input circuit s))
+        && (not (Circuit.is_output circuit s))
+        && (not (Signal.is_empty s))
+        && f s)
+      |> List.rev
+      |> List.map ~f:(create_node mangler)
   ;;
 end
 
 module Maps : sig
   type t
 
-  val create : internal_ports:Signal.t list -> Schedule.t -> t
+  val create : traced:Cyclesim0.Traced.t list -> Schedule.t -> t
+  val find_data : t -> Signal.t -> Bits.Mutable.t option
   val find_data_exn : t -> Signal.t -> Bits.Mutable.t
-  val find_data : t -> Signal.t -> Bits.Mutable.t
+  val find_data_or_empty : t -> Signal.t -> Bits.Mutable.t
   val find_reg_exn : t -> Signal.t -> Bits.Mutable.t
   val find_mem_exn : t -> Signal.t -> Bits.Mutable.t array
   val find_reg_current_by_name : t -> string -> Bits.Mutable.t option
@@ -154,14 +67,14 @@ end = struct
     | Some alias -> alias
   ;;
 
-  let create_name_to_uid signals_list =
-    List.concat_map signals_list ~f:(fun signal ->
+  let create_name_to_uid traced =
+    List.concat_map traced ~f:(fun { Cyclesim0.Traced.signal; names } ->
       let uid = Signal.uid signal in
-      List.map (Signal.names signal) ~f:(fun name -> name, uid))
+      List.map names ~f:(fun name -> name, uid))
     |> Map.of_alist_exn (module String)
   ;;
 
-  let create ~internal_ports (bundle : Schedule.t) =
+  let create ~traced (bundle : Schedule.t) =
     let aliases = Schedule.aliases bundle in
     let zero n = Bits.Mutable.of_constant (Constant.of_int ~width:n 0) in
     let const c = Bits.Mutable.of_constant (Bits.to_constant c) in
@@ -193,24 +106,23 @@ end = struct
     let mem_map =
       let mem_add map (signal : Signal.t) =
         match signal with
-        | Mem { memory = { mem_size; _ }; _ } | Multiport_mem { size = mem_size; _ } ->
+        | Multiport_mem { size = mem_size; _ } ->
           let mem = Array.init mem_size ~f:(fun _ -> zero (Signal.width signal)) in
           Map.set map ~key:(uid signal) ~data:mem
         | _ -> raise_s [%message "Expecting memory"]
       in
       List.fold (Schedule.mems bundle) ~init:(Map.empty (module Signal.Uid)) ~f:mem_add
     in
-    let name_to_uid = create_name_to_uid internal_ports in
+    let name_to_uid = create_name_to_uid traced in
     { data = data_map; reg = reg_map; mem = mem_map; aliases; name_to_uid }
   ;;
 
+  let find_data_by_uid maps uid = Map.find maps.data (alias_or_self maps uid)
   let find_data_by_uid_exn maps uid = Map.find_exn maps.data (alias_or_self maps uid)
+  let find_data maps signal = find_data_by_uid maps (uid signal)
+  let find_data_exn maps signal = find_data_by_uid_exn maps (uid signal)
 
-  let find_data_exn maps signal =
-    find_data_by_uid_exn maps (alias_or_self maps (uid signal))
-  ;;
-
-  let find_data maps signal =
+  let find_data_or_empty maps signal =
     match Map.find maps.data (alias_or_self maps (uid signal)) with
     | None -> Bits.Mutable.empty
     | Some bits -> bits
@@ -240,10 +152,9 @@ module Io_ports = struct
   type 'a t =
     { in_ports : 'a
     ; out_ports : 'a
-    ; internal_ports : 'a
     }
 
-  let create circuit maps internal_ports : _ t =
+  let create circuit maps : _ t =
     (* list of input ports *)
     let in_ports =
       List.map (Circuit.inputs circuit) ~f:(fun signal ->
@@ -254,12 +165,7 @@ module Io_ports = struct
       List.map (Circuit.outputs circuit) ~f:(fun signal ->
         List.hd_exn (names signal), Maps.find_data_exn maps signal)
     in
-    let internal_ports =
-      List.concat
-      @@ List.map internal_ports ~f:(fun signal ->
-           List.map (names signal) ~f:(fun name -> name, Maps.find_data_exn maps signal))
-    in
-    { in_ports; out_ports; internal_ports }
+    { in_ports; out_ports }
   ;;
 
   let[@cold] raise_input_port_width_mismatch port_name src dst =
@@ -295,7 +201,6 @@ end
 
 module Compile = struct
   let mutable_to_int x = Int64.to_int_trunc (Bits.Mutable.unsafe_get_int64 x 0)
-  let zero n = Bits.Mutable.of_constant (Constant.of_int ~width:n 0)
 
   let dispach_on_width width ~less_than_64 ~exactly_64 ~more_than_64 =
     Some
@@ -319,7 +224,7 @@ module Compile = struct
 
   let signal ~aliases ~combinational_ops_database (maps : Maps.t) signal =
     let find_exn signal = Maps.find_data_exn maps signal in
-    let find_or_empty signal = Maps.find_data maps signal in
+    let find_or_empty signal = Maps.find_data_or_empty maps signal in
     let tgt = find_exn signal in
     let deps = List.map (Signal.deps signal) ~f:find_or_empty in
     match signal with
@@ -520,14 +425,6 @@ module Compile = struct
            then Bits.Mutable.copy ~dst:tgt ~src
          in
          Some regce)
-    | Mem { memory = m; _ } ->
-      let mem = Maps.find_mem_exn maps signal in
-      let addr = Maps.find_data_exn maps m.mem_read_address in
-      let mem () =
-        try Bits.Mutable.copy ~dst:tgt ~src:mem.(mutable_to_int addr) with
-        | _ -> Bits.Mutable.copy ~dst:tgt ~src:(zero (Signal.width signal))
-      in
-      Some mem
     | Multiport_mem _ -> None
     | Mem_read_port { memory; read_address; _ } ->
       let mem = Maps.find_mem_exn maps memory in
@@ -612,21 +509,6 @@ module Compile = struct
 
   let memory_update (maps : Maps.t) (signal : Signal.t) =
     match signal with
-    | Mem { register = r; memory = m; _ } ->
-      let mem = Maps.find_mem_exn maps signal in
-      let we = Maps.find_data_exn maps r.reg_enable in
-      let w = Maps.find_data_exn maps m.mem_write_address in
-      let d = Maps.find_data_exn maps m.mem_write_data in
-      let mem_upd () =
-        if mutable_to_int we = 1
-        then (
-          let w = mutable_to_int w in
-          if w >= m.mem_size
-          then (*Printf.printf "memory write out of bounds %i/%i\n" w m.mem_size*)
-            ()
-          else Bits.Mutable.copy ~dst:mem.(w) ~src:d)
-      in
-      mem_upd
     | Multiport_mem { size; write_ports; _ } ->
       let mem = Maps.find_mem_exn maps signal in
       let multi_mem_wr (write_port : Signal.write_port) =
@@ -700,44 +582,79 @@ module Last_layer = struct
 end
 
 module Compute_digest = struct
-  let create out_ports_before out_ports_after internal_ports =
-    let digest = ref (Md5_lib.string "digest of hardcaml simulation") in
-    let digest_length = String.length (Md5_lib.to_binary !digest) in
+  let initial = Md5_lib.string "digest of hardcaml simulation"
+
+  let get_out_ports out_ports_before out_ports_after =
+    let ports = [ out_ports_before; out_ports_after ] |> List.concat |> List.map ~f:snd in
+    let length =
+      List.fold ports ~init:0 ~f:(fun total bits ->
+        total + Bits.number_of_data_bytes !bits)
+    in
+    ports, length
+  ;;
+
+  let get_traced_ports traced lookup =
     let ports =
-      [ out_ports_before; out_ports_after; internal_ports ]
-      |> List.concat
-      |> List.map ~f:snd
+      List.concat_map traced ~f:(fun { Cyclesim0.Traced.signal; names } ->
+        List.init (List.length names) ~f:(Fn.const (lookup signal |> Option.value_exn)))
     in
-    let total_length =
-      digest_length
-      + List.fold ports ~init:0 ~f:(fun total bits ->
-          total + Bits.number_of_data_bytes !bits)
+    let length =
+      List.fold ports ~init:0 ~f:(fun total bits ->
+        total + Bits.Mutable.number_of_data_bytes bits)
     in
+    List.rev ports, length
+  ;;
+
+  let copy_traced_ports digestable_string pos traced_ports =
+    List.fold traced_ports ~init:pos ~f:(fun pos bits ->
+      let length = Bits.Mutable.number_of_data_bytes bits in
+      Bytes.blito
+        ~src_pos:Bits.Expert.offset_for_data
+        ~src:(bits :> Bytes.t)
+        ~dst:digestable_string
+        ~dst_pos:pos
+        ();
+      pos + length)
+  ;;
+
+  let copy_out_ports digestable_string pos out_ports =
+    List.fold out_ports ~init:pos ~f:(fun pos bits ->
+      let length = Bits.number_of_data_bytes !bits in
+      Bytes.blito
+        ~src_pos:Bits.Expert.offset_for_data
+        ~src:(Bits.Expert.unsafe_underlying_repr !bits)
+        ~dst:digestable_string
+        ~dst_pos:pos
+        ();
+      pos + length)
+  ;;
+
+  let create out_ports_before out_ports_after traced lookup =
+    let digest = ref initial in
+    let digest_length = String.length (Md5_lib.to_binary !digest) in
+    let traced_ports, traced_ports_length = get_traced_ports traced lookup in
+    let out_ports, out_ports_length = get_out_ports out_ports_before out_ports_after in
+    let total_length = digest_length + out_ports_length + traced_ports_length in
     let digestable_string = Bytes.init total_length ~f:(Fn.const '\000') in
-    let build_digestable_string () =
-      (* copy bits into digestable string *)
-      let pos =
-        List.fold ports ~init:digest_length ~f:(fun pos bits ->
-          let length = Bits.number_of_data_bytes !bits in
-          Bytes.blito
-            ~src_pos:Bits.Expert.offset_for_data
-            ~src:(Bits.Expert.unsafe_underlying_repr !bits)
-            ~dst:digestable_string
-            ~dst_pos:pos
-            ();
-          pos + length)
-      in
-      assert (pos = Bytes.length digestable_string)
+    let start_digest () =
+      assert (
+        copy_traced_ports
+          digestable_string
+          (digest_length + out_ports_length)
+          traced_ports
+        = Bytes.length digestable_string)
     in
-    let compute_digest () =
-      build_digestable_string ();
+    let finish_digest () =
+      assert (
+        copy_out_ports digestable_string digest_length out_ports
+        = digest_length + out_ports_length);
       Bytes.blito
         ~src:(Md5_lib.to_binary !digest |> Bytes.of_string)
         ~dst:digestable_string
         ();
       digest := Md5_lib.bytes digestable_string
     in
-    digest, compute_digest
+    digest, start_digest, finish_digest
   ;;
 end
 
@@ -746,13 +663,11 @@ let create ?(config = Cyclesim0.Config.default) circuit =
     if config.deduplicate_signals then Dedup.deduplicate circuit else circuit
   in
   (* add internally traced nodes *)
-  let internal_ports =
-    Internal_ports.create circuit ~is_internal_port:config.is_internal_port
-  in
-  let bundle = Schedule.create circuit internal_ports in
+  let traced = Traced_nodes.create circuit ~is_internal_port:config.is_internal_port in
+  let bundle = Schedule.create circuit in
   let aliases = Schedule.aliases bundle in
   (* build maps *)
-  let maps : Maps.t = Maps.create ~internal_ports bundle in
+  let maps : Maps.t = Maps.create ~traced bundle in
   let compile =
     Compile.signal
       ~combinational_ops_database:config.combinational_ops_database
@@ -780,9 +695,7 @@ let create ?(config = Cyclesim0.Config.default) circuit =
   let resets =
     List.filter_opt (List.map (Schedule.regs bundle) ~f:(Compile.reset maps))
   in
-  let { Io_ports.in_ports; out_ports; internal_ports } =
-    Io_ports.create circuit maps internal_ports
-  in
+  let { Io_ports.in_ports; out_ports } = Io_ports.create circuit maps in
   let violated_assertions = Hashtbl.create (module String) in
   let cycle_no = ref 0 in
   let check_assertions_task () =
@@ -839,7 +752,6 @@ let create ?(config = Cyclesim0.Config.default) circuit =
     out_ports_ref out_ports
   in
   let out_ports_after_clock_edge, out_ports_task = out_ports_ref out_ports in
-  let internal_ports, internal_ports_task = out_ports_ref internal_ports in
   let tasks_before_clock_edge = List.map tasks_comb ~f:snd in
   let tasks_after_clock_edge =
     let optimize_last_layer = true in
@@ -847,19 +759,25 @@ let create ?(config = Cyclesim0.Config.default) circuit =
     then Last_layer.create ~aliases circuit tasks_comb
     else tasks_before_clock_edge
   in
-  let digest, digest_task =
-    Compute_digest.create
-      out_ports_before_clock_edge
-      out_ports_after_clock_edge
-      internal_ports
-  in
+  let lookup = Maps.find_data maps in
   let lookup_reg = Maps.find_reg_current_by_name maps in
   let lookup_mem = Maps.find_mem_by_name maps in
+  let digest, start_digest_task, finish_digest_task =
+    if config.compute_digest
+    then
+      Compute_digest.create
+        out_ports_before_clock_edge
+        out_ports_after_clock_edge
+        traced
+        lookup
+    else ref Compute_digest.initial, Fn.id, Fn.id
+  in
   { Cyclesim0.in_ports
   ; out_ports_after_clock_edge
   ; out_ports_before_clock_edge
-  ; internal_ports
   ; inputs = in_ports
+  ; traced
+  ; lookup
   ; lookup_reg
   ; lookup_mem
   ; outputs_after_clock_edge = out_ports_after_clock_edge
@@ -869,17 +787,14 @@ let create ?(config = Cyclesim0.Config.default) circuit =
       tasks
         [ [ in_ports_task ]
         ; tasks_before_clock_edge
+        ; [ start_digest_task ]
         ; tasks_regs
-        ; [ out_ports_before_clock_edge_task; internal_ports_task ]
+        ; [ out_ports_before_clock_edge_task ]
         ; [ check_assertions_task ]
         ]
   ; cycle_at_clock_edge = task tasks_at_clock_edge
   ; cycle_after_clock_edge =
-      tasks
-        [ tasks_after_clock_edge
-        ; [ out_ports_task ]
-        ; (if config.compute_digest then [ digest_task ] else [])
-        ]
+      tasks [ tasks_after_clock_edge; [ out_ports_task; finish_digest_task ] ]
   ; reset = tasks [ resets; [ clear_violated_assertions_task ] ]
   ; violated_assertions
   ; digest

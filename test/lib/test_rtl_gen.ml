@@ -223,38 +223,36 @@ let%expect_test "mem" =
   [%expect
     {|
     module reg (
-        clock,
         write_enable,
-        read_address,
-        write_address,
         write_data,
+        write_address,
+        clock,
+        read_address,
         q
     );
 
-        input clock;
         input write_enable;
-        input [1:0] read_address;
-        input [1:0] write_address;
         input [7:0] write_data;
+        input [1:0] write_address;
+        input clock;
+        input [1:0] read_address;
         output [7:0] q;
 
         /* signal declarations */
-        wire [7:0] _8 = 8'b00000000;
-        wire [7:0] _7 = 8'b00000000;
-        wire [7:0] _10;
-        reg [7:0] _10_mem[0:3];
+        reg [7:0] _7[0:3];
+        wire [7:0] _8;
 
         /* logic */
         always @(posedge clock) begin
             if (write_enable)
-                _10_mem[write_address] <= write_data;
+                _7[write_address] <= write_data;
         end
-        assign _10 = _10_mem[read_address];
+        assign _8 = _7[read_address];
 
         /* aliases */
 
         /* output assignments */
-        assign q = _10;
+        assign q = _8;
 
     endmodule |}];
   Rtl.print Vhdl circuit;
@@ -266,11 +264,11 @@ let%expect_test "mem" =
 
     entity reg is
         port (
-            clock : in std_logic;
             write_enable : in std_logic;
-            read_address : in std_logic_vector (1 downto 0);
-            write_address : in std_logic_vector (1 downto 0);
             write_data : in std_logic_vector (7 downto 0);
+            write_address : in std_logic_vector (1 downto 0);
+            clock : in std_logic;
+            read_address : in std_logic_vector (1 downto 0);
             q : out std_logic_vector (7 downto 0)
         );
     end entity;
@@ -291,11 +289,9 @@ let%expect_test "mem" =
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
 
         -- signal declarations
-        constant hc_8 : std_logic_vector (7 downto 0) := "00000000";
-        constant hc_7 : std_logic_vector (7 downto 0) := "00000000";
-        signal hc_10 : std_logic_vector (7 downto 0);
-        type hc_10_type is array (0 to 3) of std_logic_vector(7 downto 0);
-        signal hc_10_mem : hc_10_type;
+        type hc_7_type is array (0 to 3) of std_logic_vector(7 downto 0);
+        signal hc_7 : hc_7_type;
+        signal hc_8 : std_logic_vector (7 downto 0);
 
     begin
 
@@ -303,16 +299,16 @@ let%expect_test "mem" =
         process (clock) begin
             if rising_edge(clock) then
                 if write_enable = '1' then
-                    hc_10_mem(to_integer(hc_uns(write_address))) <= write_data;
+                    hc_7(to_integer(hc_uns(write_address))) <= write_data;
                 end if;
             end if;
         end process;
-        hc_10 <= hc_10_mem(to_integer(hc_uns(read_address)));
+        hc_8 <= hc_7(to_integer(hc_uns(read_address)));
 
         -- aliases
 
         -- output assignments
-        q <= hc_10;
+        q <= hc_8;
 
     end architecture; |}]
 ;;
@@ -541,7 +537,7 @@ let%expect_test "Try to generate Verilog port names with dashes" =
       (hierarchy_path (mod))
       (output ((language Verilog) (mode (To_channel <stdout>))))
       (exn (
-        "illegal port name"
+        "[Rtl_name.add_port_name] illegal port name"
         (name       in-with-dash)
         (legal_name in_with_dash)
         (note       "Hardcaml will not change ports names.")

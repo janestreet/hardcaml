@@ -176,59 +176,57 @@ let%expect_test "verilog with normalization" =
 
         /* signal declarations */
         wire [1:0] _1;
-        wire [1:0] _14 = 2'b00;
-        wire [1:0] _13 = 2'b00;
         wire _12;
-        wire [1:0] _16;
-        reg [1:0] _16_mem[0:3];
-        wire [2:0] _22;
+        reg [1:0] _13[0:3];
+        wire [1:0] _14;
         wire [2:0] _20;
-        wire [8:0] _18;
+        wire [2:0] _18;
+        wire [8:0] _16;
+        wire [2:0] _17;
         wire [2:0] _19;
         wire [2:0] _21;
-        wire [2:0] _23;
         wire vdd = 1'b1;
-        wire [1:0] _26 = 2'b00;
-        wire [1:0] _25 = 2'b00;
-        wire [1:0] _24;
-        reg [1:0] _28;
+        wire [1:0] _24 = 2'b00;
+        wire [1:0] _23 = 2'b00;
+        wire [1:0] _22;
+        reg [1:0] _26;
 
         /* logic */
         assign _1 = a;
         assign _12 = a[1:1];
         always @(posedge clock) begin
             if (_12)
-                _16_mem[b] <= a;
+                _13[b] <= a;
         end
-        assign _16 = _16_mem[a];
-        assign _22 = _18[8:6];
-        assign _20 = _18[5:3];
+        assign _14 = _13[a];
+        assign _20 = _16[8:6];
+        assign _18 = _16[5:3];
         blah
             the_blah
             ( .a(a),
               .b(b),
-              .e(_18[8:6]),
-              .d(_18[5:3]),
-              .c(_18[2:0]) );
-        assign _19 = _18[2:0];
+              .e(_16[8:6]),
+              .d(_16[5:3]),
+              .c(_16[2:0]) );
+        assign _17 = _16[2:0];
+        assign _19 = _17 | _18;
         assign _21 = _19 | _20;
-        assign _23 = _21 | _22;
-        assign _24 = a + b;
+        assign _22 = a + b;
         always @(posedge clock) begin
             if (clear)
-                _28 <= _26;
+                _26 <= _24;
             else
-                _28 <= _24;
+                _26 <= _22;
         end
 
         /* aliases */
 
         /* output assignments */
-        assign c = _28;
+        assign c = _26;
         assign d = a;
-        assign e = _23;
-        assign f = _16;
-        assign g = _16;
+        assign e = _21;
+        assign f = _14;
+        assign g = _14;
         assign h = _1;
 
     endmodule |}]

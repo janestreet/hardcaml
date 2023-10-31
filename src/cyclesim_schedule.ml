@@ -74,20 +74,20 @@ let create_aliases signal_graph =
    Note that all signals in the graph cannot be reached from just the outputs of a
    circuit using these dependencies. The (discarded) inputs to all registers and
    memories must also be included. *)
-let scheduling_deps (s : Signal.t) = Signal_graph.scheduling_deps s
+let scheduling_deps (s : Signal.t) = Signal_graph.deps_for_simulation_scheduling s
 
-let create circuit internal_ports =
+let create circuit =
   let regs, mems, consts, inputs, comb_signals = find_elements circuit in
-  let outputs = Circuit.outputs circuit @ internal_ports in
+  let outputs = Circuit.outputs circuit in
   let signal_graph = Signal_graph.create outputs in
   let aliases = create_aliases signal_graph in
   let schedule =
     if List.is_empty outputs
     then []
-    else Signal_graph.topological_sort ~deps:scheduling_deps signal_graph
+    else Signal_graph.topological_sort_exn ~deps:scheduling_deps signal_graph
   in
   let schedule_set =
-    List.concat [ internal_ports; mems; comb_signals ]
+    List.concat [ mems; comb_signals ]
     |> List.map ~f:Signal.uid
     |> Set.of_list (module Signal.Uid)
   in

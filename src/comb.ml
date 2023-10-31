@@ -1,3 +1,5 @@
+[@@@ocaml.flambda_o3]
+
 open Base
 include Comb_intf
 

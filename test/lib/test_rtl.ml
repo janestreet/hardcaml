@@ -19,7 +19,7 @@ let%expect_test "Port names must be legal" =
       (hierarchy_path (test))
       (output ((language Verilog) (mode (To_channel <stdout>))))
       (exn (
-        "illegal port name"
+        "[Rtl_name.add_port_name] illegal port name"
         (name       1^7)
         (legal_name _1_7)
         (note       "Hardcaml will not change ports names.")
@@ -31,7 +31,8 @@ let%expect_test "Port names must be legal" =
 ;;
 
 let%expect_test "Port name clashes with reserved name" =
-  require_does_raise [%here] (fun () -> rtl_write_null [ output "module" (input "x" 1) ]);
+  require_does_raise [%here] (fun () ->
+    rtl_write_null [ output "generate" (input "x" 1) ]);
   [%expect
     {|
     ("Error while writing circuit"
@@ -39,10 +40,10 @@ let%expect_test "Port name clashes with reserved name" =
       (hierarchy_path (test))
       (output ((language Verilog) (mode (To_channel <stdout>))))
       (exn (
-        "port name has already been defined or matches a reserved identifier"
+        "[Rtl_name.add_port_name] port name has already been defined or matches a reserved identifier"
         (port (
           wire
-          (names (module))
+          (names (generate))
           (width   1)
           (data_in x)))))) |}]
 ;;
@@ -69,31 +70,20 @@ let%expect_test "instantiation input is empty" =
     |> Rtl.print Verilog);
   [%expect
     {|
-    module example (
-        b
-    );
-
-        output b;
-
-        /* signal declarations */
-        wire _4;
-        wire _1;
-
-        /* logic */
-        example
-            the_example
     ("Error while writing circuit"
       (circuit_name example)
       (hierarchy_path (example))
       (output ((language Verilog) (mode (To_channel <stdout>))))
       (exn (
-        "failed to connect instantiation port"
-        (inst_name the_example)
-        (port_name a)
-        (signal    empty)
-        (indexes ())
+        "[Rtl_ast] failed to create statement for signal"
+        (signal (
+          instantiation
+          (width 1)
+          ("work.example(rtl){the_example}"
+            (parameters ())
+            (inputs  ((a empty)))
+            (outputs ((b 1))))))
         (exn (
-          "[Rtl.SignalNameManager] internal error while looking up signal name"
-          (index      0)
-          (for_signal empty)))))) |}]
+          "[Rtl_ast] Failed to find signal in logic map"
+          (context "Inst.input_port: a")))))) |}]
 ;;

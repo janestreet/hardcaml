@@ -1,55 +1,54 @@
 open! Import
 
+let%expect_test "Uid hashes are equal between ocaml and javascript" =
+  let `New new_id, _ = Signal.Uid.generator () in
+  let id = new_id () in
+  print_s [%message (id : Signal.Uid.t) (Signal.Uid.hash id : int)];
+  [%expect {|
+    ((id                   1)
+     ("Signal.Uid.hash id" 746625832)) |}];
+  let id = new_id () in
+  print_s [%message (id : Signal.Uid.t) (Signal.Uid.hash id : int)];
+  [%expect {|
+    ((id                   2)
+     ("Signal.Uid.hash id" 391307823)) |}];
+  let id = new_id () in
+  print_s [%message (id : Signal.Uid.t) (Signal.Uid.hash id : int)];
+  [%expect {|
+    ((id                   3)
+     ("Signal.Uid.hash id" 834235799)) |}]
+;;
+
+let topsort g = Signal_graph.topological_sort ~deps:Signal.deps (Signal_graph.create g)
+let sexp_of_signal = Signal.sexp_of_signal_recursive ~show_uids:false ~depth:0
+let sexp_of_topsort = [%sexp_of: (signal list, signal list) Result.t]
+
 let%expect_test "signed resize" =
   let a = Signal.input "a" 4 in
   let b = Signal.sresize a 8 in
-  let result = Signal_graph.topological_sort (Signal_graph.create [ b ]) in
-  print_s [%sexp (result : Signal.t list)];
-  [%expect
-    {|
-    (empty
-      (wire
-        (names (a))
-        (width   4)
-        (data_in empty))
-      (select (width 1) (range (3 3)) (data_in a))
-      (cat (width 2) (arguments (select select)))
-      (cat (width 4) (arguments (cat    cat)))
-      (cat (width 8) (arguments (cat    a)))) |}]
+  let result = topsort [ b ] in
+  print_s [%sexp (result : topsort)];
+  [%expect {|
+    (Ok (empty a select cat cat cat)) |}]
 ;;
 
 let%expect_test "a + a" =
   let a = Signal.input "a" 4 in
   let b = Signal.(a +: a) in
-  let result = Signal_graph.topological_sort (Signal_graph.create [ b ]) in
-  print_s [%sexp (result : Signal.t list)];
-  [%expect
-    {|
-    (empty
-      (wire
-        (names (a))
-        (width   4)
-        (data_in empty))
-      (add (width 4) (arguments (a a)))) |}]
+  let result = topsort [ b ] in
+  print_s [%sexp (result : topsort)];
+  [%expect {|
+    (Ok (empty a add)) |}]
 ;;
 
 (* Simplest possible circuit. *)
 let%expect_test "input -> output" =
   let a = Signal.input "a" 4 in
   let b = Signal.output "b" a in
-  let result = Signal_graph.topological_sort (Signal_graph.create [ b ]) in
-  print_s [%sexp (result : Signal.t list)];
-  [%expect
-    {|
-    (empty
-      (wire
-        (names (a))
-        (width   4)
-        (data_in empty))
-      (wire
-        (names (b))
-        (width   4)
-        (data_in a))) |}]
+  let result = topsort [ b ] in
+  print_s [%sexp (result : topsort)];
+  [%expect {|
+    (Ok (empty a b)) |}]
 ;;
 
 let reg_spec = Reg_spec.create () ~clock ~clear
@@ -58,59 +57,27 @@ let reg_spec = Reg_spec.create () ~clock ~clear
    nodes. *)
 let%expect_test "reg loop (standard deps)" =
   let b = Signal.reg_fb reg_spec ~width:1 ~f:Signal.(fun d -> d +:. 1) in
-  require_does_raise [%here] (fun () ->
-    Signal_graph.topological_sort (Signal_graph.create [ b ]));
+  let loop = topsort [ b ] in
+  print_s [%message (loop : topsort)];
   [%expect {|
-    ("Topological_sort.sort encountered cycle" (add wire register)) |}]
+    (loop (Error (register add wire))) |}]
 ;;
 
 (* Plug in the correct [deps] *)
-let deps (s : Signal.t) =
-  match s with
-  | Mem { memory = m; _ } -> [ m.mem_read_address ]
-  | Reg _ -> []
-  | _ -> Signal.deps s
+let topsort g =
+  Signal_graph.topological_sort
+    ~deps:Signal_graph.deps_for_simulation_scheduling
+    (Signal_graph.create g)
 ;;
 
 let%expect_test "reg loop" =
   let b =
     Signal.reg_fb reg_spec ~enable:Signal.vdd ~width:1 ~f:Signal.(fun d -> d +:. 1)
   in
-  let result = Signal_graph.topological_sort ~deps (Signal_graph.create [ b ]) in
-  print_s [%sexp (result : Signal.t list)];
-  [%expect
-    {|
-    (empty
-      (wire
-        (names (clock))
-        (width   1)
-        (data_in empty))
-      (wire
-        (names (clear))
-        (width   1)
-        (data_in empty))
-      (register
-        (width 1)
-        ((clock       clock)
-         (clock_edge  Rising)
-         (clear       clear)
-         (clear_level High)
-         (clear_to    0b0)
-         (enable      0b1))
-        (data_in wire))
-      (const
-        (width 1)
-        (value 0b1))
-      (add (width 1) (arguments (register 0b1)))
-      (wire
-        (width   1)
-        (data_in add))
-      (const
-        (names (vdd))
-        (width 1)
-        (value 0b1))
-      (const (width 1) (value 0b0))
-      (const (width 1) (value 0b0))) |}]
+  let result = topsort [ b ] in
+  print_s [%sexp (result : topsort)];
+  [%expect {|
+    (Ok (0b0 0b1 register 0b0 empty clock clear 0b1 add wire)) |}]
 ;;
 
 let%expect_test "mem loop" =
@@ -123,32 +90,10 @@ let%expect_test "mem loop" =
       ~read_address:Signal.vdd
   in
   Signal.(w <== q);
-  let result = Signal_graph.topological_sort ~deps (Signal_graph.create [ q ]) in
-  print_s [%sexp (result : Signal.t list)];
-  [%expect
-    {|
-    (empty
-      (const
-        (names (vdd))
-        (width 1)
-        (value 0b1))
-      (wire
-        (names (clock))
-        (width   1)
-        (data_in empty))
-      (memory
-        (width 1)
-        ((clock      clock)
-         (clock_edge Rising)
-         (enable     wire))
-        ((size          2)
-         (write_address wire)
-         (read_address  0b1)
-         (write_enable  wire))
-        (data_in wire))
-      (wire  (width 1) (data_in memory))
-      (const (width 1) (value   0b0))
-      (const (width 1) (value   0b0))) |}]
+  let result = topsort [ q ] in
+  print_s [%sexp (result : topsort)];
+  [%expect {|
+    (Ok (empty clock multiport_memory 0b1 memory_read_port wire)) |}]
 ;;
 
 (* This a combinational loop.  The read address is not synchronously read. *)
@@ -162,10 +107,10 @@ let%expect_test "mem loop, including read address, which isn't allowed" =
       ~read_address:w
   in
   Signal.(w <== q);
-  require_does_raise [%here] (fun () ->
-    Signal_graph.topological_sort ~deps (Signal_graph.create [ q ]));
+  let result = topsort [ q ] in
+  print_s [%sexp (result : topsort)];
   [%expect {|
-    ("Topological_sort.sort encountered cycle" (memory wire)) |}]
+    (Error (wire memory_read_port)) |}]
 ;;
 
 (* Instantiation - the only types of instantiation possible in a simulation are
@@ -174,9 +119,8 @@ let%expect_test "Instantiation loop - not allowed." =
   let w = Signal.wire 1 in
   let inst = Instantiation.create () ~name:"foo" ~inputs:[ "a", w ] ~outputs:[ "b", 1 ] in
   Signal.(w <== Map.find_exn inst "b");
-  require_does_raise [%here] (fun () ->
-    Signal_graph.topological_sort ~deps (Signal_graph.create [ w ]));
-  [%expect
-    {|
-    ("Topological_sort.sort encountered cycle" (wire wire instantiation)) |}]
+  let result = topsort [ w ] in
+  print_s [%sexp (result : topsort)];
+  [%expect {|
+    (Error (instantiation wire wire)) |}]
 ;;

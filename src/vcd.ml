@@ -174,9 +174,9 @@ module Config = struct
   ;;
 end
 
-type trace =
+type 'a trace =
   { var : Var.t
-  ; data : Bits.t ref
+  ; data : 'a
   ; prev : string ref
   }
 
@@ -212,18 +212,36 @@ let wrap chan sim =
   let write_var v d = Var.write_string chan v d in
   (* list of signals to trace *)
   let trace signals =
-    let width s = String.length (Bits.to_bstr s) in
     let xs w = String.init w ~f:(fun _ -> 'x') in
-    List.map signals ~f:(fun (n, s) ->
+    List.map signals ~f:(fun (name, s) ->
       { var =
-          Var.create ~name:n ~id:(Var.Generator.next var_generator) ~width:(width !s) ()
+          Var.create
+            ~name
+            ~id:(Var.Generator.next var_generator)
+            ~width:(Bits.width !s)
+            ()
       ; data = s
-      ; prev = ref (xs (width !s))
+      ; prev = ref (xs (Bits.width !s))
       })
+  in
+  let trace_internal (s : Cyclesim.Traced.t list) =
+    let xs w = String.init w ~f:(fun _ -> 'x') in
+    List.concat_map s ~f:(fun { signal; names } ->
+      let s = Cyclesim.lookup sim signal |> Option.value_exn in
+      List.map names ~f:(fun name ->
+        { var =
+            Var.create
+              ~name
+              ~id:(Var.Generator.next var_generator)
+              ~width:(Bits.Mutable.width s)
+              ()
+        ; data = s
+        ; prev = ref (xs (Bits.Mutable.width s))
+        }))
   in
   let trace_in = trace (in_ports sim) in
   let trace_out = trace (out_ports sim ~clock_edge:Before) in
-  let trace_internal = trace (internal_ports sim) in
+  let trace_internal = trace_internal (traced sim) in
   (* filter out 'clock' and 'reset' *)
   let trace_in =
     List.filter trace_in ~f:(fun s ->
@@ -249,14 +267,17 @@ let wrap chan sim =
     write_var clock "0";
     write_var reset "1";
     List.iter trace_in ~f:(fun t ->
-      write_var t.var (Bits.to_bstr !(t.data));
-      t.prev := Bits.to_bstr !(t.data));
+      let str = Bits.to_bstr !(t.data) in
+      write_var t.var str;
+      t.prev := str);
     List.iter trace_out ~f:(fun t ->
-      write_var t.var (Bits.to_bstr !(t.data));
-      t.prev := Bits.to_bstr !(t.data));
+      let str = Bits.to_bstr !(t.data) in
+      write_var t.var str;
+      t.prev := str);
     List.iter trace_internal ~f:(fun t ->
-      write_var t.var (Bits.to_bstr !(t.data));
-      t.prev := Bits.to_bstr !(t.data));
+      let str = Bits.Mutable.to_string t.data in
+      write_var t.var str;
+      t.prev := str);
     time := !time + vcdcycle
   in
   (* cycle *)
@@ -277,7 +298,7 @@ let wrap chan sim =
         write_var t.var data;
         t.prev := data));
     List.iter trace_internal ~f:(fun t ->
-      let data = Bits.to_bstr !(t.data) in
+      let data = Bits.Mutable.to_string t.data in
       if not (String.equal data !(t.prev))
       then (
         write_var t.var data;
@@ -286,5 +307,5 @@ let wrap chan sim =
     write_var clock "0";
     time := !time + vcdcycle
   in
-  Private.modify sim [ After, Reset, write_reset; After, At_clock_edge, write_cycle ]
+  Private.modify sim [ After, Reset, write_reset; Before, At_clock_edge, write_cycle ]
 ;;

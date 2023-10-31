@@ -139,7 +139,6 @@ module Memories = struct
     let data_width = Signal.width s in
     let depth =
       match s with
-      | Mem { memory = m; _ } -> m.mem_size
       | Multiport_mem { size; _ } -> size
       | _ -> 0
     in
@@ -288,7 +287,7 @@ let rec create ?database circuit =
         }
       | Reg _ ->
         { utilization with registers = Total_bits.add ?u:utilization.registers signal }
-      | Mem _ | Multiport_mem _ ->
+      | Multiport_mem _ ->
         { utilization with memories = Memories.add ?u:utilization.memories signal }
       | Mem_read_port _ -> utilization
       | Inst _ ->

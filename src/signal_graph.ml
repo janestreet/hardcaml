@@ -1,3 +1,5 @@
+[@@@ocaml.flambda_o3]
+
 open Base
 
 let uid = Signal.uid
@@ -5,12 +7,14 @@ let deps = Signal.deps
 
 type t =
   { outputs : Signal.t list
-  ; upto : Set.M(Signal.Uid).t
+  ; upto : Hash_set.M(Signal.Uid).t
   }
 [@@deriving sexp_of]
 
 let create ?(upto = []) t =
-  { outputs = t; upto = Set.of_list (module Signal.Uid) (List.map upto ~f:Signal.uid) }
+  { outputs = t
+  ; upto = Hash_set.of_list (module Signal.Uid) (List.map upto ~f:Signal.uid)
+  }
 ;;
 
 let depth_first_search
@@ -20,19 +24,18 @@ let depth_first_search
   t
   ~init
   =
-  let rec search1 signal ~set acc =
-    if Set.mem set (uid signal)
-    then acc, set
+  let set = Hash_set.copy t.upto in
+  let rec search1 signal acc =
+    if Hash_set.mem set (uid signal)
+    then acc
     else (
-      let set = Set.add set (uid signal) in
+      Hash_set.add set (uid signal);
       let acc = f_before acc signal in
-      let acc, set = search (deps signal) acc ~set in
+      let acc = search (deps signal) acc in
       let acc = f_after acc signal in
-      acc, set)
-  and search t acc ~set =
-    List.fold t ~init:(acc, set) ~f:(fun (arg, set) s -> search1 s ~set arg)
-  in
-  fst (search t.outputs init ~set:t.upto)
+      acc)
+  and search t acc = List.fold t ~init:acc ~f:(fun arg s -> search1 s arg) in
+  search t.outputs init
 ;;
 
 let fold t ~init ~f = depth_first_search t ~init ~f_before:f
@@ -98,45 +101,6 @@ let outputs ?(validate = false) (t : t) =
     t.outputs)
 ;;
 
-let detect_combinational_loops t =
-  Or_error.try_with (fun () ->
-    let open Signal in
-    let module Signal_state = struct
-      type t =
-        | Unvisited
-        | Visiting
-        | Visited
-      [@@deriving sexp_of]
-    end
-    in
-    let state_by_uid : (Uid.t, Signal_state.t ref) Hashtbl.t =
-      Hashtbl.create (module Uid)
-    in
-    let signal_state signal =
-      Hashtbl.find_or_add state_by_uid (uid signal) ~default:(fun _ ->
-        ref Signal_state.Unvisited)
-    in
-    let set_state signal state = signal_state signal := state in
-    (* Registers, memories etc are always in the [Visited] state. *)
-    let breaks_a_cycle s = is_reg s || is_mem s || is_inst s || is_empty s in
-    let initial_visited = filter t ~f:breaks_a_cycle in
-    List.iter initial_visited ~f:(fun signal -> set_state signal Visited);
-    let rec dfs signal =
-      let state = signal_state signal in
-      match !state with
-      | Visited -> ()
-      | Visiting ->
-        raise_s [%message "combinational loop" ~through_signal:(signal : Signal.t)]
-      | Unvisited ->
-        state := Visiting;
-        List.iter (deps signal) ~f:dfs;
-        state := Visited
-    in
-    (* We only need to check from the given outputs, and all dependents of registers,
-       memories etc. *)
-    List.iter ~f:dfs (List.concat (t.outputs :: List.map initial_visited ~f:deps)))
-;;
-
 (* [normalize_uids] maintains a table mapping signals in the input graph to
    the corresponding signal in the output graph.  It first creates an entry for
    each wire in the graph.  It then does a depth-first search following signal
@@ -156,29 +120,9 @@ let normalize_uids t =
   in
   let new_signal signal = Hashtbl.find_exn new_signal_by_old_uid (uid signal) in
   (* uid generation (note; 1L and up, 0L reserved for empty) *)
-  let id = ref 0L in
-  let fresh_id () =
-    id := Int64.( + ) !id 1L;
-    !id
-  in
-  let new_reg r =
-    { reg_clock = new_signal r.reg_clock
-    ; reg_clock_edge = r.reg_clock_edge
-    ; reg_reset = new_signal r.reg_reset
-    ; reg_reset_edge = r.reg_reset_edge
-    ; reg_reset_value = new_signal r.reg_reset_value
-    ; reg_clear = new_signal r.reg_clear
-    ; reg_clear_level = r.reg_clear_level
-    ; reg_clear_value = new_signal r.reg_clear_value
-    ; reg_enable = new_signal r.reg_enable
-    }
-  in
-  let new_mem m =
-    { mem_size = m.mem_size
-    ; mem_read_address = new_signal m.mem_read_address
-    ; mem_write_address = new_signal m.mem_write_address
-    ; mem_write_data = new_signal m.mem_write_data
-    }
+  let fresh_id =
+    let `New new_id, _ = Signal.Uid.generator () in
+    new_id
   in
   let new_write_port write_port =
     { write_clock = new_signal write_port.write_clock
@@ -260,13 +204,6 @@ let normalize_uids t =
                 }
             ; register
             ; d
-            }
-        | Mem { signal_id; extra_uid = _; register; memory } ->
-          Mem
-            { signal_id = update_id signal_id
-            ; extra_uid = fresh_id ()
-            ; register = new_reg register
-            ; memory = new_mem memory
             }
         | Multiport_mem { signal_id = id; size; write_ports } ->
           Multiport_mem
@@ -350,7 +287,7 @@ let fan_in_map ?(deps = Signal.deps) t =
       |> fun data -> Map.set map ~key:(Signal.uid signal) ~data)
 ;;
 
-let topological_sort ?(deps = Signal.deps) (graph : t) =
+let topological_sort ~deps (graph : t) =
   let module Node = struct
     include Signal
 
@@ -364,13 +301,21 @@ let topological_sort ?(deps = Signal.deps) (graph : t) =
       ( to_ :: nodes
       , List.map (deps to_) ~f:(fun from -> { Topological_sort.Edge.from; to_ }) @ edges ))
   in
-  Topological_sort.sort (module Node) ~what:Nodes_and_edge_endpoints ~nodes ~edges
-  |> Or_error.ok_exn
+  match
+    Topological_sort.sort_or_cycle
+      ~traversal_order:Unspecified
+      ~verify:false
+      (module Node)
+      ~what:Nodes_and_edge_endpoints
+      ~nodes
+      ~edges
+  with
+  | Ok sorted -> Ok sorted
+  | Error (`Cycle cycle) -> Error cycle
 ;;
 
-let scheduling_deps (s : Signal.t) =
+let deps_for_simulation_scheduling (s : Signal.t) =
   match s with
-  | Mem { memory; _ } -> [ memory.mem_read_address ]
   | Mem_read_port { read_address; _ } -> [ read_address ]
   | Reg _ -> []
   | Multiport_mem _ -> []
@@ -378,8 +323,30 @@ let scheduling_deps (s : Signal.t) =
     Signal.deps s
 ;;
 
+let deps_for_loop_checking (s : Signal.t) =
+  match s with
+  | Mem_read_port { read_address; _ } -> [ read_address ]
+  | Reg _ -> []
+  | Multiport_mem _ -> []
+  | Inst _ -> []
+  | Empty | Const _ | Op2 _ | Mux _ | Cat _ | Not _ | Wire _ | Select _ -> Signal.deps s
+;;
+
+let detect_combinational_loops t =
+  match topological_sort ~deps:deps_for_loop_checking t with
+  | Ok _ -> Ok ()
+  | Error cycle ->
+    Or_error.error_s [%message "Combinational loop" ~_:(cycle : Signal.t list)]
+;;
+
+let topological_sort_exn ~deps graph =
+  match topological_sort ~deps graph with
+  | Ok sorted -> sorted
+  | Error cycle -> raise_s [%message "Combinational loop" ~_:(cycle : Signal.t list)]
+;;
+
 let last_layer_of_nodes ~is_input graph =
-  let deps t = scheduling_deps t in
+  let deps t = deps_for_simulation_scheduling t in
   (* DFS signals starting from [graph] until a register (or memory) is reached.
      While traversing, mark all signals that are encountered with a bool to
      indicate whether the signal is in a path between a register (or memory)
@@ -395,7 +362,7 @@ let last_layer_of_nodes ~is_input graph =
          under scheduling deps. Put them in the map as not in the final layer. *)
       if Signal.is_const signal
          || Signal.is_empty signal
-         || Signal.is_multiport_mem signal
+         || Signal.is_mem signal
          || is_input signal
       then
         Map.set in_layer ~key:(uid signal) ~data:false, false

@@ -13,7 +13,7 @@ module I = struct
     ; d : 'a [@bits 32]
     ; rd : 'a
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 let used_bits = 3
@@ -27,7 +27,7 @@ module O = struct
     ; nearly_empty : 'a
     ; used : 'a [@bits used_bits]
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 open Hardcaml

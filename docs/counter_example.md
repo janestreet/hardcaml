@@ -24,14 +24,14 @@ module I = struct
     ; clear : 'a
     ; incr : 'a
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 module O = struct
   type 'a t =
     { dout : 'a[@bits 8]
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 ```
 

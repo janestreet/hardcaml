@@ -30,24 +30,37 @@ let sexp_of_t (t : t) =
   | Full_trace s -> [%sexp (s : location option list)]
 ;;
 
-let get ?(skip = []) () =
-  let skip =
-    "list.ml"
-    :: "list0.ml"
-    :: "array.ml"
-    :: "comb.ml"
-    :: "interface.ml"
-    :: "signal.ml"
-    :: "bits.ml"
-    :: "with_valid.ml"
-    :: "scope.ml"
-    :: "parameter.ml"
-    :: "hierarchy.ml"
-    :: Stdlib.__FILE__
-    :: skip
-  in
+let basic_skipped_modules =
+  [ "list.ml"
+  ; "list0.ml"
+  ; "array.ml"
+  ; "comb.ml"
+  ; "interface.ml"
+  ; "signal.ml"
+  ; "bits.ml"
+  ; "with_valid.ml"
+  ; "scope.ml"
+  ; "parameter.ml"
+  ; "hierarchy.ml"
+  ; Stdlib.__FILE__
+  ]
+;;
+
+let get_skipped_modules skip =
+  match skip with
+  | [] -> basic_skipped_modules
+  | _ -> basic_skipped_modules @ skip
+;;
+
+let get_backtrace () =
   let stack = Printexc.get_callstack 16 in
   let len = Printexc.raw_backtrace_length stack in
+  stack, len
+;;
+
+let top skip =
+  let skip = get_skipped_modules skip in
+  let stack, len = get_backtrace () in
   let rec top pos =
     if pos = len
     then None
@@ -61,6 +74,11 @@ let get ?(skip = []) () =
       | Some loc ->
         if List.mem ~equal:String.equal skip loc.filename then top (pos + 1) else Some loc)
   in
+  top 0 |> Option.map ~f:(fun s -> Top_of_stack s)
+;;
+
+let full () =
+  let stack, len = get_backtrace () in
   let rec full pos =
     if pos = len
     then []
@@ -70,8 +88,12 @@ let get ?(skip = []) () =
        |> Printexc.Slot.location)
       :: full (pos + 1)
   in
+  Some (Full_trace (full 0))
+;;
+
+let get ?(skip = []) () =
   match !mode with
   | Disabled -> None
-  | Top_of_stack -> top 0 |> Option.map ~f:(fun s -> Top_of_stack s)
-  | Full_trace -> Some (Full_trace (full 0))
+  | Top_of_stack -> top skip
+  | Full_trace -> full ()
 ;;

@@ -8,12 +8,11 @@ struct
   open Hardcaml.Signal
 
   module I = struct
-    type 'a t = { data : 'a [@bits Bits.bits] } [@@deriving sexp_of, hardcaml]
+    type 'a t = { data : 'a [@bits Bits.bits] } [@@deriving hardcaml]
   end
 
   module O = struct
-    type 'a t = { count : 'a [@bits Int.ceil_log2 Bits.bits] }
-    [@@deriving sexp_of, hardcaml]
+    type 'a t = { count : 'a [@bits Int.ceil_log2 Bits.bits] } [@@deriving hardcaml]
   end
 
   let create_with_priority_mux _scope (i : _ I.t) = { O.count = leading_zeros i.data }

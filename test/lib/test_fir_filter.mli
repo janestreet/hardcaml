@@ -7,11 +7,11 @@ module I : sig
     ; enable : 'a
     ; d : 'a
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 module O : sig
-  type 'a t = { q : 'a } [@@deriving sexp_of, hardcaml]
+  type 'a t = { q : 'a } [@@deriving hardcaml]
 end
 
 val f : Signal.t list -> Signal.t I.t -> Signal.t O.t

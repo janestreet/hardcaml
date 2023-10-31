@@ -5,7 +5,7 @@ type 'a t =
   ; b : 'a [@bits 8]
   ; c : 'a [@bits 3]
   }
-[@@deriving sexp_of, hardcaml]
+[@@deriving hardcaml]
 
 let%expect_test "address offsets" =
   let x = scan port_widths ~init:0 ~f:(fun acc width -> acc + width, acc) in

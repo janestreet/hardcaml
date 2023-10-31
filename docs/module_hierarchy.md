@@ -63,12 +63,12 @@ module I = struct
     ; clear : 'a
     ; foo : 'a [@bits 8]
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 module O = struct
   type 'a t = { foo_d : 'a [@bits 8] }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 ```
 

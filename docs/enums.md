@@ -215,7 +215,7 @@ module I = struct
     ; clear : 'a
     ; hello : 'a Hello.Binary.t
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 ```
 
@@ -255,7 +255,7 @@ module O = struct
     { counter : 'a [@bits 32]
     ; prev_hello : 'a Hello.Binary.t [@rtlmangle true]
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 ```
 

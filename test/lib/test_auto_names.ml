@@ -10,11 +10,11 @@ module Make (X : sig
 end) =
 struct
   module I = struct
-    type 'a t = { i : 'a [@rtlprefix X.name ^ "_port_"] } [@@deriving sexp_of, hardcaml]
+    type 'a t = { i : 'a [@rtlprefix X.name ^ "_port_"] } [@@deriving hardcaml]
   end
 
   module O = struct
-    type 'a t = { o : 'a [@rtlprefix X.name ^ "_port_"] } [@@deriving sexp_of, hardcaml]
+    type 'a t = { o : 'a [@rtlprefix X.name ^ "_port_"] } [@@deriving hardcaml]
   end
 
   let create scope (i : _ I.t) = { O.o = X.op scope i.i -- (X.name ^ "_internal") }

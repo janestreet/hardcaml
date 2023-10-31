@@ -9,13 +9,13 @@ struct
   open Hardcaml.Signal
 
   module I = struct
-    type 'a t = { input : 'a [@bits Bits.bits] } [@@deriving sexp_of, hardcaml]
+    type 'a t = { input : 'a [@bits Bits.bits] } [@@deriving hardcaml]
   end
 
   module O = struct
     let num_bits = Bits.bits + Int.ceil_log2 Bits.multiply_by
 
-    type 'a t = { result : 'a [@bits num_bits] } [@@deriving sexp_of, hardcaml]
+    type 'a t = { result : 'a [@bits num_bits] } [@@deriving hardcaml]
   end
 
   module With_regs = Hardcaml_xilinx_reports.Wrap_with_registers.Make (I) (O)

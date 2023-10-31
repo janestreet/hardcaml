@@ -8,7 +8,6 @@ module type Rtl = sig
     [@@deriving sexp_of]
 
     val file_extension : t -> string
-    val legalize_identifier : t -> string -> string
   end
 
   (** RTL generation options. *)
@@ -35,13 +34,7 @@ module type Rtl = sig
     [@@deriving sexp_of]
   end
 
-  module Uid_with_index : sig
-    type t = Signal.Uid.t * int [@@deriving compare, sexp_of]
-
-    include Comparator.S with type t := t
-  end
-
-  type signals_name_map_t = string Map.M(Uid_with_index).t
+  module Signals_name_map = Rtl_ast.Signals_name_map
 
   (** Write circuit to [Verilog] or [Vhdl].  Instantiations are (recursively) looked up in
       [database] and if a circuit exists it is also written.  The [output_mode] specifies
@@ -84,6 +77,6 @@ module type Rtl = sig
       -> ?blackbox:Blackbox.t (** Default is [None] *)
       -> Language.t
       -> Circuit.t
-      -> signals_name_map_t
+      -> Signals_name_map.t
   end
 end

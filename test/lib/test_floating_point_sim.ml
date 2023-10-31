@@ -9,7 +9,7 @@ module I = struct
     ; a64 : 'a [@bits 64]
     ; b64 : 'a [@bits 64]
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 module O = struct
@@ -17,7 +17,7 @@ module O = struct
     { o32 : 'a [@bits 32]
     ; o64 : 'a [@bits 64]
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 type op1 =

@@ -396,7 +396,7 @@ module With_interface (Config : Config) = struct
       ; d : 'a [@bits Config.data_width]
       ; rd : 'a
       }
-    [@@deriving sexp_of, hardcaml]
+    [@@deriving hardcaml]
   end
 
   module O = struct

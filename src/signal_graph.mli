@@ -71,11 +71,19 @@ val fan_in_map
 
 (** [topological_sort t] sorts the signals in [t] so that all the signals in [deps s]
     occur before [s]. *)
-val topological_sort : ?deps:(Signal.t -> Signal.t list) -> t -> Signal.t list
+val topological_sort
+  :  deps:(Signal.t -> Signal.t list)
+  -> t
+  -> (Signal.t list, Signal.t list) Result.t
 
-(** Signal dependencies used for scheduling. Breaks loops through sequential elements like
-    registers and memories. *)
-val scheduling_deps : Signal.t -> Signal.t list
+val topological_sort_exn : deps:(Signal.t -> Signal.t list) -> t -> Signal.t list
+
+(** Signal dependencies used for simulation scheduling. Breaks loops through sequential
+    elements like registers and memories. *)
+val deps_for_simulation_scheduling : Signal.t -> Signal.t list
+
+(** Like [deps_for_simulation_scheduling], except loops are allowed through instantiations. *)
+val deps_for_loop_checking : Signal.t -> Signal.t list
 
 (** Final layer of combinational nodes which sit on the path between the outputs and any
     driving register or memory. *)

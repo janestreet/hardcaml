@@ -180,7 +180,7 @@ let%expect_test "printing at leaves" =
       (data_in register))
     (wire
       (width   2)
-      (data_in memory)) |}]
+      (data_in memory_read_port)) |}]
 ;;
 
 let%expect_test "printing at leaves - different types" =
@@ -309,16 +309,10 @@ let%expect_test "memory" =
        ~read_address:(input "r" 4));
   [%expect
     {|
-    (memory
+    (memory_read_port
       (width 32)
-      ((clock      clock)
-       (clock_edge Rising)
-       (enable     we))
-      ((size          16)
-       (write_address w)
-       (read_address  r)
-       (write_enable  we))
-      (data_in d)) |}]
+      ((memory         multiport_memory)
+       (read_addresses r))) |}]
 ;;
 
 let%expect_test "test depth" =

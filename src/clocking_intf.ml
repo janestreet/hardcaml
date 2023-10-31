@@ -3,7 +3,7 @@ module type S = sig
     { clock : 'a
     ; clear : 'a
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 
   val add_clear : Signal.t t -> Signal.t -> Signal.t t
   val to_spec : Signal.t t -> Reg_spec.t

@@ -125,9 +125,7 @@ let%test_unit "registers/memories not eliminated" =
     Circuit.signal_graph c |> Signal_graph.filter ~f:Signal.is_reg |> List.length
   in
   let num_memories c =
-    Circuit.signal_graph c
-    |> Signal_graph.filter ~f:Signal.is_multiport_mem
-    |> List.length
+    Circuit.signal_graph c |> Signal_graph.filter ~f:Signal.is_mem |> List.length
   in
   Quickcheck.test
     ~trials

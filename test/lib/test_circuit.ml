@@ -523,11 +523,11 @@ let%expect_test "Raises when encounters duplicated ports in interfaces." =
       { foo : 'a [@rtlname "hello"]
       ; bar : 'a [@rtlname "hello"]
       }
-    [@@deriving sexp_of, hardcaml]
+    [@@deriving hardcaml]
   end
   in
   let module O = struct
-    type 'a t = { baz : 'a } [@@deriving sexp_of, hardcaml]
+    type 'a t = { baz : 'a } [@@deriving hardcaml]
   end
   in
   let module C = Circuit.With_interface (I) (O) in

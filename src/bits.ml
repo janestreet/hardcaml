@@ -1,3 +1,5 @@
+[@@@ocaml.flambda_o3]
+
 open Base
 
 type t = Bits0.t
@@ -14,6 +16,7 @@ end
 module Mutable = struct
   include Bits0
 
+  let number_of_data_bytes (t : t) = Bits0.number_of_data_bytes t
   let is_empty a = width a = 0
   let of_constant t = t
   let to_constant t = t

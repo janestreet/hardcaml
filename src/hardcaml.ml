@@ -34,7 +34,16 @@ module Property_manager = Property_manager
 module Ram = Ram
 module Reg_spec = Reg_spec
 module Reserved_words = Reserved_words
-module Rtl = Rtl
+
+module Rtl = struct
+  include Rtl
+  module Ast = Rtl_ast
+  module Deprecated = Rtl_deprecated
+  module Name = Rtl_name
+  module Verilog = Rtl_verilog_of_ast
+  module Vhdl = Rtl_vhdl_of_ast
+end
+
 module Rtl_attribute = Rtl_attribute
 module Scope = Scope
 module Side = Side
@@ -46,7 +55,7 @@ module Types = Types
 module Vcd = Vcd
 module With_valid = With_valid
 
-(** These are exposed for code that does [@@deriving sexp_of, hardcaml]. *)
+(** These are exposed for code that does [@@deriving hardcaml]. *)
 let sexp_of_array = Base.sexp_of_array
 
 let sexp_of_list = Base.sexp_of_list

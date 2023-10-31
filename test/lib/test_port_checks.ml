@@ -5,11 +5,11 @@ module I = struct
     { a : 'a
     ; b : 'a
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 module O = struct
-  type 'a t = { x : 'a } [@@deriving sexp_of, hardcaml]
+  type 'a t = { x : 'a } [@@deriving hardcaml]
 end
 
 (* Check input sets.

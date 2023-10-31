@@ -2,6 +2,7 @@ open Base
 
 module type Cyclesim = sig
   module Port_list = Cyclesim0.Port_list
+  module Traced = Cyclesim0.Traced
   module Digest = Cyclesim0.Digest
   module Config = Cyclesim0.Config
 
@@ -37,6 +38,14 @@ module type Cyclesim = sig
   (** get a traced internal port given a name. *)
   val internal_port : _ t -> string -> Bits.t ref
 
+  (** List of signals and their unique (mangled) names to be traced by the simulation.
+      Accessible via the [lookup] function. *)
+  val traced : _ t -> Traced.t list
+
+  (** Current state of an internal signal within the simulator. Value depends on the
+      current simulator step. *)
+  val lookup : _ t -> Signal.t -> Bits.Mutable.t option
+
   (** Get output port given a name.  If [clock_edge] is [Before] the outputs are computed
       prior to the clock edge - [After] means the outputs are computed after the clock
       edge. *)
@@ -50,10 +59,6 @@ module type Cyclesim = sig
   val outputs : ?clock_edge:Side.t -> (_, 'o) t -> 'o
   val in_ports : _ t -> Port_list.t
   val out_ports : ?clock_edge:Side.t -> _ t -> Port_list.t
-
-  (** get list of internal nodes *)
-  val internal_ports : _ t -> Port_list.t
-
   val digest : _ t -> Digest.t ref
 
   (** Peek at internal registers, return Some _ if it's present. Note
@@ -113,9 +118,14 @@ module type Cyclesim = sig
     val coerce : t_port_list -> t
   end
 
-  module Private :
-    Cyclesim0.Private
-      with type ('i, 'o) t := ('i, 'o) t
-       and type port_list = Port_list.t
-       and type t_port_list := t_port_list
+  module Private : sig
+    include
+      Cyclesim0.Private
+        with type ('i, 'o) t := ('i, 'o) t
+         and type port_list = Port_list.t
+         and type t_port_list := t_port_list
+         and type traced := Traced.t list
+
+    module Traced_nodes : module type of Cyclesim_compile.Traced_nodes
+  end
 end

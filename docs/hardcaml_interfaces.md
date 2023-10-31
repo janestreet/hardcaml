@@ -36,7 +36,7 @@ module Simple_interface = struct
     ; (* Where a bit width is not specified, it defaults to 1. *)
       bar : 'a
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 ```
 
@@ -56,7 +56,7 @@ module Nested_interfaces = struct
     ; hello : 'a Simple_interface.t
     ; world : 'a Simple_interface.t
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 ```
 
@@ -76,7 +76,7 @@ module Array_and_list_interfaces = struct
     { my_array : 'a array [@length 2]
     ; my_list : 'a list [@length 10] [@bits 10]
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 ```
 
@@ -95,7 +95,7 @@ module Unmodified_port_names = struct
     ; b : 'a
     ; c : 'a
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 ```
 
@@ -106,7 +106,7 @@ module Modified_port_names = struct
     ; b : 'a[@rtlprefix "x_"]
     ; c : 'a[@rtlsuffix "_x"]
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 ```
 
@@ -133,7 +133,7 @@ module Global_suffix = struct
     ; b : 'a
     ; c : 'a
     }
-  [@@deriving sexp_of, hardcaml ~rtlsuffix:"_i"]
+  [@@deriving hardcaml ~rtlsuffix:"_i"]
 end
 ```
 ## Mangling
@@ -162,7 +162,7 @@ module Nested_interfaces_mangled = struct
     ; hello : 'a Simple_interface.t
     ; world : 'a Simple_interface.t
     }
-  [@@deriving sexp_of, hardcaml ~rtlmangle:true]
+  [@@deriving hardcaml ~rtlmangle:true]
 end
 ```
 

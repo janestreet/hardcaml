@@ -28,7 +28,7 @@ module I = struct
      ; foo : 'a [@bits 8]
      ; bar : 'a [@bits 8]
      }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 (* Output interface. *)
@@ -37,7 +37,7 @@ module O = struct
     { baz : 'a [@bits 8]
     ; baz_delayed : 'a [@bits 8]
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 let create (i : Signal.t I.t) : Signal.t O.t =

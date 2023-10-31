@@ -1,0 +1,9 @@
+(library (name hardcaml_rtl_test)
+ (libraries core core_unix hardcaml expect_test_helpers_core
+  patdiff.expect_test_patdiff core_unix.filename_unix)
+ (preprocess (pps ppx_jane ppx_hardcaml)))
+
+(rule (targets setup.ml) (deps)
+ (action (bash  "cat <<EOF > setup.ml\
+               \nlet iverilog = \"iverilog\"\
+               \nEOF")))

@@ -862,27 +862,32 @@ let hardcaml_name_var () =
 
 let () =
   let get_bool_option ~loc option = Option.bind option ~f:(parse_rtlmangle ~loc) in
-  Deriving.add
-    deriver
-    ~str_type_decl:
-      (Deriving.Generator.make
-         Deriving.Args.(
-           empty
-           +> arg "rtlprefix" Ast_pattern.__
-           +> arg "rtlsuffix" Ast_pattern.__
-           +> arg "rtlmangle" Ast_pattern.__
-           +> flag "ast")
-         (fun ~loc ~path:_ (_, type_declarations) rtlprefix rtlsuffix rtlmangle ast ->
-           let options =
-             { rtlprefix; rtlsuffix; rtlmangle = get_bool_option ~loc rtlmangle; ast }
-           in
-           List.concat_map type_declarations ~f:(fun decl -> str_of_type ~options decl)))
-    ~sig_type_decl:
-      (Deriving.Generator.make
-         Deriving.Args.(empty +> flag "ast")
-         ~deps:[ Ppx_sexp_conv.sexp_of ]
-         (fun ~loc:_ ~path:_ (_, type_declarations) ast ->
-           List.concat_map type_declarations ~f:(sig_of_type ~ast)))
+  let hardcaml_internal =
+    Deriving.add
+      "hardcaml_internal"
+      ~str_type_decl:
+        (Deriving.Generator.make
+           Deriving.Args.(
+             empty
+             +> arg "rtlprefix" Ast_pattern.__
+             +> arg "rtlsuffix" Ast_pattern.__
+             +> arg "rtlmangle" Ast_pattern.__
+             +> flag "ast")
+           (fun ~loc ~path:_ (_, type_declarations) rtlprefix rtlsuffix rtlmangle ast ->
+             let options =
+               { rtlprefix; rtlsuffix; rtlmangle = get_bool_option ~loc rtlmangle; ast }
+             in
+             List.concat_map type_declarations ~f:(fun decl -> str_of_type ~options decl)))
+      ~sig_type_decl:
+        (Deriving.Generator.make
+           Deriving.Args.(empty +> flag "ast")
+           (fun ~loc:_ ~path:_ (_, type_declarations) ast ->
+             List.concat_map type_declarations ~f:(sig_of_type ~ast)))
+  in
+  (* Ordering of the derivers of the alias below matters. Empirically, the
+     derivers are expanded in reverse order of the list.
+  *)
+  Deriving.add_alias deriver [ hardcaml_internal; Ppx_sexp_conv.sexp_of ]
   |> Deriving.ignore;
   Driver.register_transformation
     "hardcaml_naming"

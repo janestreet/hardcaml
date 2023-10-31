@@ -1,3 +1,5 @@
+[@@@ocaml.flambda_o3]
+
 open Base
 
 module T = struct
@@ -44,7 +46,7 @@ let width_mask = 0b11_1111
 let words_of_width width = (width + bits_per_word - 1) lsr log_bits_per_word
 let bytes_of_width width = words_of_width width lsl shift_bytes_to_words
 let words t = words_of_width (width t)
-let number_of_data_bytes t = Bytes.length t - 8
+let number_of_data_bytes t = Bytes.length t - offset_for_data
 
 let create width =
   let bytes = Bytes.make ((words_of_width width + 1) lsl shift_bytes_to_words) '\000' in

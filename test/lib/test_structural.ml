@@ -1,15 +1,15 @@
 open! Import
 
 module I = struct
-  type 'a t = { a : 'a [@bits 2] } [@@deriving sexp_of, hardcaml]
+  type 'a t = { a : 'a [@bits 2] } [@@deriving hardcaml]
 end
 
 module O = struct
-  type 'a t = { b : 'a [@bits 3] } [@@deriving sexp_of, hardcaml]
+  type 'a t = { b : 'a [@bits 3] } [@@deriving hardcaml]
 end
 
 module T = struct
-  type 'a t = { c : 'a } [@@deriving sexp_of, hardcaml]
+  type 'a t = { c : 'a } [@@deriving hardcaml]
 end
 
 let%expect_test "Prints with circuit created via With_interface.create_circuit" =

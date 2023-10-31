@@ -21,7 +21,7 @@ module Make (M : S) : sig
       ; write_enable : 'a
       ; read_enable : 'a
       }
-    [@@deriving sexp_of, hardcaml]
+    [@@deriving hardcaml]
   end
 
   module O : sig
@@ -31,7 +31,7 @@ module Make (M : S) : sig
       ; valid : 'a
       ; almost_empty : 'a
       }
-    [@@deriving sexp_of, hardcaml]
+    [@@deriving hardcaml]
   end
 
   val hierarchical : ?name:string -> Scope.t -> Signal.t I.t -> Signal.t O.t

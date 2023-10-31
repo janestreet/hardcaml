@@ -20,7 +20,7 @@ module I = struct
     ; start : 'a
     ; n : 'a[@bits 8]
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 module O = struct
@@ -29,7 +29,7 @@ module O = struct
     ; result : 'a[@bits 32]
     ; state : 'a[@bits 2]
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 ```
 

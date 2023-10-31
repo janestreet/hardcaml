@@ -141,7 +141,7 @@ An interface is a grouping of signals with associated names and bit widths.
   { a : 'a[@bits 8]
   ; b : 'a[@bits 7]
   }
-  [@@deriving sexp_of, hardcaml];;
+  [@@deriving hardcaml];;
 ```
 
 A large set of functions are generated, which makes working with

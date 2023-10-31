@@ -1,16 +1,18 @@
 open! Import
 
 let%expect_test "rtl name legalization" =
+  let verilog = Rtl.Name.create (module Rtl.Name.Verilog) in
+  let vhdl = Rtl.Name.create (module Rtl.Name.Vhdl) in
   let show name =
     [%message
       ""
-        ~verilog:(Rtl.Language.legalize_identifier Verilog name : string)
-        ~vhdl:(Rtl.Language.legalize_identifier Vhdl name : string)]
+        ~verilog:(Rtl.Name.legalize verilog name : string)
+        ~vhdl:(Rtl.Name.legalize vhdl name : string)]
     |> print_s
   in
-  require_does_not_raise ~cr:CR_someday [%here] (fun () -> show "");
+  require_does_raise ~cr:CR_someday [%here] (fun () -> show "");
   [%expect {|
-    ("unexpectedly raised" (Invalid_argument "index out of bounds")) |}];
+    "[Rtl_name] string is empty" |}];
   (* underscore really is a valid verilog name... *)
   show "_";
   [%expect {|

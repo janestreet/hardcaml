@@ -8,7 +8,7 @@ module I = struct
     ; c : 'a [@bits 2]
     ; d : 'a
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 let default =

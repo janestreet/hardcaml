@@ -5,7 +5,7 @@ module I = struct
     { x : 'a [@bits 4]
     ; y : 'a [@bits 8]
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 let%expect_test "[equal]" =
@@ -152,7 +152,7 @@ let%expect_test "safe assoc list" =
       { x : 'a
       ; y : 'a [@rtlname "x"]
       }
-    [@@deriving sexp_of, hardcaml]
+    [@@deriving hardcaml]
   end
   in
   (* show port names are the same *)
@@ -495,7 +495,7 @@ module _ = struct
   open Core
 
   module Another_module = struct
-    type 'a t = { value : 'a [@bits 16] } [@@deriving sexp_of, hardcaml]
+    type 'a t = { value : 'a [@bits 16] } [@@deriving hardcaml]
   end
 
   type 'a t =
@@ -503,7 +503,7 @@ module _ = struct
     ; bar : 'a Another_module.t
     ; baz : 'a Another_module.t
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 
   let%expect_test "all names are 'value'." =
     print_s [%message (port_names : string t)];

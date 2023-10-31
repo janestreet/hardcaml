@@ -3,7 +3,7 @@
 (** Specification of attributes which may be attached to various objects within a RTL
     design. Such attributes are used to provide implementation hints to down stream CAD
     tools and do not affect any functionality within Hardcaml. *)
-type t [@@deriving sexp_of]
+type t [@@deriving sexp_of, compare, equal, hash]
 
 (** Attribute value types. *)
 module Value : sig

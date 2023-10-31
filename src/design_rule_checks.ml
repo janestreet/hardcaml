@@ -15,7 +15,6 @@ let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
     | Const _
     | Select _
     | Reg _
-    | Mem _
     | Multiport_mem _
     | Mem_read_port _
     | Inst _ ->
@@ -29,7 +28,7 @@ let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
       ~init:(Map.empty (module Signal.Uid))
       ~f_before:(fun unchanged signal ->
         match signal with
-        | Mem { register = r; _ } | Reg { register = r; _ } ->
+        | Reg { register = r; _ } ->
           let clock_domain = transitively_resolve r.reg_clock in
           Map.add_multi unchanged ~key:clock_domain.s_id ~data:(clock_domain, signal)
         | Multiport_mem { write_ports; _ } ->
@@ -55,6 +54,6 @@ let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
       raise_s
         [%message
           "The following sequential elements have unexpected clock pin connections"
-            (signal_uid : int64)
+            (signal_uid : Signal.Uid.t)
             (signals : Signal.t list)])
 ;;

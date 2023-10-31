@@ -9,11 +9,11 @@ module I = struct
     ; enable : 'a
     ; d : 'a [@bits 16]
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 end
 
 module O = struct
-  type 'a t = { q : 'a [@bits 32] } [@@deriving sexp_of, hardcaml]
+  type 'a t = { q : 'a [@bits 32] } [@@deriving hardcaml]
 end
 
 let f coefs (i : Signal.t I.t) =

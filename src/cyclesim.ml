@@ -4,16 +4,24 @@ include Cyclesim_intf
 (* types defined in Cyclesim0. *)
 
 module Port_list = Cyclesim0.Port_list
-module Private = Cyclesim0.Private
+
+(* Implementation details. *)
+module Private = struct
+  include Cyclesim0.Private
+  module Traced_nodes = Cyclesim_compile.Traced_nodes
+end
+
 module Digest = Cyclesim0.Digest
+module Traced = Cyclesim0.Traced
 
 type t_port_list = Cyclesim0.t_port_list
 type ('i, 'o) t = ('i, 'o) Cyclesim0.t [@@deriving sexp_of]
 
-let internal_ports = Cyclesim0.internal_ports
 let in_ports = Cyclesim0.in_ports
 let inputs = Cyclesim0.inputs
 let digest t = Cyclesim0.digest t
+let traced t = Cyclesim0.traced t
+let lookup = Cyclesim0.lookup
 let lookup_reg = Cyclesim0.lookup_reg
 let lookup_mem = Cyclesim0.lookup_mem
 
@@ -53,8 +61,15 @@ let in_port (sim : _ Cyclesim0.t) name =
 ;;
 
 let internal_port (sim : _ Cyclesim0.t) name =
-  try List.Assoc.find_exn sim.internal_ports name ~equal:String.equal with
-  | _ -> raise_s [%message "Couldn't find internal port" name]
+  match
+    List.find sim.traced ~f:(fun { signal = _; names } ->
+      List.exists names ~f:(fun n -> String.equal n name))
+  with
+  | None -> raise_s [%message "Couldn't find internal port" name]
+  | Some { signal; names = _ } ->
+    (match sim.lookup signal with
+     | None -> raise_s [%message "Couldn't find internal port" name]
+     | Some bits -> ref (Bits.Mutable.to_bits bits))
 ;;
 
 let out_port_after_clock_edge (sim : _ Cyclesim0.t) name =
@@ -103,7 +118,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
   module C = Circuit.With_interface (I) (O)
 
   let coerce sim =
-    let find_port ports (name, width) =
+    let find_port (ports : Cyclesim0.Port_list.t) (name, width) =
       match List.Assoc.find ports name ~equal:String.equal with
       | Some x -> x
       | None -> ref (Bits.zero width)
@@ -114,7 +129,16 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
   ;;
 
   let create ?config ?circuit_config create_fn =
-    let circuit = C.create_exn ?config:circuit_config ~name:"simulator" create_fn in
+    let circuit_config =
+      (* Because the circuit will only be used for simulations, we can disable a couple of
+         passes we would otherwise want - combinational loop checks (will be done during
+         the simulation topsort anyway) and rewriting uids which is only really relevant
+         for rtl generation. *)
+      match circuit_config with
+      | None -> Circuit.Config.default_for_simulations
+      | Some config -> config
+    in
+    let circuit = C.create_exn ~config:circuit_config ~name:"simulator" create_fn in
     let sim = create ?config circuit in
     coerce sim
   ;;

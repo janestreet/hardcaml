@@ -17,10 +17,14 @@ module type Signal = sig
   [@@deriving sexp_of, compare, hash]
 
   module Uid : sig
-    type t = int64 [@@deriving compare, hash, sexp_of]
+    type t [@@deriving compare, hash, sexp_of]
 
     include Comparator.S with type t := t
     include Equal.S with type t := t
+
+    val to_int : t -> int
+    val to_string : t -> string
+    val generator : unit -> [ `New of unit -> t ] * [ `Reset of unit -> unit ]
   end
 
   module Uid_set : sig
@@ -86,12 +90,6 @@ module type Signal = sig
         ; register : register
         ; d : t
         }
-    | Mem of
-        { signal_id : signal_id
-        ; extra_uid : Uid.t
-        ; register : register
-        ; memory : memory
-        }
     | Multiport_mem of
         { signal_id : signal_id
         ; size : int
@@ -140,13 +138,6 @@ module type Signal = sig
     ; reg_clear_level : Level.t (** synchronous clear level *)
     ; reg_clear_value : t (** sychhronous clear value *)
     ; reg_enable : t (** global system enable *)
-    }
-
-  and memory =
-    { mem_size : int
-    ; mem_read_address : t
-    ; mem_write_address : t
-    ; mem_write_data : t
     }
 
   and instantiation =
@@ -199,11 +190,8 @@ module type Signal = sig
   (** is the signal a register? *)
   val is_reg : t -> bool
 
-  (** is the signal a memory, or multiport memory? *)
+  (** is the signal a memory? *)
   val is_mem : t -> bool
-
-  (** is the signal a multiport memory? *)
-  val is_multiport_mem : t -> bool
 
   (** is the signal a memory read port? *)
   val is_mem_read_port : t -> bool

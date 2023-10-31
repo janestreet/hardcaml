@@ -65,7 +65,7 @@ struct
       ; write_enable : 'a
       ; read_enable : 'a
       }
-    [@@deriving sexp_of, hardcaml]
+    [@@deriving hardcaml]
   end
 
   module O = struct
@@ -75,7 +75,7 @@ struct
       ; valid : 'a
       ; almost_empty : 'a
       }
-    [@@deriving sexp_of, hardcaml]
+    [@@deriving hardcaml]
   end
 
   module Async_distributed_ram = struct

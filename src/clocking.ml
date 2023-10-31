@@ -5,7 +5,7 @@ module Make () = struct
     { clock : 'a
     ; clear : 'a
     }
-  [@@deriving sexp_of, hardcaml]
+  [@@deriving hardcaml]
 
   let add_clear t clear = { t with clear = Signal.( |: ) t.clear clear }
   let to_spec t = Reg_spec.create ~clock:t.clock ~clear:t.clear ()

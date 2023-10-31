@@ -104,3 +104,7 @@ module Raw : sig
 
   val to_bytes : t -> Bytes.t
 end
+
+module Expert : sig
+  val offset_for_data : int
+end

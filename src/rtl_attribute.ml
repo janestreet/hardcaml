@@ -5,14 +5,14 @@ module Value = struct
     | Int of int
     | String of string
     | Bool of bool
-  [@@deriving sexp_of]
+  [@@deriving sexp_of, compare, equal, hash]
 end
 
 type t =
   { name : string
   ; value : Value.t option
   }
-[@@deriving sexp_of]
+[@@deriving sexp_of, compare, equal, hash]
 
 let create ?value name = { name; value }
 let name t = t.name
