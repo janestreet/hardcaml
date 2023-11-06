@@ -111,8 +111,10 @@ let declaration buffer (decl : Rtl_ast.declaration) =
   | Inst inst -> List.iter inst.all_names ~f:(write_var ~write_attrs:false inst)
   | Multiport_memory { memory; depth; range = r; _ } ->
     let range = range_compat r in
+    let comment = get_comment memory.signal in
     write_attr memory;
-    add_string [%string "%{tab}reg%{range} %{memory.name}[0:%{(depth-1)#Int}];\n"]
+    add_string
+      [%string "%{tab}reg%{range} %{memory.name}[0:%{(depth-1)#Int}]%{comment};\n"]
 ;;
 
 let declarations buffer (ast : Rtl_ast.t) =

@@ -15,7 +15,7 @@ module Make (Cases : Cases) = struct
 
   let rank_of_case =
     let alist = List.mapi Cases.all ~f:(fun i c -> c, i) in
-    fun c -> List.Assoc.find_exn alist ~equal:[%compare.equal: Cases.t] c
+    fun c -> snd (List.find_exn alist ~f:(fun (x, _) -> [%compare.equal: Cases.t] c x))
   ;;
 
   let case_of_rank =
