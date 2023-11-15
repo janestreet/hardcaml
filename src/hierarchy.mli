@@ -15,6 +15,20 @@ val hierarchical
   -> 'i
   -> 'o
 
+(** Fold through every circuit and instantiation in a hierarchical design.
+
+    [f] will be passed the corresponding circuit if it exists in the database, and a
+    [Signal.instanation] specification, unless the top most module.
+*)
+val fold
+  :  Circuit.t
+  -> Circuit_database.t
+  -> init:'a
+  -> f:('a -> Circuit.t option -> Signal.instantiation option -> 'a)
+  -> 'a
+
+val print : Circuit.t -> Circuit_database.t -> unit
+
 module With_interface (I : Interface.S) (O : Interface.S) : sig
   (** [create database ~name create_fn inputs] creates a sub-circuit using [create_fn
       inputs] and adds it to [database].  It is then referenced in current circuit by an

@@ -21,6 +21,12 @@ module Signal_map = struct
   ;;
 end
 
+module Instantiation_sexp = struct
+  type t = Signal.instantiation
+
+  let sexp_of_t (t : t) = [%message "" (t.inst_name : string) (t.inst_instance : string)]
+end
+
 type t =
   { name : string
   ; signal_by_uid : Signal_map.t
@@ -34,6 +40,7 @@ type t =
   ; fan_out : Signal.Uid_set.t Map.M(Signal.Uid).t Lazy.t
   ; fan_in : Signal.Uid_set.t Map.M(Signal.Uid).t Lazy.t
   ; assertions : Signal.t Map.M(String).t
+  ; instantiations : Instantiation_sexp.t list
   }
 [@@deriving fields ~getters, sexp_of]
 
@@ -176,16 +183,27 @@ let create_exn ?(config = Config.default) ~name outputs =
   let outputs = Signal_graph.outputs signal_graph |> ok_exn in
   (* get inputs checking that they are valid *)
   let inputs = ok_exn (Signal_graph.inputs signal_graph) in
-  (* update the assertions map to the new normalized signals *)
-  let assertions =
-    Signal_graph.fold signal_graph ~init:assertions ~f:(fun assertions signal ->
+  (* update the assertions map to the new normalized signals and find all instantiations. *)
+  let assertions, instantiations =
+    Signal_graph.fold
+      signal_graph
+      ~init:(assertions, [])
+      ~f:(fun (assertions, instantiations) signal ->
       if Signal.is_empty signal
-      then assertions
-      else
-        List.fold (Signal.names signal) ~init:assertions ~f:(fun assertions name ->
-          Map.change assertions name ~f:(function
-            | Some _ -> Some signal
-            | None -> None)))
+      then assertions, instantiations
+      else (
+        let assertions =
+          List.fold (Signal.names signal) ~init:assertions ~f:(fun assertions name ->
+            Map.change assertions name ~f:(function
+              | Some _ -> Some signal
+              | None -> None))
+        in
+        let instantiations =
+          match signal with
+          | Signal.Inst inst -> inst.instantiation :: instantiations
+          | _ -> instantiations
+        in
+        assertions, instantiations))
   in
   (* check for combinational loops *)
   if config.detect_combinational_loops
@@ -202,6 +220,7 @@ let create_exn ?(config = Config.default) ~name outputs =
   ; fan_out = lazy (Signal_graph.fan_out_map signal_graph)
   ; fan_in = lazy (Signal_graph.fan_in_map signal_graph)
   ; assertions
+  ; instantiations
   }
 ;;
 
@@ -295,13 +314,7 @@ let structural_compare ?check_names c0 c1 =
   recurse_into_circuit ()
 ;;
 
-let instantiations t =
-  let instantiations = ref [] in
-  Signal_graph.iter (signal_graph t) ~f:(function
-    | Signal.Inst inst -> instantiations := inst.instantiation :: !instantiations
-    | _ -> ());
-  !instantiations
-;;
+let instantiations t = t.instantiations
 
 module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = struct
   type create = I.Of_signal.t -> O.Of_signal.t

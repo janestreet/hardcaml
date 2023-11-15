@@ -252,8 +252,10 @@ module Digest = struct
     Md5_lib.bytes (Buffer.contents_bytes buffer)
   ;;
 
-  let to_string = Md5_lib.to_hex
+  let to_string t = Md5_lib.to_hex t
+  let to_constant t = Constant.of_hex_string ~signedness:Unsigned ~width:128 (to_string t)
   let sexp_of_t t = [%sexp_of: string] (to_string t)
+  let of_verilog verilog = Md5_lib.string verilog
 end
 
 module Expert = struct

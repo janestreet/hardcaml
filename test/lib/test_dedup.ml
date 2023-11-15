@@ -160,7 +160,7 @@ let gen_circuit_and_inputs =
 ;;
 
 let%test_unit "sufficient portion of generated circuits is not just constant outputs." =
-  let random = Splittable_random.State.create (Base.Random.State.make [| 0x3eadbeef |]) in
+  let random = Splittable_random.create (Base.Random.State.make [| 0x3eadbeef |]) in
   let number_of_circuits = 1_000 in
   let results =
     List.init number_of_circuits ~f:(fun _ ->

@@ -68,6 +68,8 @@ module type Rtl = sig
       -> t
 
     val to_string : t -> String.t
+    val to_constant : t -> Constant.t
+    val of_verilog : string -> t
   end
 
   module Expert : sig

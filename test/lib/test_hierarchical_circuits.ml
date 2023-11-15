@@ -255,3 +255,22 @@ let%expect_test "generate hierarchy exn" =
       (circuit_name inner)
       (input_and_output_names (a)))) |}]
 ;;
+
+let%expect_test "hierarchy fold" =
+  let db = Circuit_database.create () in
+  let circ = outer ~db ~cause_exn:false ~share:true in
+  let result =
+    Hierarchy.fold circ db ~init:[] ~f:(fun all circuit inst ->
+      let circuit = Option.map circuit ~f:Circuit.name in
+      let inst = Option.map inst ~f:(fun i -> i.inst_name) in
+      (circuit, inst) :: all)
+  in
+  print_s [%message (result : (string option * string option) list)];
+  [%expect
+    {|
+    (result (
+      ((inner)  (inner))
+      ((inner)  (inner))
+      ((middle) (middle))
+      ((outer) ()))) |}]
+;;

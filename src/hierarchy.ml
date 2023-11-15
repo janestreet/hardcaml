@@ -81,6 +81,34 @@ let hierarchical
       inputs)
 ;;
 
+let fold circuit database ~init ~f =
+  let rec fold arg (circuit : Circuit.t) inst =
+    let arg = f arg (Some circuit) inst in
+    List.fold (Circuit.instantiations circuit) ~init:arg ~f:(fun arg inst ->
+      match Circuit_database.find database ~mangled_name:inst.inst_name with
+      | Some circuit -> fold arg circuit (Some inst)
+      | None -> f arg None (Some inst))
+  in
+  fold init circuit None
+;;
+
+let print circuit database =
+  let rec f level circuit instance_name =
+    Stdio.printf "%s%s(%s)\n" level (Circuit.name circuit) instance_name;
+    List.iter (Circuit.instantiations circuit) ~f:(fun inst ->
+      let next_level = "  " ^ level in
+      match Circuit_database.find database ~mangled_name:inst.inst_name with
+      | Some circuit -> f next_level circuit inst.inst_instance
+      | None ->
+        Stdio.printf
+          "%s%s(%s) [no implementation]\n"
+          next_level
+          inst.inst_name
+          inst.inst_instance)
+  in
+  f "" circuit "top"
+;;
+
 module With_interface (I : Interface.S) (O : Interface.S) = struct
   let create = hierarchy (module I) (module O)
 end

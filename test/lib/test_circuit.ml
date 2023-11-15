@@ -17,9 +17,10 @@ let%expect_test "[sexp_of_t]" =
      (signal_graph (
        (outputs ())
        (upto    ())))
-     (fan_out    ())
-     (fan_in     ())
-     (assertions ())) |}]
+     (fan_out        ())
+     (fan_in         ())
+     (assertions     ())
+     (instantiations ())) |}]
 ;;
 
 let%expect_test "[sexp_of_t] with an output" =
@@ -54,7 +55,8 @@ let%expect_test "[sexp_of_t] with an output" =
        (upto ())))
      (fan_out ((2 (1))))
      (fan_in ((1 (2)) (2 ())))
-     (assertions ())) |}]
+     (assertions     ())
+     (instantiations ())) |}]
 ;;
 
 let%expect_test "[sexp_of_t] with an input" =
@@ -101,7 +103,8 @@ let%expect_test "[sexp_of_t] with an input" =
        (0 ())
        (1 (0))
        (2 (1))))
-     (assertions ())) |}]
+     (assertions     ())
+     (instantiations ())) |}]
 ;;
 
 let%expect_test "[sexp_of_t] with an operator" =
@@ -151,7 +154,8 @@ let%expect_test "[sexp_of_t] with an operator" =
        (1 (0))
        (2 (3))
        (3 (1))))
-     (assertions ())) |}]
+     (assertions     ())
+     (instantiations ())) |}]
 ;;
 
 let%expect_test "Output signal not driven" =
@@ -294,7 +298,8 @@ let%expect_test "phantom inputs" =
        (0 ())
        (1 (0))
        (2 (1))))
-     (assertions ())) |}];
+     (assertions     ())
+     (instantiations ())) |}];
   (* Add 2, one of which is already an input (and will be removed) *)
   Circuit.set_phantom_inputs circuit [ "a", 1; "c", 1 ] |> show;
   [%expect
@@ -337,7 +342,8 @@ let%expect_test "phantom inputs" =
        (0 ())
        (1 (0))
        (2 (1))))
-     (assertions ())) |}];
+     (assertions     ())
+     (instantiations ())) |}];
   (* Add 2, one of which is already an output *)
   require_does_raise [%here] (fun () ->
     Circuit.set_phantom_inputs circuit [ "b", 1; "c", 1 ] |> show);
