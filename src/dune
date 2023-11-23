@@ -1,6 +1,5 @@
 (library (name hardcaml) (public_name hardcaml) (c_names bits_stubs)
- (libraries base bin_prot bigarray core_kernel.flags stdio topological_sort
-  zarith)
+ (libraries base bin_prot core_kernel.flags stdio topological_sort zarith)
  (preprocess (pps ppx_jane ppx_hardcaml0))
  (ocamlopt_flags :standard (:include ocamlopt-flags)))
 
