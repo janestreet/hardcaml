@@ -122,8 +122,8 @@ module type SignalNameManager = sig
   type name_map =
     { mangler : Mangler.t
     ; signals : signals_name_map_t
-    ; mem : mem_names Uid_map.t
-    ; inst_labels : string Uid_map.t
+    ; mem : mem_names Type.Uid_map.t
+    ; inst_labels : string Type.Uid_map.t
     }
 
   val reserved : string list
@@ -329,7 +329,7 @@ module Process = struct
     | _ -> false
   ;;
 
-  let make_reg ?(clock = true) () ~register ~signal ~data_in =
+  let make_reg ?(clock = true) () ~(register : Reg_spec.t) ~signal ~data_in =
     let q = signal in
     let d = data_in in
     (* main assignment *)
@@ -389,7 +389,7 @@ module type Rtl_internal = sig
   val start_logic : io -> unit
   val logic : io -> name -> Signal.t -> unit
   val logic_mem2 : io -> name -> Names.mem_names -> Signal.t -> unit
-  val logic_inst : io -> name -> string -> Signal.t -> instantiation -> unit
+  val logic_inst : io -> name -> string -> Signal.t -> Type.instantiation -> unit
   val assign : io -> string -> string -> unit
   val end_logic : io -> unit
   val check_signal : Signal.t -> unit
@@ -505,7 +505,7 @@ module VerilogCore : Rtl_internal = struct
 
   let start_logic _ = ()
 
-  let clocked ~io ~signal ~register ~data_in ~name ~assign =
+  let clocked ~io ~signal ~(register : Reg_spec.t) ~data_in ~name ~assign =
     let open Process in
     let level n = function
       | Level High | Edge Rising -> "(" ^ n ^ ")"
@@ -544,7 +544,6 @@ module VerilogCore : Rtl_internal = struct
   ;;
 
   let logic io name s =
-    let dep n = List.nth_exn (deps s) n in
     let sn = name s in
     let binop op arg_a arg_b =
       let a = name arg_a in
@@ -558,7 +557,7 @@ module VerilogCore : Rtl_internal = struct
       io (t4 ^ "assign " ^ sn ^ " = " ^ a ^ " " ^ op ^ " " ^ b ^ ";\n")
     in
     match s with
-    | Multiport_mem _ | Inst _ | Empty ->
+    | Type.Multiport_mem _ | Inst _ | Empty ->
       raise_unexpected ~while_:"writing logic assignments" ~got_signal:s
     | Not { arg; _ } -> io (t4 ^ "assign " ^ sn ^ " = ~ " ^ name arg ^ ";\n")
     | Cat { args; _ } ->
@@ -611,13 +610,13 @@ module VerilogCore : Rtl_internal = struct
     | Reg { register; d = data_in; _ } ->
       clocked ~io ~signal:s ~register ~data_in ~name ~assign:(fun tab q d ->
         io (tab ^ name q ^ " <= " ^ name d ^ ";\n"))
-    | Select { high; low; _ } ->
+    | Select { arg; high; low; _ } ->
       io
         (t4
          ^ "assign "
          ^ sn
          ^ " = "
-         ^ name (dep 0)
+         ^ name arg
          ^ "["
          ^ Int.to_string high
          ^ ":"
@@ -633,7 +632,7 @@ module VerilogCore : Rtl_internal = struct
   let logic_mem2 io name _mem signal =
     let write_ports =
       match signal with
-      | Multiport_mem { write_ports; _ } -> write_ports
+      | Type.Multiport_mem { write_ports; _ } -> write_ports
       | _ -> raise_s [%message "Internal error - expecting Multiport_mem signal"]
     in
     Array.iter write_ports ~f:(fun write_port ->
@@ -651,7 +650,7 @@ module VerilogCore : Rtl_internal = struct
           io (tab ^ name signal ^ "[" ^ wa ^ "] <= " ^ name d ^ ";\n")))
   ;;
 
-  let logic_inst io name inst_name s i =
+  let logic_inst io name inst_name s (i : Type.instantiation) =
     let attributes = print_attribute s in
     io (attributes ^ t4 ^ i.inst_name ^ "\n");
     let assoc n v = "." ^ n ^ "(" ^ v ^ ")" in
@@ -817,7 +816,7 @@ module VhdlCore : Rtl_internal = struct
 
   let signal_decl io name s =
     match s with
-    | Empty -> raise_unexpected ~while_:"declaring signals" ~got_signal:s
+    | Signal.Type.Empty -> raise_unexpected ~while_:"declaring signals" ~got_signal:s
     | Op2 _ | Mux _ | Cat _ | Not _ | Wire _ | Select _ | Inst _ ->
       io (t4 ^ decl Wire name (width s) ^ ";\n")
     | Reg _ -> io (t4 ^ decl Reg name (width s) ^ ";\n")
@@ -832,7 +831,7 @@ module VhdlCore : Rtl_internal = struct
   let mem_decl io name mem s =
     let open Names in
     match s with
-    | Multiport_mem { size; _ } ->
+    | Signal.Type.Multiport_mem { size; _ } ->
       let b = Int.to_string (width s - 1) in
       let sz = Int.to_string (size - 1) in
       io (t4 ^ "type " ^ mem.typ ^ " is array (0 to " ^ sz ^ ") of ");
@@ -845,7 +844,7 @@ module VhdlCore : Rtl_internal = struct
 
   let start_logic io = io "begin\n\n"
 
-  let clocked ~io ~signal ~register ~data_in ~name ~assign =
+  let clocked ~io ~signal ~(register : Reg_spec.t) ~data_in ~name ~assign =
     let open Process in
     let level n = function
       | Level High -> n ^ " = '1'"
@@ -878,9 +877,7 @@ module VhdlCore : Rtl_internal = struct
   ;;
 
   let logic io name s =
-    let dep n = List.nth_exn (deps s) n in
     let sn = name s in
-    let dname n = name (dep n) in
     let unsigned_name s = Names.prefix ^ "uns(" ^ name s ^ ")" in
     let signed_name s = Names.prefix ^ "sgn(" ^ name s ^ ")" in
     let slv str =
@@ -922,9 +919,9 @@ module VhdlCore : Rtl_internal = struct
     | Reg { register; d; _ } ->
       clocked ~io ~signal:s ~register ~data_in:d ~name ~assign:(fun tab q d ->
         io (tab ^ name q ^ " <= " ^ name d ^ ";\n"))
-    | Select { high; low; _ } ->
+    | Select { arg; high; low; _ } ->
       let sel =
-        dname 0 ^ "(" ^ Int.to_string high ^ " downto " ^ Int.to_string low ^ ")"
+        name arg ^ "(" ^ Int.to_string high ^ " downto " ^ Int.to_string low ^ ")"
       in
       let sel = if width s = 1 then slv sel else sel in
       io (t4 ^ sn ^ " <= " ^ sel ^ ";\n")
@@ -946,7 +943,7 @@ module VhdlCore : Rtl_internal = struct
     let to_integer s = "to_integer(" ^ Names.prefix ^ "uns(" ^ s ^ "))" in
     let write_ports =
       match signal with
-      | Multiport_mem { write_ports; _ } -> write_ports
+      | Type.Multiport_mem { write_ports; _ } -> write_ports
       | _ -> raise_s [%message "Internal error - expecting Multiport_mem signal"]
     in
     Array.iter write_ports ~f:(fun write_port ->
@@ -964,7 +961,7 @@ module VhdlCore : Rtl_internal = struct
           io (tab ^ name signal ^ "(" ^ to_integer wa ^ ") <= " ^ name d ^ ";\n")))
   ;;
 
-  let logic_inst io name inst_name s i =
+  let logic_inst io name inst_name s (i : Type.instantiation) =
     io
       (t4
        ^ inst_name

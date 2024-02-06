@@ -4,7 +4,7 @@ open Signal
 
 let%expect_test "blackboxes" =
   let circuit = Circuit.create_exn ~name:"blackboxes" [ output "y" ~:(input "x" 1) ] in
-  Testing.diff_and_analyse_vhdl_and_verilog ~blackbox:true ~show:true circuit;
+  Testing.analyse_vhdl_and_verilog ~blackbox:true ~show:true circuit;
   [%expect
     {|
     module blackboxes (
@@ -14,6 +14,7 @@ let%expect_test "blackboxes" =
 
         input x;
         output y;
+
 
     endmodule
     library ieee;
@@ -43,6 +44,7 @@ let%expect_test "blackboxes" =
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
 
     begin
+
 
     end architecture; |}]
 ;;

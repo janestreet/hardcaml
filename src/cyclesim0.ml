@@ -5,27 +5,40 @@ module Port_list = struct
 end
 
 module Traced = struct
-  type t =
-    { signal : Signal.t
-    ; names : string list
-    }
+  type signal = Signal.t
 
-  let sexp_of_t { signal; names } =
-    let sexp_of_signal = Signal.sexp_of_signal_recursive ~show_uids:false ~depth:1 in
-    [%message (signal : signal) (names : string list)]
+  let sexp_of_signal = Signal.Type.sexp_of_signal_recursive ~show_uids:false ~depth:1
+
+  type io_port =
+    { signal : signal
+    ; name : string
+    }
+  [@@deriving sexp_of]
+
+  type internal_signal =
+    { signal : signal
+    ; mangled_names : string list
+    }
+  [@@deriving sexp_of]
+
+  type t =
+    { input_ports : io_port list
+    ; output_ports : io_port list
+    ; internal_signals : internal_signal list
+    }
+  [@@deriving sexp_of]
+
+  let to_io_port signal =
+    let name = List.hd_exn (Signal.names signal) in
+    { signal; name }
   ;;
 end
 
 type task = unit -> unit
 
-module Digest = struct
-  type t = Md5_lib.t
-
-  let sexp_of_t t = [%sexp_of: string] (Md5_lib.to_hex t : string)
-  let compare a b = String.compare (Md5_lib.to_binary a) (Md5_lib.to_binary b)
-  let equal a b = String.equal (Md5_lib.to_binary a) (Md5_lib.to_binary b)
-  let none = Md5_lib.string "none"
-end
+module Node = Cyclesim_lookup.Node
+module Reg = Cyclesim_lookup.Reg
+module Memory = Cyclesim_lookup.Memory
 
 type ('i, 'o) t =
   { in_ports : Port_list.t
@@ -39,14 +52,14 @@ type ('i, 'o) t =
   ; cycle_before_clock_edge : task
   ; cycle_at_clock_edge : task
   ; cycle_after_clock_edge : task
-  ; traced : Traced.t list
-  ; lookup : Signal.t -> Bits.Mutable.t option
-  ; lookup_reg : string -> Bits.Mutable.t option
-  ; lookup_mem : string -> Bits.Mutable.t array option
-  ; assertions : Bits.Mutable.t Map.M(String).t
-  ; violated_assertions : int list Hashtbl.M(String).t
-  ; digest : Digest.t ref
+  ; traced : Traced.t
+  ; lookup_node : Traced.internal_signal -> Node.t option
+  ; lookup_reg : Traced.internal_signal -> Reg.t option
+  ; lookup_mem : Traced.internal_signal -> Memory.t option
   ; circuit : Circuit.t option
+  ; node_by_name : Traced.internal_signal Map.M(String).t Lazy.t
+  ; memory_by_name : Traced.internal_signal Map.M(String).t Lazy.t
+  ; reg_by_name : Traced.internal_signal Map.M(String).t Lazy.t
   }
 [@@deriving fields ~getters]
 
@@ -59,13 +72,11 @@ let sexp_of_t sexp_of_i sexp_of_o t =
 ;;
 
 type t_port_list = (Port_list.t, Port_list.t) t
-type traced = Traced.t list
 
 module Config = struct
   type t =
     { is_internal_port : (Signal.t -> bool) option
     ; combinational_ops_database : Combinational_ops_database.t
-    ; compute_digest : bool
     ; deduplicate_signals : bool
     ; store_circuit : bool
     }
@@ -75,7 +86,6 @@ module Config = struct
   let default =
     { is_internal_port = None
     ; combinational_ops_database = empty_ops_database
-    ; compute_digest = Exported_for_specific_uses.am_testing
     ; deduplicate_signals = false
     ; store_circuit = false
     }
@@ -88,7 +98,6 @@ module Config = struct
          | `All_named -> Some (fun s -> not (List.is_empty (Signal.names s)))
          | `Ports_only -> None)
     ; combinational_ops_database = empty_ops_database
-    ; compute_digest = Exported_for_specific_uses.am_testing
     ; deduplicate_signals = false
     ; store_circuit = false
     }
@@ -104,7 +113,31 @@ module Private = struct
   type nonrec port_list = Port_list.t
   type nonrec t_port_list = t_port_list
   type nonrec task = task
-  type nonrec traced = traced
+  type node = Node.t
+  type reg = Reg.t
+  type memory = Memory.t
+  type traced = Traced.t
+  type traced_internal_signal = Traced.internal_signal
+  type traced_io_port = Traced.io_port
+
+  let by_name predicate (traced : Traced.internal_signal list) =
+    List.fold
+      traced
+      ~init:(Map.empty (module String))
+      ~f:(fun map ({ signal; mangled_names } as traced) ->
+        if predicate signal
+        then
+          List.fold_left mangled_names ~init:map ~f:(fun map name ->
+            Map.set map ~key:name ~data:traced)
+        else map)
+  ;;
+
+  let node_by_name =
+    by_name (fun s -> (not (Signal.Type.is_mem s)) && not (Signal.Type.is_reg s))
+  ;;
+
+  let memory_by_name = by_name (fun s -> Signal.Type.is_mem s)
+  let reg_by_name = by_name (fun s -> Signal.Type.is_reg s)
 
   let create
     ?circuit
@@ -117,10 +150,9 @@ module Private = struct
     ~cycle_at_clock_edge
     ~cycle_after_clock_edge
     ~traced
-    ~lookup
+    ~lookup_node
     ~lookup_reg
     ~lookup_mem
-    ~assertions
     ()
     =
     { in_ports
@@ -134,14 +166,14 @@ module Private = struct
     ; cycle_before_clock_edge
     ; cycle_at_clock_edge
     ; cycle_after_clock_edge
-    ; assertions
     ; traced
-    ; lookup
+    ; lookup_node
     ; lookup_reg
     ; lookup_mem
-    ; violated_assertions = Hashtbl.create (module String)
-    ; digest = ref (Md5_lib.string "none")
     ; circuit
+    ; node_by_name = lazy (node_by_name traced.internal_signals)
+    ; memory_by_name = lazy (memory_by_name traced.internal_signals)
+    ; reg_by_name = lazy (reg_by_name traced.internal_signals)
     }
   ;;
 

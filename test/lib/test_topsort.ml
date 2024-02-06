@@ -19,8 +19,11 @@ let%expect_test "Uid hashes are equal between ocaml and javascript" =
      ("Signal.Uid.hash id" 834235799)) |}]
 ;;
 
-let topsort g = Signal_graph.topological_sort ~deps:Signal.deps (Signal_graph.create g)
-let sexp_of_signal = Signal.sexp_of_signal_recursive ~show_uids:false ~depth:0
+let topsort g =
+  Signal_graph.topological_sort ~deps:(module Signal.Type.Deps) (Signal_graph.create g)
+;;
+
+let sexp_of_signal = Signal.Type.sexp_of_signal_recursive ~show_uids:false ~depth:0
 let sexp_of_topsort = [%sexp_of: (signal list, signal list) Result.t]
 
 let%expect_test "signed resize" =
@@ -66,7 +69,7 @@ let%expect_test "reg loop (standard deps)" =
 (* Plug in the correct [deps] *)
 let topsort g =
   Signal_graph.topological_sort
-    ~deps:Signal_graph.deps_for_simulation_scheduling
+    ~deps:(module Signal_graph.Deps_for_simulation_scheduling)
     (Signal_graph.create g)
 ;;
 
@@ -77,7 +80,7 @@ let%expect_test "reg loop" =
   let result = topsort [ b ] in
   print_s [%sexp (result : topsort)];
   [%expect {|
-    (Ok (0b0 0b1 register 0b0 empty clock clear 0b1 add wire)) |}]
+    (Ok (register 0b1 add wire empty clock 0b0 clear 0b0 0b1)) |}]
 ;;
 
 let%expect_test "mem loop" =
@@ -93,7 +96,7 @@ let%expect_test "mem loop" =
   let result = topsort [ q ] in
   print_s [%sexp (result : topsort)];
   [%expect {|
-    (Ok (empty clock multiport_memory 0b1 memory_read_port wire)) |}]
+    (Ok (0b1 memory_read_port multiport_memory empty clock wire)) |}]
 ;;
 
 (* This a combinational loop.  The read address is not synchronously read. *)

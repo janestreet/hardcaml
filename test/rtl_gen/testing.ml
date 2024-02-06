@@ -85,6 +85,15 @@ let analyse ?quiet lang circuit hdl =
   | Vhdl -> analyse_vhdl ?quiet circuit hdl
 ;;
 
+let analyse_vhdl_and_verilog ?quiet ?(show = false) ?(blackbox = false) circuit =
+  let hdl = hdl_new blackbox Verilog circuit in
+  analyse ?quiet Verilog circuit hdl;
+  if show then Out_channel.print_string hdl;
+  let hdl = hdl_new blackbox Vhdl circuit in
+  analyse ?quiet Vhdl circuit hdl;
+  if show then Out_channel.print_string hdl
+;;
+
 let diff_and_analyse ?quiet ?(show = false) ?(blackbox = false) lang circuit =
   let hdl_old = hdl_old blackbox lang circuit in
   let hdl_new = hdl_new blackbox lang circuit in

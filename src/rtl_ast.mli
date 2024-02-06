@@ -3,7 +3,7 @@ open Base
 type range =
   | Vector of { width : int }
   | Bit
-[@@deriving sexp_of]
+[@@deriving equal, sexp_of]
 
 type reg_or_wire =
   | Reg
@@ -14,7 +14,8 @@ type var =
   { name : string
   ; range : range
   ; reg_or_wire : reg_or_wire
-  ; signal : Signal.t
+  ; attributes : Rtl_attribute.t list
+  ; comment : string option
   }
 [@@deriving equal, sexp_of]
 
@@ -187,7 +188,6 @@ type statement =
 
 type t =
   { name : string
-  ; blackbox : bool
   ; inputs : var list
   ; outputs : output list
   ; declarations : declaration list

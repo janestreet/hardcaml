@@ -44,6 +44,13 @@ module type S = sig
     val stretch : Signal.t t -> n:int -> Signal.t -> Signal.t
 
     val stretch_no_clear : Signal.t t -> n:int -> Signal.t -> Signal.t
+
+    (** Take a [Signal.t With_valid.t] that is in a slower clock and convert the [valid]
+        pulse to a pulse in the faster clock. *)
+    val with_valid_pulse_detect_rising_edge
+      :  Signal.t t
+      -> Signal.t With_valid.t
+      -> Signal.t With_valid.t
   end
 end
 

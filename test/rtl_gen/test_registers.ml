@@ -12,7 +12,7 @@ let of_spec spec ~enable =
 
 let%expect_test "clock" =
   let spec = Reg_spec.create ~clock () in
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
   [%expect
     {|
     module my_register (
@@ -25,20 +25,14 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire vdd = 1'b1;
-        wire _5 = 1'b0;
-        wire _4 = 1'b0;
+        wire vdd;
+        wire _5;
         reg _7;
-
-        /* logic */
+        assign vdd = 1'b1;
+        assign _5 = 1'b0;
         always @(posedge clock) begin
             _7 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _7;
 
     endmodule
@@ -68,29 +62,23 @@ let%expect_test "clock" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant vdd : std_logic := '1';
-        constant hc_5 : std_logic := '0';
-        constant hc_4 : std_logic := '0';
+        signal vdd : std_logic;
+        signal hc_5 : std_logic;
         signal hc_7 : std_logic;
 
     begin
 
-        -- logic
+        vdd <= '1';
+        hc_5 <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 hc_7 <= d;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_7;
 
     end architecture; |}];
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.vdd);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.vdd);
   [%expect
     {|
     module my_register (
@@ -103,20 +91,14 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire vdd = 1'b1;
-        wire _5 = 1'b0;
-        wire _4 = 1'b0;
+        wire vdd;
+        wire _5;
         reg _7;
-
-        /* logic */
+        assign vdd = 1'b1;
+        assign _5 = 1'b0;
         always @(posedge clock) begin
             _7 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _7;
 
     endmodule
@@ -146,29 +128,23 @@ let%expect_test "clock" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant vdd : std_logic := '1';
-        constant hc_5 : std_logic := '0';
-        constant hc_4 : std_logic := '0';
+        signal vdd : std_logic;
+        signal hc_5 : std_logic;
         signal hc_7 : std_logic;
 
     begin
 
-        -- logic
+        vdd <= '1';
+        hc_5 <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 hc_7 <= d;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_7;
 
     end architecture; |}];
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
     module my_register (
@@ -183,20 +159,13 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire _6 = 1'b0;
-        wire _5 = 1'b0;
+        wire _6;
         reg _7;
-
-        /* logic */
+        assign _6 = 1'b0;
         always @(posedge clock) begin
             if (enable)
                 _7 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _7;
 
     endmodule
@@ -227,15 +196,12 @@ let%expect_test "clock" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_6 : std_logic := '0';
-        constant hc_5 : std_logic := '0';
+        signal hc_6 : std_logic;
         signal hc_7 : std_logic;
 
     begin
 
-        -- logic
+        hc_6 <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if enable = '1' then
@@ -243,15 +209,11 @@ let%expect_test "clock" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_7;
 
     end architecture; |}];
   let spec = Reg_spec.override spec ~clock_edge:Falling in
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
     module my_register (
@@ -266,20 +228,13 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire _6 = 1'b0;
-        wire _5 = 1'b0;
+        wire _6;
         reg _7;
-
-        /* logic */
+        assign _6 = 1'b0;
         always @(negedge clock) begin
             if (enable)
                 _7 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _7;
 
     endmodule
@@ -310,15 +265,12 @@ let%expect_test "clock" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_6 : std_logic := '0';
-        constant hc_5 : std_logic := '0';
+        signal hc_6 : std_logic;
         signal hc_7 : std_logic;
 
     begin
 
-        -- logic
+        hc_6 <= '0';
         process (clock) begin
             if falling_edge(clock) then
                 if enable = '1' then
@@ -326,10 +278,6 @@ let%expect_test "clock" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_7;
 
     end architecture; |}]
@@ -337,7 +285,7 @@ let%expect_test "clock" =
 
 let%expect_test "clock + reset" =
   let spec = Reg_spec.create ~clock ~reset () in
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
   [%expect
     {|
     module my_register (
@@ -352,23 +300,17 @@ let%expect_test "clock + reset" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire vdd = 1'b1;
-        wire _6 = 1'b0;
-        wire _5 = 1'b0;
+        wire vdd;
+        wire _6;
         reg _8;
-
-        /* logic */
+        assign vdd = 1'b1;
+        assign _6 = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _8 <= _5;
+                _8 <= _6;
             else
                 _8 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _8;
 
     endmodule
@@ -399,33 +341,27 @@ let%expect_test "clock + reset" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant vdd : std_logic := '1';
-        constant hc_6 : std_logic := '0';
-        constant hc_5 : std_logic := '0';
+        signal vdd : std_logic;
+        signal hc_6 : std_logic;
         signal hc_8 : std_logic;
 
     begin
 
-        -- logic
+        vdd <= '1';
+        hc_6 <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_8 <= hc_5;
+                hc_8 <= hc_6;
             else
                 if rising_edge(clock) then
                     hc_8 <= d;
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_8;
 
     end architecture; |}];
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.vdd);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.vdd);
   [%expect
     {|
     module my_register (
@@ -440,23 +376,17 @@ let%expect_test "clock + reset" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire vdd = 1'b1;
-        wire _6 = 1'b0;
-        wire _5 = 1'b0;
+        wire vdd;
+        wire _6;
         reg _8;
-
-        /* logic */
+        assign vdd = 1'b1;
+        assign _6 = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _8 <= _5;
+                _8 <= _6;
             else
                 _8 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _8;
 
     endmodule
@@ -487,33 +417,27 @@ let%expect_test "clock + reset" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant vdd : std_logic := '1';
-        constant hc_6 : std_logic := '0';
-        constant hc_5 : std_logic := '0';
+        signal vdd : std_logic;
+        signal hc_6 : std_logic;
         signal hc_8 : std_logic;
 
     begin
 
-        -- logic
+        vdd <= '1';
+        hc_6 <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_8 <= hc_5;
+                hc_8 <= hc_6;
             else
                 if rising_edge(clock) then
                     hc_8 <= d;
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_8;
 
     end architecture; |}];
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
     module my_register (
@@ -530,23 +454,16 @@ let%expect_test "clock + reset" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire _7 = 1'b0;
-        wire _6 = 1'b0;
+        wire _7;
         reg _8;
-
-        /* logic */
+        assign _7 = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _8 <= _6;
+                _8 <= _7;
             else
                 if (enable)
                     _8 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _8;
 
     endmodule
@@ -578,18 +495,15 @@ let%expect_test "clock + reset" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_7 : std_logic := '0';
-        constant hc_6 : std_logic := '0';
+        signal hc_7 : std_logic;
         signal hc_8 : std_logic;
 
     begin
 
-        -- logic
+        hc_7 <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_8 <= hc_6;
+                hc_8 <= hc_7;
             else
                 if rising_edge(clock) then
                     if enable = '1' then
@@ -598,15 +512,11 @@ let%expect_test "clock + reset" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_8;
 
     end architecture; |}];
   let spec = Reg_spec.override spec ~reset_edge:Falling in
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
     module my_register (
@@ -623,23 +533,16 @@ let%expect_test "clock + reset" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire _7 = 1'b0;
-        wire _6 = 1'b0;
+        wire _7;
         reg _8;
-
-        /* logic */
+        assign _7 = 1'b0;
         always @(posedge clock or negedge reset) begin
             if (reset == 0)
-                _8 <= _6;
+                _8 <= _7;
             else
                 if (enable)
                     _8 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _8;
 
     endmodule
@@ -671,18 +574,15 @@ let%expect_test "clock + reset" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_7 : std_logic := '0';
-        constant hc_6 : std_logic := '0';
+        signal hc_7 : std_logic;
         signal hc_8 : std_logic;
 
     begin
 
-        -- logic
+        hc_7 <= '0';
         process (clock, reset) begin
             if falling_edge(reset) then
-                hc_8 <= hc_6;
+                hc_8 <= hc_7;
             else
                 if rising_edge(clock) then
                     if enable = '1' then
@@ -691,10 +591,6 @@ let%expect_test "clock + reset" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_8;
 
     end architecture; |}]
@@ -702,7 +598,7 @@ let%expect_test "clock + reset" =
 
 let%expect_test "clock + clear" =
   let spec = Reg_spec.create ~clock ~clear () in
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
   [%expect
     {|
     module my_register (
@@ -717,23 +613,17 @@ let%expect_test "clock + clear" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire vdd = 1'b1;
-        wire _6 = 1'b0;
-        wire _5 = 1'b0;
+        wire vdd;
+        wire _6;
         reg _8;
-
-        /* logic */
+        assign vdd = 1'b1;
+        assign _6 = 1'b0;
         always @(posedge clock) begin
             if (clear)
                 _8 <= _6;
             else
                 _8 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _8;
 
     endmodule
@@ -764,16 +654,14 @@ let%expect_test "clock + clear" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant vdd : std_logic := '1';
-        constant hc_6 : std_logic := '0';
-        constant hc_5 : std_logic := '0';
+        signal vdd : std_logic;
+        signal hc_6 : std_logic;
         signal hc_8 : std_logic;
 
     begin
 
-        -- logic
+        vdd <= '1';
+        hc_6 <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if clear = '1' then
@@ -783,14 +671,10 @@ let%expect_test "clock + clear" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_8;
 
     end architecture; |}];
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.vdd);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.vdd);
   [%expect
     {|
     module my_register (
@@ -805,23 +689,17 @@ let%expect_test "clock + clear" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire vdd = 1'b1;
-        wire _6 = 1'b0;
-        wire _5 = 1'b0;
+        wire vdd;
+        wire _6;
         reg _8;
-
-        /* logic */
+        assign vdd = 1'b1;
+        assign _6 = 1'b0;
         always @(posedge clock) begin
             if (clear)
                 _8 <= _6;
             else
                 _8 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _8;
 
     endmodule
@@ -852,16 +730,14 @@ let%expect_test "clock + clear" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant vdd : std_logic := '1';
-        constant hc_6 : std_logic := '0';
-        constant hc_5 : std_logic := '0';
+        signal vdd : std_logic;
+        signal hc_6 : std_logic;
         signal hc_8 : std_logic;
 
     begin
 
-        -- logic
+        vdd <= '1';
+        hc_6 <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if clear = '1' then
@@ -871,14 +747,10 @@ let%expect_test "clock + clear" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_8;
 
     end architecture; |}];
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
     module my_register (
@@ -895,12 +767,9 @@ let%expect_test "clock + clear" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire _7 = 1'b0;
-        wire _6 = 1'b0;
+        wire _7;
         reg _8;
-
-        /* logic */
+        assign _7 = 1'b0;
         always @(posedge clock) begin
             if (clear)
                 _8 <= _7;
@@ -908,10 +777,6 @@ let%expect_test "clock + clear" =
                 if (enable)
                     _8 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _8;
 
     endmodule
@@ -943,15 +808,12 @@ let%expect_test "clock + clear" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_7 : std_logic := '0';
-        constant hc_6 : std_logic := '0';
+        signal hc_7 : std_logic;
         signal hc_8 : std_logic;
 
     begin
 
-        -- logic
+        hc_7 <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if clear = '1' then
@@ -963,15 +825,11 @@ let%expect_test "clock + clear" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_8;
 
     end architecture; |}];
   let spec = Reg_spec.override spec ~clear_level:Low in
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
   [%expect
     {|
     module my_register (
@@ -986,23 +844,17 @@ let%expect_test "clock + clear" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire vdd = 1'b1;
-        wire _6 = 1'b0;
-        wire _5 = 1'b0;
+        wire vdd;
+        wire _6;
         reg _8;
-
-        /* logic */
+        assign vdd = 1'b1;
+        assign _6 = 1'b0;
         always @(posedge clock) begin
             if (clear == 0)
                 _8 <= _6;
             else
                 _8 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _8;
 
     endmodule
@@ -1033,16 +885,14 @@ let%expect_test "clock + clear" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant vdd : std_logic := '1';
-        constant hc_6 : std_logic := '0';
-        constant hc_5 : std_logic := '0';
+        signal vdd : std_logic;
+        signal hc_6 : std_logic;
         signal hc_8 : std_logic;
 
     begin
 
-        -- logic
+        vdd <= '1';
+        hc_6 <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if clear = '0' then
@@ -1052,10 +902,6 @@ let%expect_test "clock + clear" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_8;
 
     end architecture; |}]
@@ -1063,7 +909,7 @@ let%expect_test "clock + clear" =
 
 let%expect_test "clock + reset + clear" =
   let spec = Reg_spec.create ~clock ~reset ~clear () in
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
   [%expect
     {|
     module my_register (
@@ -1080,26 +926,20 @@ let%expect_test "clock + reset + clear" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire vdd = 1'b1;
-        wire _7 = 1'b0;
-        wire _6 = 1'b0;
+        wire vdd;
+        wire _7;
         reg _9;
-
-        /* logic */
+        assign vdd = 1'b1;
+        assign _7 = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _9 <= _6;
+                _9 <= _7;
             else
                 if (clear)
                     _9 <= _7;
                 else
                     _9 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _9;
 
     endmodule
@@ -1131,19 +971,17 @@ let%expect_test "clock + reset + clear" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant vdd : std_logic := '1';
-        constant hc_7 : std_logic := '0';
-        constant hc_6 : std_logic := '0';
+        signal vdd : std_logic;
+        signal hc_7 : std_logic;
         signal hc_9 : std_logic;
 
     begin
 
-        -- logic
+        vdd <= '1';
+        hc_7 <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_9 <= hc_6;
+                hc_9 <= hc_7;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
@@ -1154,14 +992,10 @@ let%expect_test "clock + reset + clear" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_9;
 
     end architecture; |}];
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.vdd);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.vdd);
   [%expect
     {|
     module my_register (
@@ -1178,26 +1012,20 @@ let%expect_test "clock + reset + clear" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire vdd = 1'b1;
-        wire _7 = 1'b0;
-        wire _6 = 1'b0;
+        wire vdd;
+        wire _7;
         reg _9;
-
-        /* logic */
+        assign vdd = 1'b1;
+        assign _7 = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _9 <= _6;
+                _9 <= _7;
             else
                 if (clear)
                     _9 <= _7;
                 else
                     _9 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _9;
 
     endmodule
@@ -1229,19 +1057,17 @@ let%expect_test "clock + reset + clear" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant vdd : std_logic := '1';
-        constant hc_7 : std_logic := '0';
-        constant hc_6 : std_logic := '0';
+        signal vdd : std_logic;
+        signal hc_7 : std_logic;
         signal hc_9 : std_logic;
 
     begin
 
-        -- logic
+        vdd <= '1';
+        hc_7 <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_9 <= hc_6;
+                hc_9 <= hc_7;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
@@ -1252,14 +1078,10 @@ let%expect_test "clock + reset + clear" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_9;
 
     end architecture; |}];
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
     module my_register (
@@ -1278,15 +1100,12 @@ let%expect_test "clock + reset + clear" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire _8 = 1'b0;
-        wire _7 = 1'b0;
+        wire _8;
         reg _9;
-
-        /* logic */
+        assign _8 = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _9 <= _7;
+                _9 <= _8;
             else
                 if (clear)
                     _9 <= _8;
@@ -1294,10 +1113,6 @@ let%expect_test "clock + reset + clear" =
                     if (enable)
                         _9 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _9;
 
     endmodule
@@ -1330,18 +1145,15 @@ let%expect_test "clock + reset + clear" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_8 : std_logic := '0';
-        constant hc_7 : std_logic := '0';
+        signal hc_8 : std_logic;
         signal hc_9 : std_logic;
 
     begin
 
-        -- logic
+        hc_8 <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_9 <= hc_7;
+                hc_9 <= hc_8;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
@@ -1354,17 +1166,13 @@ let%expect_test "clock + reset + clear" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_9;
 
     end architecture; |}];
   let spec =
     Reg_spec.override spec ~clock_edge:Falling ~reset_edge:Falling ~clear_level:Low
   in
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
     module my_register (
@@ -1383,15 +1191,12 @@ let%expect_test "clock + reset + clear" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire _8 = 1'b0;
-        wire _7 = 1'b0;
+        wire _8;
         reg _9;
-
-        /* logic */
+        assign _8 = 1'b0;
         always @(negedge clock or negedge reset) begin
             if (reset == 0)
-                _9 <= _7;
+                _9 <= _8;
             else
                 if (clear == 0)
                     _9 <= _8;
@@ -1399,10 +1204,6 @@ let%expect_test "clock + reset + clear" =
                     if (enable)
                         _9 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _9;
 
     endmodule
@@ -1435,18 +1236,15 @@ let%expect_test "clock + reset + clear" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_8 : std_logic := '0';
-        constant hc_7 : std_logic := '0';
+        signal hc_8 : std_logic;
         signal hc_9 : std_logic;
 
     begin
 
-        -- logic
+        hc_8 <= '0';
         process (clock, reset) begin
             if falling_edge(reset) then
-                hc_9 <= hc_7;
+                hc_9 <= hc_8;
             else
                 if falling_edge(clock) then
                     if clear = '0' then
@@ -1459,15 +1257,11 @@ let%expect_test "clock + reset + clear" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_9;
 
     end architecture; |}];
   let spec = Reg_spec.override spec ~reset_to:Signal.vdd ~clear_to:Signal.vdd in
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
     module my_register (
@@ -1486,11 +1280,9 @@ let%expect_test "clock + reset + clear" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire vdd = 1'b1;
+        wire vdd;
         reg _8;
-
-        /* logic */
+        assign vdd = 1'b1;
         always @(negedge clock or negedge reset) begin
             if (reset == 0)
                 _8 <= vdd;
@@ -1501,10 +1293,6 @@ let%expect_test "clock + reset + clear" =
                     if (enable)
                         _8 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _8;
 
     endmodule
@@ -1537,14 +1325,12 @@ let%expect_test "clock + reset + clear" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant vdd : std_logic := '1';
+        signal vdd : std_logic;
         signal hc_8 : std_logic;
 
     begin
 
-        -- logic
+        vdd <= '1';
         process (clock, reset) begin
             if falling_edge(reset) then
                 hc_8 <= vdd;
@@ -1560,10 +1346,6 @@ let%expect_test "clock + reset + clear" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_8;
 
     end architecture; |}]
@@ -1576,7 +1358,7 @@ let%expect_test "multiple reg names" =
   Circuit.create_exn
     ~name:"my_register"
     Signal.[ output "q" (reg spec ~enable d -- "a" -- "b" -- "c") ]
-  |> Testing.diff_and_analyse_vhdl_and_verilog ~show:true;
+  |> Testing.analyse_vhdl_and_verilog ~show:true;
   [%expect
     {|
     module my_register (
@@ -1595,17 +1377,14 @@ let%expect_test "multiple reg names" =
         input d;
         output q;
 
-        /* signal declarations */
-        wire _8 = 1'b0;
-        wire _7 = 1'b0;
+        wire _8;
         reg c;
         wire b;
         wire a;
-
-        /* logic */
+        assign _8 = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                c <= _7;
+                c <= _8;
             else
                 if (clear)
                     c <= _8;
@@ -1613,12 +1392,8 @@ let%expect_test "multiple reg names" =
                     if (enable)
                         c <= d;
         end
-
-        /* aliases */
         assign b = c;
         assign a = c;
-
-        /* output assignments */
         assign q = c;
 
     endmodule
@@ -1651,20 +1426,17 @@ let%expect_test "multiple reg names" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_8 : std_logic := '0';
-        constant hc_7 : std_logic := '0';
+        signal hc_8 : std_logic;
         signal c : std_logic;
         signal b : std_logic;
         signal a : std_logic;
 
     begin
 
-        -- logic
+        hc_8 <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                c <= hc_7;
+                c <= hc_8;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
@@ -1677,12 +1449,8 @@ let%expect_test "multiple reg names" =
                 end if;
             end if;
         end process;
-
-        -- aliases
         b <= c;
         a <= c;
-
-        -- output assignments
         q <= c;
 
     end architecture; |}]

@@ -12,41 +12,7 @@ module Collision_mode = struct
   include Comparable.Make (T)
 end
 
-module Write_port = struct
-  type t = Signal.write_port =
-    { write_clock : Signal.t
-    ; write_address : Signal.t
-    ; write_enable : Signal.t
-    ; write_data : Signal.t
-    }
-
-  let sexp_of_t t =
-    let open Signal in
-    [%message
-      ""
-        (t.write_clock : Signal.t)
-        (t.write_address : Signal.t)
-        (t.write_enable : Signal.t)
-        (t.write_data : Signal.t)]
-  ;;
-end
-
-module Read_port = struct
-  type t = Signal.read_port =
-    { read_clock : Signal.t
-    ; read_address : Signal.t
-    ; read_enable : Signal.t
-    }
-  [@@deriving sexp_of]
-
-  let sexp_of_t t =
-    let open Signal in
-    [%message
-      "" (t.read_clock : Signal.t) (t.read_address : Signal.t) (t.read_enable : Signal.t)]
-  ;;
-end
-
-let if_write_before_read_mode ~collision_mode (r : Read_port.t array) =
+let if_write_before_read_mode ~collision_mode (r : _ Read_port.t array) =
   match (collision_mode : Collision_mode.t) with
   | Write_before_read ->
     Array.map r ~f:(fun r ->
@@ -57,7 +23,10 @@ let if_write_before_read_mode ~collision_mode (r : Read_port.t array) =
   | Read_before_write -> Array.map r ~f:(fun r -> r.read_address)
 ;;
 
-let if_read_before_write_mode ~collision_mode (r : Read_port.t array) (q : Signal.t array)
+let if_read_before_write_mode
+  ~collision_mode
+  (r : _ Read_port.t array)
+  (q : Signal.t array)
   =
   match (collision_mode : Collision_mode.t) with
   | Write_before_read -> q

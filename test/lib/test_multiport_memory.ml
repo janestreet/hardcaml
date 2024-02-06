@@ -2,7 +2,7 @@ open! Import
 open Hardcaml_waveterm_kernel
 
 let write_port address_width data_width =
-  { Signal.write_clock = Signal.gnd
+  { Write_port.write_clock = Signal.gnd
   ; write_address = Signal.of_int ~width:address_width 0
   ; write_data = Signal.of_int ~width:data_width 0
   ; write_enable = Signal.gnd
@@ -115,7 +115,7 @@ let%expect_test "exceptions" =
 ;;
 
 let%expect_test "sexp" =
-  let sexp_of_signal = Signal.sexp_of_signal_recursive ~depth:2 in
+  let sexp_of_signal = Signal.Type.sexp_of_signal_recursive ~depth:2 in
   let memory =
     Signal.multiport_memory
       32
@@ -192,20 +192,13 @@ let%expect_test "verilog, async memory, 1 port" =
         input [4:0] read_address;
         output [14:0] q0;
 
-        /* signal declarations */
         reg [14:0] _7[0:31];
         wire [14:0] _8;
-
-        /* logic */
         always @(posedge clock) begin
             if (write_enable)
                 _7[write_address] <= write_data;
         end
         assign _8 = _7[read_address];
-
-        /* aliases */
-
-        /* output assignments */
         assign q0 = _8;
 
     endmodule |}]
@@ -239,6 +232,7 @@ let%expect_test "verilog, async memory, 2 ports" =
   [%expect
     {|
     module multi_port_memory (
+        read_address2,
         write_enable2,
         write_data2,
         write_address2,
@@ -247,12 +241,12 @@ let%expect_test "verilog, async memory, 2 ports" =
         write_data,
         write_address,
         clock,
-        read_address2,
         read_address,
         q0,
         q1
     );
 
+        input [4:0] read_address2;
         input write_enable2;
         input [14:0] write_data2;
         input [4:0] write_address2;
@@ -261,17 +255,13 @@ let%expect_test "verilog, async memory, 2 ports" =
         input [14:0] write_data;
         input [4:0] write_address;
         input clock;
-        input [4:0] read_address2;
         input [4:0] read_address;
         output [14:0] q0;
         output [14:0] q1;
 
-        /* signal declarations */
         wire [14:0] _14;
         reg [14:0] _13[0:31];
         wire [14:0] _15;
-
-        /* logic */
         assign _14 = _13[read_address2];
         always @(posedge clock) begin
             if (write_enable)
@@ -282,10 +272,6 @@ let%expect_test "verilog, async memory, 2 ports" =
                 _13[write_address2] <= write_data2;
         end
         assign _15 = _13[read_address];
-
-        /* aliases */
-
-        /* output assignments */
         assign q0 = _15;
         assign q1 = _14;
 
@@ -311,7 +297,7 @@ let dual_port ?(collision_mode = Ram.Collision_mode.Read_before_write) () =
            }
         |]
       ~read_ports:
-        [| { Ram.Read_port.read_clock = Signal.input "read_clock1" 1
+        [| { Read_port.read_clock = Signal.input "read_clock1" 1
            ; read_address = Signal.input "read_address1" 5
            ; read_enable = Signal.input "read_enable1" 1
            }
@@ -336,6 +322,7 @@ let%expect_test "dual port Verilog" =
     module multi_port_memory (
         read_enable2,
         read_clock2,
+        read_address2,
         read_enable1,
         read_clock1,
         write_enable2,
@@ -346,7 +333,6 @@ let%expect_test "dual port Verilog" =
         write_data1,
         write_address1,
         write_clock1,
-        read_address2,
         read_address1,
         q0,
         q1
@@ -354,6 +340,7 @@ let%expect_test "dual port Verilog" =
 
         input read_enable2;
         input read_clock2;
+        input [4:0] read_address2;
         input read_enable1;
         input read_clock1;
         input write_enable2;
@@ -364,23 +351,17 @@ let%expect_test "dual port Verilog" =
         input [14:0] write_data1;
         input [4:0] write_address1;
         input write_clock1;
-        input [4:0] read_address2;
         input [4:0] read_address1;
         output [14:0] q0;
         output [14:0] q1;
 
-        /* signal declarations */
-        wire [14:0] _20 = 15'b000000000000000;
-        wire [14:0] _19 = 15'b000000000000000;
+        wire [14:0] _20;
         wire [14:0] _18;
         reg [14:0] _21;
-        wire [14:0] _24 = 15'b000000000000000;
-        wire [14:0] _23 = 15'b000000000000000;
         reg [14:0] foo[0:31];
         wire [14:0] _22;
         reg [14:0] _25;
-
-        /* logic */
+        assign _20 = 15'b000000000000000;
         assign _18 = foo[read_address2];
         always @(posedge read_clock2) begin
             if (read_enable2)
@@ -399,10 +380,6 @@ let%expect_test "dual port Verilog" =
             if (read_enable1)
                 _25 <= _22;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q0 = _25;
         assign q1 = _21;
 
@@ -422,20 +399,20 @@ let%expect_test "dual port VHDL" =
         port (
             read_enable2 : in std_logic;
             read_clock2 : in std_logic;
+            read_address2 : in std_logic_vector(4 downto 0);
             read_enable1 : in std_logic;
             read_clock1 : in std_logic;
             write_enable2 : in std_logic;
-            write_data2 : in std_logic_vector (14 downto 0);
-            write_address2 : in std_logic_vector (4 downto 0);
+            write_data2 : in std_logic_vector(14 downto 0);
+            write_address2 : in std_logic_vector(4 downto 0);
             write_clock2 : in std_logic;
             write_enable1 : in std_logic;
-            write_data1 : in std_logic_vector (14 downto 0);
-            write_address1 : in std_logic_vector (4 downto 0);
+            write_data1 : in std_logic_vector(14 downto 0);
+            write_address1 : in std_logic_vector(4 downto 0);
             write_clock1 : in std_logic;
-            read_address2 : in std_logic_vector (4 downto 0);
-            read_address1 : in std_logic_vector (4 downto 0);
-            q0 : out std_logic_vector (14 downto 0);
-            q1 : out std_logic_vector (14 downto 0)
+            read_address1 : in std_logic_vector(4 downto 0);
+            q0 : out std_logic_vector(14 downto 0);
+            q1 : out std_logic_vector(14 downto 0)
         );
     end entity;
 
@@ -453,22 +430,17 @@ let%expect_test "dual port VHDL" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_20 : std_logic_vector (14 downto 0) := "000000000000000";
-        constant hc_19 : std_logic_vector (14 downto 0) := "000000000000000";
-        signal hc_18 : std_logic_vector (14 downto 0);
-        signal hc_21 : std_logic_vector (14 downto 0);
-        constant hc_24 : std_logic_vector (14 downto 0) := "000000000000000";
-        constant hc_23 : std_logic_vector (14 downto 0) := "000000000000000";
+        signal hc_20 : std_logic_vector(14 downto 0);
+        signal hc_18 : std_logic_vector(14 downto 0);
+        signal hc_21 : std_logic_vector(14 downto 0);
         type foo_type is array (0 to 31) of std_logic_vector(14 downto 0);
         signal foo : foo_type;
-        signal hc_22 : std_logic_vector (14 downto 0);
-        signal hc_25 : std_logic_vector (14 downto 0);
+        signal hc_22 : std_logic_vector(14 downto 0);
+        signal hc_25 : std_logic_vector(14 downto 0);
 
     begin
 
-        -- logic
+        hc_20 <= "000000000000000";
         hc_18 <= foo(to_integer(hc_uns(read_address2)));
         process (read_clock2) begin
             if rising_edge(read_clock2) then
@@ -499,10 +471,6 @@ let%expect_test "dual port VHDL" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q0 <= hc_25;
         q1 <= hc_21;
 

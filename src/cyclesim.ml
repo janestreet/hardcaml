@@ -11,33 +11,20 @@ module Private = struct
   module Traced_nodes = Cyclesim_compile.Traced_nodes
 end
 
-module Digest = Cyclesim0.Digest
 module Traced = Cyclesim0.Traced
+module Node = Cyclesim0.Node
+module Reg = Cyclesim0.Reg
+module Memory = Cyclesim0.Memory
 
 type t_port_list = Cyclesim0.t_port_list
 type ('i, 'o) t = ('i, 'o) Cyclesim0.t [@@deriving sexp_of]
 
 let in_ports = Cyclesim0.in_ports
 let inputs = Cyclesim0.inputs
-let digest t = Cyclesim0.digest t
 let traced t = Cyclesim0.traced t
-let lookup = Cyclesim0.lookup
+let lookup_node = Cyclesim0.lookup_node
 let lookup_reg = Cyclesim0.lookup_reg
 let lookup_mem = Cyclesim0.lookup_mem
-
-module Violated_or_not = struct
-  type t =
-    | Violated of int list
-    | Not_violated
-  [@@deriving sexp_of]
-end
-
-let results_of_assertions (t : _ t) =
-  Map.mapi t.assertions ~f:(fun ~key ~data:_ ->
-    match Hashtbl.find t.violated_assertions key with
-    | Some cycles -> Violated_or_not.Violated (List.rev cycles)
-    | None -> Violated_or_not.Not_violated)
-;;
 
 module Config = Cyclesim0.Config
 
@@ -60,16 +47,34 @@ let in_port (sim : _ Cyclesim0.t) name =
   | _ -> raise_s [%message "Couldn't find input port" name]
 ;;
 
-let internal_port (sim : _ Cyclesim0.t) name =
-  match
-    List.find sim.traced ~f:(fun { signal = _; names } ->
-      List.exists names ~f:(fun n -> String.equal n name))
-  with
-  | None -> raise_s [%message "Couldn't find internal port" name]
-  | Some { signal; names = _ } ->
-    (match sim.lookup signal with
-     | None -> raise_s [%message "Couldn't find internal port" name]
-     | Some bits -> ref (Bits.Mutable.to_bits bits))
+let lookup_node_by_name (sim : _ Cyclesim0.t) name =
+  let map = Lazy.force sim.node_by_name in
+  let%bind.Option name = Map.find map name in
+  lookup_node sim name
+;;
+
+let lookup_reg_by_name (sim : _ Cyclesim0.t) name =
+  let map = Lazy.force sim.reg_by_name in
+  let%bind.Option name = Map.find map name in
+  lookup_reg sim name
+;;
+
+let lookup_mem_by_name (sim : _ Cyclesim0.t) name =
+  let map = Lazy.force sim.memory_by_name in
+  let%bind.Option name = Map.find map name in
+  lookup_mem sim name
+;;
+
+let lookup_node_or_reg (sim : _ Cyclesim0.t) traced =
+  match lookup_node sim traced with
+  | None -> lookup_reg sim traced |> Option.map ~f:Reg.to_node
+  | Some t -> Some t
+;;
+
+let lookup_node_or_reg_by_name (sim : _ Cyclesim0.t) name =
+  match lookup_node_by_name sim name with
+  | None -> lookup_reg_by_name sim name |> Option.map ~f:Reg.to_node
+  | Some t -> Some t
 ;;
 
 let out_port_after_clock_edge (sim : _ Cyclesim0.t) name =
@@ -108,7 +113,11 @@ let combine = Cyclesim_combine.combine
 
 (* compilation *)
 
-let create = Cyclesim_compile.create
+let create ?(implementation = `V2) =
+  match implementation with
+  | `V1 -> Cyclesim_compile.create
+  | `V2 -> Cyclesim2.create
+;;
 
 (* interfaces *)
 
@@ -128,7 +137,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
     Private.coerce sim ~to_input ~to_output
   ;;
 
-  let create ?config ?circuit_config create_fn =
+  let create ?implementation ?config ?circuit_config create_fn =
     let circuit_config =
       (* Because the circuit will only be used for simulations, we can disable a couple of
          passes we would otherwise want - combinational loop checks (will be done during
@@ -139,7 +148,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
       | Some config -> config
     in
     let circuit = C.create_exn ~config:circuit_config ~name:"simulator" create_fn in
-    let sim = create ?config circuit in
+    let sim = create ?implementation ?config circuit in
     coerce sim
   ;;
 end

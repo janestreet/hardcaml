@@ -4,9 +4,9 @@ open Signal
 let sexp_of_const_signal ?(depth = 1) signal =
   let open Signal in
   match signal with
-  | Empty -> [%sexp "empty"]
+  | Type.Empty -> [%sexp "empty"]
   | _ ->
-    if is_const signal
+    if Type.is_const signal
     then
       if width signal <= 8
       then [%sexp (Int.to_string (width signal) ^ "'b" ^ Signal.to_bstr signal : string)]
@@ -19,7 +19,7 @@ let sexp_of_const_signal ?(depth = 1) signal =
     else (
       match names signal with
       | [] ->
-        let sexp_of_signal = sexp_of_signal_recursive ~depth in
+        let sexp_of_signal = Type.sexp_of_signal_recursive ~depth in
         [%message "Not a constant" (signal : signal)]
       | [ n ] -> [%sexp (n : string)]
       | ns -> [%sexp (ns : string list)])

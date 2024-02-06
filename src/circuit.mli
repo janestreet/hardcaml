@@ -80,7 +80,7 @@ val phantom_inputs : t -> (string * int) list
 
 (** Map of [uid]s to [Signal.t]s. *)
 module Signal_map : sig
-  type t = Signal.t Signal.Uid_map.t [@@deriving sexp_of]
+  type t = Signal.t Signal.Type.Uid_map.t [@@deriving sexp_of]
 end
 
 val assertions : t -> Signal.t Map.M(String).t
@@ -90,17 +90,17 @@ val signal_map : t -> Signal_map.t
 
 (** Compute and return a [Fan_out_map.t].  The computation is lazy and only performed the
     first time [fan_out_map] is called. *)
-val fan_out_map : t -> Signal.Uid_set.t Signal.Uid_map.t
+val fan_out_map : t -> Signal.Type.Uid_set.t Signal.Type.Uid_map.t
 
 (** Compute and return a [Fan_in_map.t].  The computation is lazy and only performed the
     first time [fan_in_map] is called. *)
-val fan_in_map : t -> Signal.Uid_set.t Signal.Uid_map.t
+val fan_in_map : t -> Signal.Type.Uid_set.t Signal.Type.Uid_map.t
 
 (** compare 2 circuits to see if they are the same *)
 val structural_compare : ?check_names:bool -> t -> t -> bool
 
 (** returns the list of instantiations in this circuit *)
-val instantiations : t -> Signal.instantiation list
+val instantiations : t -> Signal.Type.instantiation list
 
 val create_with_interface
   :  (module Interface.S_Of_signal with type Of_signal.t = 'i)

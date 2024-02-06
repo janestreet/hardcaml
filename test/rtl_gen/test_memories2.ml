@@ -19,9 +19,7 @@ let circuit ~data_width ~address_width =
 ;;
 
 let%expect_test "multiport memorydata" =
-  Testing.diff_and_analyse_vhdl_and_verilog
-    ~show:true
-    (circuit ~data_width:32 ~address_width:7);
+  Testing.analyse_vhdl_and_verilog ~show:true (circuit ~data_width:32 ~address_width:7);
   [%expect
     {|
     module multimem (
@@ -40,20 +38,13 @@ let%expect_test "multiport memorydata" =
         input [6:0] ra;
         output [31:0] q0;
 
-        /* signal declarations */
         reg [31:0] _7[0:127];
         wire [31:0] _8;
-
-        /* logic */
         always @(posedge clock) begin
             if (we)
                 _7[wa] <= d;
         end
         assign _8 = _7[ra];
-
-        /* aliases */
-
-        /* output assignments */
         assign q0 = _8;
 
     endmodule
@@ -64,11 +55,11 @@ let%expect_test "multiport memorydata" =
     entity multimem is
         port (
             we : in std_logic;
-            d : in std_logic_vector (31 downto 0);
-            wa : in std_logic_vector (6 downto 0);
+            d : in std_logic_vector(31 downto 0);
+            wa : in std_logic_vector(6 downto 0);
             clock : in std_logic;
-            ra : in std_logic_vector (6 downto 0);
-            q0 : out std_logic_vector (31 downto 0)
+            ra : in std_logic_vector(6 downto 0);
+            q0 : out std_logic_vector(31 downto 0)
         );
     end entity;
 
@@ -86,15 +77,12 @@ let%expect_test "multiport memorydata" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
         type hc_7_type is array (0 to 127) of std_logic_vector(31 downto 0);
         signal hc_7 : hc_7_type;
-        signal hc_8 : std_logic_vector (31 downto 0);
+        signal hc_8 : std_logic_vector(31 downto 0);
 
     begin
 
-        -- logic
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
@@ -103,16 +91,10 @@ let%expect_test "multiport memorydata" =
             end if;
         end process;
         hc_8 <= hc_7(to_integer(hc_uns(ra)));
-
-        -- aliases
-
-        -- output assignments
         q0 <= hc_8;
 
     end architecture; |}];
-  Testing.diff_and_analyse_vhdl_and_verilog
-    ~show:true
-    (circuit ~data_width:15 ~address_width:1);
+  Testing.analyse_vhdl_and_verilog ~show:true (circuit ~data_width:15 ~address_width:1);
   [%expect
     {|
     module multimem (
@@ -131,20 +113,13 @@ let%expect_test "multiport memorydata" =
         input ra;
         output [14:0] q0;
 
-        /* signal declarations */
         reg [14:0] _7[0:1];
         wire [14:0] _8;
-
-        /* logic */
         always @(posedge clock) begin
             if (we)
                 _7[wa] <= d;
         end
         assign _8 = _7[ra];
-
-        /* aliases */
-
-        /* output assignments */
         assign q0 = _8;
 
     endmodule
@@ -155,11 +130,11 @@ let%expect_test "multiport memorydata" =
     entity multimem is
         port (
             we : in std_logic;
-            d : in std_logic_vector (14 downto 0);
+            d : in std_logic_vector(14 downto 0);
             wa : in std_logic;
             clock : in std_logic;
             ra : in std_logic;
-            q0 : out std_logic_vector (14 downto 0)
+            q0 : out std_logic_vector(14 downto 0)
         );
     end entity;
 
@@ -177,15 +152,12 @@ let%expect_test "multiport memorydata" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
         type hc_7_type is array (0 to 1) of std_logic_vector(14 downto 0);
         signal hc_7 : hc_7_type;
-        signal hc_8 : std_logic_vector (14 downto 0);
+        signal hc_8 : std_logic_vector(14 downto 0);
 
     begin
 
-        -- logic
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
@@ -194,16 +166,10 @@ let%expect_test "multiport memorydata" =
             end if;
         end process;
         hc_8 <= hc_7(to_integer(hc_uns(ra)));
-
-        -- aliases
-
-        -- output assignments
         q0 <= hc_8;
 
     end architecture; |}];
-  Testing.diff_and_analyse_vhdl_and_verilog
-    ~show:true
-    (circuit ~data_width:1 ~address_width:2);
+  Testing.analyse_vhdl_and_verilog ~show:true (circuit ~data_width:1 ~address_width:2);
   [%expect
     {|
     module multimem (
@@ -222,20 +188,13 @@ let%expect_test "multiport memorydata" =
         input [1:0] ra;
         output q0;
 
-        /* signal declarations */
         reg [0:0] _7[0:3];
         wire _8;
-
-        /* logic */
         always @(posedge clock) begin
             if (we)
                 _7[wa] <= d;
         end
         assign _8 = _7[ra];
-
-        /* aliases */
-
-        /* output assignments */
         assign q0 = _8;
 
     endmodule
@@ -247,9 +206,9 @@ let%expect_test "multiport memorydata" =
         port (
             we : in std_logic;
             d : in std_logic;
-            wa : in std_logic_vector (1 downto 0);
+            wa : in std_logic_vector(1 downto 0);
             clock : in std_logic;
-            ra : in std_logic_vector (1 downto 0);
+            ra : in std_logic_vector(1 downto 0);
             q0 : out std_logic
         );
     end entity;
@@ -268,15 +227,12 @@ let%expect_test "multiport memorydata" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
         type hc_7_type is array (0 to 3) of std_logic;
         signal hc_7 : hc_7_type;
         signal hc_8 : std_logic;
 
     begin
 
-        -- logic
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
@@ -285,16 +241,10 @@ let%expect_test "multiport memorydata" =
             end if;
         end process;
         hc_8 <= hc_7(to_integer(hc_uns(ra)));
-
-        -- aliases
-
-        -- output assignments
         q0 <= hc_8;
 
     end architecture; |}];
-  Testing.diff_and_analyse_vhdl_and_verilog
-    ~show:true
-    (circuit ~data_width:1 ~address_width:1);
+  Testing.analyse_vhdl_and_verilog ~show:true (circuit ~data_width:1 ~address_width:1);
   [%expect
     {|
     module multimem (
@@ -313,20 +263,13 @@ let%expect_test "multiport memorydata" =
         input ra;
         output q0;
 
-        /* signal declarations */
         reg [0:0] _7[0:1];
         wire _8;
-
-        /* logic */
         always @(posedge clock) begin
             if (we)
                 _7[wa] <= d;
         end
         assign _8 = _7[ra];
-
-        /* aliases */
-
-        /* output assignments */
         assign q0 = _8;
 
     endmodule
@@ -359,15 +302,12 @@ let%expect_test "multiport memorydata" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
         type hc_7_type is array (0 to 1) of std_logic;
         signal hc_7 : hc_7_type;
         signal hc_8 : std_logic;
 
     begin
 
-        -- logic
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
@@ -376,10 +316,6 @@ let%expect_test "multiport memorydata" =
             end if;
         end process;
         hc_8 <= hc_7(to_integer(hc_uns(ra)));
-
-        -- aliases
-
-        -- output assignments
         q0 <= hc_8;
 
     end architecture; |}]

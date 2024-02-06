@@ -4,7 +4,7 @@
    in a circuit are assigned, and hence cannot be changed. *)
 
 open Base
-module Uid_set = Signal.Uid_set
+module Uid_set = Signal.Type.Uid_set
 
 module Signal_map = struct
   type t = Signal.t Map.M(Signal.Uid).t [@@deriving sexp_of]
@@ -22,7 +22,7 @@ module Signal_map = struct
 end
 
 module Instantiation_sexp = struct
-  type t = Signal.instantiation
+  type t = Signal.Type.instantiation
 
   let sexp_of_t (t : t) = [%message "" (t.inst_name : string) (t.inst_instance : string)]
 end
@@ -37,15 +37,15 @@ type t =
       (* [fan_in] and [fan_out] are lazily computed.  One might worry that this would interact
      poorly with signals, which have some mutable components (e.g. wires).  But those have
      already been set by the time a circuit is created, so a circuit is not mutable. *)
-  ; fan_out : Signal.Uid_set.t Map.M(Signal.Uid).t Lazy.t
-  ; fan_in : Signal.Uid_set.t Map.M(Signal.Uid).t Lazy.t
+  ; fan_out : Signal.Type.Uid_set.t Map.M(Signal.Uid).t Lazy.t
+  ; fan_in : Signal.Type.Uid_set.t Map.M(Signal.Uid).t Lazy.t
   ; assertions : Signal.t Map.M(String).t
   ; instantiations : Instantiation_sexp.t list
   }
 [@@deriving fields ~getters, sexp_of]
 
 module Summary = struct
-  let sexp_of_signal signal = Signal.sexp_of_signal_recursive ~depth:0 signal
+  let sexp_of_signal signal = Signal.Type.sexp_of_signal_recursive ~depth:0 signal
 
   let sexp_of_t t =
     [%message
@@ -200,7 +200,7 @@ let create_exn ?(config = Config.default) ~name outputs =
         in
         let instantiations =
           match signal with
-          | Signal.Inst inst -> inst.instantiation :: instantiations
+          | Signal.Type.Inst inst -> inst.instantiation :: instantiations
           | _ -> instantiations
         in
         assertions, instantiations))
@@ -283,7 +283,7 @@ let structural_compare ?check_names c0 c1 =
   (* Name and width (and implicitly, order) of ports match *)
   let ports_match which_ports =
     let names_or_empty = function
-      | Signal.Empty -> []
+      | Signal.Type.Empty -> []
       | s -> Signal.names s
     in
     match
@@ -302,7 +302,9 @@ let structural_compare ?check_names c0 c1 =
          (outputs c1)
          ~init:(Uid_set.empty, true)
          ~f:(fun (set, b) s t ->
-         let set, b' = Signal.structural_compare ?check_names ~initial_deps:set s t in
+         let set, b' =
+           Signal.Type.structural_compare ?check_names ~initial_deps:set s t
+         in
          set, b && b'))
   in
   num_ports_match inputs
@@ -397,10 +399,8 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
   ;;
 
   let move_port_attributes from_ to_ =
-    Option.iter (Signal.signal_id from_) ~f:(fun from_ ->
-      Option.iter (Signal.signal_id to_) ~f:(fun to_ ->
-        to_.s_attributes <- from_.s_attributes;
-        from_.s_attributes <- []))
+    Signal.Type.set_attributes to_ (Signal.Type.get_attributes from_);
+    Signal.Type.set_attributes from_ []
   ;;
 
   let check_alist_of_one_direction name direction alist =

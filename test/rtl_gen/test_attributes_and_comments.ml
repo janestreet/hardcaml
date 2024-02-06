@@ -23,7 +23,7 @@ let%expect_test "attributes on signals" =
                 (int_attr (string_attr (input "i" 1) |: false_attr (input "j" 1)))))
       ]
   in
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true circuit;
+  Testing.analyse_vhdl_and_verilog ~show:true circuit;
   [%expect
     {|
     module attributes (
@@ -39,16 +39,9 @@ let%expect_test "attributes on signals" =
         (* nameattr *)
         output o;
 
-        /* signal declarations */
         (* boolattr=1,intattr=123 *)
         wire _4;
-
-        /* logic */
         assign _4 = i | j;
-
-        /* aliases */
-
-        /* output assignments */
         assign o = _4;
 
     endmodule
@@ -78,18 +71,11 @@ let%expect_test "attributes on signals" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
         signal hc_4 : std_logic;
 
     begin
 
-        -- logic
         hc_4 <= hc_sl(hc_uns(i) or hc_uns(j));
-
-        -- aliases
-
-        -- output assignments
         o <= hc_4;
 
     end architecture; |}]
@@ -101,7 +87,7 @@ let%expect_test "comments on signals" =
       ~name:"comments"
       [ output "o" (set_comment (input "i" 1 |: input "j" 1) "I am a comment") ]
   in
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true circuit;
+  Testing.analyse_vhdl_and_verilog ~show:true circuit;
   [%expect
     {|
     module comments (
@@ -114,15 +100,8 @@ let%expect_test "comments on signals" =
         input i;
         output o;
 
-        /* signal declarations */
         wire _4/* I am a comment */;
-
-        /* logic */
         assign _4 = i | j;
-
-        /* aliases */
-
-        /* output assignments */
         assign o = _4;
 
     endmodule
@@ -152,18 +131,11 @@ let%expect_test "comments on signals" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
         signal hc_4 : std_logic;
 
     begin
 
-        -- logic
         hc_4 <= hc_sl(hc_uns(i) or hc_uns(j));
-
-        -- aliases
-
-        -- output assignments
         o <= hc_4;
 
     end architecture; |}]

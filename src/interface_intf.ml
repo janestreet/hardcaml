@@ -35,7 +35,7 @@ module type Ast = sig
       ; type_ : Type.t (** Field type - a signal or a sub-module *)
       ; sequence : Sequence.t option (** Is the field type an array or list? *)
       ; doc : string option
-          (** Ocaml documentation string, if any. Note that this must be placed in the [ml]
+          (** OCaml documentation string, if any. Note that this must be placed in the [ml]
           and not [mli].*)
       }
     [@@deriving sexp_of]

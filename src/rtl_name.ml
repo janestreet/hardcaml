@@ -127,7 +127,7 @@ let mangle_signal_names
 
 let mangle_instantiation_name t signal =
   match signal with
-  | Signal.Inst { instantiation; _ } ->
+  | Signal.Type.Inst { instantiation; _ } ->
     let legal_name = legalize t instantiation.inst_instance in
     Mangler.mangle t.mangler legal_name
   | _ ->
@@ -138,7 +138,7 @@ let mangle_instantiation_name t signal =
 
 let mangle_multiport_mem_name t signal =
   match signal with
-  | Signal.Multiport_mem _ ->
+  | Signal.Type.Multiport_mem _ ->
     (match Signal.names signal with
      | [] ->
        (* memory nodes themselves do not have names (only the q_out) *)

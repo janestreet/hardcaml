@@ -180,6 +180,7 @@ module State_machine = struct
 
   let create
     ?(encoding = Encoding.Binary)
+    ?(auto_wave_format = true)
     ?(enable = Signal.vdd)
     (type a)
     (module State : State with type t = a)
@@ -188,22 +189,24 @@ module State_machine = struct
     let module State = struct
       include State
       include Comparator.Make (State)
+
+      let name_by_index =
+        Array.of_list_map State.all ~f:(fun s -> Sexp.to_string [%sexp (s : State.t)])
+      ;;
     end
     in
     let nstates = List.length State.all in
     let ls = if nstates = 1 then 1 else Int.ceil_log2 nstates in
     let state_bits i =
       match encoding with
-      | Binary -> Signal.of_int ~width:ls i
-      | Gray ->
-        Signal.of_bit_string
-          (Bits.binary_to_gray (Bits.of_int ~width:ls i) |> Bits.to_bstr)
+      | Binary -> Bits.of_int ~width:ls i
+      | Gray -> Bits.binary_to_gray (Bits.of_int ~width:ls i)
       | Onehot ->
         let nstates' = if nstates = 1 then 1 else nstates - 1 in
-        Signal.of_bit_string
-          Bits.(select (binary_to_onehot (of_int ~width:ls i)) nstates' 0 |> to_bstr)
+        Bits.(select (binary_to_onehot (of_int ~width:ls i)) nstates' 0)
     in
-    let states = List.mapi State.all ~f:(fun i s -> s, (i, state_bits i)) in
+    let state_signal i = state_bits i |> Bits.to_constant |> Signal.of_constant in
+    let states = List.mapi State.all ~f:(fun i s -> s, (i, state_signal i)) in
     let var =
       match encoding with
       | Binary | Gray -> Variable.reg reg_spec ~enable ~width:ls
@@ -278,6 +281,21 @@ module State_machine = struct
       | Binary | Gray -> state_val "is" s ==: current
       | Onehot -> Signal.bit var.value (fst (find_state "is" s))
     in
+    if auto_wave_format
+    then (
+      let wave_format =
+        let rec find_state i bits =
+          if i = nstates
+          then "-"
+          else if Bits.equal (state_bits i) bits
+          then State.name_by_index.(i)
+          else find_state (i + 1) bits
+        in
+        match encoding with
+        | Binary -> Wave_format.Index (Array.to_list State.name_by_index)
+        | Gray | Onehot -> Wave_format.Custom (find_state 0)
+      in
+      ignore (Signal.(var.value --$ wave_format) : Signal.t));
     { current; is; set_next; switch }
   ;;
 end

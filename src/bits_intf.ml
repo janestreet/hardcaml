@@ -17,6 +17,9 @@ module type Bits = sig
   (** Set the i-th 64-bit word within the underlying representation. *)
   val unsafe_set_int64 : t -> int -> int64 -> unit
 
+  val get_int64 : t -> int -> int64
+  val set_int64 : t -> int -> int64 -> unit
+
   module Expert : sig
     (** Access the underlying data representation. Note that this is unstable,
         and may change over time.
@@ -48,6 +51,8 @@ module type Bits = sig
 
     val unsafe_get_int64 : t -> int -> int64
     val unsafe_set_int64 : t -> int -> int64 -> unit
+    val get_int64 : t -> int -> int64
+    val set_int64 : t -> int -> int64 -> unit
     val to_bits : t -> bits
     val of_constant : Constant.t -> t
     val to_constant : t -> Constant.t

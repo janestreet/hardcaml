@@ -62,10 +62,7 @@ let%expect_test "C" =
         input C_port_i;
         output C_port_o;
 
-        /* signal declarations */
-        wire _14 = 1'b1;
-        wire _12 = 1'b1;
-        wire _10 = 1'b1;
+        wire _14;
         wire _2;
         wire C$i$C_port_i;
         wire C$B$i$B_port_i;
@@ -76,22 +73,17 @@ let%expect_test "C" =
         wire C$B$o$B_port_o;
         wire C$C_internal;
         wire C$o$C_port_o;
-
-        /* logic */
+        assign _14 = 1'b1;
         assign _2 = C_port_i;
         assign C$i$C_port_i = _2;
         assign C$B$i$B_port_i = C$i$C_port_i;
         assign C$B$A$i$A_port_i = C$B$i$B_port_i;
-        assign C$B$A$A_internal = C$B$A$i$A_port_i + _10;
+        assign C$B$A$A_internal = C$B$A$i$A_port_i + _14;
         assign C$B$A$o$A_port_o = C$B$A$A_internal;
-        assign C$B$B_internal = C$B$A$o$A_port_o + _12;
+        assign C$B$B_internal = C$B$A$o$A_port_o + _14;
         assign C$B$o$B_port_o = C$B$B_internal;
         assign C$C_internal = C$B$o$B_port_o + _14;
         assign C$o$C_port_o = C$C_internal;
-
-        /* aliases */
-
-        /* output assignments */
         assign C_port_o = C$o$C_port_o;
 
     endmodule |}]

@@ -52,9 +52,9 @@ computation as a graph.
 # open Hardcaml.Signal
 # open Hardcaml.Signal.Unoptimized
 # let adder a b = a +: b;;
-val adder : signal -> signal -> signal = <fun>
+val adder : Type.t -> Type.t -> Type.t = <fun>
 # adder (of_string "01") (of_string "10")
-- : signal = (add (width 2) (arguments (0b01 0b10)))
+- : Type.t = (add (width 2) (arguments (0b01 0b10)))
 ```
 
 Signals also provide functions related to [sequential logic](sequential_logic.md) (registers,
@@ -76,7 +76,7 @@ output port names for our designs.
 
 ```ocaml
 # let c = output "c" (adder (input "a" 8) (input "b" 8))
-val c : signal = (wire (names (c)) (width 8) (data_in add))
+val c : Type.t = (wire (names (c)) (width 8) (data_in add))
 # let circuit = Hardcaml.Circuit.create_exn ~name:"my_adder" [ c ]
 val circuit : Hardcaml.Circuit.t = <abstr>
 ```
@@ -97,15 +97,8 @@ module my_adder (
     input [7:0] a;
     output [7:0] c;
 
-    /* signal declarations */
     wire [7:0] _4;
-
-    /* logic */
     assign _4 = a + b;
-
-    /* aliases */
-
-    /* output assignments */
     assign c = _4;
 
 endmodule

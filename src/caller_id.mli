@@ -1,10 +1,12 @@
-(** Embed the callstack in the signal type when it is created.
+(** Optionally embed the callstack in the signal type when it is created.
 
     When an exception occurs, the callstack is printed as part of the sexp of the signal.
     This is especially useful for dangling wires as it shows the construction site of the
     wire rather than the place that the dangling wire was detected.
 
-    By default it is not enabled. *)
+    By default it is [Disabled]. Tracing the stack within every signal can become very
+    expensive as circuits grow. The environment variable [HARDCAML_DEBUG] can be set to
+    enable tracing. *)
 
 open Base
 

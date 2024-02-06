@@ -5,6 +5,11 @@ module type Private = sig
   type port_list
   type t_port_list
   type traced
+  type traced_io_port
+  type traced_internal_signal
+  type node
+  type reg
+  type memory
   type task = unit -> unit
 
   val create
@@ -18,10 +23,9 @@ module type Private = sig
     -> cycle_at_clock_edge:task
     -> cycle_after_clock_edge:task
     -> traced:traced
-    -> lookup:(Signal.t -> Bits.Mutable.t option)
-    -> lookup_reg:(string -> Bits.Mutable.t option)
-    -> lookup_mem:(string -> Bits.Mutable.t array option)
-    -> assertions:Bits.Mutable.t Map.M(String).t
+    -> lookup_node:(traced_internal_signal -> node option)
+    -> lookup_reg:(traced_internal_signal -> reg option)
+    -> lookup_mem:(traced_internal_signal -> memory option)
     -> unit
     -> t_port_list
 
@@ -50,18 +54,31 @@ module type Cyclesim0 = sig
   end
 
   module Traced : sig
-    type t =
+    type io_port =
       { signal : Signal.t
-      ; names : string list
+      ; name : string
       }
     [@@deriving sexp_of]
+
+    type internal_signal =
+      { signal : Signal.t
+      ; mangled_names : string list
+      }
+    [@@deriving sexp_of]
+
+    type t =
+      { input_ports : io_port list
+      ; output_ports : io_port list
+      ; internal_signals : internal_signal list
+      }
+    [@@deriving sexp_of]
+
+    val to_io_port : Signal.t -> io_port
   end
 
-  module Digest : sig
-    type t = Md5_lib.t [@@deriving sexp_of, compare, equal]
-
-    val none : t
-  end
+  module Node = Cyclesim_lookup.Node
+  module Reg = Cyclesim_lookup.Reg
+  module Memory = Cyclesim_lookup.Memory
 
   type task = unit -> unit
 
@@ -77,14 +94,14 @@ module type Cyclesim0 = sig
     ; cycle_before_clock_edge : task
     ; cycle_at_clock_edge : task
     ; cycle_after_clock_edge : task
-    ; traced : Traced.t list
-    ; lookup : Signal.t -> Bits.Mutable.t option
-    ; lookup_reg : string -> Bits.Mutable.t option
-    ; lookup_mem : string -> Bits.Mutable.t array option
-    ; assertions : Bits.Mutable.t Map.M(String).t
-    ; violated_assertions : int list Hashtbl.M(String).t
-    ; digest : Digest.t ref
+    ; traced : Traced.t
+    ; lookup_node : Traced.internal_signal -> Node.t option
+    ; lookup_reg : Traced.internal_signal -> Reg.t option
+    ; lookup_mem : Traced.internal_signal -> Memory.t option
     ; circuit : Circuit.t option
+    ; node_by_name : Traced.internal_signal Map.M(String).t Lazy.t
+    ; memory_by_name : Traced.internal_signal Map.M(String).t Lazy.t
+    ; reg_by_name : Traced.internal_signal Map.M(String).t Lazy.t
     }
   [@@deriving fields ~getters, sexp_of]
 
@@ -98,9 +115,6 @@ module type Cyclesim0 = sig
           waveform). *)
       ; combinational_ops_database : Combinational_ops_database.t
           (** Database of instantiations which may be replace by a combinational operation. *)
-      ; compute_digest : bool
-          (** Compute an md5 digest of the outputs of a simulation run. Enabled by default
-          within inlined tests. *)
       ; deduplicate_signals : bool
           (** Perform a pass which finds structurally equal signals and shares them. *)
       ; store_circuit : bool
@@ -122,5 +136,10 @@ module type Cyclesim0 = sig
       with type ('i, 'o) t = ('i, 'o) t
        and type port_list = Port_list.t
        and type t_port_list = t_port_list
-       and type traced = Traced.t list
+       and type traced = Traced.t
+       and type traced_io_port = Traced.io_port
+       and type traced_internal_signal = Traced.internal_signal
+       and type node = Node.t
+       and type reg = Reg.t
+       and type memory = Memory.t
 end

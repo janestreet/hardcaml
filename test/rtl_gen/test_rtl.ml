@@ -36,7 +36,7 @@ let%expect_test "example" =
       let zoo = Signal.reg spec ~enable:coo zoo in
       { zoo; moo })
   in
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true circuit;
+  Testing.analyse_vhdl_and_verilog ~show:true circuit;
   [%expect
     {|
     module temp (
@@ -57,9 +57,8 @@ let%expect_test "example" =
         output zoo;
         output [1:0] moo;
 
-        /* signal declarations */
-        wire [1:0] _24 = 2'b11;
-        wire [1:0] bbb = 2'b11;
+        wire [1:0] _24;
+        wire [1:0] bbb;
         wire [1:0] aaa;
         wire zoo_0;
         wire _19;
@@ -75,17 +74,16 @@ let%expect_test "example" =
         wire _15;
         wire noo;
         wire coo;
-        wire _27 = 1'b0;
+        wire _27;
         wire _4;
-        wire _26 = 1'b0;
         wire _6;
         wire _8;
         wire _10;
         wire _12;
         wire _14;
         reg _28;
-
-        /* logic */
+        assign _24 = 2'b11;
+        assign bbb = 2'b11;
         assign zoo_0 = ~ noo;
         assign _19 = _14 | zoo_0;
         assign _20 = { _19,
@@ -98,6 +96,7 @@ let%expect_test "example" =
         assign _1 = fff;
         assign _15 = ~ _10;
         assign noo = _12 - _15;
+        assign _27 = 1'b0;
         assign _4 = clear;
         assign _6 = reset;
         assign _8 = clock;
@@ -106,7 +105,7 @@ let%expect_test "example" =
         assign _14 = _12 + _10;
         always @(posedge _8 or posedge _6) begin
             if (_6)
-                _28 <= _26;
+                _28 <= _27;
             else
                 if (_4)
                     _28 <= _27;
@@ -114,15 +113,11 @@ let%expect_test "example" =
                     if (noo)
                         _28 <= _14;
         end
-
-        /* aliases */
         assign aaa = bbb;
         assign eee = fff;
         assign ddd = fff;
         assign ccc = fff;
         assign coo = noo;
-
-        /* output assignments */
         assign zoo = _28;
         assign moo = _1;
 
@@ -139,7 +134,7 @@ let%expect_test "example" =
             bar : in std_logic;
             foo : in std_logic;
             zoo : out std_logic;
-            moo : out std_logic_vector (1 downto 0)
+            moo : out std_logic_vector(1 downto 0)
         );
     end entity;
 
@@ -157,28 +152,25 @@ let%expect_test "example" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_24 : std_logic_vector (1 downto 0) := "11";
-        constant bbb : std_logic_vector (1 downto 0) := "11";
-        signal aaa : std_logic_vector (1 downto 0);
+        signal hc_24 : std_logic_vector(1 downto 0);
+        signal bbb : std_logic_vector(1 downto 0);
+        signal aaa : std_logic_vector(1 downto 0);
         signal zoo_0 : std_logic;
         signal hc_19 : std_logic;
-        signal hc_20 : std_logic_vector (1 downto 0);
-        signal hc_17 : std_logic_vector (1 downto 0);
-        signal hc_21 : std_logic_vector (1 downto 0);
-        signal hc_23 : std_logic_vector (1 downto 0);
-        signal fff : std_logic_vector (1 downto 0);
-        signal eee : std_logic_vector (1 downto 0);
-        signal ddd : std_logic_vector (1 downto 0);
-        signal ccc : std_logic_vector (1 downto 0);
-        signal hc_1 : std_logic_vector (1 downto 0);
+        signal hc_20 : std_logic_vector(1 downto 0);
+        signal hc_17 : std_logic_vector(1 downto 0);
+        signal hc_21 : std_logic_vector(1 downto 0);
+        signal hc_23 : std_logic_vector(1 downto 0);
+        signal fff : std_logic_vector(1 downto 0);
+        signal eee : std_logic_vector(1 downto 0);
+        signal ddd : std_logic_vector(1 downto 0);
+        signal ccc : std_logic_vector(1 downto 0);
+        signal hc_1 : std_logic_vector(1 downto 0);
         signal hc_15 : std_logic;
         signal noo : std_logic;
         signal coo : std_logic;
-        constant hc_27 : std_logic := '0';
+        signal hc_27 : std_logic;
         signal hc_4 : std_logic;
-        constant hc_26 : std_logic := '0';
         signal hc_6 : std_logic;
         signal hc_8 : std_logic;
         signal hc_10 : std_logic;
@@ -188,7 +180,8 @@ let%expect_test "example" =
 
     begin
 
-        -- logic
+        hc_24 <= "11";
+        bbb <= "11";
         zoo_0 <= hc_sl(not hc_uns(noo));
         hc_19 <= hc_sl(hc_uns(hc_14) or hc_uns(zoo_0));
         hc_20 <= hc_19 & hc_19;
@@ -201,6 +194,7 @@ let%expect_test "example" =
         hc_1 <= fff;
         hc_15 <= hc_sl(not hc_uns(hc_10));
         noo <= hc_sl(hc_uns(hc_12) - hc_uns(hc_15));
+        hc_27 <= '0';
         hc_4 <= clear;
         hc_6 <= reset;
         hc_8 <= clock;
@@ -209,7 +203,7 @@ let%expect_test "example" =
         hc_14 <= hc_sl(hc_uns(hc_12) + hc_uns(hc_10));
         process (hc_8, hc_6) begin
             if rising_edge(hc_6) then
-                hc_28 <= hc_26;
+                hc_28 <= hc_27;
             else
                 if rising_edge(hc_8) then
                     if hc_4 = '1' then
@@ -222,15 +216,11 @@ let%expect_test "example" =
                 end if;
             end if;
         end process;
-
-        -- aliases
         aaa <= bbb;
         eee <= fff;
         ddd <= fff;
         ccc <= fff;
         coo <= noo;
-
-        -- output assignments
         zoo <= hc_28;
         moo <= hc_1;
 

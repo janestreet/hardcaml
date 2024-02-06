@@ -19,37 +19,47 @@ module Traced_nodes = struct
     mangler
   ;;
 
-  let create_node mangler signal =
-    let names = Signal.names signal |> List.map ~f:(Mangler.mangle mangler) in
-    { Traced.signal; names }
+  let internal_signal mangler signal =
+    let mangled_names = Signal.names signal |> List.map ~f:(Mangler.mangle mangler) in
+    { Traced.signal; mangled_names }
+  ;;
+
+  let io_port signal =
+    let name = Signal.names signal |> List.hd_exn in
+    { Traced.signal; name }
   ;;
 
   let create circuit ~is_internal_port =
-    match is_internal_port with
-    | None -> []
-    | Some f ->
-      let mangler = create_mangler circuit in
-      Signal_graph.filter (Circuit.signal_graph circuit) ~f:(fun s ->
-        (not (Circuit.is_input circuit s))
-        && (not (Circuit.is_output circuit s))
-        && (not (Signal.is_empty s))
-        && f s)
-      |> List.rev
-      |> List.map ~f:(create_node mangler)
+    let internal_signals =
+      match is_internal_port with
+      | None -> []
+      | Some f ->
+        let mangler = create_mangler circuit in
+        Signal_graph.filter (Circuit.signal_graph circuit) ~f:(fun s ->
+          (not (Circuit.is_input circuit s))
+          && (not (Circuit.is_output circuit s))
+          && (not (Signal.is_empty s))
+          && f s)
+        |> List.rev
+        |> List.map ~f:(internal_signal mangler)
+    in
+    { Traced.input_ports = List.map (Circuit.inputs circuit) ~f:io_port
+    ; output_ports = List.map (Circuit.outputs circuit) ~f:io_port
+    ; internal_signals
+    }
   ;;
 end
 
 module Maps : sig
   type t
 
-  val create : traced:Cyclesim0.Traced.t list -> Schedule.t -> t
+  val create : traced:Cyclesim0.Traced.internal_signal list -> Schedule.t -> t
   val find_data : t -> Signal.t -> Bits.Mutable.t option
   val find_data_exn : t -> Signal.t -> Bits.Mutable.t
   val find_data_or_empty : t -> Signal.t -> Bits.Mutable.t
   val find_reg_exn : t -> Signal.t -> Bits.Mutable.t
+  val find_mem : t -> Signal.t -> Bits.Mutable.t array option
   val find_mem_exn : t -> Signal.t -> Bits.Mutable.t array
-  val find_reg_current_by_name : t -> string -> Bits.Mutable.t option
-  val find_mem_by_name : t -> string -> Bits.Mutable.t array option
 end = struct
   type t =
     { data : Bits.Mutable.t Map.M(Signal.Uid).t
@@ -68,9 +78,9 @@ end = struct
   ;;
 
   let create_name_to_uid traced =
-    List.concat_map traced ~f:(fun { Cyclesim0.Traced.signal; names } ->
+    List.concat_map traced ~f:(fun { Cyclesim0.Traced.signal; mangled_names } ->
       let uid = Signal.uid signal in
-      List.map names ~f:(fun name -> name, uid))
+      List.map mangled_names ~f:(fun name -> name, uid))
     |> Map.of_alist_exn (module String)
   ;;
 
@@ -130,22 +140,8 @@ end = struct
 
   let find_reg_by_uid_exn maps uid = Map.find_exn maps.reg uid
   let find_reg_exn maps signal = find_reg_by_uid_exn maps (uid signal)
+  let find_mem maps signal = Map.find maps.mem (uid signal)
   let find_mem_exn maps signal = Map.find_exn maps.mem (uid signal)
-
-  let name_to_uid maps name =
-    let%map.Option uid = Map.find maps.name_to_uid name in
-    alias_or_self maps uid
-  ;;
-
-  let find_mem_by_name maps name =
-    let%bind.Option uid = name_to_uid maps name in
-    Map.find maps.mem uid
-  ;;
-
-  let find_reg_current_by_name maps name =
-    let%bind.Option uid = name_to_uid maps name in
-    if Map.mem maps.reg uid then Some (Map.find_exn maps.data uid) else None
-  ;;
 end
 
 module Io_ports = struct
@@ -226,7 +222,7 @@ module Compile = struct
     let find_exn signal = Maps.find_data_exn maps signal in
     let find_or_empty signal = Maps.find_data_or_empty maps signal in
     let tgt = find_exn signal in
-    let deps = List.map (Signal.deps signal) ~f:find_or_empty in
+    let deps = Signal.Type.Deps.map signal ~f:find_or_empty in
     match signal with
     | Empty -> raise_s [%message "Can't compile empty signal"]
     | Const _ -> None
@@ -511,7 +507,7 @@ module Compile = struct
     match signal with
     | Multiport_mem { size; write_ports; _ } ->
       let mem = Maps.find_mem_exn maps signal in
-      let multi_mem_wr (write_port : Signal.write_port) =
+      let multi_mem_wr (write_port : _ Write_port.t) =
         let we = Maps.find_data_exn maps write_port.write_enable in
         let w = Maps.find_data_exn maps write_port.write_address in
         let d = Maps.find_data_exn maps write_port.write_data in
@@ -581,83 +577,6 @@ module Last_layer = struct
   ;;
 end
 
-module Compute_digest = struct
-  let initial = Md5_lib.string "digest of hardcaml simulation"
-
-  let get_out_ports out_ports_before out_ports_after =
-    let ports = [ out_ports_before; out_ports_after ] |> List.concat |> List.map ~f:snd in
-    let length =
-      List.fold ports ~init:0 ~f:(fun total bits ->
-        total + Bits.number_of_data_bytes !bits)
-    in
-    ports, length
-  ;;
-
-  let get_traced_ports traced lookup =
-    let ports =
-      List.concat_map traced ~f:(fun { Cyclesim0.Traced.signal; names } ->
-        List.init (List.length names) ~f:(Fn.const (lookup signal |> Option.value_exn)))
-    in
-    let length =
-      List.fold ports ~init:0 ~f:(fun total bits ->
-        total + Bits.Mutable.number_of_data_bytes bits)
-    in
-    List.rev ports, length
-  ;;
-
-  let copy_traced_ports digestable_string pos traced_ports =
-    List.fold traced_ports ~init:pos ~f:(fun pos bits ->
-      let length = Bits.Mutable.number_of_data_bytes bits in
-      Bytes.blito
-        ~src_pos:Bits.Expert.offset_for_data
-        ~src:(bits :> Bytes.t)
-        ~dst:digestable_string
-        ~dst_pos:pos
-        ();
-      pos + length)
-  ;;
-
-  let copy_out_ports digestable_string pos out_ports =
-    List.fold out_ports ~init:pos ~f:(fun pos bits ->
-      let length = Bits.number_of_data_bytes !bits in
-      Bytes.blito
-        ~src_pos:Bits.Expert.offset_for_data
-        ~src:(Bits.Expert.unsafe_underlying_repr !bits)
-        ~dst:digestable_string
-        ~dst_pos:pos
-        ();
-      pos + length)
-  ;;
-
-  let create out_ports_before out_ports_after traced lookup =
-    let digest = ref initial in
-    let digest_length = String.length (Md5_lib.to_binary !digest) in
-    let traced_ports, traced_ports_length = get_traced_ports traced lookup in
-    let out_ports, out_ports_length = get_out_ports out_ports_before out_ports_after in
-    let total_length = digest_length + out_ports_length + traced_ports_length in
-    let digestable_string = Bytes.init total_length ~f:(Fn.const '\000') in
-    let start_digest () =
-      assert (
-        copy_traced_ports
-          digestable_string
-          (digest_length + out_ports_length)
-          traced_ports
-        = Bytes.length digestable_string)
-    in
-    let finish_digest () =
-      assert (
-        copy_out_ports digestable_string digest_length out_ports
-        = digest_length + out_ports_length);
-      Bytes.blito
-        ~src:(Md5_lib.to_binary !digest |> Bytes.of_string)
-        ~dst:digestable_string
-        ();
-      digest := Md5_lib.bytes digestable_string
-    in
-    digest, start_digest, finish_digest
-  ;;
-end
-
 let create ?(config = Cyclesim0.Config.default) circuit =
   let circuit =
     if config.deduplicate_signals then Dedup.deduplicate circuit else circuit
@@ -667,7 +586,7 @@ let create ?(config = Cyclesim0.Config.default) circuit =
   let bundle = Schedule.create circuit in
   let aliases = Schedule.aliases bundle in
   (* build maps *)
-  let maps : Maps.t = Maps.create ~traced bundle in
+  let maps : Maps.t = Maps.create ~traced:traced.internal_signals bundle in
   let compile =
     Compile.signal
       ~combinational_ops_database:config.combinational_ops_database
@@ -687,27 +606,11 @@ let create ?(config = Cyclesim0.Config.default) circuit =
       ; [ Staged.unstage (Compile.register_update maps (Schedule.regs bundle)) ]
       ]
   in
-  let assertions =
-    Map.map (Circuit.assertions circuit) ~f:(fun asn_signal ->
-      Maps.find_data_exn maps asn_signal)
-  in
   (* reset *)
   let resets =
     List.filter_opt (List.map (Schedule.regs bundle) ~f:(Compile.reset maps))
   in
   let { Io_ports.in_ports; out_ports } = Io_ports.create circuit maps in
-  let violated_assertions = Hashtbl.create (module String) in
-  let cycle_no = ref 0 in
-  let check_assertions_task () =
-    Map.iteri assertions ~f:(fun ~key ~data:asn_value ->
-      if Bits.Mutable.Comb.is_gnd asn_value
-      then Hashtbl.add_multi violated_assertions ~key ~data:!cycle_no);
-    cycle_no := !cycle_no + 1
-  in
-  let clear_violated_assertions_task () =
-    Hashtbl.clear violated_assertions;
-    cycle_no := 0
-  in
   (* simulator structure *)
   let task tasks =
     let tasks = Array.of_list tasks in
@@ -759,46 +662,46 @@ let create ?(config = Cyclesim0.Config.default) circuit =
     then Last_layer.create ~aliases circuit tasks_comb
     else tasks_before_clock_edge
   in
-  let lookup = Maps.find_data maps in
-  let lookup_reg = Maps.find_reg_current_by_name maps in
-  let lookup_mem = Maps.find_mem_by_name maps in
-  let digest, start_digest_task, finish_digest_task =
-    if config.compute_digest
-    then
-      Compute_digest.create
-        out_ports_before_clock_edge
-        out_ports_after_clock_edge
-        traced
-        lookup
-    else ref Compute_digest.initial, Fn.id, Fn.id
+  let lookup_node (t : Traced.internal_signal) =
+    if Signal.Type.is_mem t.signal || Signal.Type.is_reg t.signal
+    then None
+    else
+      Maps.find_data maps t.signal
+      |> Option.map ~f:Cyclesim_lookup.Node.create_from_bits_mutable
   in
-  { Cyclesim0.in_ports
-  ; out_ports_after_clock_edge
-  ; out_ports_before_clock_edge
-  ; inputs = in_ports
-  ; traced
-  ; lookup
-  ; lookup_reg
-  ; lookup_mem
-  ; outputs_after_clock_edge = out_ports_after_clock_edge
-  ; outputs_before_clock_edge = out_ports_before_clock_edge
-  ; cycle_check = task tasks_check
-  ; cycle_before_clock_edge =
-      tasks
-        [ [ in_ports_task ]
-        ; tasks_before_clock_edge
-        ; [ start_digest_task ]
-        ; tasks_regs
-        ; [ out_ports_before_clock_edge_task ]
-        ; [ check_assertions_task ]
-        ]
-  ; cycle_at_clock_edge = task tasks_at_clock_edge
-  ; cycle_after_clock_edge =
-      tasks [ tasks_after_clock_edge; [ out_ports_task; finish_digest_task ] ]
-  ; reset = tasks [ resets; [ clear_violated_assertions_task ] ]
-  ; violated_assertions
-  ; digest
-  ; circuit = (if config.store_circuit then Some circuit else None)
-  ; assertions
-  }
+  let lookup_reg (t : Traced.internal_signal) =
+    if not (Signal.Type.is_reg t.signal)
+    then None
+    else
+      Maps.find_data maps t.signal
+      |> Option.map ~f:Cyclesim_lookup.Reg.create_from_bits_mutable
+  in
+  let lookup_mem (t : Traced.internal_signal) =
+    if not (Signal.Type.is_mem t.signal)
+    then None
+    else
+      Maps.find_mem maps t.signal
+      |> Option.map ~f:Cyclesim_lookup.Memory.create_from_bits_mutable_array
+  in
+  Cyclesim0.Private.create
+    ~in_ports
+    ~out_ports_after_clock_edge
+    ~out_ports_before_clock_edge
+    ~traced
+    ~lookup_node
+    ~lookup_reg
+    ~lookup_mem
+    ~cycle_check:(task tasks_check)
+    ~cycle_before_clock_edge:
+      (tasks
+         [ [ in_ports_task ]
+         ; tasks_before_clock_edge
+         ; tasks_regs
+         ; [ out_ports_before_clock_edge_task ]
+         ])
+    ~cycle_at_clock_edge:(task tasks_at_clock_edge)
+    ~cycle_after_clock_edge:(tasks [ tasks_after_clock_edge; [ out_ports_task ] ])
+    ~reset:(task resets)
+    ?circuit:(if config.store_circuit then Some circuit else None)
+    ()
 ;;

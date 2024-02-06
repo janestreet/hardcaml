@@ -24,13 +24,13 @@ let find_elements circuit =
     ~f_before:(fun (regs, mems, consts, inputs, comb_signals) signal ->
     if Signal.is_empty signal
     then regs, mems, consts, inputs, comb_signals
-    else if Signal.is_reg signal
+    else if Signal.Type.is_reg signal
     then signal :: regs, mems, consts, inputs, comb_signals
-    else if Signal.is_const signal
+    else if Signal.Type.is_const signal
     then regs, mems, signal :: consts, inputs, comb_signals
     else if Circuit.is_input circuit signal
     then regs, mems, consts, signal :: inputs, comb_signals
-    else if Signal.is_mem signal
+    else if Signal.Type.is_mem signal
     then regs, signal :: mems, consts, inputs, comb_signals
     else regs, mems, consts, inputs, signal :: comb_signals)
 ;;
@@ -49,7 +49,7 @@ let rec unwrap_signal (signal : Signal.t) =
 
 let unwrap_wire signal =
   match signal with
-  | Signal.Wire _ -> unwrap_signal signal
+  | Signal.Type.Wire _ -> unwrap_signal signal
   | _ -> None
 ;;
 
@@ -74,7 +74,9 @@ let create_aliases signal_graph =
    Note that all signals in the graph cannot be reached from just the outputs of a
    circuit using these dependencies. The (discarded) inputs to all registers and
    memories must also be included. *)
-let scheduling_deps (s : Signal.t) = Signal_graph.deps_for_simulation_scheduling s
+let scheduling_deps =
+  (module Signal_graph.Deps_for_simulation_scheduling : Signal.Type.Deps)
+;;
 
 let create circuit =
   let regs, mems, consts, inputs, comb_signals = find_elements circuit in

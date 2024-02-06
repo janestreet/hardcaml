@@ -316,7 +316,7 @@ let%expect_test "memory" =
 ;;
 
 let%expect_test "test depth" =
-  Signal.sexp_of_signal_recursive ~depth:3 (input "a" 1 <=: input "b" 1) |> print_s;
+  Signal.Type.sexp_of_signal_recursive ~depth:3 (input "a" 1 <=: input "b" 1) |> print_s;
   [%expect
     {|
     (not
@@ -336,7 +336,7 @@ let%expect_test "test depth" =
 ;;
 
 let%expect_test "test instantiation" =
-  Signal.sexp_of_signal_recursive
+  Signal.Type.sexp_of_signal_recursive
     ~depth:2
     (Map.find_exn
        (Instantiation.create

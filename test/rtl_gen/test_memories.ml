@@ -47,7 +47,7 @@ let circuit =
 ;;
 
 let%expect_test "memory " =
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true circuit;
+  Testing.analyse_vhdl_and_verilog ~show:true circuit;
   [%expect
     {|
     module mem (
@@ -70,7 +70,6 @@ let%expect_test "memory " =
         output [31:0] q2;
         output q3;
 
-        /* signal declarations */
         wire _11;
         wire _10;
         reg [0:0] _12[0:1];
@@ -84,8 +83,6 @@ let%expect_test "memory " =
         wire [31:0] q1_1;
         reg [31:0] _18[0:127];
         wire [31:0] _19;
-
-        /* logic */
         assign _11 = d[0:0];
         assign _10 = wa[0:0];
         always @(posedge clock) begin
@@ -106,12 +103,8 @@ let%expect_test "memory " =
                 _18[wa] <= d;
         end
         assign _19 = _18[ra];
-
-        /* aliases */
         assign q1_0 = q2_0;
         assign q1_1 = q2_1;
-
-        /* output assignments */
         assign q1 = _19;
         assign q2 = q2_1;
         assign q3 = q2_0;
@@ -124,12 +117,12 @@ let%expect_test "memory " =
     entity mem is
         port (
             we : in std_logic;
-            d : in std_logic_vector (31 downto 0);
-            wa : in std_logic_vector (6 downto 0);
+            d : in std_logic_vector(31 downto 0);
+            wa : in std_logic_vector(6 downto 0);
             clock : in std_logic;
-            ra : in std_logic_vector (6 downto 0);
-            q1 : out std_logic_vector (31 downto 0);
-            q2 : out std_logic_vector (31 downto 0);
+            ra : in std_logic_vector(6 downto 0);
+            q1 : out std_logic_vector(31 downto 0);
+            q2 : out std_logic_vector(31 downto 0);
             q3 : out std_logic
         );
     end entity;
@@ -148,8 +141,6 @@ let%expect_test "memory " =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
         signal hc_11 : std_logic;
         signal hc_10 : std_logic;
         type hc_12_type is array (0 to 1) of std_logic;
@@ -157,19 +148,18 @@ let%expect_test "memory " =
         signal hc_9 : std_logic;
         signal q2_0 : std_logic;
         signal q1_0 : std_logic;
-        signal hc_15 : std_logic_vector (3 downto 0);
+        signal hc_15 : std_logic_vector(3 downto 0);
         type hc_16_type is array (0 to 15) of std_logic_vector(31 downto 0);
         signal hc_16 : hc_16_type;
-        signal hc_14 : std_logic_vector (3 downto 0);
-        signal q2_1 : std_logic_vector (31 downto 0);
-        signal q1_1 : std_logic_vector (31 downto 0);
+        signal hc_14 : std_logic_vector(3 downto 0);
+        signal q2_1 : std_logic_vector(31 downto 0);
+        signal q1_1 : std_logic_vector(31 downto 0);
         type hc_18_type is array (0 to 127) of std_logic_vector(31 downto 0);
         signal hc_18 : hc_18_type;
-        signal hc_19 : std_logic_vector (31 downto 0);
+        signal hc_19 : std_logic_vector(31 downto 0);
 
     begin
 
-        -- logic
         hc_11 <= hc_sl(d(0 downto 0));
         hc_10 <= hc_sl(wa(0 downto 0));
         process (clock) begin
@@ -199,12 +189,8 @@ let%expect_test "memory " =
             end if;
         end process;
         hc_19 <= hc_18(to_integer(hc_uns(ra)));
-
-        -- aliases
         q1_0 <= q2_0;
         q1_1 <= q2_1;
-
-        -- output assignments
         q1 <= hc_19;
         q2 <= q2_1;
         q3 <= q2_0;

@@ -1,6 +1,7 @@
 open Base
 
-let tab = "    "
+let tab_len = 4
+let tab = String.init tab_len ~f:(Fn.const ' ')
 let tab2 = tab ^ tab
 let spaces n = String.init n ~f:(Fn.const ' ')
 
@@ -22,11 +23,7 @@ let output name range = [%string "output%{range_and_name name range}"]
 let reg name range = [%string "reg%{range_and_name name range}"]
 let wire name range = [%string "wire%{range_and_name name range}"]
 
-let attributes_of_signal signal =
-  if Signal.is_empty signal then [] else Signal.attributes signal
-;;
-
-let attributes (attributes : Rtl_attribute.t list) =
+let attributes_to_string (attributes : Rtl_attribute.t list) =
   let attrs =
     List.map attributes ~f:(fun attr ->
       match Rtl_attribute.value attr with
@@ -47,18 +44,20 @@ let declare_io_ports buffer (ast : Rtl_ast.t) =
   let add_string = Buffer.add_string buffer in
   let io_ports =
     List.concat
-      [ List.map ast.inputs ~f:(fun { name; range; signal; _ } ->
+      [ List.map ast.inputs ~f:(fun { name; range; attributes; _ } ->
           ( name
-          , match attributes_of_signal signal with
+          , match attributes with
             | [] -> input name range
-            | attrs -> [%string "%{attributes attrs}\n%{tab}%{input name range}"] ))
+            | attrs ->
+              [%string "%{attributes_to_string attrs}\n%{tab}%{input name range}"] ))
       ; List.map
           ast.outputs
-          ~f:(fun { output = { name; range; signal; _ }; driven_by = _ } ->
+          ~f:(fun { output = { name; range; attributes; _ }; driven_by = _ } ->
           ( name
-          , match attributes_of_signal signal with
+          , match attributes with
             | [] -> output name range
-            | attrs -> [%string "%{attributes attrs}\n%{tab}%{output name range}"] ))
+            | attrs ->
+              [%string "%{attributes_to_string attrs}\n%{tab}%{output name range}"] ))
       ]
   in
   let io_ports_decl =
@@ -76,34 +75,25 @@ let declare_io_ports buffer (ast : Rtl_ast.t) =
 let write_attributes buffer attrs =
   match attrs with
   | [] -> ()
-  | attrs -> Buffer.add_string buffer [%string "%{tab}%{attributes attrs}\n"]
+  | attrs -> Buffer.add_string buffer [%string "%{tab}%{attributes_to_string attrs}\n"]
 ;;
 
-let get_comment signal =
-  Option.map (Signal.comment signal) ~f:(fun c -> [%string "/* %{c} */"])
-  |> Option.value ~default:""
+let get_comment comment =
+  Option.map comment ~f:(fun c -> [%string "/* %{c} */"]) |> Option.value ~default:""
 ;;
 
 let declaration buffer (decl : Rtl_ast.declaration) =
   let add_string = Buffer.add_string buffer in
-  let write_attr (var : Rtl_ast.var) =
-    write_attributes buffer (attributes_of_signal var.signal)
-  in
+  let write_attr (var : Rtl_ast.var) = write_attributes buffer var.attributes in
   let is_write_var (decl : Rtl_ast.logic_declaration) var =
     Rtl_ast.equal_var var decl.write
   in
   let write_var ~write_attrs decl (var : Rtl_ast.var) =
-    let comment = get_comment var.signal in
-    (* The old generator writes atrributes on aliases also. Which I think it probably
-       shouldn't. *)
+    let comment = get_comment var.comment in
+    (* we write attributes on the aliases as well - which is one choice. *)
     if write_attrs then write_attr var;
     if Rtl_ast.equal_reg_or_wire var.reg_or_wire Reg && is_write_var decl var
     then add_string [%string "%{tab}%{reg var.name var.range}%{comment};\n"]
-    else if Signal.is_const var.signal && is_write_var decl var
-    then (
-      let const = Signal.const_value var.signal in
-      let const = [%string "%{(Bits.width const)#Int}'b%{(Bits.to_bstr const)}"] in
-      add_string [%string "%{tab}%{wire var.name var.range}%{comment} = %{const};\n"])
     else add_string [%string "%{tab}%{wire var.name var.range}%{comment};\n"]
   in
   match decl with
@@ -111,7 +101,7 @@ let declaration buffer (decl : Rtl_ast.declaration) =
   | Inst inst -> List.iter inst.all_names ~f:(write_var ~write_attrs:false inst)
   | Multiport_memory { memory; depth; range = r; _ } ->
     let range = range_compat r in
-    let comment = get_comment memory.signal in
+    let comment = get_comment memory.comment in
     write_attr memory;
     add_string
       [%string "%{tab}reg%{range} %{memory.name}[0:%{(depth-1)#Int}]%{comment};\n"]
@@ -160,17 +150,10 @@ let rec write_always indent buffer (t : Rtl_ast.always) =
     add_string [%string "%{indent}case (%{select.name})\n"];
     let num_cases = List.length cases in
     List.iteri cases ~f:(fun index case ->
-      match case with
-      | [ Assignment { lhs; rhs } ] ->
-        if index = num_cases - 1
-        then add_string [%string "%{indent}default: %{lhs.name} <= %{rhs.name};\n"]
-        else add_string [%string "%{indent}%{index#Int}: %{lhs.name} <= %{rhs.name};\n"]
-      | _ ->
-        if index = num_cases - 1
-        then add_string [%string "%{indent}default:\n"]
-        else add_string [%string "%{indent}%{index#Int}:\n"];
-        block indent case ~f:(fun indent ->
-          List.iter case ~f:(write_always indent buffer)));
+      if index = num_cases - 1
+      then add_string [%string "%{indent}default:\n"]
+      else add_string [%string "%{indent}%{index#Int}:\n"];
+      block indent case ~f:(fun indent -> List.iter case ~f:(write_always indent buffer)));
     add_string [%string "%{indent}endcase\n"]
 ;;
 
@@ -217,7 +200,7 @@ let write_instantiation buffer (instantiation : Rtl_ast.instantiation) =
   let add_string = Buffer.add_string buffer in
   write_attributes buffer instantiation.attributes;
   add_string [%string "%{tab}%{instantiation.name}\n"];
-  let sep = ",\n" ^ spaces 10 in
+  let sep = [%string ",\n%{spaces (tab_len*2 + 3)}"] in
   (match instantiation.parameters with
    | [] -> ()
    | parameters ->
@@ -230,6 +213,7 @@ let write_instantiation buffer (instantiation : Rtl_ast.instantiation) =
      in
      add_string [%string "%{tab2}#( %{parameters} )\n"]);
   add_string [%string "%{tab2}%{instantiation.instance}\n"];
+  let sep = [%string ",\n%{spaces (tab_len*2 + 2)}"] in
   let input_ports =
     List.map instantiation.input_ports ~f:(fun { port_name; connection } ->
       [%string ".%{port_name}(%{connection.name})"])
@@ -264,7 +248,7 @@ let rec statement buffer (stat : Rtl_ast.statement) =
   | Assignment (Not { lhs; arg }) ->
     add_string [%string "%{tab}assign %{lhs.name} = ~ %{arg.name};\n"]
   | Assignment (Concat { lhs; args }) ->
-    let sep = ",\n" ^ spaces (String.length lhs.name + 16) in
+    let sep = ",\n" ^ spaces (String.length lhs.name + ((tab_len * 3) + 4)) in
     let args = List.map args ~f:(fun arg -> arg.name) |> String.concat ~sep in
     add_string [%string "%{tab}assign %{lhs.name} = { %{args} };\n"]
   | Assignment (Binop { lhs; arg_a; op; arg_b; signed = false }) ->
@@ -280,7 +264,10 @@ let rec statement buffer (stat : Rtl_ast.statement) =
   | Assignment (Select { lhs; arg; high; low }) ->
     add_string
       [%string "%{tab}assign %{lhs.name} = %{arg.name}[%{high#Int}:%{low#Int}];\n"]
-  | Assignment (Const { lhs = _; constant = _ }) -> ()
+  | Assignment (Const { lhs; constant }) ->
+    add_string
+      [%string
+        "%{tab}assign %{lhs.name} = %{Bits.width constant#Int}'b%{Bits.to_bstr constant};\n"]
   | Assignment (Mux { lhs; select; cases = [ on_false; on_true ] }) ->
     add_string
       [%string
@@ -325,16 +312,9 @@ let write_aliases buffer (ast : Rtl_ast.t) =
 let to_buffer buffer (ast : Rtl_ast.t) =
   let add_string = Buffer.add_string buffer in
   declare_io_ports buffer ast;
-  if ast.blackbox
-  then add_string "endmodule\n"
-  else (
-    add_string [%string "%{tab}/* signal declarations */\n"];
-    declarations buffer ast;
-    add_string [%string "\n%{tab}/* logic */\n"];
-    statements buffer ast;
-    add_string [%string "\n%{tab}/* aliases */\n"];
-    write_aliases buffer ast;
-    add_string [%string "\n%{tab}/* output assignments */\n"];
-    output_assignments buffer ast;
-    add_string "\nendmodule\n")
+  declarations buffer ast;
+  statements buffer ast;
+  write_aliases buffer ast;
+  output_assignments buffer ast;
+  add_string "\nendmodule\n"
 ;;

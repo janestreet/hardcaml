@@ -17,6 +17,13 @@ val diff_and_analyse
   -> Hardcaml.Circuit.t
   -> unit
 
+val analyse_vhdl_and_verilog
+  :  ?quiet:bool
+  -> ?show:bool
+  -> ?blackbox:bool
+  -> Hardcaml.Circuit.t
+  -> unit
+
 val diff_and_analyse_vhdl_and_verilog
   :  ?quiet:bool
   -> ?show:bool

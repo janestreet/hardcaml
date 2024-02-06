@@ -17,10 +17,9 @@ depends: [
   "ppx_jane"
   "ppx_sexp_conv"
   "stdio"
-  "topological_sort"
-  "dune"             {>= "2.0.0"}
-  "ppxlib"           {>= "0.28.0"}
-  "zarith"           {>= "1.11"}
+  "dune"          {>= "2.0.0"}
+  "ppxlib"        {>= "0.28.0"}
+  "zarith"        {>= "1.11"}
 ]
 available: arch != "arm32" & arch != "x86_32"
 synopsis: "RTL Hardware Design in OCaml"

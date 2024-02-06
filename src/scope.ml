@@ -96,14 +96,6 @@ let name ?(sep = Path.default_path_seperator) scope n =
 let instance (scope : t) = List.hd scope.path
 let naming ?sep scope s n = Signal.( -- ) s (name ?sep scope n)
 
-let add_assertion scope asn_name asn =
-  if not scope.trace_properties
-  then ()
-  else (
-    let asn_name = name scope asn_name in
-    Assertion_manager.add scope.assertion_manager asn_name asn)
-;;
-
 let make_ltl_ap scope name signal =
   let wire = Signal.wireof signal in
   let wire = naming scope wire ("ap" ^ Path.default_path_seperator ^ name) in
@@ -118,11 +110,10 @@ let add_ltl_property scope property_name property =
     Property_manager.add_ltl scope.property_manager property_name property)
 ;;
 
-let assertion_manager scope = scope.assertion_manager
-let property_manager scope = scope.property_manager
+let assertion_manager scope =
+  if scope.trace_properties then Some scope.assertion_manager else None
+;;
 
-let assert_signal_in_always scope asn_name asn =
-  let asn_var = Always.Variable.wire ~default:(Signal.one 1) in
-  add_assertion scope asn_name (Always.Variable.value asn_var);
-  Always.( <-- ) asn_var asn
+let property_manager scope =
+  if scope.trace_properties then Some scope.property_manager else None
 ;;

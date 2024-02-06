@@ -26,8 +26,8 @@ val clock : Signal.t = (wire (names (clock)) (width 1) (data_in empty))
 # let clear = Signal.input "clear" 1
 val clear : Signal.t = (wire (names (clear)) (width 1) (data_in empty))
 # let spec = Reg_spec.create ~clock ~clear ()
-val spec : Signal.register =
-  {Hardcaml.Signal.reg_clock =
+val spec : Reg_spec.t =
+  {Hardcaml.Reg_spec.reg_clock =
     (wire (names (clock)) (width 1) (data_in empty));
    reg_clock_edge = Hardcaml__.Edge.Rising; reg_reset = empty;
    reg_reset_edge = Hardcaml__.Edge.Rising; reg_reset_value = empty;
@@ -44,8 +44,8 @@ when it is reset or cleared.
 
 ```ocaml
 # let new_spec = Reg_spec.override spec ~clear_to:Signal.vdd
-val new_spec : Signal.register =
-  {Hardcaml.Signal.reg_clock =
+val new_spec : Reg_spec.t =
+  {Hardcaml.Reg_spec.reg_clock =
     (wire (names (clock)) (width 1) (data_in empty));
    reg_clock_edge = Hardcaml__.Edge.Rising; reg_reset = empty;
    reg_reset_edge = Hardcaml__.Edge.Rising; reg_reset_value = empty;
@@ -64,9 +64,9 @@ A simple register takes a signal as input and basically delays it for one cycle.
 
 ```ocaml
 # let d_in = Signal.input "d_in" 8
-val d_in : Signal.t = (wire (names (d_in)) (width 8) (data_in empty))
+val d_in : Reg_spec.signal = (wire (names (d_in)) (width 8) (data_in empty))
 # let q_out = Signal.reg spec ~enable:Signal.vdd d_in
-val q_out : Signal.t =
+val q_out : Reg_spec.signal =
   (register (width 8)
  ((clock clock) (clock_edge Rising) (clear clear) (clear_level High)
   (clear_to 0b00000000) (enable 0b1))
@@ -77,7 +77,7 @@ The pipeline function will delay its input for multiple cycles.
 
 ```ocaml
 # let q_out_after_3_clocks = Signal.pipeline spec ~enable:Signal.vdd ~n:3 d_in
-val q_out_after_3_clocks : Signal.t =
+val q_out_after_3_clocks : Reg_spec.signal =
   (register (width 8)
  ((clock clock) (clock_edge Rising) (clear clear) (clear_level High)
   (clear_to 0b00000000) (enable 0b1))
@@ -96,7 +96,7 @@ the next one.
 
 ```ocaml
 # let counter = Signal.reg_fb spec ~enable:Signal.vdd  ~width:8 ~f:(fun d -> Signal.(d +:. 1))
-val counter : Signal.t =
+val counter : Reg_spec.signal =
   (register (width 8)
  ((clock clock) (clock_edge Rising) (clear clear) (clear_level High)
   (clear_to 0b00000000) (enable 0b1))
@@ -111,7 +111,7 @@ passes its input through to its output.
 
 ```ocaml
 # let w = Signal.wire 1;;
-val w : Signal.t = (wire (width 1) (data_in empty))
+val w : Reg_spec.signal = (wire (width 1) (data_in empty))
 ```
 
 Wires can later be assigned an input driver.
@@ -120,7 +120,7 @@ Wires can later be assigned an input driver.
 # Signal.(w <== vdd);;
 - : unit = ()
 # w;;
-- : Signal.t = (wire (width 1) (data_in 0b1))
+- : Reg_spec.signal = (wire (width 1) (data_in 0b1))
 ```
 
 Apart from the fact they logically do nothing, they are really useful!
@@ -133,8 +133,9 @@ It is how the `reg_fb` function is implemented.
     Signal.(d <== q);
     q
 val reg_fb :
-  Signal.register ->
-  enable:Signal.t -> w:int -> (Signal.t -> Signal.t) -> Signal.t = <fun>
+  Reg_spec.t ->
+  enable:Reg_spec.signal ->
+  w:int -> (Reg_spec.signal -> Reg_spec.signal) -> Reg_spec.signal = <fun>
 ```
 
 Without wires we cannot express the above function since the input
@@ -183,12 +184,12 @@ let data = Signal.input "data" 32;;
 
 ```ocaml
 # let write_port =
-    { Signal.write_clock = clock
+    { Write_port.write_clock = clock
     ; write_address = address
     ; write_enable = write_enable
     ; write_data = data }
-val write_port : Signal.write_port =
-  {Hardcaml.Signal.write_clock =
+val write_port : Reg_spec.signal Write_port.t =
+  {Hardcaml.Write_port.write_clock =
     (wire (names (clock)) (width 1) (data_in empty));
    write_address = (wire (names (address)) (width 8) (data_in empty));
    write_enable = (wire (names (write_enable)) (width 1) (data_in empty));
@@ -200,14 +201,14 @@ is returned as an array, one for each read port.
 
 ```ocaml
 # let read_address = address
-val read_address : Signal.t =
+val read_address : Reg_spec.signal =
   (wire (names (address)) (width 8) (data_in empty))
 # let q =
     Signal.multiport_memory
       256
       ~write_ports:[|write_port|]
       ~read_addresses:[|read_address|]
-val q : Signal.t array =
+val q : Reg_spec.signal array =
   [|(memory_read_port (width 32)
  ((memory multiport_memory) (read_addresses address)))|]
 ```
@@ -226,11 +227,11 @@ later.
 
 ```ocaml
 # let read_port =
-    { Signal.read_clock = clock
+    { Read_port.read_clock = clock
     ; read_address
     ; read_enable = Signal.input "read_enable" 1 }
-val read_port : Signal.read_port =
-  {Hardcaml.Signal.read_clock =
+val read_port : Reg_spec.signal Read_port.t =
+  {Hardcaml.Read_port.read_clock =
     (wire (names (clock)) (width 1) (data_in empty));
    read_address = (wire (names (address)) (width 8) (data_in empty));
    read_enable = (wire (names (read_enable)) (width 1) (data_in empty))}
@@ -246,7 +247,7 @@ Each read port can have a different clock.
       ~write_ports:[|write_port|]
       ~read_ports:[|read_port|]
       ()
-val q : Signal.t array =
+val q : Reg_spec.signal array =
   [|(register (width 32) ((clock clock) (clock_edge Rising) (enable read_enable))
  (data_in memory_read_port))|]
 ```

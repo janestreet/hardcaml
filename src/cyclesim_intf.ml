@@ -3,7 +3,9 @@ open Base
 module type Cyclesim = sig
   module Port_list = Cyclesim0.Port_list
   module Traced = Cyclesim0.Traced
-  module Digest = Cyclesim0.Digest
+  module Node = Cyclesim0.Node
+  module Reg = Cyclesim0.Reg
+  module Memory = Cyclesim0.Memory
   module Config = Cyclesim0.Config
 
   (** base type of the cycle based simulators *)
@@ -35,16 +37,10 @@ module type Cyclesim = sig
   (** get input port given a name *)
   val in_port : _ t -> string -> Bits.t ref
 
-  (** get a traced internal port given a name. *)
-  val internal_port : _ t -> string -> Bits.t ref
-
-  (** List of signals and their unique (mangled) names to be traced by the simulation.
-      Accessible via the [lookup] function. *)
-  val traced : _ t -> Traced.t list
-
-  (** Current state of an internal signal within the simulator. Value depends on the
-      current simulator step. *)
-  val lookup : _ t -> Signal.t -> Bits.Mutable.t option
+  (** Signals and their unique (mangled) names to be traced by the simulation. Includes
+      both IO ports and internal signals - the latter are accessible via the [lookup]
+      function. *)
+  val traced : _ t -> Traced.t
 
   (** Get output port given a name.  If [clock_edge] is [Before] the outputs are computed
       prior to the clock edge - [After] means the outputs are computed after the clock
@@ -59,7 +55,13 @@ module type Cyclesim = sig
   val outputs : ?clock_edge:Side.t -> (_, 'o) t -> 'o
   val in_ports : _ t -> Port_list.t
   val out_ports : ?clock_edge:Side.t -> _ t -> Port_list.t
-  val digest : _ t -> Digest.t ref
+
+  (** Current value of an internal (combinational) node within the simulator. *)
+  val lookup_node : _ t -> Traced.internal_signal -> Node.t option
+
+  val lookup_node_by_name : _ t -> string -> Node.t option
+  val lookup_node_or_reg : _ t -> Traced.internal_signal -> Node.t option
+  val lookup_node_or_reg_by_name : _ t -> string -> Node.t option
 
   (** Peek at internal registers, return Some _ if it's present. Note
       that the node must marked as traced in [Cyclesim.Config.t] when creating
@@ -67,25 +69,24 @@ module type Cyclesim = sig
       will change the simulation internal node's value and affect the results of
       simulation.
   *)
-  val lookup_reg : _ t -> string -> Bits.Mutable.t option
+  val lookup_reg : _ t -> Traced.internal_signal -> Reg.t option
+
+  val lookup_reg_by_name : _ t -> string -> Reg.t option
 
   (** Similar to [lookup_data], but for memories. This is very useful
       for initializing memory contents without having to simulate the entire
       circuit.
   *)
-  val lookup_mem : _ t -> string -> Bits.Mutable.t array option
+  val lookup_mem : _ t -> Traced.internal_signal -> Memory.t option
 
-  module Violated_or_not : sig
-    type t =
-      | Violated of int list (* cycles on which assertion was violated *)
-      | Not_violated
-    [@@deriving sexp_of]
-  end
-
-  val results_of_assertions : _ t -> Violated_or_not.t Map.M(String).t
+  val lookup_mem_by_name : _ t -> string -> Memory.t option
 
   (** construct a simulator from a circuit *)
-  val create : ?config:Config.t -> Circuit.t -> t_port_list
+  val create
+    :  ?implementation:[ `V1 | `V2 ]
+    -> ?config:Config.t
+    -> Circuit.t
+    -> t_port_list
 
   module Combine_error = Cyclesim_combine.Combine_error
 
@@ -109,7 +110,8 @@ module type Cyclesim = sig
     (** Create a simulator using the provided [Create_fn].  The returned simulator ports
         are coerced to the input and output interface types. *)
     val create
-      :  ?config:Config.t
+      :  ?implementation:[ `V1 | `V2 ]
+      -> ?config:Config.t
       -> ?circuit_config:Circuit.Config.t
       -> Circuit.With_interface(I)(O).create
       -> t
@@ -124,7 +126,12 @@ module type Cyclesim = sig
         with type ('i, 'o) t := ('i, 'o) t
          and type port_list = Port_list.t
          and type t_port_list := t_port_list
-         and type traced := Traced.t list
+         and type traced := Traced.t
+         and type traced_io_port := Traced.io_port
+         and type traced_internal_signal := Traced.internal_signal
+         and type reg = Reg.t
+         and type node = Node.t
+         and type memory = Memory.t
 
     module Traced_nodes : module type of Cyclesim_compile.Traced_nodes
   end

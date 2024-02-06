@@ -57,7 +57,7 @@ module C = Circuit.With_interface (I) (O)
 
 let%expect_test "operators" =
   let circuit = C.create_exn ~name:"operators" create in
-  Testing.diff_and_analyse_vhdl_and_verilog ~show:true circuit;
+  Testing.analyse_vhdl_and_verilog ~show:true circuit;
   [%expect
     {|
     module operators (
@@ -102,8 +102,7 @@ let%expect_test "operators" =
         output [7:0] o_mux2;
         output [7:0] o_mux;
 
-        /* signal declarations */
-        wire [7:0] _25 = 8'b10101011;
+        wire [7:0] _25;
         wire [7:0] _24;
         wire [1:0] _23;
         reg [7:0] _26;
@@ -126,16 +125,19 @@ let%expect_test "operators" =
         wire [7:0] _19;
         wire [7:0] _21;
         wire [7:0] _42;
-
-        /* logic */
+        assign _25 = 8'b10101011;
         assign _24 = _11[7:0];
         assign _23 = _21[2:1];
         always @* begin
             case (_23)
-            0: _26 <= _21;
-            1: _26 <= _19;
-            2: _26 <= _24;
-            default: _26 <= _25;
+            0:
+                _26 <= _21;
+            1:
+                _26 <= _19;
+            2:
+                _26 <= _24;
+            default:
+                _26 <= _25;
             endcase
         end
         assign _27 = _21[0:0];
@@ -160,10 +162,6 @@ let%expect_test "operators" =
         assign _19 = i_b;
         assign _21 = i_a;
         assign _42 = _21 & _19;
-
-        /* aliases */
-
-        /* output assignments */
         assign o_and = _42;
         assign o_or = module_0;
         assign o_xor = a_b;
@@ -188,25 +186,25 @@ let%expect_test "operators" =
 
     entity operators is
         port (
-            i_c : in std_logic_vector (9 downto 0);
-            i_b : in std_logic_vector (7 downto 0);
-            i_a : in std_logic_vector (7 downto 0);
-            o_and : out std_logic_vector (7 downto 0);
-            o_or : out std_logic_vector (7 downto 0);
-            o_xor : out std_logic_vector (7 downto 0);
-            o_not : out std_logic_vector (7 downto 0);
-            o_add : out std_logic_vector (7 downto 0);
-            o_sub : out std_logic_vector (7 downto 0);
-            o_mul : out std_logic_vector (17 downto 0);
-            o_smul : out std_logic_vector (17 downto 0);
+            i_c : in std_logic_vector(9 downto 0);
+            i_b : in std_logic_vector(7 downto 0);
+            i_a : in std_logic_vector(7 downto 0);
+            o_and : out std_logic_vector(7 downto 0);
+            o_or : out std_logic_vector(7 downto 0);
+            o_xor : out std_logic_vector(7 downto 0);
+            o_not : out std_logic_vector(7 downto 0);
+            o_add : out std_logic_vector(7 downto 0);
+            o_sub : out std_logic_vector(7 downto 0);
+            o_mul : out std_logic_vector(17 downto 0);
+            o_smul : out std_logic_vector(17 downto 0);
             o_eq : out std_logic;
             o_lt : out std_logic;
-            o_select1 : out std_logic_vector (1 downto 0);
-            o_select2 : out std_logic_vector (5 downto 0);
-            o_cat1 : out std_logic_vector (15 downto 0);
-            o_cat2 : out std_logic_vector (25 downto 0);
-            o_mux2 : out std_logic_vector (7 downto 0);
-            o_mux : out std_logic_vector (7 downto 0)
+            o_select1 : out std_logic_vector(1 downto 0);
+            o_select2 : out std_logic_vector(5 downto 0);
+            o_cat1 : out std_logic_vector(15 downto 0);
+            o_cat2 : out std_logic_vector(25 downto 0);
+            o_mux2 : out std_logic_vector(7 downto 0);
+            o_mux : out std_logic_vector(7 downto 0)
         );
     end entity;
 
@@ -224,35 +222,33 @@ let%expect_test "operators" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_25 : std_logic_vector (7 downto 0) := "10101011";
-        signal hc_24 : std_logic_vector (7 downto 0);
-        signal hc_23 : std_logic_vector (1 downto 0);
-        signal hc_26 : std_logic_vector (7 downto 0);
+        signal hc_25 : std_logic_vector(7 downto 0);
+        signal hc_24 : std_logic_vector(7 downto 0);
+        signal hc_23 : std_logic_vector(1 downto 0);
+        signal hc_26 : std_logic_vector(7 downto 0);
         signal hc_27 : std_logic;
-        signal hc_28 : std_logic_vector (7 downto 0);
-        signal hc_29 : std_logic_vector (25 downto 0);
-        signal hc_30 : std_logic_vector (15 downto 0);
-        signal hc_31 : std_logic_vector (5 downto 0);
-        signal hc_32 : std_logic_vector (1 downto 0);
+        signal hc_28 : std_logic_vector(7 downto 0);
+        signal hc_29 : std_logic_vector(25 downto 0);
+        signal hc_30 : std_logic_vector(15 downto 0);
+        signal hc_31 : std_logic_vector(5 downto 0);
+        signal hc_32 : std_logic_vector(1 downto 0);
         signal hc_33 : std_logic;
         signal hc_34 : std_logic;
-        signal hc_35 : std_logic_vector (17 downto 0);
-        signal hc_11 : std_logic_vector (9 downto 0);
-        signal hc_36 : std_logic_vector (17 downto 0);
-        signal hc_37 : std_logic_vector (7 downto 0);
-        signal hc_38 : std_logic_vector (7 downto 0);
-        signal hc_39 : std_logic_vector (7 downto 0);
-        signal a_b : std_logic_vector (7 downto 0);
-        signal module : std_logic_vector (7 downto 0);
-        signal hc_19 : std_logic_vector (7 downto 0);
-        signal hc_21 : std_logic_vector (7 downto 0);
-        signal hc_42 : std_logic_vector (7 downto 0);
+        signal hc_35 : std_logic_vector(17 downto 0);
+        signal hc_11 : std_logic_vector(9 downto 0);
+        signal hc_36 : std_logic_vector(17 downto 0);
+        signal hc_37 : std_logic_vector(7 downto 0);
+        signal hc_38 : std_logic_vector(7 downto 0);
+        signal hc_39 : std_logic_vector(7 downto 0);
+        signal a_b : std_logic_vector(7 downto 0);
+        signal module : std_logic_vector(7 downto 0);
+        signal hc_19 : std_logic_vector(7 downto 0);
+        signal hc_21 : std_logic_vector(7 downto 0);
+        signal hc_42 : std_logic_vector(7 downto 0);
 
     begin
 
-        -- logic
+        hc_25 <= "10101011";
         hc_24 <= hc_11(7 downto 0);
         hc_23 <= hc_21(2 downto 1);
         with to_integer(hc_uns(hc_23)) select hc_26 <=
@@ -281,10 +277,6 @@ let%expect_test "operators" =
         hc_19 <= i_b;
         hc_21 <= i_a;
         hc_42 <= hc_slv(hc_uns(hc_21) and hc_uns(hc_19));
-
-        -- aliases
-
-        -- output assignments
         o_and <= hc_42;
         o_or <= module;
         o_xor <= a_b;

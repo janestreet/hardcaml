@@ -23,13 +23,6 @@ let%expect_test "To_file" =
         input a;
         output b;
 
-        /* signal declarations */
-
-        /* logic */
-
-        /* aliases */
-
-        /* output assignments */
         assign b = a;
 
     endmodule
@@ -41,14 +34,11 @@ let%expect_test "To_file" =
         input a;
         output b;
 
-        /* signal declarations */
         wire _6;
         wire _1;
         wire _8;
         wire _3;
         wire _9;
-
-        /* logic */
         inner
             the_inner
             ( .a(a),
@@ -60,10 +50,6 @@ let%expect_test "To_file" =
               .b(_8) );
         assign _3 = _8;
         assign _9 = _3 | _1;
-
-        /* aliases */
-
-        /* output assignments */
         assign b = _9;
 
     endmodule
@@ -75,20 +61,13 @@ let%expect_test "To_file" =
         input a;
         output b;
 
-        /* signal declarations */
         wire _5;
         wire _2;
-
-        /* logic */
         middle
             the_middle
             ( .a(a),
               .b(_5) );
         assign _2 = _5;
-
-        /* aliases */
-
-        /* output assignments */
         assign b = _2;
 
     endmodule |}];
@@ -134,15 +113,8 @@ let%expect_test "In_directory" =
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
 
-        -- signal declarations
-
     begin
 
-        -- logic
-
-        -- aliases
-
-        -- output assignments
         b <= a;
 
     end architecture;
@@ -171,8 +143,6 @@ let%expect_test "In_directory" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
         signal hc_6 : std_logic;
         signal hc_1 : std_logic;
         signal hc_8 : std_logic;
@@ -181,18 +151,15 @@ let%expect_test "In_directory" =
 
     begin
 
-        -- logic
         the_inner: entity work.inner (rtl)
-            port map ( a => a, b => hc_6 );
+            port map ( a => a,
+                       b => hc_6 );
         hc_1 <= hc_6;
         the_inner_0: entity work.inner (rtl)
-            port map ( a => a, b => hc_8 );
+            port map ( a => a,
+                       b => hc_8 );
         hc_3 <= hc_8;
         hc_9 <= hc_sl(hc_uns(hc_3) or hc_uns(hc_1));
-
-        -- aliases
-
-        -- output assignments
         b <= hc_9;
 
     end architecture;
@@ -221,21 +188,15 @@ let%expect_test "In_directory" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
         signal hc_5 : std_logic;
         signal hc_2 : std_logic;
 
     begin
 
-        -- logic
         the_middle: entity work.middle (rtl)
-            port map ( a => a, b => hc_5 );
+            port map ( a => a,
+                       b => hc_5 );
         hc_2 <= hc_5;
-
-        -- aliases
-
-        -- output assignments
         b <= hc_2;
 
     end architecture; |}];

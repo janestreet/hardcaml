@@ -86,7 +86,7 @@ and gen_register width depth inputs =
   (* cyclesim only supports global reset signal *)
   let%bind reset_value = gen_const width in
   let reg_spec =
-    { Signal.reg_clock = clock
+    { Reg_spec.reg_clock = clock
     ; reg_clock_edge = Rising
     ; reg_reset = reset_sig
     ; reg_reset_edge = Rising

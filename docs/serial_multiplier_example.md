@@ -82,11 +82,11 @@ We start by implementing functions for the partial product and running sum.
 # open Hardcaml.Signal
 # let partial_product a b0 =
     mux2 b0 a (zero (width a))
-val partial_product : signal -> signal -> signal = <fun>
+val partial_product : Type.t -> Type.t -> Type.t = <fun>
 # let running_sum first sum a b0 =
     let sum = mux2 first (zero (width sum)) sum in
     ue sum +: (ue (partial_product a b0))
-val running_sum : signal -> signal -> signal -> signal -> signal = <fun>
+val running_sum : Type.t -> Type.t -> Type.t -> Type.t -> Type.t = <fun>
 ```
 
 The `running_sum` function takes a new argument called `first`. This
@@ -111,7 +111,7 @@ at each iteration.
     sum_w <== sum;
     sum, running_sum_bit_out
 val running_sum_reg :
-  register -> signal -> signal -> signal -> signal * signal = <fun>
+  Type.register -> Type.t -> Type.t -> Type.t -> Type.t * Type.t = <fun>
 ```
 
 We also need to store the computed bits in a register.
@@ -119,7 +119,7 @@ We also need to store the computed bits in a register.
 ```ocaml
 # let computed_bits spec width bit =
    reg_fb spec ~width ~f:(fun d -> bit @: msbs d)
-val computed_bits : register -> int -> signal -> signal = <fun>
+val computed_bits : Type.register -> int -> Type.t -> Type.t = <fun>
 ```
 
 The final implementation just needs to put these functions together.
@@ -130,7 +130,7 @@ The final implementation just needs to put these functions together.
     let running_sum, computed_bit = running_sum_reg spec first a b0 in
     let computed_bits = computed_bits spec b_width computed_bit in
     running_sum @: computed_bits
-val umul_sequential : signal -> signal -> signal -> int -> signal -> signal =
+val umul_sequential : Type.t -> Type.t -> Type.t -> int -> Type.t -> Type.t =
   <fun>
 ```
 

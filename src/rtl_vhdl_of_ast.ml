@@ -1,14 +1,14 @@
 open Base
 
-let tab = "    "
+let tab_len = 4
+let tab = String.init tab_len ~f:(Fn.const ' ')
 let tab2 = tab ^ tab
+let spaces n = String.init n ~f:(Fn.const ' ')
 
-let slv ?(add_space = true) (range : Rtl_ast.range) =
+let slv (range : Rtl_ast.range) =
   match range with
   | Bit -> "std_logic"
-  | Vector { width } ->
-    let space = if add_space then " " else "" in
-    [%string "std_logic_vector%{space}(%{(width-1)#Int} downto 0)"]
+  | Vector { width } -> [%string "std_logic_vector(%{(width-1)#Int} downto 0)"]
 ;;
 
 let input name range = [%string "%{name} : in %{slv range}"]
@@ -52,50 +52,34 @@ architecture rtl of %{ast.name} is
 %{tab}function %{hc}slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
 %{tab}function %{hc}slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
 %{tab}function %{hc}slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
 |}]
-;;
-
-let attributes_of_signal signal =
-  if Signal.is_empty signal then [] else Signal.attributes signal
 ;;
 
 let raise_vhdl_doesnt_support_attributes_yet () =
   raise_s [%message "[Rtl_vhdl_of_ast] Signal attributes are not supported in VHDL yet"]
 ;;
 
-let vhdl_doesnt_support_attributes_yet signal =
+let vhdl_doesnt_support_attributes_yet attributes =
   let raise_on_attributes = false in
-  if raise_on_attributes && not (List.is_empty (attributes_of_signal signal))
+  if raise_on_attributes && not (List.is_empty attributes)
   then raise_vhdl_doesnt_support_attributes_yet ()
 ;;
 
 let declaration buffer (decl : Rtl_ast.declaration) =
   let add_string = Buffer.add_string buffer in
-  let write_var (decl : Rtl_ast.logic_declaration) (var : Rtl_ast.var) =
-    vhdl_doesnt_support_attributes_yet var.signal;
-    if Signal.is_const var.signal && Rtl_ast.equal_var var decl.write
-    then (
-      let const = Signal.const_value var.signal in
-      let bconst = [%string "%{Bits.to_bstr const}"] in
-      if Bits.width const = 1
-      then
-        add_string
-          [%string "%{tab}constant %{var.name} : %{slv var.range} := '%{bconst}';\n"]
-      else
-        add_string
-          [%string "%{tab}constant %{var.name} : %{slv var.range} := \"%{bconst}\";\n"])
-    else add_string [%string "%{tab}signal %{var.name} : %{slv var.range};\n"]
+  let write_var (var : Rtl_ast.var) =
+    vhdl_doesnt_support_attributes_yet var.attributes;
+    add_string [%string "%{tab}signal %{var.name} : %{slv var.range};\n"]
   in
   match decl with
-  | Logic decl -> List.iter decl.all_names ~f:(write_var decl)
-  | Inst inst -> List.iter inst.all_names ~f:(write_var inst)
+  | Logic decl -> List.iter decl.all_names ~f:write_var
+  | Inst inst -> List.iter inst.all_names ~f:write_var
   | Multiport_memory { memory; memory_type; depth; range = _ } ->
-    vhdl_doesnt_support_attributes_yet memory.signal;
+    vhdl_doesnt_support_attributes_yet memory.attributes;
     add_string
       [%string
         "%{tab}type %{memory_type} is array (0 to %{(depth-1)#Int}) of %{slv \
-         ~add_space:false memory.range};\n"];
+         memory.range};\n"];
     add_string [%string "%{tab}signal %{memory.name} : %{memory_type};\n"]
 ;;
 
@@ -188,12 +172,12 @@ let write_instantiation buffer (instantiation : Rtl_ast.instantiation) =
    | parameters ->
      let parameters =
        String.concat
-         ~sep:[%string ", "]
+         ~sep:[%string ",\n%{spaces (tab_len*3 + 10)}"]
          (List.map parameters ~f:(fun p ->
             let name, value = Parameter_name.to_string p.name, parameter_value p in
             [%string "%{name} => %{value}"]))
      in
-     add_string [%string "%{tab2}generic map ( %{parameters})\n"]);
+     add_string [%string "%{tab2}generic map ( %{parameters} )\n"]);
   let input_ports =
     List.map instantiation.input_ports ~f:(fun { port_name; connection } ->
       [%string "%{port_name} => %{connection.name}"])
@@ -208,7 +192,11 @@ let write_instantiation buffer (instantiation : Rtl_ast.instantiation) =
         then [%string "%{port_name} => %{connection.name}(%{low#Int})"]
         else [%string "%{port_name} => %{connection.name}(%{high#Int} downto %{low#Int})"])
   in
-  let ports = String.concat ~sep:", " (input_ports @ output_ports) in
+  let ports =
+    String.concat
+      ~sep:[%string ",\n%{spaces (tab_len*3 + 7)}"]
+      (input_ports @ output_ports)
+  in
   add_string [%string "%{tab2}port map ( %{ports} );\n"]
 ;;
 
@@ -227,7 +215,7 @@ let operator : Rtl_ast.binop -> string = function
 let rec statement buffer (stat : Rtl_ast.statement) =
   let add_string = Buffer.add_string buffer in
   let assign (lhs : Rtl_ast.var) expr =
-    if Signal.width lhs.signal = 1
+    if Rtl_ast.equal_range Bit lhs.range
     then [%string "%{tab}%{lhs.name} <= hc_sl(%{expr});\n"]
     else [%string "%{tab}%{lhs.name} <= hc_slv(%{expr});\n"]
   in
@@ -246,7 +234,7 @@ let rec statement buffer (stat : Rtl_ast.statement) =
   | Assignment (Wire { lhs; driver }) ->
     add_string [%string "%{tab}%{lhs.name} <= %{driver.name};\n"]
   | Assignment (Select { lhs; arg; high; low }) ->
-    if Signal.width lhs.signal = 1
+    if Rtl_ast.equal_range Bit lhs.range
     then
       add_string
         [%string
@@ -254,7 +242,10 @@ let rec statement buffer (stat : Rtl_ast.statement) =
     else
       add_string
         [%string "%{tab}%{lhs.name} <= %{arg.name}(%{high#Int} downto %{low#Int});\n"]
-  | Assignment (Const { lhs = _; constant = _ }) -> ()
+  | Assignment (Const { lhs; constant }) ->
+    if Bits.width constant = 1
+    then add_string [%string "%{tab}%{lhs.name} <= '%{Bits.to_bstr constant}';\n"]
+    else add_string [%string "%{tab}%{lhs.name} <= \"%{Bits.to_bstr constant}\";\n"]
   | Assignment (Mux { lhs; select; cases }) ->
     let num_cases = List.length cases in
     let cases =
@@ -267,7 +258,7 @@ let rec statement buffer (stat : Rtl_ast.statement) =
     in
     add_string
       [%string
-        "%{tab}with to_integer(hc_uns(%{select.name})) select %{lhs.name} <= \n\
+        "%{tab}with to_integer(hc_uns(%{select.name})) select %{lhs.name} <=\n\
          %{tab2}%{cases};\n"]
   | Mux { to_assignment; to_always = _; is_mux2 = _ } ->
     statement buffer (to_assignment ())
@@ -308,23 +299,10 @@ let write_aliases buffer (ast : Rtl_ast.t) =
 let to_buffer buffer ast =
   let add_string = Buffer.add_string buffer in
   declare_io_ports buffer ast;
-  if ast.blackbox
-  then add_string [%string {|begin
-
-end architecture;
-|}]
-  else (
-    add_string [%string "%{tab}-- signal declarations\n"];
-    declarations buffer ast;
-    add_string [%string {|
-begin
-
-%{tab}-- logic
-|}];
-    statements buffer ast;
-    add_string [%string "\n%{tab}-- aliases\n"];
-    write_aliases buffer ast;
-    add_string [%string "\n%{tab}-- output assignments\n"];
-    output_assignments buffer ast;
-    add_string "\nend architecture;\n")
+  declarations buffer ast;
+  add_string "\nbegin\n\n";
+  statements buffer ast;
+  write_aliases buffer ast;
+  output_assignments buffer ast;
+  add_string "\nend architecture;\n"
 ;;

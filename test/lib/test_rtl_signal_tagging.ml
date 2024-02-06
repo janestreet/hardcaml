@@ -66,29 +66,23 @@ let%expect_test "Signal attributes on top of signals in Verilog for circuitscons
         (* mark_debug="TRUE" *)
         output [3:0] c;
 
-        /* signal declarations */
         wire [3:0] _2;
-        wire vdd = 1'b1;
-        wire [3:0] _9 = 4'b0000;
-        wire [3:0] _8 = 4'b0000;
+        wire vdd;
+        wire [3:0] _9;
         wire _4;
         wire [3:0] _6;
         (* dont_touch="TRUE" *)
         reg [3:0] hello;
         wire [3:0] _12;
-
-        /* logic */
         assign _2 = b;
+        assign vdd = 1'b1;
+        assign _9 = 4'b0000;
         assign _4 = clk;
         assign _6 = a;
         always @(posedge _4) begin
             hello <= _6;
         end
         assign _12 = hello + _2;
-
-        /* aliases */
-
-        /* output assignments */
         assign c = _12;
 
     endmodule |}]
@@ -110,19 +104,13 @@ let%expect_test "Signal attributes on top of signals in Verilog" =
         input [3:0] a;
         output [3:0] result;
 
-        /* signal declarations */
-        wire [3:0] _5 = 4'b0011;
+        wire [3:0] _5;
         wire [3:0] _4;
         (* hello="world" *)
         wire [3:0] tmp;
-
-        /* logic */
+        assign _5 = 4'b0011;
         assign _4 = a + b;
         assign tmp = _4 + _5;
-
-        /* aliases */
-
-        /* output assignments */
         assign result = tmp;
 
     endmodule |}]
@@ -138,9 +126,9 @@ let%expect_test "Signal attributes on top of signals in VHDL" =
 
     entity test is
         port (
-            b : in std_logic_vector (3 downto 0);
-            a : in std_logic_vector (3 downto 0);
-            result : out std_logic_vector (3 downto 0)
+            b : in std_logic_vector(3 downto 0);
+            a : in std_logic_vector(3 downto 0);
+            result : out std_logic_vector(3 downto 0)
         );
     end entity;
 
@@ -158,21 +146,15 @@ let%expect_test "Signal attributes on top of signals in VHDL" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_5 : std_logic_vector (3 downto 0) := "0011";
-        signal hc_4 : std_logic_vector (3 downto 0);
-        signal tmp : std_logic_vector (3 downto 0);
+        signal hc_5 : std_logic_vector(3 downto 0);
+        signal hc_4 : std_logic_vector(3 downto 0);
+        signal tmp : std_logic_vector(3 downto 0);
 
     begin
 
-        -- logic
+        hc_5 <= "0011";
         hc_4 <= hc_slv(hc_uns(a) + hc_uns(b));
         tmp <= hc_slv(hc_uns(hc_4) + hc_uns(hc_5));
-
-        -- aliases
-
-        -- output assignments
         result <= tmp;
 
     end architecture; |}]
@@ -221,14 +203,8 @@ let%expect_test "Test Rtl attributes on the pipeline construct" =
         (* SRL_STYLE="register" *)
         output [3:0] b;
 
-        /* signal declarations */
-        wire [3:0] _14 = 4'b0000;
-        wire [3:0] _13 = 4'b0000;
-        wire [3:0] _11 = 4'b0000;
-        wire [3:0] _10 = 4'b0000;
-        wire vdd = 1'b1;
-        wire [3:0] _7 = 4'b0000;
-        wire [3:0] _6 = 4'b0000;
+        wire [3:0] _14;
+        wire vdd;
         wire _2;
         wire [3:0] _4;
         (* SRL_STYLE="register" *)
@@ -236,8 +212,8 @@ let%expect_test "Test Rtl attributes on the pipeline construct" =
         (* SRL_STYLE="register" *)
         reg [3:0] _12;
         reg [3:0] _15;
-
-        /* logic */
+        assign _14 = 4'b0000;
+        assign vdd = 1'b1;
         assign _2 = clk;
         assign _4 = a;
         always @(posedge _2) begin
@@ -249,10 +225,6 @@ let%expect_test "Test Rtl attributes on the pipeline construct" =
         always @(posedge _2) begin
             _15 <= _12;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign b = _15;
 
     endmodule |}]

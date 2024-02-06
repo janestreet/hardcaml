@@ -24,7 +24,7 @@ val fold
   :  Circuit.t
   -> Circuit_database.t
   -> init:'a
-  -> f:('a -> Circuit.t option -> Signal.instantiation option -> 'a)
+  -> f:('a -> Circuit.t option -> Signal.Type.instantiation option -> 'a)
   -> 'a
 
 val print : Circuit.t -> Circuit_database.t -> unit

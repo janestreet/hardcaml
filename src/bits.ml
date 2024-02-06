@@ -7,6 +7,8 @@ type t = Bits0.t
 let number_of_data_bytes (t : t) = Bits0.number_of_data_bytes t
 let unsafe_get_int64 = Bits0.unsafe_get_int64
 let unsafe_set_int64 = Bits0.unsafe_set_int64
+let get_int64 = Bits0.get_int64
+let set_int64 = Bits0.set_int64
 
 module Expert = struct
   let unsafe_underlying_repr (t : t) = (t :> Bytes.t)
@@ -69,7 +71,7 @@ module Mutable = struct
     mask c
   ;;
 
-  external add : t -> t -> t -> unit = "hardcaml_bits_add" [@@noalloc]
+  external add_stub : t -> t -> t -> unit = "hardcaml_bits_add" [@@noalloc]
 
   (* Note; across the recursive call we turn [carry] into an int. This avoids an
      allocation (same in the sub routine below) *)
@@ -98,23 +100,13 @@ module Mutable = struct
     mask dst
   ;;
 
-  let add_stub dst a b =
-    add dst a b;
-    mask dst
-  ;;
-
   let ( +: ) =
     match Sys.backend_type with
     | Native | Bytecode -> add_stub
     | Other _ -> add_ocaml
   ;;
 
-  external sub : t -> t -> t -> unit = "hardcaml_bits_sub" [@@noalloc]
-
-  let sub_stub dst a b =
-    sub dst a b;
-    mask dst
-  ;;
+  external sub_stub : t -> t -> t -> unit = "hardcaml_bits_sub" [@@noalloc]
 
   let rec sub_iter words dst a_in b_in i borrow =
     if i = words

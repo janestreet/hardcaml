@@ -47,15 +47,14 @@ let create
     instance
     ~f:(validate_module_or_instantiation_name ~special_chars:instance_name_special_chars);
   let width = List.fold outputs ~init:0 ~f:(fun a (_, i) -> a + i) in
-  let deps = List.map inputs ~f:snd in
   let outputs, _ =
     List.fold outputs ~init:([], 0) ~f:(fun (o, a) (n, w) -> (n, (w, a)) :: o, a + w)
   in
   let one_output = List.length outputs = 1 in
   let signal =
-    Signal.Inst
-      { signal_id = Signal.make_id width deps
-      ; extra_uid = Signal.new_id ()
+    Signal.Type.Inst
+      { signal_id = Signal.Type.make_id width
+      ; extra_uid = Signal.Type.new_id ()
       ; instantiation =
           { inst_name = name
           ; inst_instance =

@@ -88,7 +88,7 @@ let%expect_test "memory" =
       ~name:"memory1"
       16
       ~write_ports:
-        [| { Signal.write_clock = clock
+        [| { Write_port.write_clock = clock
            ; write_address = of_string "1100"
            ; write_enable = of_string "1"
            ; write_data = of_string "1100"
@@ -108,9 +108,9 @@ let%expect_test "memory" =
     Op[id:11 bits:4 names: deps:9,10] = add
     Op[id:9 bits:4 names: deps:2,2] = add
     Wire[id:2 bits:4 names: deps:8] -> 8
-    Mem_read_port[id:8 bits:4 names: deps:7,4]
-    Multiport_mem[id:7 bits:4 names:memory1 deps:4,4,1,5,5,6]
+    Mem_read_port[id:8 bits:4 names: deps:4,7]
     Const[id:4 bits:4 names: deps:] = 1011
+    Multiport_mem[id:7 bits:4 names:memory1 deps:1,5,5,6]
     Wire[id:1 bits:1 names:clock deps:0] -> 0
     Empty
     Const[id:5 bits:4 names: deps:] = 1100
@@ -122,10 +122,10 @@ let trials = 500
 
 let%test_unit "registers/memories not eliminated" =
   let num_registers c =
-    Circuit.signal_graph c |> Signal_graph.filter ~f:Signal.is_reg |> List.length
+    Circuit.signal_graph c |> Signal_graph.filter ~f:Signal.Type.is_reg |> List.length
   in
   let num_memories c =
-    Circuit.signal_graph c |> Signal_graph.filter ~f:Signal.is_mem |> List.length
+    Circuit.signal_graph c |> Signal_graph.filter ~f:Signal.Type.is_mem |> List.length
   in
   Quickcheck.test
     ~trials

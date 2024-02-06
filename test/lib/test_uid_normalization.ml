@@ -174,7 +174,6 @@ let%expect_test "verilog with normalization" =
         output [1:0] g;
         output [1:0] h;
 
-        /* signal declarations */
         wire [1:0] _1;
         wire _12;
         reg [1:0] _13[0:3];
@@ -185,13 +184,10 @@ let%expect_test "verilog with normalization" =
         wire [2:0] _17;
         wire [2:0] _19;
         wire [2:0] _21;
-        wire vdd = 1'b1;
-        wire [1:0] _24 = 2'b00;
-        wire [1:0] _23 = 2'b00;
+        wire vdd;
+        wire [1:0] _24;
         wire [1:0] _22;
         reg [1:0] _26;
-
-        /* logic */
         assign _1 = a;
         assign _12 = a[1:1];
         always @(posedge clock) begin
@@ -211,6 +207,8 @@ let%expect_test "verilog with normalization" =
         assign _17 = _16[2:0];
         assign _19 = _17 | _18;
         assign _21 = _19 | _20;
+        assign vdd = 1'b1;
+        assign _24 = 2'b00;
         assign _22 = a + b;
         always @(posedge clock) begin
             if (clear)
@@ -218,10 +216,6 @@ let%expect_test "verilog with normalization" =
             else
                 _26 <= _22;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign c = _26;
         assign d = a;
         assign e = _21;

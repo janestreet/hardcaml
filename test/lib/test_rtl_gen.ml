@@ -22,20 +22,13 @@ let%expect_test "reg, clock + enable" =
         input [7:0] d;
         output [7:0] q;
 
-        /* signal declarations */
-        wire [7:0] _6 = 8'b00000000;
-        wire [7:0] _5 = 8'b00000000;
+        wire [7:0] _6;
         reg [7:0] _7;
-
-        /* logic */
+        assign _6 = 8'b00000000;
         always @(posedge clock) begin
             if (enable)
                 _7 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _7;
 
     endmodule |}];
@@ -50,8 +43,8 @@ let%expect_test "reg, clock + enable" =
         port (
             enable : in std_logic;
             clock : in std_logic;
-            d : in std_logic_vector (7 downto 0);
-            q : out std_logic_vector (7 downto 0)
+            d : in std_logic_vector(7 downto 0);
+            q : out std_logic_vector(7 downto 0)
         );
     end entity;
 
@@ -69,15 +62,12 @@ let%expect_test "reg, clock + enable" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_6 : std_logic_vector (7 downto 0) := "00000000";
-        constant hc_5 : std_logic_vector (7 downto 0) := "00000000";
-        signal hc_7 : std_logic_vector (7 downto 0);
+        signal hc_6 : std_logic_vector(7 downto 0);
+        signal hc_7 : std_logic_vector(7 downto 0);
 
     begin
 
-        -- logic
+        hc_6 <= "00000000";
         process (clock) begin
             if rising_edge(clock) then
                 if enable = '1' then
@@ -85,10 +75,6 @@ let%expect_test "reg, clock + enable" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_7;
 
     end architecture; |}]
@@ -117,15 +103,12 @@ let%expect_test "reg, clock, reset, clear + enable" =
         input [7:0] d;
         output [7:0] q;
 
-        /* signal declarations */
-        wire [7:0] _8 = 8'b00000000;
-        wire [7:0] _7 = 8'b00000000;
+        wire [7:0] _8;
         reg [7:0] _9;
-
-        /* logic */
+        assign _8 = 8'b00000000;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _9 <= _7;
+                _9 <= _8;
             else
                 if (clear)
                     _9 <= _8;
@@ -133,10 +116,6 @@ let%expect_test "reg, clock, reset, clear + enable" =
                     if (enable)
                         _9 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _9;
 
     endmodule |}];
@@ -153,8 +132,8 @@ let%expect_test "reg, clock, reset, clear + enable" =
             clear : in std_logic;
             reset : in std_logic;
             clock : in std_logic;
-            d : in std_logic_vector (7 downto 0);
-            q : out std_logic_vector (7 downto 0)
+            d : in std_logic_vector(7 downto 0);
+            q : out std_logic_vector(7 downto 0)
         );
     end entity;
 
@@ -172,18 +151,15 @@ let%expect_test "reg, clock, reset, clear + enable" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_8 : std_logic_vector (7 downto 0) := "00000000";
-        constant hc_7 : std_logic_vector (7 downto 0) := "00000000";
-        signal hc_9 : std_logic_vector (7 downto 0);
+        signal hc_8 : std_logic_vector(7 downto 0);
+        signal hc_9 : std_logic_vector(7 downto 0);
 
     begin
 
-        -- logic
+        hc_8 <= "00000000";
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_9 <= hc_7;
+                hc_9 <= hc_8;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
@@ -196,10 +172,6 @@ let%expect_test "reg, clock, reset, clear + enable" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q <= hc_9;
 
     end architecture; |}]
@@ -238,20 +210,13 @@ let%expect_test "mem" =
         input [1:0] read_address;
         output [7:0] q;
 
-        /* signal declarations */
         reg [7:0] _7[0:3];
         wire [7:0] _8;
-
-        /* logic */
         always @(posedge clock) begin
             if (write_enable)
                 _7[write_address] <= write_data;
         end
         assign _8 = _7[read_address];
-
-        /* aliases */
-
-        /* output assignments */
         assign q = _8;
 
     endmodule |}];
@@ -265,11 +230,11 @@ let%expect_test "mem" =
     entity reg is
         port (
             write_enable : in std_logic;
-            write_data : in std_logic_vector (7 downto 0);
-            write_address : in std_logic_vector (1 downto 0);
+            write_data : in std_logic_vector(7 downto 0);
+            write_address : in std_logic_vector(1 downto 0);
             clock : in std_logic;
-            read_address : in std_logic_vector (1 downto 0);
-            q : out std_logic_vector (7 downto 0)
+            read_address : in std_logic_vector(1 downto 0);
+            q : out std_logic_vector(7 downto 0)
         );
     end entity;
 
@@ -287,15 +252,12 @@ let%expect_test "mem" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
         type hc_7_type is array (0 to 3) of std_logic_vector(7 downto 0);
         signal hc_7 : hc_7_type;
-        signal hc_8 : std_logic_vector (7 downto 0);
+        signal hc_8 : std_logic_vector(7 downto 0);
 
     begin
 
-        -- logic
         process (clock) begin
             if rising_edge(clock) then
                 if write_enable = '1' then
@@ -304,10 +266,6 @@ let%expect_test "mem" =
             end if;
         end process;
         hc_8 <= hc_7(to_integer(hc_uns(read_address)));
-
-        -- aliases
-
-        -- output assignments
         q <= hc_8;
 
     end architecture; |}]
@@ -345,14 +303,11 @@ let%expect_test "multiport mem" =
         input [1:0] read_address;
         output [7:0] q0;
 
-        /* signal declarations */
-        wire [7:0] _11 = 8'b00000000;
-        wire [7:0] _10 = 8'b00000000;
+        wire [7:0] _11;
         reg [7:0] _8[0:3];
         wire [7:0] _9;
         reg [7:0] _12;
-
-        /* logic */
+        assign _11 = 8'b00000000;
         always @(posedge clock) begin
             if (write_enable)
                 _8[write_address] <= write_data;
@@ -362,10 +317,6 @@ let%expect_test "multiport mem" =
             if (read_enable)
                 _12 <= _9;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q0 = _12;
 
     endmodule |}];
@@ -380,11 +331,11 @@ let%expect_test "multiport mem" =
         port (
             read_enable : in std_logic;
             write_enable : in std_logic;
-            write_data : in std_logic_vector (7 downto 0);
-            write_address : in std_logic_vector (1 downto 0);
+            write_data : in std_logic_vector(7 downto 0);
+            write_address : in std_logic_vector(1 downto 0);
             clock : in std_logic;
-            read_address : in std_logic_vector (1 downto 0);
-            q0 : out std_logic_vector (7 downto 0)
+            read_address : in std_logic_vector(1 downto 0);
+            q0 : out std_logic_vector(7 downto 0)
         );
     end entity;
 
@@ -402,18 +353,15 @@ let%expect_test "multiport mem" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        constant hc_11 : std_logic_vector (7 downto 0) := "00000000";
-        constant hc_10 : std_logic_vector (7 downto 0) := "00000000";
+        signal hc_11 : std_logic_vector(7 downto 0);
         type hc_8_type is array (0 to 3) of std_logic_vector(7 downto 0);
         signal hc_8 : hc_8_type;
-        signal hc_9 : std_logic_vector (7 downto 0);
-        signal hc_12 : std_logic_vector (7 downto 0);
+        signal hc_9 : std_logic_vector(7 downto 0);
+        signal hc_12 : std_logic_vector(7 downto 0);
 
     begin
 
-        -- logic
+        hc_11 <= "00000000";
         process (clock) begin
             if rising_edge(clock) then
                 if write_enable = '1' then
@@ -429,10 +377,6 @@ let%expect_test "multiport mem" =
                 end if;
             end if;
         end process;
-
-        -- aliases
-
-        -- output assignments
         q0 <= hc_12;
 
     end architecture; |}]
@@ -459,20 +403,13 @@ let%expect_test "Try generate a Verilog circuit with a signal using a reserved n
         input [7:0] d;
         output [7:0] q;
 
-        /* signal declarations */
-        wire [7:0] _6 = 8'b00000000;
-        wire [7:0] _5 = 8'b00000000;
+        wire [7:0] _6;
         reg [7:0] signed_0;
-
-        /* logic */
+        assign _6 = 8'b00000000;
         always @(posedge clock) begin
             if (enable)
                 signed_0 <= d;
         end
-
-        /* aliases */
-
-        /* output assignments */
         assign q = signed_0;
 
     endmodule |}]
@@ -564,15 +501,8 @@ let%expect_test "Try to generate Verilog net names with dashes" =
         input [31:0] in;
         output [31:0] out;
 
-        /* signal declarations */
         wire [31:0] a_with_dash;
-
-        /* logic */
         assign a_with_dash = in;
-
-        /* aliases */
-
-        /* output assignments */
         assign out = a_with_dash;
 
     endmodule |}]

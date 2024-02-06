@@ -34,13 +34,6 @@ module test (
     input a;
     output b;
 
-    /* signal declarations */
-
-    /* logic */
-
-    /* aliases */
-
-    /* output assignments */
     assign b = a;
 
 endmodule
@@ -74,15 +67,8 @@ architecture rtl of test is
     function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
     function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
 
-    -- signal declarations
-
 begin
 
-    -- logic
-
-    -- aliases
-
-    -- output assignments
     b <= a;
 
 end architecture;

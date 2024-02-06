@@ -11,7 +11,7 @@ module Value : sig
     | Int of int
     | String of string
     | Bool of bool
-  [@@deriving sexp_of]
+  [@@deriving equal, sexp_of]
 end
 
 (** Create a new attribute. *)

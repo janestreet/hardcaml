@@ -79,12 +79,13 @@ end
     in
     let foo_d = Signal.reg spec_with_clear ~enable:Signal.vdd input.foo in
     { O. foo_d }
-val create : Scope.t -> Signal.t I.t -> Signal.t O.t = <fun>
+val create : Scope.t -> Reg_spec.signal I.t -> Reg_spec.signal O.t = <fun>
 
 # let hierarchical (scope : Scope.t) (input : Signal.t I.t) =
     let module H = Hierarchy.In_scope(I)(O) in
     H.hierarchical ~scope ~name:"module_name" ~instance:"module_instance_2" create input
-val hierarchical : Scope.t -> Signal.t I.t -> Signal.t O.t = <fun>
+val hierarchical : Scope.t -> Reg_spec.signal I.t -> Reg_spec.signal O.t =
+  <fun>
 ```
 
 And that's it! When we want to instantiate this design as a
@@ -107,7 +108,8 @@ from the `scope` argument.
 
 ```ocaml
 # Scope.naming;;
-- : ?sep:string -> Scope.t -> Signal.t -> string -> Signal.t = <fun>
+- : ?sep:string -> Scope.t -> Reg_spec.signal -> string -> Reg_spec.signal =
+<fun>
 ```
 
 Here is an example.

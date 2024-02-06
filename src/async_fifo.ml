@@ -141,16 +141,21 @@ struct
     ;;
   end
 
-  let create ?scope (i : _ I.t) =
+  let create ?(use_negedge_sync_chain = false) ?(sync_stages = 2) ?scope (i : _ I.t) =
+    if sync_stages < 2
+    then raise_s [%message "[sync_stages] must be >= 2!" (sync_stages : int)];
+    if use_negedge_sync_chain && sync_stages % 2 = 1
+    then
+      raise_s
+        [%message "[sync_stages] must be even when using negedge!" (sync_stages : int)];
     let ( -- ) =
       match scope with
       | Some scope -> Scope.naming scope
       | None -> ( -- )
     in
-    let async_reg_var ~name ~clock ~reset ~width =
-      let var =
-        Always.Variable.reg (Reg_spec.create ~clock ~reset ()) ~enable:vdd ~width
-      in
+    let async_reg_var ?clock_edge () ~name ~clock ~reset ~width =
+      let spec = Reg_spec.create ~clock ~reset () |> Reg_spec.override ?clock_edge in
+      let var = Always.Variable.reg spec ~enable:vdd ~width in
       ignore
         (Signal.add_attribute var.value (Rtl_attribute.Vivado.async_reg true) -- name
           : Signal.t);
@@ -164,18 +169,27 @@ struct
       var
     in
     let waddr_rd =
-      reg_var
+      async_reg_var
+        ()
         ~clock:i.clock_read
         ~reset:i.reset_read
         ~width:address_width
         ~name:"waddr_rd"
     in
-    let waddr_rd_ff =
-      async_reg_var
-        ~name:"waddr_rd_ff"
-        ~clock:i.clock_read
-        ~reset:i.reset_read
-        ~width:address_width
+    let clock_edge_of_sync_chain idx =
+      if use_negedge_sync_chain
+      then if idx % 2 = 0 then Edge.Falling else Rising
+      else Rising
+    in
+    let waddr_rd_ffs =
+      Array.init (sync_stages - 1) ~f:(fun idx ->
+        async_reg_var
+          ~clock_edge:(clock_edge_of_sync_chain idx)
+          ()
+          ~name:[%string "waddr_rd_ff_%{idx#Int}"]
+          ~clock:i.clock_read
+          ~reset:i.reset_read
+          ~width:address_width)
     in
     let raddr_rd =
       reg_var
@@ -185,7 +199,12 @@ struct
         ~name:"raddr_rd"
     in
     let data_out =
-      reg_var ~clock:i.clock_read ~reset:i.reset_read ~width:M.width ~name:"data_out"
+      async_reg_var
+        ()
+        ~clock:i.clock_read
+        ~reset:i.reset_read
+        ~width:M.width
+        ~name:"data_out"
     in
     let waddr_wd =
       reg_var
@@ -194,15 +213,19 @@ struct
         ~width:address_width
         ~name:"waddr_wd"
     in
-    let raddr_wd_ff =
-      async_reg_var
-        ~name:"raddr_wd_ff"
-        ~clock:i.clock_write
-        ~reset:i.reset_write
-        ~width:address_width
+    let raddr_wd_ffs =
+      Array.init (sync_stages - 1) ~f:(fun idx ->
+        async_reg_var
+          ~clock_edge:(clock_edge_of_sync_chain idx)
+          ()
+          ~name:[%string "raddr_wd_ff_%{idx#Int}"]
+          ~clock:i.clock_write
+          ~reset:i.reset_write
+          ~width:address_width)
     in
     let raddr_wd =
-      reg_var
+      async_reg_var
+        ()
         ~clock:i.clock_write
         ~reset:i.reset_write
         ~width:address_width
@@ -227,11 +250,21 @@ struct
     Always.(
       compile
         [ (* @(posedge clk_read) *)
-          waddr_rd_ff <-- waddr_wd.value
-        ; waddr_rd <-- waddr_rd_ff.value
+          Array.init (Array.length waddr_rd_ffs) ~f:(fun idx ->
+            if idx = 0
+            then waddr_rd_ffs.(idx) <-- waddr_wd.value
+            else waddr_rd_ffs.(idx) <-- waddr_rd_ffs.(idx - 1).value)
+          |> Array.to_list
+          |> proc
+        ; waddr_rd <-- (Array.last waddr_rd_ffs).value
         ; (* @(posedge clk_write) *)
-          raddr_wd_ff <-- raddr_rd.value
-        ; raddr_wd <-- raddr_wd_ff.value
+          Array.init (Array.length raddr_wd_ffs) ~f:(fun idx ->
+            if idx = 0
+            then raddr_wd_ffs.(idx) <-- raddr_rd.value
+            else raddr_wd_ffs.(idx) <-- raddr_wd_ffs.(idx - 1).value)
+          |> Array.to_list
+          |> proc
+        ; raddr_wd <-- (Array.last raddr_wd_ffs).value
         ; (* @(posedge clk_write) *)
           when_
             (i.write_enable &: ~:full)
@@ -285,12 +318,21 @@ struct
     }
   ;;
 
-  let hierarchical ?(name = "hardcaml_async_fifo") scope i =
+  (* The tcl scripts that constrain the name of this module depend on the module name
+     being [hardcaml_async_fifo*]. *)
+  let base_name = "hardcaml_async_fifo"
+
+  let hierarchical ?(name = base_name) ?use_negedge_sync_chain ?sync_stages scope i =
     let module H = Hierarchy.In_scope (I) (O) in
-    H.hierarchical ~name ~scope (fun scope -> create ~scope) i
+    H.hierarchical
+      ~name
+      ~scope
+      (fun scope -> create ?use_negedge_sync_chain ?sync_stages ~scope)
+      i
   ;;
 
-  let hierarchical_with_delay ?(name = "hardcaml_async_fifo_with_delay") ?delay scope i =
+  let hierarchical_with_delay ?(name = [%string "%{base_name}_with_delay"]) ?delay scope i
+    =
     let module H = Hierarchy.In_scope (I) (O) in
     H.hierarchical ~name ~scope (create_with_delay ?delay) i
   ;;

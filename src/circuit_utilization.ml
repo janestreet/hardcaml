@@ -72,32 +72,35 @@ module Multiplexers = struct
 
   let none = { count = 0; total_bits = 0; multiplexers = Map.empty (module Int) }
 
-  let add ?(u = none) s =
-    let number_of_data_elements = List.length (Signal.deps s) - 1 in
-    let data_width = Signal.width s in
-    let key = number_of_data_elements in
-    let total_bits = number_of_data_elements * data_width in
-    Some
-      { count = u.count + 1
-      ; total_bits = u.total_bits + total_bits
-      ; multiplexers =
-          (match Map.find u.multiplexers key with
-           | None ->
-             Map.add_exn
-               u.multiplexers
-               ~key
-               ~data:
-                 { max_instance_bits = number_of_data_elements; total_bits; count = 1 }
-           | Some data ->
-             Map.set
-               u.multiplexers
-               ~key
-               ~data:
-                 { max_instance_bits = max data.max_instance_bits total_bits
-                 ; total_bits = data.total_bits + total_bits
-                 ; count = data.count + 1
-                 })
-      }
+  let add ?(u = none) (s : Signal.t) =
+    match s with
+    | Mux { cases; _ } ->
+      let number_of_data_elements = List.length cases in
+      let data_width = Signal.width s in
+      let key = number_of_data_elements in
+      let total_bits = number_of_data_elements * data_width in
+      Some
+        { count = u.count + 1
+        ; total_bits = u.total_bits + total_bits
+        ; multiplexers =
+            (match Map.find u.multiplexers key with
+             | None ->
+               Map.add_exn
+                 u.multiplexers
+                 ~key
+                 ~data:
+                   { max_instance_bits = number_of_data_elements; total_bits; count = 1 }
+             | Some data ->
+               Map.set
+                 u.multiplexers
+                 ~key
+                 ~data:
+                   { max_instance_bits = max data.max_instance_bits total_bits
+                   ; total_bits = data.total_bits + total_bits
+                   ; count = data.count + 1
+                   })
+        }
+    | _ -> raise_s [%message "Expected a mux"]
   ;;
 end
 
@@ -305,7 +308,7 @@ let rec create ?database circuit =
           concatenation = Total_bits.add ?u:utilization.concatenation signal
         }
       | Op2 { op; _ } ->
-        (match (op : Signal.signal_op) with
+        (match (op : Signal.Type.signal_op) with
          | Signal_add ->
            { utilization with
              adders = Total_and_max_bits.add ?u:utilization.adders signal

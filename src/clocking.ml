@@ -31,6 +31,16 @@ module Make () = struct
 
     let stretch_no_clear t ~n d = stretch (to_spec_no_clear t) ~n d
     let stretch t ~n d = stretch (to_spec t) ~n d
+
+    let detect_rising_edge t s =
+      let open Signal in
+      let prev_s = reg_no_clear t s in
+      ~:prev_s &: s
+    ;;
+
+    let with_valid_pulse_detect_rising_edge t (v : _ With_valid.t) =
+      { v with valid = detect_rising_edge t v.valid }
+    ;;
   end
 
   module Var = struct

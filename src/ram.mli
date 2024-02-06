@@ -14,31 +14,12 @@ module Collision_mode : sig
   include Comparable.S with type t := t
 end
 
-module Write_port : sig
-  type t = Signal.write_port =
-    { write_clock : Signal.t
-    ; write_address : Signal.t
-    ; write_enable : Signal.t
-    ; write_data : Signal.t
-    }
-  [@@deriving sexp_of]
-end
-
-module Read_port : sig
-  type t = Signal.read_port =
-    { read_clock : Signal.t
-    ; read_address : Signal.t
-    ; read_enable : Signal.t
-    }
-  [@@deriving sexp_of]
-end
-
 val create
   :  ?attributes:Rtl_attribute.t list
   -> ?name:string
   -> collision_mode:Collision_mode.t
   -> size:int
-  -> write_ports:Write_port.t array
-  -> read_ports:Read_port.t array
+  -> write_ports:Signal.t Write_port.t array
+  -> read_ports:Signal.t Read_port.t array
   -> unit
   -> Signal.t array

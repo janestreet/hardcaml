@@ -1,7 +1,6 @@
 (* generic rtl writing for vhdl/verilog *)
 
 open Base
-open Signal
 include Rtl_intf
 module Out_channel = Stdio.Out_channel
 module Filename = Stdlib.Filename

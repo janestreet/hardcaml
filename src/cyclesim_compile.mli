@@ -2,7 +2,7 @@ module Traced_nodes : sig
   val create
     :  Circuit.t
     -> is_internal_port:(Signal.t -> bool) option
-    -> Cyclesim0.Traced.t list
+    -> Cyclesim0.Traced.t
 end
 
 val create

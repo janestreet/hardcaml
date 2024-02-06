@@ -14,7 +14,7 @@ let%expect_test "name of empty" =
 ;;
 
 let%expect_test "non-const signal" =
-  require_does_raise [%here] (fun () -> Signal.const_value (wire 1));
+  require_does_raise [%here] (fun () -> Signal.Type.const_value (wire 1));
   [%expect
     {|
     ("cannot get the value of a non-constant signal"

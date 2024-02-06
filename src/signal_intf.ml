@@ -1,350 +1,222 @@
 open Base
 
-module type Signal = sig
-  (** Signal data type and low-level functions *)
+module type Names = sig
+  type t
 
-  (** simple operators *)
-  type signal_op =
-    | Signal_add
-    | Signal_sub
-    | Signal_mulu
-    | Signal_muls
-    | Signal_and
-    | Signal_or
-    | Signal_xor
-    | Signal_eq
-    | Signal_lt
-  [@@deriving sexp_of, compare, hash]
-
-  module Uid : sig
-    type t [@@deriving compare, hash, sexp_of]
-
-    include Comparator.S with type t := t
-    include Equal.S with type t := t
-
-    val to_int : t -> int
-    val to_string : t -> string
-    val generator : unit -> [ `New of unit -> t ] * [ `Reset of unit -> unit ]
-  end
-
-  module Uid_set : sig
-    type t = Set.M(Uid).t [@@deriving sexp_of]
-
-    val empty : t
-  end
-
-  module Uid_map : module type of Map.M (Uid)
-
-  (** internal structure for tracking signals *)
-  type signal_id =
-    { s_id : Uid.t
-    ; mutable s_names : string list
-    ; s_width : int
-    ; mutable s_attributes : Rtl_attribute.t list
-    ; mutable s_comment : string option
-        (** Making this mutable turns hardcaml from pretty functional to pretty imperative.
-        however, if used carefully and only with the library, we can provide a
-        potentially easier way of changing the graph structure in some cases *)
-    ; mutable s_deps : t list
-    ; caller_id : Caller_id.t option
-    }
-
-  (** main signal data type *)
-  and t =
-    | Empty
-    | Const of
-        { signal_id : signal_id
-        ; constant : Bits.t
-        }
-    | Op2 of
-        { signal_id : signal_id
-        ; op : signal_op
-        ; arg_a : t
-        ; arg_b : t
-        }
-    | Mux of
-        { signal_id : signal_id
-        ; select : t
-        ; cases : t list
-        }
-    | Cat of
-        { signal_id : signal_id
-        ; args : t list
-        }
-    | Not of
-        { signal_id : signal_id
-        ; arg : t
-        }
-    | Wire of
-        { signal_id : signal_id
-        ; driver : t ref
-        }
-    | Select of
-        { signal_id : signal_id
-        ; arg : t
-        ; high : int
-        ; low : int
-        }
-    | Reg of
-        { signal_id : signal_id
-        ; register : register
-        ; d : t
-        }
-    | Multiport_mem of
-        { signal_id : signal_id
-        ; size : int
-        ; write_ports : write_port array
-        }
-    | Mem_read_port of
-        { signal_id : signal_id
-        ; memory : t
-        ; read_address : t
-        }
-    | Inst of
-        { signal_id : signal_id
-        ; extra_uid : Uid.t
-        ; instantiation : instantiation
-        }
-
-  and write_port =
-    { write_clock : t
-    ; write_address : t
-    ; write_enable : t
-    ; write_data : t
-    }
-
-  and read_port =
-    { read_clock : t
-    ; read_address : t
-    ; read_enable : t
-    }
-
-  (** These types are used to define a particular type of register as per the following
-      template, where each part is optional:
-
-      {v
-       always @(?edge clock, ?edge reset)
-         if (reset == reset_level) d <= reset_value;
-         else if (clear == clear_level) d <= clear_value;
-         else if (enable) d <= ...;
-     v} *)
-  and register =
-    { reg_clock : t (** clock *)
-    ; reg_clock_edge : Edge.t (** active clock edge *)
-    ; reg_reset : t (** asynchronous reset *)
-    ; reg_reset_edge : Edge.t (** asynchronous reset edge *)
-    ; reg_reset_value : t (** asychhronous reset value *)
-    ; reg_clear : t (** synchronous clear *)
-    ; reg_clear_level : Level.t (** synchronous clear level *)
-    ; reg_clear_value : t (** sychhronous clear value *)
-    ; reg_enable : t (** global system enable *)
-    }
-
-  and instantiation =
-    { inst_name : string (** name of circuit *)
-    ; inst_instance : string (** instantiation label *)
-    ; inst_generics : Parameter.t list (** [Parameter.int ...] *)
-    ; inst_inputs : (string * t) list (** name and input signal *)
-    ; inst_outputs : (string * (int * int)) list
-        (** name, width and low index of output *)
-    ; inst_lib : string
-    ; inst_arch : string
-    }
-
-  type signal = t
-
-  (** returns the (private) signal_id.  For internal use only. *)
-  val signal_id : t -> signal_id option
-
-  (** returns the unique id of the signal *)
-  val uid : t -> Uid.t
-
-  (** returns the signal's dependencies *)
-  val deps : t -> t list
-
-  (** returns the list of names assigned to the signal *)
+  (** Returns the list of names assigned to the signal. *)
   val names : t -> string list
 
   (** Set the given names on the signal.  Wipes any names currently set. *)
   val set_names : t -> string list -> unit
+end
+
+module type Attributes = sig
+  type t
 
   (** Add an attribute to node. This is currently supported only in Verilog. *)
   val add_attribute : t -> Rtl_attribute.t -> t
 
-  (** Returns attributes associated to the signal *)
+  (** Returns attributes associated to the signal. *)
   val attributes : t -> Rtl_attribute.t list
 
+  (** Set the format used to display the signal *)
+  val ( --$ ) : t -> Wave_format.t -> t
+end
+
+module type Comments = sig
+  type t
+
   (** Set the comment associated with the signal. This is currently only supported in
-      Verilog *)
+      Verilog. *)
   val set_comment : t -> string -> t
 
   (** Remove the comment associated with the signal. This is currently only supported in
-      Verilog *)
+      Verilog. *)
   val unset_comment : t -> t
 
-  (** Returns comment associated with the signal *)
+  (** Returns comment associated with the signal. *)
   val comment : t -> string option
+end
 
-  val has_name : t -> bool
+module type Ports = sig
+  type t
 
-  (** is the signal a register? *)
-  val is_reg : t -> bool
+  (** Creates an input. *)
+  val input : string -> int -> t
 
-  (** is the signal a memory? *)
-  val is_mem : t -> bool
+  (** Creates an output. *)
+  val output : string -> t -> t
+end
 
-  (** is the signal a memory read port? *)
-  val is_mem_read_port : t -> bool
+module type Wires = sig
+  type t
 
-  (** is the signal an instantiation? *)
-  val is_inst : t -> bool
-
-  (** is the signal a constant? *)
-  val is_const : t -> bool
-
-  (** is the signal a part selection? *)
-  val is_select : t -> bool
-
-  (** is the signal a wire? *)
-  val is_wire : t -> bool
-
-  (** is the signal the given operator? *)
-  val is_op2 : signal_op -> t -> bool
-
-  (** is the signal concatenation? *)
-  val is_cat : t -> bool
-
-  (** is the signal a multiplexer? *)
-  val is_mux : t -> bool
-
-  (** is the signal a not> *)
-  val is_not : t -> bool
-
-  (** return the (binary) string representing a constants value *)
-  val const_value : t -> Bits.t
-
-  (** creates a new signal uid *)
-  val new_id : unit -> Uid.t
-
-  (** resets the signal identifiers *)
-  val reset_id : unit -> unit
-
-  (** constructs a signal_id type *)
-  val make_id : int -> t list -> signal_id
-
-  (** perform a recursive structural comparison of two signals *)
-  val structural_compare
-    :  ?check_names:bool
-    -> ?check_deps:bool
-    -> ?initial_deps:Uid_set.t
-    -> t
-    -> t
-    -> Uid_set.t * bool
-
-  (** [sexp_of_signal_recursive ~depth signal] converts a signal recursively to a sexp for
-      up to [depth] levels.  If [show_uids] is false then signal identifiers will not be
-      printed.  [max_list_length] controls how many [mux] and [concat] arguments
-      (dependancies) are printed. *)
-  val sexp_of_signal_recursive
-    :  ?show_uids:bool (** default is [false] *)
-    -> depth:int
-    -> t
-    -> Sexp.t
-
-  (** Combinatorial signal API. This API automatically performs constant propogations
-      (eg: replacing (a + 1 + 5) with (a + 6)). This reduces the amount of work that needs
-      to be done during simulation by simply reducing the number of simulation nodes.
-
-      To use raw signals, ie: keeping the simulation nodes as described, use [Raw]
-      below.
-  *)
-  include Comb.S with type t := t
-
-  (** creates an unassigned wire *)
+  (** Creates an unassigned wire. *)
   val wire : int -> t
 
-  (** creates an assigned wire *)
+  (** Creates an assigned wire. *)
   val wireof : t -> t
 
-  (** assigns to wire *)
+  (** Assigns to wire. *)
   val ( <== ) : t -> t -> unit
 
   val assign : t -> t -> unit
+end
 
-  (** creates an input *)
-  val input : string -> int -> t
+module type Logic = sig
+  type t
 
-  (** creates an output *)
-  val output : string -> t -> t
+  (** Combinational logic API with constant propogation optimizations. *)
+  include Comb.S with type t := t
 
-  (** Comb logic API without constant propogation optimizations. *)
-  module Unoptimized : Comb.S with type t = t
+  (** Combinational logic API without constant propogation optimizations. *)
+  module Unoptimized : Comb.S with type t := t
+end
 
-  (** [Reg_spec_] is a register specification.  It is named [Reg_spec_] rather than
-      [Reg_spec] so that people consistently use the name [Hardcaml.Reg_spec] rather
-      than [Hardcaml.Signal.Reg_spec_]. *)
-  module Reg_spec_ : sig
-    type t = register [@@deriving sexp_of]
+module type Regs = sig
+  type t
 
-    val create : ?clear:signal -> ?reset:signal -> unit -> clock:signal -> t
-
-    val override
-      :  ?clock:signal
-      -> ?clock_edge:Edge.t
-      -> ?reset:signal
-      -> ?reset_edge:Edge.t
-      -> ?reset_to:signal
-      -> ?clear:signal
-      -> ?clear_level:Level.t
-      -> ?clear_to:signal
-      -> ?global_enable:signal
-      -> t
-      -> t
-
-    val clock : t -> signal
-    val clear : t -> signal
-    val reset : t -> signal
-  end
-
-  val reg : Reg_spec_.t -> ?enable:t -> t -> t
-  val reg_fb : ?enable:t -> Reg_spec_.t -> width:int -> f:(t -> t) -> t
+  val reg : Reg_spec.t -> ?enable:t -> t -> t
+  val reg_fb : ?enable:t -> Reg_spec.t -> width:int -> f:(t -> t) -> t
 
   (** Pipeline a signal [n] times with the given register specification. If set, a list of
       RTL attributes will also be applied to each register created. *)
   val pipeline
     :  ?attributes:Rtl_attribute.t list
-    -> Reg_spec_.t
+    -> Reg_spec.t
     -> n:int
     -> ?enable:t
     -> t
     -> t
+end
 
-  val memory : int -> write_port:write_port -> read_address:t -> t
+module type Memories = sig
+  type t
+
+  val multiport_memory
+    :  ?name:string
+    -> ?attributes:Rtl_attribute.t list
+    -> int
+    -> write_ports:t Write_port.t array
+    -> read_addresses:t array
+    -> t array
+
+  val memory : int -> write_port:t Write_port.t -> read_address:t -> t
 
   val ram_wbr
     :  ?name:string
     -> ?attributes:Rtl_attribute.t list
-    -> write_port:write_port
-    -> read_port:read_port
+    -> write_port:t Write_port.t
+    -> read_port:t Read_port.t
     -> int
     -> t
 
   val ram_rbw
     :  ?name:string
     -> ?attributes:Rtl_attribute.t list
-    -> write_port:write_port
-    -> read_port:read_port
+    -> write_port:t Write_port.t
+    -> read_port:t Read_port.t
     -> int
     -> t
+end
 
-  val multiport_memory
-    :  ?name:string
-    -> ?attributes:Rtl_attribute.t list
-    -> int
-    -> write_ports:write_port array
-    -> read_addresses:t array
-    -> t array
+module type Signal = sig
+  (** Signal type for constructing logic designs. *)
+
+  type t = Signal__type.t
+
+  module Type = Signal__type
+
+  (** {1 Naming}
+
+      One or more string names applied to a signal. These will be used during RTL code
+      generation and simulation to aid design inspection. *)
+
+  include Names with type t := t
+
+  (** {1 Attributes}
+
+      Attributes are attached to signals and written during RTL generation. They can be
+      used to control downstream synthesis and place and route tools. They do not
+      otherwise affect the Hardcaml circuit. *)
+
+  include Attributes with type t := t
+
+  (** {1 Comments}
+
+      A comment can be associated with a signal, and this is sometimes useful to pass
+      information to downstream tooling (specifically Verilator). *)
+
+  include Comments with type t := t
+
+  (** {1 Circuit Input and Output Ports}
+
+      Specification of the module level input and output ports. Ports are represented in
+      Hardcaml as wires with a single name. Note that Hardcaml will generally rewrite and
+      legalize names depending on context but will not do so for ports. *)
+
+  include Ports with type t := t
+
+  (** {1 Wires}
+
+      Wires are used in Hardcaml to conenct two signals together. They are first created
+      then assigned to (internally they have a mutable reference to their driver). Wires
+      are how we can create cycles which we require in order to build logic like, for
+      example, a counter.
+
+      It is entirely possible to create combinational loops using wires.  Often this is
+      not the intent and Hardcaml has functions to detect this - for example, Cyclesim
+      will fail if there is such a loop.
+  *)
+
+  include Wires with type t := t
+
+  (** {1 Combinational Logic}
+
+      The main combinational logic API for creating things like adders, multiplexers etc.
+      This API is the same as provided by [Bits.t].
+
+      By default Hardcaml performs constant propogation over signals - operations with
+      purely constant values (and some other simple cases such as [a &: vdd]) will be
+      simplified. You can avoid this by using the operations from the [Unoptimized]
+      module. *)
+
+  include Logic with type t := t
+
+  (** {1 Registers}
+
+      Registers are configured using a [Reg_spec.t]. This encodes the clock, synchronous
+      clear, and asychronous reset used. *)
+
+  include Regs with type t := t
+
+  (** {1 Memories}
+
+      [multiport_memory] provides the low-level primitive from which Hardcaml memories
+      are created. It provides a memory with an arbitrary number of read and write ports
+      that is asychronously read.
+
+      By default synthesizers will infer either LUT ram or register banks from this
+      primitive.
+
+      Limiting the number of read/write ports and placing a register on the read address
+      or read output port will allow synthesizers to infer single or simple dual port RAM
+      from RTL. [ram_rbw] and [ram_wbr] are examples of this. *)
+
+  include Memories with type t := t
 
   (** Pretty printer. *)
   val pp : Formatter.t -> t -> unit
+
+  (**/**)
+
+  (* The following are exposed for convenience.  They are also available under [Types].*)
+
+  (** Returns the unique id of the signal. *)
+  val uid : t -> Type.Uid.t
+
+  (** Returns the list of names assigned to the signal. *)
+  val names : t -> string list
+
+  module Uid = Type.Uid
 end

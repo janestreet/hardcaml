@@ -40,9 +40,10 @@ let%expect_test "instantiation, with 0 or more parameters." =
       in
       O.map3 o1 o2 o3 ~f:Signal.(fun a b c -> a |: b |: c))
   in
-  Testing.diff_and_analyse_vhdl_and_verilog ~quiet:true ~show:true circuit;
+  Testing.analyse_vhdl_and_verilog ~quiet:true ~show:true circuit;
   [%expect
     {|
+    ("Icarus Verilog failed with" (error_code (Error (Exit_non_zero 4))))
     module temp (
         bar,
         foo,
@@ -55,7 +56,6 @@ let%expect_test "instantiation, with 0 or more parameters." =
         output zoo;
         output [1:0] moo;
 
-        /* signal declarations */
         wire [1:0] _16;
         wire [1:0] _12;
         wire [1:0] _9;
@@ -71,8 +71,6 @@ let%expect_test "instantiation, with 0 or more parameters." =
         wire _18;
         wire _20;
         wire _22;
-
-        /* logic */
         assign _16 = _15[2:1];
         assign _12 = _11[2:1];
         assign _9 = _8[2:1];
@@ -80,7 +78,7 @@ let%expect_test "instantiation, with 0 or more parameters." =
         assign _17 = _13 | _16;
         foo
             #( .par(3),
-              .far("baloo") )
+               .far("baloo") )
             the_foo
             ( .foo(_5),
               .bar(_3),
@@ -106,15 +104,11 @@ let%expect_test "instantiation, with 0 or more parameters." =
         assign _18 = _8[0:0];
         assign _20 = _18 | _19;
         assign _22 = _20 | _21;
-
-        /* aliases */
-
-        /* output assignments */
         assign zoo = _22;
         assign moo = _17;
 
     endmodule
-    ("Icarus Verilog failed with" (error_code (Error (Exit_non_zero 4))))
+    ("GHDL failed with" (error_code (Error (Exit_non_zero 1))))
     library ieee;
     use ieee.std_logic_1164.all;
     use ieee.numeric_std.all;
@@ -124,7 +118,7 @@ let%expect_test "instantiation, with 0 or more parameters." =
             bar : in std_logic;
             foo : in std_logic;
             zoo : out std_logic;
-            moo : out std_logic_vector (1 downto 0)
+            moo : out std_logic_vector(1 downto 0)
         );
     end entity;
 
@@ -142,56 +136,58 @@ let%expect_test "instantiation, with 0 or more parameters." =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
-        signal hc_16 : std_logic_vector (1 downto 0);
-        signal hc_12 : std_logic_vector (1 downto 0);
-        signal hc_9 : std_logic_vector (1 downto 0);
-        signal hc_13 : std_logic_vector (1 downto 0);
-        signal hc_17 : std_logic_vector (1 downto 0);
-        signal hc_15 : std_logic_vector (2 downto 0);
+        signal hc_16 : std_logic_vector(1 downto 0);
+        signal hc_12 : std_logic_vector(1 downto 0);
+        signal hc_9 : std_logic_vector(1 downto 0);
+        signal hc_13 : std_logic_vector(1 downto 0);
+        signal hc_17 : std_logic_vector(1 downto 0);
+        signal hc_15 : std_logic_vector(2 downto 0);
         signal hc_21 : std_logic;
-        signal hc_11 : std_logic_vector (2 downto 0);
+        signal hc_11 : std_logic_vector(2 downto 0);
         signal hc_19 : std_logic;
         signal hc_3 : std_logic;
         signal hc_5 : std_logic;
-        signal hc_8 : std_logic_vector (2 downto 0);
+        signal hc_8 : std_logic_vector(2 downto 0);
         signal hc_18 : std_logic;
         signal hc_20 : std_logic;
         signal hc_22 : std_logic;
 
     begin
 
-        -- logic
         hc_16 <= hc_15(2 downto 1);
         hc_12 <= hc_11(2 downto 1);
         hc_9 <= hc_8(2 downto 1);
         hc_13 <= hc_slv(hc_uns(hc_9) or hc_uns(hc_12));
         hc_17 <= hc_slv(hc_uns(hc_13) or hc_uns(hc_16));
         the_foo: entity work.foo (rtl)
-            generic map ( par => 3, far => "baloo")
-            port map ( foo => hc_5, bar => hc_3, moo => hc_15(2 downto 1), zoo => hc_15(0) );
+            generic map ( par => 3,
+                          far => "baloo" )
+            port map ( foo => hc_5,
+                       bar => hc_3,
+                       moo => hc_15(2 downto 1),
+                       zoo => hc_15(0) );
         hc_21 <= hc_sl(hc_15(0 downto 0));
         the_foo_0: entity work.foo (rtl)
-            generic map ( par => 3)
-            port map ( foo => hc_5, bar => hc_3, moo => hc_11(2 downto 1), zoo => hc_11(0) );
+            generic map ( par => 3 )
+            port map ( foo => hc_5,
+                       bar => hc_3,
+                       moo => hc_11(2 downto 1),
+                       zoo => hc_11(0) );
         hc_19 <= hc_sl(hc_11(0 downto 0));
         hc_3 <= bar;
         hc_5 <= foo;
         the_foo_1: entity work.foo (rtl)
-            port map ( foo => hc_5, bar => hc_3, moo => hc_8(2 downto 1), zoo => hc_8(0) );
+            port map ( foo => hc_5,
+                       bar => hc_3,
+                       moo => hc_8(2 downto 1),
+                       zoo => hc_8(0) );
         hc_18 <= hc_sl(hc_8(0 downto 0));
         hc_20 <= hc_sl(hc_uns(hc_18) or hc_uns(hc_19));
         hc_22 <= hc_sl(hc_uns(hc_20) or hc_uns(hc_21));
-
-        -- aliases
-
-        -- output assignments
         zoo <= hc_22;
         moo <= hc_17;
 
-    end architecture;
-    ("GHDL failed with" (error_code (Error (Exit_non_zero 1)))) |}]
+    end architecture; |}]
 ;;
 
 let%expect_test "instantiation output corner case" =
@@ -213,9 +209,10 @@ let%expect_test "instantiation output corner case" =
       let module I = Instantiation.With_interface (I) (O) in
       I.create ~name:"foo" i)
   in
-  Testing.diff_and_analyse_vhdl_and_verilog ~quiet:true ~show:true circuit;
+  Testing.analyse_vhdl_and_verilog ~quiet:true ~show:true circuit;
   [%expect
     {|
+    ("Icarus Verilog failed with" (error_code (Error (Exit_non_zero 2))))
     module temp (
         bar,
         foo,
@@ -226,13 +223,10 @@ let%expect_test "instantiation output corner case" =
         input foo;
         output zoo;
 
-        /* signal declarations */
         wire _2;
         wire _4;
         wire _8;
         wire _5;
-
-        /* logic */
         assign _2 = bar;
         assign _4 = foo;
         foo
@@ -241,14 +235,10 @@ let%expect_test "instantiation output corner case" =
               .bar(_2),
               .zoo(_8) );
         assign _5 = _8;
-
-        /* aliases */
-
-        /* output assignments */
         assign zoo = _5;
 
     endmodule
-    ("Icarus Verilog failed with" (error_code (Error (Exit_non_zero 2))))
+    ("GHDL failed with" (error_code (Error (Exit_non_zero 1))))
     library ieee;
     use ieee.std_logic_1164.all;
     use ieee.numeric_std.all;
@@ -275,8 +265,6 @@ let%expect_test "instantiation output corner case" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
         signal hc_2 : std_logic;
         signal hc_4 : std_logic;
         signal hc_8 : std_logic;
@@ -284,20 +272,16 @@ let%expect_test "instantiation output corner case" =
 
     begin
 
-        -- logic
         hc_2 <= bar;
         hc_4 <= foo;
         the_foo: entity work.foo (rtl)
-            port map ( foo => hc_4, bar => hc_2, zoo => hc_8 );
+            port map ( foo => hc_4,
+                       bar => hc_2,
+                       zoo => hc_8 );
         hc_5 <= hc_8;
-
-        -- aliases
-
-        -- output assignments
         zoo <= hc_5;
 
-    end architecture;
-    ("GHDL failed with" (error_code (Error (Exit_non_zero 1)))) |}]
+    end architecture; |}]
 ;;
 
 let%expect_test "all parameter types" =
@@ -339,9 +323,10 @@ let%expect_test "all parameter types" =
           ]
         i)
   in
-  Testing.diff_and_analyse_vhdl_and_verilog ~quiet:true ~show:true circuit;
+  Testing.analyse_vhdl_and_verilog ~quiet:true ~show:true circuit;
   [%expect
     {|
+    ("Icarus Verilog failed with" (error_code (Error (Exit_non_zero 3))))
     module temp (
         bar,
         foo,
@@ -352,41 +337,34 @@ let%expect_test "all parameter types" =
         input foo;
         output zoo;
 
-        /* signal declarations */
         wire _2;
         wire _4;
         wire _8;
         wire _5;
-
-        /* logic */
         assign _2 = bar;
         assign _4 = foo;
         foo
             #( .a(1'b1),
-              .a2(1'b0),
-              .b(2'b10),
-              .c(1'b1),
-              .c2(1'b0),
-              .d(123),
-              .e(1.240000),
-              .f(4'd0),
-              .g(9'bUX01ZWLH_),
-              .h(4'd5),
-              .i(9'bUX01ZWLH_),
-              .j("foo") )
+               .a2(1'b0),
+               .b(2'b10),
+               .c(1'b1),
+               .c2(1'b0),
+               .d(123),
+               .e(1.240000),
+               .f(4'd0),
+               .g(9'bUX01ZWLH_),
+               .h(4'd5),
+               .i(9'bUX01ZWLH_),
+               .j("foo") )
             the_foo
             ( .foo(_4),
               .bar(_2),
               .zoo(_8) );
         assign _5 = _8;
-
-        /* aliases */
-
-        /* output assignments */
         assign zoo = _5;
 
     endmodule
-    ("Icarus Verilog failed with" (error_code (Error (Exit_non_zero 3))))
+    ("GHDL failed with" (error_code (Error (Exit_non_zero 1))))
     library ieee;
     use ieee.std_logic_1164.all;
     use ieee.numeric_std.all;
@@ -413,8 +391,6 @@ let%expect_test "all parameter types" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
         signal hc_2 : std_logic;
         signal hc_4 : std_logic;
         signal hc_8 : std_logic;
@@ -422,21 +398,28 @@ let%expect_test "all parameter types" =
 
     begin
 
-        -- logic
         hc_2 <= bar;
         hc_4 <= foo;
         the_foo: entity work.foo (rtl)
-            generic map ( a => '1', a2 => '0', b => "10", c => true, c2 => false, d => 123, e => 1.240000, f => 'U', g => std_logic_vector'("UX01ZWLH_"), h => 'W', i => std_ulogic_vector'("UX01ZWLH_"), j => "foo")
-            port map ( foo => hc_4, bar => hc_2, zoo => hc_8 );
+            generic map ( a => '1',
+                          a2 => '0',
+                          b => "10",
+                          c => true,
+                          c2 => false,
+                          d => 123,
+                          e => 1.240000,
+                          f => 'U',
+                          g => std_logic_vector'("UX01ZWLH_"),
+                          h => 'W',
+                          i => std_ulogic_vector'("UX01ZWLH_"),
+                          j => "foo" )
+            port map ( foo => hc_4,
+                       bar => hc_2,
+                       zoo => hc_8 );
         hc_5 <= hc_8;
-
-        -- aliases
-
-        -- output assignments
         zoo <= hc_5;
 
-    end architecture;
-    ("GHDL failed with" (error_code (Error (Exit_non_zero 1)))) |}]
+    end architecture; |}]
 ;;
 
 let%expect_test "phantom input" =
@@ -454,7 +437,7 @@ let%expect_test "phantom input" =
   in
   let module C = Circuit.With_interface (I) (O) in
   let circuit = C.create_exn ~name:"temp" (fun (i : _ I.t) -> { O.zoo = i.foo }) in
-  Testing.diff_and_analyse_vhdl_and_verilog ~quiet:true ~show:true circuit;
+  Testing.analyse_vhdl_and_verilog ~quiet:true ~show:true circuit;
   [%expect
     {|
     module temp (
@@ -467,15 +450,8 @@ let%expect_test "phantom input" =
         input bar;
         output zoo;
 
-        /* signal declarations */
         wire _2;
-
-        /* logic */
         assign _2 = foo;
-
-        /* aliases */
-
-        /* output assignments */
         assign zoo = _2;
 
     endmodule
@@ -505,18 +481,11 @@ let%expect_test "phantom input" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-
-        -- signal declarations
         signal hc_2 : std_logic;
 
     begin
 
-        -- logic
         hc_2 <= foo;
-
-        -- aliases
-
-        -- output assignments
         zoo <= hc_2;
 
     end architecture; |}]

@@ -68,13 +68,6 @@ let%expect_test "generate hierarchy without sharing" =
         input a;
         output b;
 
-        /* signal declarations */
-
-        /* logic */
-
-        /* aliases */
-
-        /* output assignments */
         assign b = a;
 
     endmodule
@@ -86,13 +79,6 @@ let%expect_test "generate hierarchy without sharing" =
         input a;
         output b;
 
-        /* signal declarations */
-
-        /* logic */
-
-        /* aliases */
-
-        /* output assignments */
         assign b = a;
 
     endmodule
@@ -104,14 +90,11 @@ let%expect_test "generate hierarchy without sharing" =
         input a;
         output b;
 
-        /* signal declarations */
         wire _6;
         wire _1;
         wire _8;
         wire _3;
         wire _9;
-
-        /* logic */
         inner_0
             the_inner_0
             ( .a(a),
@@ -123,10 +106,6 @@ let%expect_test "generate hierarchy without sharing" =
               .b(_8) );
         assign _3 = _8;
         assign _9 = _3 | _1;
-
-        /* aliases */
-
-        /* output assignments */
         assign b = _9;
 
     endmodule
@@ -138,20 +117,13 @@ let%expect_test "generate hierarchy without sharing" =
         input a;
         output b;
 
-        /* signal declarations */
         wire _5;
         wire _2;
-
-        /* logic */
         middle
             the_middle
             ( .a(a),
               .b(_5) );
         assign _2 = _5;
-
-        /* aliases */
-
-        /* output assignments */
         assign b = _2;
 
     endmodule |}]
@@ -175,13 +147,6 @@ let%expect_test "generate hierarchy with sharing" =
         input a;
         output b;
 
-        /* signal declarations */
-
-        /* logic */
-
-        /* aliases */
-
-        /* output assignments */
         assign b = a;
 
     endmodule
@@ -193,14 +158,11 @@ let%expect_test "generate hierarchy with sharing" =
         input a;
         output b;
 
-        /* signal declarations */
         wire _6;
         wire _1;
         wire _8;
         wire _3;
         wire _9;
-
-        /* logic */
         inner
             the_inner
             ( .a(a),
@@ -212,10 +174,6 @@ let%expect_test "generate hierarchy with sharing" =
               .b(_8) );
         assign _3 = _8;
         assign _9 = _3 | _1;
-
-        /* aliases */
-
-        /* output assignments */
         assign b = _9;
 
     endmodule
@@ -227,20 +185,13 @@ let%expect_test "generate hierarchy with sharing" =
         input a;
         output b;
 
-        /* signal declarations */
         wire _5;
         wire _2;
-
-        /* logic */
         middle
             the_middle
             ( .a(a),
               .b(_5) );
         assign _2 = _5;
-
-        /* aliases */
-
-        /* output assignments */
         assign b = _2;
 
     endmodule |}]

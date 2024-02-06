@@ -8,8 +8,17 @@ module Mode = struct
     | Full_trace
 end
 
+(* Default caller_id mode is [Disabled]. It can be enabled by setting the environment var
+   [HARDCAML_DEBUG]. If it's value is [top] then [Top_of_stack] is used - otherwise
+   [Full_trace]. *)
 let mode =
-  ref (if Base.Exported_for_specific_uses.am_testing then Mode.Disabled else Top_of_stack)
+  let default =
+    match Sys.getenv "HARDCAML_DEBUG" with
+    | Some value ->
+      if String.(uppercase value = "TOP") then Mode.Top_of_stack else Mode.Full_trace
+    | None -> Disabled
+  in
+  ref default
 ;;
 
 let set_mode m = mode := m

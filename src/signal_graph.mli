@@ -30,7 +30,7 @@ val outputs : ?validate:bool (** default is [false] *) -> t -> Signal.t list Or_
     than the default definition. This is useful for terminating traversals
     based on some condition on signals, e.g., if it's a register or a memory. *)
 val depth_first_search
-  :  ?deps:(Signal.t -> Signal.t list)
+  :  ?deps:(module Signal.Type.Deps)
   -> ?f_before:('a -> Signal.t -> 'a)
   -> ?f_after:('a -> Signal.t -> 'a)
   -> t
@@ -57,33 +57,27 @@ val normalize_uids : t -> t
 
 (** Fan-out of each signal in the signal graph.  The fan-out of a signal is the set of
     signals it drives.*)
-val fan_out_map
-  :  ?deps:(Signal.t -> Signal.t list)
-  -> t
-  -> Signal.Uid_set.t Map.M(Signal.Uid).t
+val fan_out_map : t -> Signal.Type.Uid_set.t Map.M(Signal.Uid).t
 
 (** Fan-in of each signal in the signal graph.  The fan-in of a signal is the set of
     signals that drive it.*)
-val fan_in_map
-  :  ?deps:(Signal.t -> Signal.t list)
-  -> t
-  -> Signal.Uid_set.t Map.M(Signal.Uid).t
+val fan_in_map : t -> Signal.Type.Uid_set.t Map.M(Signal.Uid).t
 
 (** [topological_sort t] sorts the signals in [t] so that all the signals in [deps s]
     occur before [s]. *)
 val topological_sort
-  :  deps:(Signal.t -> Signal.t list)
+  :  deps:(module Signal.Type.Deps)
   -> t
   -> (Signal.t list, Signal.t list) Result.t
 
-val topological_sort_exn : deps:(Signal.t -> Signal.t list) -> t -> Signal.t list
+val topological_sort_exn : deps:(module Signal.Type.Deps) -> t -> Signal.t list
 
 (** Signal dependencies used for simulation scheduling. Breaks loops through sequential
     elements like registers and memories. *)
-val deps_for_simulation_scheduling : Signal.t -> Signal.t list
+module Deps_for_simulation_scheduling : Signal.Type.Deps
 
-(** Like [deps_for_simulation_scheduling], except loops are allowed through instantiations. *)
-val deps_for_loop_checking : Signal.t -> Signal.t list
+(** Like [Deps_for_simulation_scheduling], except loops are allowed through instantiations. *)
+module Deps_for_loop_checking : Signal.Type.Deps
 
 (** Final layer of combinational nodes which sit on the path between the outputs and any
     driving register or memory. *)

@@ -123,7 +123,7 @@ will be output in the state `S_write_result`.
        that follows. *)
     }
   ;;
-val create : Signal.t I.t -> Signal.t O.t = <fun>
+val create : Reg_spec.signal I.t -> Reg_spec.signal O.t = <fun>
 ```
 
 ## Testing the logic

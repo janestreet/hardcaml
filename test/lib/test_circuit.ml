@@ -378,15 +378,8 @@ let%expect_test "phantom input aliases an internal name" =
         input a;
         output c;
 
-        /* signal declarations */
         wire b;
-
-        /* logic */
         assign b = ~ a;
-
-        /* aliases */
-
-        /* output assignments */
         assign c = b;
 
     endmodule |}];
@@ -405,15 +398,8 @@ let%expect_test "phantom input aliases an internal name" =
         input b;
         output c;
 
-        /* signal declarations */
         wire b_0;
-
-        /* logic */
         assign b_0 = ~ a;
-
-        /* aliases */
-
-        /* output assignments */
         assign c = b_0;
 
     endmodule |}]

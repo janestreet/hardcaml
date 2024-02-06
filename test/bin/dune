@@ -1,9 +1,16 @@
-(executables (names test_parameters test_multiport_memory auto_naming)
+(executables
+ (modes byte exe)
+ (names test_parameters test_multiport_memory auto_naming)
  (libraries base hardcaml hardcaml_test hardcaml_waveterm.interactive stdio)
- (preprocess (pps ppx_jane)))
+ (preprocess
+  (pps ppx_jane)))
 
-(rule (targets test_instantiate_verilog.v test_instantiate_vhdl.vhd)
- (deps test_parameters.exe) (action (bash ./test_parameters.exe)))
+(rule
+ (targets test_instantiate_verilog.v test_instantiate_vhdl.vhd)
+ (deps test_parameters.exe)
+ (action
+  (bash ./test_parameters.exe)))
 
-(alias (name runtest)
+(alias
+ (name runtest)
  (deps test_instantiate_verilog.v test_instantiate_vhdl.vhd))

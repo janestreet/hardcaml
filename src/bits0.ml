@@ -65,6 +65,22 @@ let unsafe_set_int64 (t : t) i x =
   Bytes.unsafe_set_int64 t ((i lsl shift_bytes_to_words) + offset_for_data) x
 ;;
 
+let[@cold] raise_invalid_index width word_index =
+  raise_s [%message "[Bits0] Invalid words index" (width : int) (word_index : int)]
+;;
+
+let get_int64 (t : t) index =
+  let words = words t in
+  if index < 0 || index >= words then raise_invalid_index words index;
+  unsafe_get_int64 t index
+;;
+
+let set_int64 (t : t) index value =
+  let words = words t in
+  if index < 0 || index >= words then raise_invalid_index words index;
+  unsafe_set_int64 t index value
+;;
+
 external unsafe_get_int32 : bytes -> int -> int32 = "%caml_bytes_get32u"
 external unsafe_set_int32 : bytes -> int -> int32 -> unit = "%caml_bytes_set32u"
 

@@ -1,0 +1,5 @@
+(library
+ (name hardcaml_sims_test)
+ (libraries base hardcaml)
+ (preprocess
+  (pps ppx_jane ppx_hardcaml)))

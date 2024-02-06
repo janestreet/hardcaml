@@ -80,7 +80,6 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
         input [2:0] a;
         output [2:0] c;
 
-        /* signal declarations */
         wire _54;
         wire _1;
         wire _56;
@@ -127,7 +126,7 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
         wire _22;
         wire _102;
         wire _23;
-        wire _52 = 1'b0;
+        wire _52;
         wire _104;
         wire _24;
         wire _106;
@@ -185,8 +184,6 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
         wire _154;
         wire _50;
         wire [2:0] _155;
-
-        /* logic */
         nand
             the_nand
             ( .a(_52),
@@ -325,6 +322,7 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
               .b(_22),
               .c(_102) );
         assign _23 = _102;
+        assign _52 = 1'b0;
         nand
             the_nand_22
             ( .a(_57),
@@ -484,10 +482,6 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
         assign _155 = { _50,
                         _16,
                         _8 };
-
-        /* aliases */
-
-        /* output assignments */
         assign c = _155;
 
     endmodule |}]
@@ -533,7 +527,6 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
         input [2:0] a;
         output [2:0] c;
 
-        /* signal declarations */
         wire [1:0] _53;
         wire _55;
         wire _1;
@@ -603,7 +596,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
         wire [1:0] _123;
         wire _125;
         wire _23;
-        wire _52 = 1'b0;
+        wire _52;
         wire [1:0] _126;
         wire _128;
         wire _24;
@@ -686,8 +679,6 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
         wire _202;
         wire _50;
         wire [2:0] _203;
-
-        /* logic */
         assign _53 = { _52,
                        _2 };
         LUT2
@@ -872,6 +863,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
             ( .I(_123),
               .O(_125) );
         assign _23 = _125;
+        assign _52 = 1'b0;
         assign _126 = { _59,
                         _52 };
         LUT2
@@ -1081,10 +1073,6 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
         assign _203 = { _50,
                         _16,
                         _8 };
-
-        /* aliases */
-
-        /* output assignments */
         assign c = _203;
 
     endmodule |}]

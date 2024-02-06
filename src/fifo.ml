@@ -7,7 +7,12 @@ module Kinded_fifo = Fifo_intf.Kinded_fifo
    Despite what's suggested by Vivado's BRAM documentation, [write_first] are not
    respected, even in SDP RAM mode.
 *)
-let ram_wbr_safe capacity ~write_port ~read_port ~ram_attributes =
+let ram_wbr_safe
+  capacity
+  ~(write_port : _ Write_port.t)
+  ~(read_port : _ Read_port.t)
+  ~ram_attributes
+  =
   let open Signal in
   let collision =
     reg

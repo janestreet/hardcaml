@@ -111,7 +111,7 @@ type t = private
   | Switch of Signal.t * (Signal.t * t list) list
 [@@deriving sexp_of]
 
-type always = t
+type always := t
 type 'a case = 'a * t list
 type 'a cases = 'a case list
 
@@ -166,9 +166,16 @@ module State_machine : sig
   end
 
   (** [create reg_spec ~e] creates a new state machine where the state is stored in a
-      register created from [reg_spec] and [e]. *)
+      register created from [reg_spec] and [e].
+
+      [encoding] chooses the state encoding from binary, gray or onehot. Generally binary
+      is correctly identified by synthesizers and transformed to onehot.
+
+      [auto_wave_format] will automatically make state names show in waveforms.
+  *)
   val create
     :  ?encoding:Encoding.t (** default is [Binary] *)
+    -> ?auto_wave_format:bool (** default is [true] *)
     -> ?enable:Signal.t
     -> (module State with type t = 'a)
     -> Reg_spec.t
