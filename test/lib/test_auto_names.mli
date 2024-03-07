@@ -1,1 +1,1 @@
-val sim : unit -> Hardcaml_waveterm_kernel.Waveform.t
+val sim : unit -> Hardcaml_waveterm_cyclesim.Waveform.t

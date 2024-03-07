@@ -4,6 +4,7 @@
 
 open! Import
 open Hardcaml_waveterm_kernel
+open Hardcaml_waveterm_cyclesim
 
 module I = struct
   type 'a t =

@@ -1,5 +1,6 @@
 open Import
 open Hardcaml_waveterm_kernel
+open Hardcaml_waveterm_cyclesim
 
 module Async_fifo = Async_fifo.Make (struct
   let width = 72

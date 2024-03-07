@@ -1,7 +1,7 @@
 open Hardcaml
 
 (* We cannot compile these examples unless we also compile their dependancies. Which would
-   mean building a work library in a seperate directory (otherwise parallel builds clash)
+   mean building a work library in a separate directory (otherwise parallel builds clash)
    and building black boxes for instantiations. *)
 
 let%expect_test "instantiation, with 0 or more parameters." =

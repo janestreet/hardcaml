@@ -35,6 +35,7 @@ module Cyclesim_float_ops = Cyclesim_float_ops
 module Logic = Logic
 module Vcd = Vcd
 module Wave_format = Wave_format
+module Wave_data = Wave_data
 
 (** {1 Rtl generation} *)
 

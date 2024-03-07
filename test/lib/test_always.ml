@@ -1,7 +1,7 @@
 open! Import
 open! Signal
 open! Always
-open Hardcaml_waveterm_kernel
+open Hardcaml_waveterm_cyclesim
 
 let%expect_test "guarded assignment width mistmatch" =
   require_does_raise [%here] (fun () ->

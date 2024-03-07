@@ -100,7 +100,7 @@ let sim () =
       ()
   in
   let sim = Sim.create ~config:Cyclesim.Config.trace_all (C.hierarchy scope) in
-  let waves, sim = Hardcaml_waveterm_kernel.Waveform.create sim in
+  let waves, sim = Hardcaml_waveterm_cyclesim.Waveform.create sim in
   for _ = 0 to 10 do
     Cyclesim.cycle sim
   done;

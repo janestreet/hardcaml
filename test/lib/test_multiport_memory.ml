@@ -1,5 +1,5 @@
 open! Import
-open Hardcaml_waveterm_kernel
+open Hardcaml_waveterm_cyclesim
 
 let write_port address_width data_width =
   { Write_port.write_clock = Signal.gnd
