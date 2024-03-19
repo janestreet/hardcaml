@@ -37,7 +37,8 @@ let%expect_test "looping wire" =
       "Combinational loop" ((
         wire
         (width   1)
-        (data_in wire))))) |}]
+        (data_in wire)))))
+    |}]
 ;;
 
 let%expect_test "combinational loop" =
@@ -53,7 +54,8 @@ let%expect_test "combinational loop" =
         (wire
           (width   2)
           (data_in add))
-        (add (width 2) (arguments (a wire)))))) |}]
+        (add (width 2) (arguments (a wire))))))
+    |}]
 ;;
 
 let%expect_test "long combinational loop through logic" =
@@ -79,7 +81,8 @@ let%expect_test "long combinational loop through logic" =
         (add (width 2) (arguments (wire a)))
         (or  (width 2) (arguments (add  b)))
         (and (width 2) (arguments (or   c)))
-        (xor (width 2) (arguments (and  mux)))))) |}];
+        (xor (width 2) (arguments (and  mux))))))
+    |}];
   test [ e ];
   [%expect
     {|
@@ -97,7 +100,8 @@ let%expect_test "long combinational loop through logic" =
           (data_in xor))
         (add (width 2) (arguments (wire a)))
         (or  (width 2) (arguments (add  b)))
-        (and (width 2) (arguments (or   c)))))) |}];
+        (and (width 2) (arguments (or   c))))))
+    |}];
   test [ f ];
   [%expect
     {|
@@ -110,7 +114,8 @@ let%expect_test "long combinational loop through logic" =
           (width   2)
           (data_in xor))
         (add (width 2) (arguments (wire a)))
-        (or  (width 2) (arguments (add  b)))))) |}];
+        (or  (width 2) (arguments (add  b))))))
+    |}];
   test [ g ];
   [%expect
     {|
@@ -123,7 +128,8 @@ let%expect_test "long combinational loop through logic" =
         (add (width 2) (arguments (wire a)))
         (or  (width 2) (arguments (add  b)))
         (and (width 2) (arguments (or   c)))
-        (xor (width 2) (arguments (and  mux)))))) |}]
+        (xor (width 2) (arguments (and  mux))))))
+    |}]
 ;;
 
 let%expect_test "combinational loop in 2nd arg" =
@@ -139,7 +145,8 @@ let%expect_test "combinational loop in 2nd arg" =
         (wire
           (width   2)
           (data_in add))
-        (add (width 2) (arguments (a wire)))))) |}]
+        (add (width 2) (arguments (a wire))))))
+    |}]
 ;;
 
 let%expect_test "loop through register" =
@@ -147,8 +154,7 @@ let%expect_test "loop through register" =
     Signal.reg_fb (Reg_spec.create () ~clock) ~enable:vdd ~width:2 ~f:(fun d -> d +:. 1)
   in
   test [ a ];
-  [%expect {|
-    (Ok ()) |}]
+  [%expect {| (Ok ()) |}]
 ;;
 
 let%expect_test "loop through 2 registers" =
@@ -160,8 +166,7 @@ let%expect_test "loop through 2 registers" =
   let d = Signal.reg reg_spec ~enable:vdd d in
   w <== d;
   test [ d ];
-  [%expect {|
-    (Ok ()) |}]
+  [%expect {| (Ok ()) |}]
 ;;
 
 (* same as above, but a different arrangement of the adder *)
@@ -173,8 +178,7 @@ let%expect_test "loop through 2 registers" =
   let d = Signal.reg reg_spec ~enable:vdd d in
   w <== a +: d;
   test [ d ];
-  [%expect {|
-    (Ok ()) |}]
+  [%expect {| (Ok ()) |}]
 ;;
 
 let%expect_test "combinational loop before a register" =
@@ -192,7 +196,8 @@ let%expect_test "combinational loop before a register" =
         (wire
           (width   2)
           (data_in and))
-        (and (width 2) (arguments (a wire)))))) |}]
+        (and (width 2) (arguments (a wire))))))
+    |}]
 ;;
 
 let%expect_test "combinational loop between registers" =
@@ -210,7 +215,8 @@ let%expect_test "combinational loop between registers" =
         (wire
           (width   2)
           (data_in and))
-        (and (width 2) (arguments (register wire)))))) |}]
+        (and (width 2) (arguments (register wire))))))
+    |}]
 ;;
 
 let%expect_test "combinational loop inside register loop" =
@@ -230,7 +236,8 @@ let%expect_test "combinational loop inside register loop" =
         wire
         (names (wire_in_loop))
         (width   2)
-        (data_in wire_in_loop))))) |}]
+        (data_in wire_in_loop)))))
+    |}]
 ;;
 
 let%expect_test "looping memory - q to read_address" =
@@ -256,7 +263,8 @@ let%expect_test "looping memory - q to read_address" =
         (memory_read_port
           (width 1)
           ((memory         multiport_memory)
-           (read_addresses wire)))))) |}]
+           (read_addresses wire))))))
+    |}]
 ;;
 
 let%expect_test "no loop in memory - q to write port" =

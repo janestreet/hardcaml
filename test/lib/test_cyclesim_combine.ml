@@ -85,5 +85,6 @@ let%expect_test "Test comparison" =
        (clock_edge Before)
        (port_name  c)
        (value0     0)
-       (value1     1)))) |}]
+       (value1     1))))
+    |}]
 ;;

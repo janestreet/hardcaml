@@ -8,5 +8,6 @@ let%expect_test "minimum and maximum (64 bit ocaml, native int)" =
     {|
     (of_int (
       (min ((63 -4611686018427387904) 63'h4000000000000000))
-      (max ((63 4611686018427387903)  63'h3fffffffffffffff)))) |}]
+      (max ((63 4611686018427387903)  63'h3fffffffffffffff))))
+    |}]
 ;;

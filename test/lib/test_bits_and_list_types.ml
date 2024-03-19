@@ -26,7 +26,8 @@ let%expect_test "bits against list type" =
       (prims (Add Sub Mulu Muls And Or Xor Not Eq Lt Sel Mux Cat))
       (iterations    20)
       (min_bit_width 1)
-      (max_bit_width 20))) |}];
+      (max_bit_width 20)))
+    |}];
   Test.test [%here] (config Bool_list);
   [%expect
     {|
@@ -42,7 +43,8 @@ let%expect_test "bits against list type" =
       (prims (Add Sub Mulu Muls And Or Xor Not Eq Lt Sel Mux Cat))
       (iterations    20)
       (min_bit_width 1)
-      (max_bit_width 20))) |}];
+      (max_bit_width 20)))
+    |}];
   Test.test [%here] (config X_list);
   [%expect
     {|
@@ -58,5 +60,6 @@ let%expect_test "bits against list type" =
       (prims (Add Sub Mulu Muls And Or Xor Not Eq Lt Sel Mux Cat))
       (iterations    20)
       (min_bit_width 1)
-      (max_bit_width 20))) |}]
+      (max_bit_width 20)))
+    |}]
 ;;

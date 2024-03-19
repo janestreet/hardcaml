@@ -38,7 +38,8 @@ let%expect_test "less than" =
          1'b1)))
       (int_on_right (
         (7'b0011011 <: 12  = 1'b0)
-        (7'b0011011 <: -12 = 1'b1)))) |}]
+        (7'b0011011 <: -12 = 1'b1))))
+    |}]
 ;;
 
 let%expect_test "greater than" =
@@ -77,7 +78,8 @@ let%expect_test "greater than" =
          1'b0)))
       (int_on_right (
         (7'b0011011 >: 12  = 1'b1)
-        (7'b0011011 >: -12 = 1'b0)))) |}]
+        (7'b0011011 >: -12 = 1'b0))))
+    |}]
 ;;
 
 let%expect_test "less than or equal to" =
@@ -116,7 +118,8 @@ let%expect_test "less than or equal to" =
          1'b1)))
       (int_on_right (
         (7'b0011011 <=: 12  = 1'b0)
-        (7'b0011011 <=: -12 = 1'b1)))) |}]
+        (7'b0011011 <=: -12 = 1'b1))))
+    |}]
 ;;
 
 let%expect_test "greater than or equal to" =
@@ -155,7 +158,8 @@ let%expect_test "greater than or equal to" =
          1'b0)))
       (int_on_right (
         (7'b0011011 >=: 12  = 1'b1)
-        (7'b0011011 >=: -12 = 1'b0)))) |}]
+        (7'b0011011 >=: -12 = 1'b0))))
+    |}]
 ;;
 
 (* equality *)
@@ -196,7 +200,8 @@ let%expect_test "equals" =
          1'b0)))
       (int_on_right (
         (7'b0011011 ==: 12  = 1'b0)
-        (7'b0011011 ==: -12 = 1'b0)))) |}]
+        (7'b0011011 ==: -12 = 1'b0))))
+    |}]
 ;;
 
 let%expect_test "not equals" =
@@ -235,5 +240,6 @@ let%expect_test "not equals" =
          1'b1)))
       (int_on_right (
         (7'b0011011 <>: 12  = 1'b1)
-        (7'b0011011 <>: -12 = 1'b1)))) |}]
+        (7'b0011011 <>: -12 = 1'b1))))
+    |}]
 ;;

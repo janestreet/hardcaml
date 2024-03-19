@@ -126,7 +126,8 @@ let%expect_test "generate hierarchy without sharing" =
         assign _2 = _5;
         assign b = _2;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let%expect_test "generate hierarchy with sharing" =
@@ -194,7 +195,8 @@ let%expect_test "generate hierarchy with sharing" =
         assign _2 = _5;
         assign b = _2;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let%expect_test "generate hierarchy exn" =
@@ -204,7 +206,8 @@ let%expect_test "generate hierarchy exn" =
     (raised (
       "Port names are not unique"
       (circuit_name inner)
-      (input_and_output_names (a)))) |}]
+      (input_and_output_names (a))))
+    |}]
 ;;
 
 let%expect_test "hierarchy fold" =
@@ -223,5 +226,6 @@ let%expect_test "hierarchy fold" =
       ((inner)  (inner))
       ((inner)  (inner))
       ((middle) (middle))
-      ((outer) ()))) |}]
+      ((outer) ())))
+    |}]
 ;;

@@ -6,17 +6,20 @@ let%expect_test "Uid hashes are equal between ocaml and javascript" =
   print_s [%message (id : Signal.Uid.t) (Signal.Uid.hash id : int)];
   [%expect {|
     ((id                   1)
-     ("Signal.Uid.hash id" 746625832)) |}];
+     ("Signal.Uid.hash id" 746625832))
+    |}];
   let id = new_id () in
   print_s [%message (id : Signal.Uid.t) (Signal.Uid.hash id : int)];
   [%expect {|
     ((id                   2)
-     ("Signal.Uid.hash id" 391307823)) |}];
+     ("Signal.Uid.hash id" 391307823))
+    |}];
   let id = new_id () in
   print_s [%message (id : Signal.Uid.t) (Signal.Uid.hash id : int)];
   [%expect {|
     ((id                   3)
-     ("Signal.Uid.hash id" 834235799)) |}]
+     ("Signal.Uid.hash id" 834235799))
+    |}]
 ;;
 
 let topsort g =
@@ -31,8 +34,7 @@ let%expect_test "signed resize" =
   let b = Signal.sresize a 8 in
   let result = topsort [ b ] in
   print_s [%sexp (result : topsort)];
-  [%expect {|
-    (Ok (empty a select cat cat cat)) |}]
+  [%expect {| (Ok (empty a select cat cat cat)) |}]
 ;;
 
 let%expect_test "a + a" =
@@ -40,8 +42,7 @@ let%expect_test "a + a" =
   let b = Signal.(a +: a) in
   let result = topsort [ b ] in
   print_s [%sexp (result : topsort)];
-  [%expect {|
-    (Ok (empty a add)) |}]
+  [%expect {| (Ok (empty a add)) |}]
 ;;
 
 (* Simplest possible circuit. *)
@@ -50,8 +51,7 @@ let%expect_test "input -> output" =
   let b = Signal.output "b" a in
   let result = topsort [ b ] in
   print_s [%sexp (result : topsort)];
-  [%expect {|
-    (Ok (empty a b)) |}]
+  [%expect {| (Ok (empty a b)) |}]
 ;;
 
 let reg_spec = Reg_spec.create () ~clock ~clear
@@ -62,8 +62,7 @@ let%expect_test "reg loop (standard deps)" =
   let b = Signal.reg_fb reg_spec ~width:1 ~f:Signal.(fun d -> d +:. 1) in
   let loop = topsort [ b ] in
   print_s [%message (loop : topsort)];
-  [%expect {|
-    (loop (Error (register add wire))) |}]
+  [%expect {| (loop (Error (register add wire))) |}]
 ;;
 
 (* Plug in the correct [deps] *)
@@ -79,8 +78,7 @@ let%expect_test "reg loop" =
   in
   let result = topsort [ b ] in
   print_s [%sexp (result : topsort)];
-  [%expect {|
-    (Ok (register 0b1 add wire empty clock 0b0 clear 0b0 0b1)) |}]
+  [%expect {| (Ok (register 0b1 add wire empty clock 0b0 clear 0b0 0b1)) |}]
 ;;
 
 let%expect_test "mem loop" =
@@ -95,8 +93,7 @@ let%expect_test "mem loop" =
   Signal.(w <== q);
   let result = topsort [ q ] in
   print_s [%sexp (result : topsort)];
-  [%expect {|
-    (Ok (0b1 memory_read_port multiport_memory empty clock wire)) |}]
+  [%expect {| (Ok (0b1 memory_read_port multiport_memory empty clock wire)) |}]
 ;;
 
 (* This a combinational loop.  The read address is not synchronously read. *)
@@ -112,8 +109,7 @@ let%expect_test "mem loop, including read address, which isn't allowed" =
   Signal.(w <== q);
   let result = topsort [ q ] in
   print_s [%sexp (result : topsort)];
-  [%expect {|
-    (Error (wire memory_read_port)) |}]
+  [%expect {| (Error (wire memory_read_port)) |}]
 ;;
 
 (* Instantiation - the only types of instantiation possible in a simulation are
@@ -124,6 +120,5 @@ let%expect_test "Instantiation loop - not allowed." =
   Signal.(w <== Map.find_exn inst "b");
   let result = topsort [ w ] in
   print_s [%sexp (result : topsort)];
-  [%expect {|
-    (Error (instantiation wire wire)) |}]
+  [%expect {| (Error (instantiation wire wire)) |}]
 ;;

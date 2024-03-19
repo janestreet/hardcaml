@@ -38,7 +38,8 @@ let%expect_test "add" =
          123'h0000000000000000000000000000000)))
       (int_on_right (
         (7'b0011011 +: 12  = 7'b0100111)
-        (7'b0011011 +: -12 = 7'b0001111)))) |}]
+        (7'b0011011 +: -12 = 7'b0001111))))
+    |}]
 ;;
 
 let%expect_test "[+:] with one constant" =
@@ -176,7 +177,8 @@ let%expect_test "[+:] with one constant" =
              (data_in empty))
            (const
              (width 2)
-             (value 0b11)))))))) |}]
+             (value 0b11))))))))
+    |}]
 ;;
 
 let%expect_test "sub" =
@@ -215,7 +217,8 @@ let%expect_test "sub" =
          123'h000000000000000000000000000ae92)))
       (int_on_right (
         (7'b0011011 -: 12  = 7'b0001111)
-        (7'b0011011 -: -12 = 7'b0100111)))) |}]
+        (7'b0011011 -: -12 = 7'b0100111))))
+    |}]
 ;;
 
 let%expect_test "[-:] with one constant" =
@@ -383,7 +386,8 @@ let%expect_test "[-:] with one constant" =
              (data_in empty))
            (const
              (width 2)
-             (value 0b11)))))))) |}]
+             (value 0b11))))))))
+    |}]
 ;;
 
 let%expect_test "multiplication" =
@@ -455,7 +459,8 @@ let%expect_test "multiplication" =
          (2'b11 *+ 5'b10000 = 7'b0010000)))
        (misc (
          (8'b00010110 *+ 8'b00100001 = 16'h02d6)
-         (7'b0011011  *+ 4'b1100     = 11'h794))))) |}]
+         (7'b0011011  *+ 4'b1100     = 11'h794)))))
+    |}]
 ;;
 
 let%expect_test "multiplication with one constant" =
@@ -607,7 +612,8 @@ let%expect_test "multiplication with one constant" =
              (data_in empty))
            (const
              (width 2)
-             (value 0b11)))))))) |}]
+             (value 0b11))))))))
+    |}]
 ;;
 
 let%expect_test "negate" =
@@ -637,5 +643,6 @@ let%expect_test "negate" =
         (3'b100 = 3'b100)
         (3'b101 = 3'b011)
         (3'b110 = 3'b010)
-        (3'b111 = 3'b001)))) |}]
+        (3'b111 = 3'b001))))
+    |}]
 ;;

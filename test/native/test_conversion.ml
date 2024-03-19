@@ -13,7 +13,8 @@ let%expect_test "Bits.to_sint (min int)" =
   [%expect
     {|
     ((should_be_min_int -4611686018427387904)
-     (should_be_0       0)) |}]
+     (should_be_0       0))
+    |}]
 ;;
 
 let%expect_test "Bits.to_[s]int (at msb)" =
@@ -48,5 +49,6 @@ let%expect_test "Bits.to_[s]int (at msb)" =
        ((unsigned 0) (signed 0))
        ((unsigned 0) (signed 0))
        ((unsigned 0) (signed 0))
-       ((unsigned 0) (signed 0))))) |}]
+       ((unsigned 0) (signed 0)))))
+    |}]
 ;;

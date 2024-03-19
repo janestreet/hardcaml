@@ -8,14 +8,14 @@ let%expect_test "case-sensitive mangler" =
   print_s
     [%message
       "adding existing identifier" ~_:(add_identifier t "fudge" : [ `Ok | `Duplicate ])];
-  [%expect {|
-    ("adding existing identifier" Duplicate) |}];
+  [%expect {| ("adding existing identifier" Duplicate) |}];
   show_raise (fun () -> add_identifiers_exn t [ "bramble" ]);
   [%expect
     {|
     (raised (
       "Failed to add identifier to mangler as it is already present"
-      (invalid_identifier bramble))) |}];
+      (invalid_identifier bramble)))
+    |}];
   let mangle name =
     let mangled_name = mangle t name in
     print_s [%message (name : string) (mangled_name : string) ~mangler:(t : t)]
@@ -30,7 +30,8 @@ let%expect_test "case-sensitive mangler" =
        (table (
          (bramble 0)
          (fudge   0)
-         (spoodle 0)))))) |}];
+         (spoodle 0))))))
+    |}];
   mangle "spoodle";
   [%expect
     {|
@@ -42,7 +43,8 @@ let%expect_test "case-sensitive mangler" =
          (bramble   0)
          (fudge     0)
          (spoodle   1)
-         (spoodle_0 0)))))) |}];
+         (spoodle_0 0))))))
+    |}];
   mangle "spoodle";
   [%expect
     {|
@@ -55,7 +57,8 @@ let%expect_test "case-sensitive mangler" =
          (fudge     0)
          (spoodle   2)
          (spoodle_0 0)
-         (spoodle_1 0)))))) |}];
+         (spoodle_1 0))))))
+    |}];
   mangle "labradoodle";
   [%expect
     {|
@@ -69,7 +72,8 @@ let%expect_test "case-sensitive mangler" =
          (labradoodle 0)
          (spoodle     2)
          (spoodle_0   0)
-         (spoodle_1   0)))))) |}];
+         (spoodle_1   0))))))
+    |}];
   (* try to subvert mangler by adding the next mangled name *)
   mangle "labradoodle_0";
   [%expect
@@ -85,7 +89,8 @@ let%expect_test "case-sensitive mangler" =
          (labradoodle_0 0)
          (spoodle       2)
          (spoodle_0     0)
-         (spoodle_1     0)))))) |}];
+         (spoodle_1     0))))))
+    |}];
   mangle "labradoodle";
   [%expect
     {|
@@ -101,7 +106,8 @@ let%expect_test "case-sensitive mangler" =
          (labradoodle_0_0 0)
          (spoodle         2)
          (spoodle_0       0)
-         (spoodle_1       0)))))) |}]
+         (spoodle_1       0))))))
+    |}]
 ;;
 
 let%expect_test "case-insensitive mangler" =
@@ -115,7 +121,8 @@ let%expect_test "case-insensitive mangler" =
     {|
     ((name         fudge)
      (mangled_name fudge)
-     (t ((case_sensitive false) (table ((fudge 0)))))) |}];
+     (t ((case_sensitive false) (table ((fudge 0))))))
+    |}];
   mangle "FUDGE";
   [%expect
     {|
@@ -125,5 +132,6 @@ let%expect_test "case-insensitive mangler" =
        (case_sensitive false)
        (table (
          (fudge   1)
-         (FUDGE_0 0)))))) |}]
+         (FUDGE_0 0))))))
+    |}]
 ;;

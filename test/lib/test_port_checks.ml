@@ -30,7 +30,7 @@ let%expect_test "too many inputs" =
         : Hardcaml.Circuit.t)
   in
   circuit Relaxed;
-  [%expect {||}];
+  [%expect {| |}];
   require_does_raise [%here] (fun () -> circuit Port_sets);
   [%expect
     {|
@@ -40,7 +40,8 @@ let%expect_test "too many inputs" =
       (actual_ports (a b c))
       (expected_but_not_in_circuit ())
       (in_circuit_but_not_expected (c))
-      (circuit ((name foo) (input_ports (c b a)) (output_ports (x))))) |}]
+      (circuit ((name foo) (input_ports (c b a)) (output_ports (x)))))
+    |}]
 ;;
 
 let%expect_test "too few inputs" =
@@ -59,7 +60,7 @@ let%expect_test "too few inputs" =
         : Hardcaml.Circuit.t)
   in
   circuit Relaxed;
-  [%expect {||}];
+  [%expect {| |}];
   require_does_raise [%here] (fun () -> circuit Port_sets);
   [%expect
     {|
@@ -72,7 +73,8 @@ let%expect_test "too few inputs" =
       (circuit (
         (name foo)
         (input_ports  (a))
-        (output_ports (x))))) |}]
+        (output_ports (x)))))
+    |}]
 ;;
 
 (* Check output port widths.
@@ -92,9 +94,9 @@ let%expect_test "output width does not match" =
         : Hardcaml.Circuit.t)
   in
   circuit Relaxed;
-  [%expect {||}];
+  [%expect {| |}];
   circuit Port_sets;
-  [%expect {||}];
+  [%expect {| |}];
   require_does_raise [%here] (fun () -> circuit Port_sets_and_widths);
   [%expect
     {|
@@ -103,5 +105,6 @@ let%expect_test "output width does not match" =
       (port_width 2)
       " was specified as "
       (expected_width 1)
-      " in interface") |}]
+      " in interface")
+    |}]
 ;;

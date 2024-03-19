@@ -78,7 +78,8 @@ let%expect_test "attributes on signals" =
         hc_4 <= hc_sl(hc_uns(i) or hc_uns(j));
         o <= hc_4;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 let%expect_test "comments on signals" =
@@ -138,5 +139,6 @@ let%expect_test "comments on signals" =
         hc_4 <= hc_sl(hc_uns(i) or hc_uns(j));
         o <= hc_4;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;

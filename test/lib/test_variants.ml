@@ -34,11 +34,12 @@ module Test (Enum : Hardcaml.Enum.S_enum with module Cases := Cases) = struct
       Core.print_s [%message (selector : Cases.t) (value : Bits.t)]);
     [%expect
       {|
-    ((selector C0) (value 0000000000000000))
-    ((selector C1) (value 0000000000000001))
-    ((selector C2) (value 0000000000000010))
-    ((selector C3) (value 0000000000000011))
-    ((selector C4) (value 0000000000000100)) |}]
+      ((selector C0) (value 0000000000000000))
+      ((selector C1) (value 0000000000000001))
+      ((selector C2) (value 0000000000000010))
+      ((selector C3) (value 0000000000000011))
+      ((selector C4) (value 0000000000000100))
+      |}]
   ;;
 
   let%expect_test "Raises when non exhaustive without default" =

@@ -5,7 +5,8 @@ let%expect_test "[Reg_spec.sexp_of_t]" =
   print_s [%sexp (Reg_spec.create () ~clock : Reg_spec.t)];
   [%expect {|
     ((clock      clock)
-     (clock_edge Rising)) |}]
+     (clock_edge Rising))
+    |}]
 ;;
 
 let%expect_test "name of empty" =
@@ -20,7 +21,8 @@ let%expect_test "non-const signal" =
     ("cannot get the value of a non-constant signal"
      (wire
        (width   1)
-       (data_in empty))) |}]
+       (data_in empty)))
+    |}]
 ;;
 
 let%expect_test "non-const to_int" =
@@ -30,7 +32,8 @@ let%expect_test "non-const to_int" =
     ("cannot use [to_constant] on non-constant signal"
      (wire
        (width   1)
-       (data_in empty))) |}]
+       (data_in empty)))
+    |}]
 ;;
 
 let%expect_test "non-const to_bstr" =
@@ -40,13 +43,13 @@ let%expect_test "non-const to_bstr" =
     ("cannot use [to_constant] on non-constant signal"
      (wire
        (width   1)
-       (data_in empty))) |}]
+       (data_in empty)))
+    |}]
 ;;
 
 let%expect_test "set name of empty" =
   require_does_raise [%here] (fun () -> empty -- "oops");
-  [%expect {|
-    ("attempt to set the name of the empty signal" (to_ oops)) |}]
+  [%expect {| ("attempt to set the name of the empty signal" (to_ oops)) |}]
 ;;
 
 let%expect_test "multiple assignment to a wire" =
@@ -65,7 +68,8 @@ let%expect_test "multiple assignment to a wire" =
         const
         (names (gnd))
         (width 1)
-        (value 0b0)))) |}]
+        (value 0b0))))
+    |}]
 ;;
 
 let%expect_test "wire width mismatch" =
@@ -78,7 +82,8 @@ let%expect_test "wire width mismatch" =
      (wire_width       29)
      (expression_width 17)
      (wire       (wire  (width 29) (data_in empty)))
-     (expression (const (width 17) (value   0x00003)))) |}]
+     (expression (const (width 17) (value   0x00003))))
+    |}]
 ;;
 
 let%expect_test "assignment to a non-wire" =
@@ -97,7 +102,8 @@ let%expect_test "assignment to a non-wire" =
         const
         (names (gnd))
         (width 1)
-        (value 0b0)))) |}]
+        (value 0b0))))
+    |}]
 ;;
 
 let g_clock = clock
@@ -142,7 +148,8 @@ let%expect_test "invalid clock" =
         wire
         (names (not_a_clock))
         (width   2)
-        (data_in empty)))) |}]
+        (data_in empty))))
+    |}]
 ;;
 
 let%expect_test "invalid reset" =
@@ -156,7 +163,8 @@ let%expect_test "invalid reset" =
         wire
         (names (not_a_reset))
         (width   2)
-        (data_in empty)))) |}]
+        (data_in empty))))
+    |}]
 ;;
 
 let%expect_test "invalid reset_value" =
@@ -170,7 +178,8 @@ let%expect_test "invalid reset_value" =
         wire
         (names (not_a_reset_value))
         (width   2)
-        (data_in empty)))) |}]
+        (data_in empty))))
+    |}]
 ;;
 
 let%expect_test "invalid clear" =
@@ -184,7 +193,8 @@ let%expect_test "invalid clear" =
         wire
         (names (not_a_clear))
         (width   2)
-        (data_in empty)))) |}]
+        (data_in empty))))
+    |}]
 ;;
 
 let%expect_test "invalid clear_value" =
@@ -198,7 +208,8 @@ let%expect_test "invalid clear_value" =
         wire
         (names (not_a_clear_value))
         (width   2)
-        (data_in empty)))) |}]
+        (data_in empty))))
+    |}]
 ;;
 
 let%expect_test "invalid enable" =
@@ -212,7 +223,8 @@ let%expect_test "invalid enable" =
         wire
         (names (not_an_enable))
         (width   2)
-        (data_in empty)))) |}]
+        (data_in empty))))
+    |}]
 ;;
 
 let%expect_test "insertion" =
@@ -227,7 +239,8 @@ let%expect_test "insertion" =
       (width_from           2)
       (width_target         3)
       (at_offset            2)
-      (highest_inserted_bit 4)) |}];
+      (highest_inserted_bit 4))
+    |}];
   require_does_not_raise [%here] (fun () ->
     print_s
       [%message
@@ -238,7 +251,8 @@ let%expect_test "insertion" =
     ("valid [insert]" (
       const
       (width 3)
-      (value 0b001))) |}]
+      (value 0b001)))
+    |}]
 ;;
 
 let%expect_test "mux errors" =
@@ -252,13 +266,15 @@ let%expect_test "mux errors" =
         (value 0b0))
       (const
         (width 2)
-        (value 0b10)))) |}];
+        (value 0b10))))
+    |}];
   require_does_raise [%here] (fun () -> mux vdd [ gnd; vdd; gnd ]);
   [%expect
     {|
     ("[mux] got too many inputs"
       (inputs_provided  3)
-      (maximum_expected 2)) |}];
+      (maximum_expected 2))
+    |}];
   require_does_raise [%here] (fun () -> mux vdd [ gnd ]);
   [%expect {| ("[mux] got fewer than 2 inputs" (inputs_provided 1)) |}];
   require_does_raise [%here] (fun () -> mux2 (of_bit_string "11") gnd vdd);

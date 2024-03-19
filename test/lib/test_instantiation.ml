@@ -33,7 +33,8 @@ let%expect_test "Intstantiation in Verilog with single bit output" =
         assign _2 = _5;
         assign b = _2;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let%expect_test "Intstantiation in VHDL with single bit output" =
@@ -76,7 +77,8 @@ let%expect_test "Intstantiation in VHDL with single bit output" =
         hc_2 <= hc_5;
         b <= hc_2;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 (* Another instantiation test, this time with multiple inputs and outputs *)
@@ -129,5 +131,6 @@ let%expect_test "Intstantiation in Verilog with multiple inputs and outputs" =
         assign c = _8;
         assign d = _7;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;

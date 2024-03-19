@@ -34,7 +34,8 @@ let%expect_test "Cyclesim.internal_port can peek at combinational node" =
   Stdio.print_endline [%string "Summed = %{summed#Int}"];
   [%expect {|
     Foo = 60
-    Summed = 70 |}]
+    Summed = 70
+    |}]
 ;;
 
 let%expect_test "lookup_reg can peek and poke internal registers" =

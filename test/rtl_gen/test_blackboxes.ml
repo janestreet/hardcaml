@@ -46,5 +46,6 @@ let%expect_test "blackboxes" =
     begin
 
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;

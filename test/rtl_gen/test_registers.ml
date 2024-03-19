@@ -77,7 +77,8 @@ let%expect_test "clock" =
         end process;
         q <= hc_7;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.vdd);
   [%expect
     {|
@@ -143,7 +144,8 @@ let%expect_test "clock" =
         end process;
         q <= hc_7;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
@@ -211,7 +213,8 @@ let%expect_test "clock" =
         end process;
         q <= hc_7;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   let spec = Reg_spec.override spec ~clock_edge:Falling in
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
@@ -280,7 +283,8 @@ let%expect_test "clock" =
         end process;
         q <= hc_7;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 let%expect_test "clock + reset" =
@@ -360,7 +364,8 @@ let%expect_test "clock + reset" =
         end process;
         q <= hc_8;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.vdd);
   [%expect
     {|
@@ -436,7 +441,8 @@ let%expect_test "clock + reset" =
         end process;
         q <= hc_8;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
@@ -514,7 +520,8 @@ let%expect_test "clock + reset" =
         end process;
         q <= hc_8;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   let spec = Reg_spec.override spec ~reset_edge:Falling in
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
@@ -593,7 +600,8 @@ let%expect_test "clock + reset" =
         end process;
         q <= hc_8;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 let%expect_test "clock + clear" =
@@ -673,7 +681,8 @@ let%expect_test "clock + clear" =
         end process;
         q <= hc_8;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.vdd);
   [%expect
     {|
@@ -749,7 +758,8 @@ let%expect_test "clock + clear" =
         end process;
         q <= hc_8;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
@@ -827,7 +837,8 @@ let%expect_test "clock + clear" =
         end process;
         q <= hc_8;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   let spec = Reg_spec.override spec ~clear_level:Low in
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
   [%expect
@@ -904,7 +915,8 @@ let%expect_test "clock + clear" =
         end process;
         q <= hc_8;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 let%expect_test "clock + reset + clear" =
@@ -994,7 +1006,8 @@ let%expect_test "clock + reset + clear" =
         end process;
         q <= hc_9;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.vdd);
   [%expect
     {|
@@ -1080,7 +1093,8 @@ let%expect_test "clock + reset + clear" =
         end process;
         q <= hc_9;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
@@ -1168,7 +1182,8 @@ let%expect_test "clock + reset + clear" =
         end process;
         q <= hc_9;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   let spec =
     Reg_spec.override spec ~clock_edge:Falling ~reset_edge:Falling ~clear_level:Low
   in
@@ -1259,7 +1274,8 @@ let%expect_test "clock + reset + clear" =
         end process;
         q <= hc_9;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   let spec = Reg_spec.override spec ~reset_to:Signal.vdd ~clear_to:Signal.vdd in
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
@@ -1348,7 +1364,8 @@ let%expect_test "clock + reset + clear" =
         end process;
         q <= hc_8;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 let%expect_test "multiple reg names" =
@@ -1453,5 +1470,6 @@ let%expect_test "multiple reg names" =
         a <= c;
         q <= c;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;

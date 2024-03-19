@@ -86,7 +86,8 @@ let create
     | None -> actual_capacity - 1
     | Some x -> x
   in
-  let empty, full = wire 1, wire 1 in
+  let not_empty, full = wire 1, wire 1 in
+  let empty = ~:not_empty in
   (* safe rd/wr signals assuming fifo neither full or empty *)
   let rd = if underflow_check then (rd &: ~:empty) -- "RD_INT" else rd in
   let wr = if overflow_check then (wr &: ~:full) -- "WR_INT" else wr in
@@ -100,7 +101,7 @@ let create
   in
   used <== reg ~enable (used_next -- "USED_NEXT");
   (* full empty flags *)
-  empty <== reg ~enable ~clear_to:vdd (used_next ==:. 0);
+  not_empty <== reg ~enable (used_next <>:. 0);
   full <== reg ~enable (used_next ==:. actual_capacity);
   (* nearly full/empty flags *)
   let nearly_empty = reg ~enable ~clear_to:vdd (used_next <=:. nearly_empty) in

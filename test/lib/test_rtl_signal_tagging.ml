@@ -85,7 +85,8 @@ let%expect_test "Signal attributes on top of signals in Verilog for circuitscons
         assign _12 = hello + _2;
         assign c = _12;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let%expect_test "Signal attributes on top of signals in Verilog" =
@@ -113,7 +114,8 @@ let%expect_test "Signal attributes on top of signals in Verilog" =
         assign tmp = _4 + _5;
         assign result = tmp;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let%expect_test "Signal attributes on top of signals in VHDL" =
@@ -157,7 +159,8 @@ let%expect_test "Signal attributes on top of signals in VHDL" =
         tmp <= hc_slv(hc_uns(hc_4) + hc_uns(hc_5));
         result <= tmp;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 let%expect_test "Test Rtl attributes on the pipeline construct" =
@@ -227,5 +230,6 @@ let%expect_test "Test Rtl attributes on the pipeline construct" =
         end
         assign b = _15;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;

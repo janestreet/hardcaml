@@ -294,5 +294,6 @@ let%expect_test "operators" =
         o_mux2 <= hc_28;
         o_mux <= hc_26;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;

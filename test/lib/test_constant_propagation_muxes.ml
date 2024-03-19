@@ -40,7 +40,8 @@ let%expect_test "[mux]" =
      (Error (
        "[mux] got too many inputs"
        (inputs_provided  5)
-       (maximum_expected 4)))) |}]
+       (maximum_expected 4))))
+    |}]
 ;;
 
 let%expect_test "mux" =
@@ -58,7 +59,8 @@ let%expect_test "mux" =
       ((2'b00 (5'b00000 5'b01010 5'b10100 5'b11110)) = 5'b00000)
       ((2'b01 (5'b00000 5'b01010 5'b10100 5'b11110)) = 5'b01010)
       ((2'b10 (5'b00000 5'b01010 5'b10100 5'b11110)) = 5'b10100)
-      ((2'b11 (5'b00000 5'b01010 5'b10100 5'b11110)) = 5'b11110))) |}]
+      ((2'b11 (5'b00000 5'b01010 5'b10100 5'b11110)) = 5'b11110)))
+    |}]
 ;;
 
 let%expect_test "mux2" =
@@ -79,5 +81,6 @@ let%expect_test "mux2" =
       ((((1'b1 1'b0 1'b0) = 1'b0)
         ((1'b1 1'b0 1'b1) = 1'b0))
        (((1'b1 1'b1 1'b0) = 1'b1)
-        ((1'b1 1'b1 1'b1) = 1'b1))))) |}]
+        ((1'b1 1'b1 1'b1) = 1'b1)))))
+    |}]
 ;;

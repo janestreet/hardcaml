@@ -35,8 +35,7 @@ let test ~branching_factor ~case_count =
 
 let%expect_test "empty data" =
   show_raise (fun () -> Bits.priority_select []);
-  [%expect {|
-    (raised "[tree_or_reduce_binary_operator] got empty list") |}]
+  [%expect {| (raised "[tree_or_reduce_binary_operator] got empty list") |}]
 ;;
 
 let%expect_test "branching factor 1" =
@@ -82,7 +81,8 @@ let%expect_test "branching factor 1" =
     (priority_select 1100 = 3)
     (priority_select 1101 = 1)
     (priority_select 1110 = 2)
-    (priority_select 1111 = 1) |}]
+    (priority_select 1111 = 1)
+    |}]
 ;;
 
 let%expect_test "branching factor 2" =
@@ -106,7 +106,8 @@ let%expect_test "branching factor 2" =
     (priority_select 1100 = 3)
     (priority_select 1101 = 1)
     (priority_select 1110 = 2)
-    (priority_select 1111 = 1) |}]
+    (priority_select 1111 = 1)
+    |}]
 ;;
 
 let%expect_test "branching factor 3" =
@@ -130,7 +131,8 @@ let%expect_test "branching factor 3" =
     (priority_select 1100 = 3)
     (priority_select 1101 = 1)
     (priority_select 1110 = 2)
-    (priority_select 1111 = 1) |}]
+    (priority_select 1111 = 1)
+    |}]
 ;;
 
 let%expect_test "branching factor 4" =
@@ -170,7 +172,8 @@ let%expect_test "branching factor 4" =
     (priority_select 11100 = 3)
     (priority_select 11101 = 1)
     (priority_select 11110 = 2)
-    (priority_select 11111 = 1) |}]
+    (priority_select 11111 = 1)
+    |}]
 ;;
 
 let test_with_default ~branching_factor ~case_count =
@@ -197,7 +200,8 @@ let%expect_test "with default" =
     ((branching_factor 1)
      (case_count       1))
     (priority_select_with_default 0 = 255)
-    (priority_select_with_default 1 = 1) |}];
+    (priority_select_with_default 1 = 1)
+    |}];
   test_with_default ~branching_factor:3 ~case_count:5;
   [%expect
     {|
@@ -234,7 +238,8 @@ let%expect_test "with default" =
     (priority_select_with_default 11100 = 3)
     (priority_select_with_default 11101 = 1)
     (priority_select_with_default 11110 = 2)
-    (priority_select_with_default 11111 = 1) |}]
+    (priority_select_with_default 11111 = 1)
+    |}]
 ;;
 
 let test_onehot ~branching_factor ~case_count =
@@ -257,7 +262,8 @@ let%expect_test "onehot" =
     ((branching_factor 1)
      (case_count       1))
     (onehot_select 0 = 0)
-    (onehot_select 1 = 1) |}];
+    (onehot_select 1 = 1)
+    |}];
   test_onehot ~branching_factor:2 ~case_count:4;
   [%expect
     {|
@@ -278,5 +284,6 @@ let%expect_test "onehot" =
     (onehot_select 1100 = 7)
     (onehot_select 1101 = 7)
     (onehot_select 1110 = 7)
-    (onehot_select 1111 = 7) |}]
+    (onehot_select 1111 = 7)
+    |}]
 ;;

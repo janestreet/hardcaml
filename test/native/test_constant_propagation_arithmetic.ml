@@ -21,5 +21,6 @@ let%expect_test "negate" =
       _63_bit_min_max (
         (63'h3fffffffffffffff = 63'h4000000000000001)
         (63'h4000000000000000 = 63'h4000000000000000)
-        (63'h4000000000000001 = 63'h3fffffffffffffff)))) |}]
+        (63'h4000000000000001 = 63'h3fffffffffffffff))))
+    |}]
 ;;

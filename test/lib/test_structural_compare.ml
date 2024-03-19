@@ -47,8 +47,7 @@ let%expect_test "different number of inputs" =
       (circuit ~circuit_name:"test" ~internal_name:"foo" ~input_count:3 ~output_count:1)
   in
   print_s [%message "circuits same" (compare : bool)];
-  [%expect {|
-    ("circuits same" (compare false)) |}]
+  [%expect {| ("circuits same" (compare false)) |}]
 ;;
 
 let%expect_test "different number of outputs" =
@@ -58,6 +57,5 @@ let%expect_test "different number of outputs" =
       (circuit ~circuit_name:"test" ~internal_name:"foo" ~input_count:2 ~output_count:2)
   in
   print_s [%message "circuits same" (compare : bool)];
-  [%expect {|
-    ("circuits same" (compare false)) |}]
+  [%expect {| ("circuits same" (compare false)) |}]
 ;;

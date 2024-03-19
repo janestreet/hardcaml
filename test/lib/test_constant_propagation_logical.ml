@@ -38,7 +38,8 @@ let%expect_test "and" =
          123'h0000000000000000000000000000001)))
       (int_on_right (
         (7'b0011011 &: 12  = 7'b0001000)
-        (7'b0011011 &: -12 = 7'b0010000)))) |}]
+        (7'b0011011 &: -12 = 7'b0010000))))
+    |}]
 ;;
 
 let%expect_test "[&:] with one constant" =
@@ -116,7 +117,8 @@ let%expect_test "[&:] with one constant" =
              (width 2)
              (value 0b10))))))))
     (2'b11 &: x = x)
-    (x &: 2'b11 = x) |}]
+    (x &: 2'b11 = x)
+    |}]
 ;;
 
 let%expect_test "or" =
@@ -155,7 +157,8 @@ let%expect_test "or" =
          123'h7ffffffffffffffffffffffffffffff)))
       (int_on_right (
         (7'b0011011 |: 12  = 7'b0011111)
-        (7'b0011011 |: -12 = 7'b1111111)))) |}]
+        (7'b0011011 |: -12 = 7'b1111111))))
+    |}]
 ;;
 
 let%expect_test "[|:] with one constant" =
@@ -233,7 +236,8 @@ let%expect_test "[|:] with one constant" =
              (width 2)
              (value 0b10))))))))
     (2'b11 |: x = 2'b11)
-    (x |: 2'b11 = 2'b11) |}]
+    (x |: 2'b11 = 2'b11)
+    |}]
 ;;
 
 let%expect_test "xor" =
@@ -272,7 +276,8 @@ let%expect_test "xor" =
          123'h7fffffffffffffffffffffffffffffe)))
       (int_on_right (
         (7'b0011011 ^: 12  = 7'b0010111)
-        (7'b0011011 ^: -12 = 7'b1101111)))) |}]
+        (7'b0011011 ^: -12 = 7'b1101111))))
+    |}]
 ;;
 
 let%expect_test "not" =
@@ -302,5 +307,6 @@ let%expect_test "not" =
         (3'b100 = 3'b011)
         (3'b101 = 3'b010)
         (3'b110 = 3'b001)
-        (3'b111 = 3'b000)))) |}]
+        (3'b111 = 3'b000))))
+    |}]
 ;;

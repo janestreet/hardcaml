@@ -26,5 +26,6 @@ let%expect_test "file IO" =
       (circuit_name test)
       (hierarchy_path (test))
       (output ((language Verilog) (mode (In_directory /foo))))
-      (exn (Sys_error "/foo/test.v: No such file or directory"))) |}]
+      (exn (Sys_error "/foo/test.v: No such file or directory")))
+    |}]
 ;;

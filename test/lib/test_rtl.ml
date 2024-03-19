@@ -6,8 +6,7 @@ let rtl_write_null outputs = Rtl.print Verilog (Circuit.create_exn ~name:"test" 
 let%expect_test "Port names must be unique" =
   require_does_raise [%here] (fun () -> rtl_write_null [ output "a" (input "a" 1) ]);
   [%expect
-    {|
-    ("Port names are not unique" (circuit_name test) (input_and_output_names (a))) |}]
+    {| ("Port names are not unique" (circuit_name test) (input_and_output_names (a))) |}]
 ;;
 
 let%expect_test "Port names must be legal" =
@@ -27,7 +26,8 @@ let%expect_test "Port names must be legal" =
           wire
           (names (1^7))
           (width   1)
-          (data_in empty)))))) |}]
+          (data_in empty))))))
+    |}]
 ;;
 
 let%expect_test "Port name clashes with reserved name" =
@@ -45,7 +45,8 @@ let%expect_test "Port name clashes with reserved name" =
           wire
           (names (generate))
           (width   1)
-          (data_in x)))))) |}]
+          (data_in x))))))
+    |}]
 ;;
 
 let%expect_test "output wire is width 0 (or empty)" =
@@ -57,7 +58,8 @@ let%expect_test "output wire is width 0 (or empty)" =
       wire (
         wire
         (width   0)
-        (data_in empty)))) |}]
+        (data_in empty))))
+    |}]
 ;;
 
 let%expect_test "instantiation input is empty" =
@@ -85,5 +87,6 @@ let%expect_test "instantiation input is empty" =
             (outputs ((b 1))))))
         (exn (
           "[Rtl_ast] Failed to find signal in logic map"
-          (context "Inst.input_port: a")))))) |}]
+          (context "Inst.input_port: a"))))))
+    |}]
 ;;

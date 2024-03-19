@@ -8,8 +8,7 @@ let%expect_test "combinational loop" =
   w <== b;
   let signal_graph = Signal_graph.create [ b ] in
   print_s [%sexp (Signal_graph.normalize_uids signal_graph : Signal_graph.t)];
-  [%expect {|
-    ((outputs ((add (width 2) (arguments (a wire))))) (upto ())) |}]
+  [%expect {| ((outputs ((add (width 2) (arguments (a wire))))) (upto ())) |}]
 ;;
 
 let design () =
@@ -223,5 +222,6 @@ let%expect_test "verilog with normalization" =
         assign g = _14;
         assign h = _1;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;

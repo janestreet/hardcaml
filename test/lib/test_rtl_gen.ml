@@ -31,7 +31,8 @@ let%expect_test "reg, clock + enable" =
         end
         assign q = _7;
 
-    endmodule |}];
+    endmodule
+    |}];
   Rtl.print Vhdl circuit;
   [%expect
     {|
@@ -77,7 +78,8 @@ let%expect_test "reg, clock + enable" =
         end process;
         q <= hc_7;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 let%expect_test "reg, clock, reset, clear + enable" =
@@ -118,7 +120,8 @@ let%expect_test "reg, clock, reset, clear + enable" =
         end
         assign q = _9;
 
-    endmodule |}];
+    endmodule
+    |}];
   Rtl.print Vhdl circuit;
   [%expect
     {|
@@ -174,7 +177,8 @@ let%expect_test "reg, clock, reset, clear + enable" =
         end process;
         q <= hc_9;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 let write_data = input "write_data" 8
@@ -219,7 +223,8 @@ let%expect_test "mem" =
         assign _8 = _7[read_address];
         assign q = _8;
 
-    endmodule |}];
+    endmodule
+    |}];
   Rtl.print Vhdl circuit;
   [%expect
     {|
@@ -268,7 +273,8 @@ let%expect_test "mem" =
         hc_8 <= hc_7(to_integer(hc_uns(read_address)));
         q <= hc_8;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 let%expect_test "multiport mem" =
@@ -319,7 +325,8 @@ let%expect_test "multiport mem" =
         end
         assign q0 = _12;
 
-    endmodule |}];
+    endmodule
+    |}];
   Rtl.print Vhdl circuit;
   [%expect
     {|
@@ -379,7 +386,8 @@ let%expect_test "multiport mem" =
         end process;
         q0 <= hc_12;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 let%expect_test "Try generate a Verilog circuit with a signal using a reserved name" =
@@ -412,7 +420,8 @@ let%expect_test "Try generate a Verilog circuit with a signal using a reserved n
         end
         assign q = signed_0;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let%expect_test "Try to generate a Verilog module name with dashes" =
@@ -426,7 +435,8 @@ let%expect_test "Try to generate a Verilog module name with dashes" =
     {|
     ("Invalid module or instance name - should only contain alphanumeric or special characters"
      (name mod-with-dash)
-     (special_chars (_ $))) |}]
+     (special_chars (_ $)))
+    |}]
 ;;
 
 let%expect_test "Try to generate a Verilog module name that starts with a number" =
@@ -440,7 +450,8 @@ let%expect_test "Try to generate a Verilog module name that starts with a number
     {|
     ("First letter of module or instance names should be alpha or special"
      (name 999)
-     (special_chars (_ $))) |}]
+     (special_chars (_ $)))
+    |}]
 ;;
 
 let%expect_test "Module name rules apply to instantiations also" =
@@ -457,7 +468,8 @@ let%expect_test "Module name rules apply to instantiations also" =
     {|
     ("Invalid module or instance name - should only contain alphanumeric or special characters"
      (name a^b)
-     (special_chars (_ $))) |}]
+     (special_chars (_ $)))
+    |}]
 ;;
 
 let%expect_test "Try to generate Verilog port names with dashes" =
@@ -482,7 +494,8 @@ let%expect_test "Try to generate Verilog port names with dashes" =
           wire
           (names (in-with-dash))
           (width   32)
-          (data_in empty)))))) |}]
+          (data_in empty))))))
+    |}]
 ;;
 
 let%expect_test "Try to generate Verilog net names with dashes" =
@@ -505,5 +518,6 @@ let%expect_test "Try to generate Verilog net names with dashes" =
         assign a_with_dash = in;
         assign out = a_with_dash;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;

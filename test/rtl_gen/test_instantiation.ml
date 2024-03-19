@@ -187,7 +187,8 @@ let%expect_test "instantiation, with 0 or more parameters." =
         zoo <= hc_22;
         moo <= hc_17;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 let%expect_test "instantiation output corner case" =
@@ -281,7 +282,8 @@ let%expect_test "instantiation output corner case" =
         hc_5 <= hc_8;
         zoo <= hc_5;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 let%expect_test "all parameter types" =
@@ -419,7 +421,8 @@ let%expect_test "all parameter types" =
         hc_5 <= hc_8;
         zoo <= hc_5;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 let%expect_test "phantom input" =
@@ -488,5 +491,6 @@ let%expect_test "phantom input" =
         hc_2 <= foo;
         zoo <= hc_2;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;

@@ -41,7 +41,8 @@ let%expect_test "fields value" =
   [%expect
     {|
     (value ((a 0) (b 0) (c 11) (d 0)))
-    (value ((a 1) (b 1) (c 01) (d 1))) |}]
+    (value ((a 1) (b 1) (c 01) (d 1)))
+    |}]
 ;;
 
 let%expect_test "wrap value" =
@@ -61,5 +62,6 @@ let%expect_test "wrap value" =
   [%expect
     {|
     (value ((a 0) (b 1) (c 11) (d 1)))
-    (value ((a 1) (b 0) (c 01) (d 0))) |}]
+    (value ((a 1) (b 0) (c 01) (d 0)))
+    |}]
 ;;

@@ -30,7 +30,8 @@ let%expect_test "[compare]" =
     (compare 1 0 = 1)
     (compare 0 00 = -1)
     (compare 00 01 = -1)
-    (compare 11 01 = 1) |}]
+    (compare 11 01 = 1)
+    |}]
 ;;
 
 let%expect_test "set of [Bits.t]s" =
@@ -38,8 +39,7 @@ let%expect_test "set of [Bits.t]s" =
     [%sexp
       (Set.of_list (module Bits) (List.map [ "0"; "1"; "01"; "11" ] ~f:of_bit_string)
         : Set.M(Bits).t)];
-  [%expect {|
-    (0 1 01 11) |}]
+  [%expect {| (0 1 01 11) |}]
 ;;
 
 let%expect_test "[floor_log2], [popcount]" =
@@ -95,7 +95,8 @@ let%expect_test "[floor_log2], [popcount]" =
      (floor_log2 (Ok 62)))
     ((input 111111111111111111111111111111111111111111111111111111111111111)
      (popcount 63)
-     (floor_log2 (Ok 62))) |}]
+     (floor_log2 (Ok 62)))
+    |}]
 ;;
 
 let test_sexp_of_bit_string (module M : Hardcaml.Comb.S) =
@@ -135,7 +136,8 @@ let%expect_test "[Bits_list.of_bit_string]" =
     (1111111111111111111111111111111111111111111111111111111111111111
      (Ok 1111111111111111111111111111111111111111111111111111111111111111))
     (11111111111111111111111111111111111111111111111111111111111111111
-     (Ok 11111111111111111111111111111111111111111111111111111111111111111)) |}]
+     (Ok 11111111111111111111111111111111111111111111111111111111111111111))
+    |}]
 ;;
 
 let%expect_test "[Bits.of_bit_string]" =
@@ -154,7 +156,8 @@ let%expect_test "[Bits.of_bit_string]" =
     (1111111111111111111111111111111111111111111111111111111111111111
      (Ok 1111111111111111111111111111111111111111111111111111111111111111))
     (11111111111111111111111111111111111111111111111111111111111111111
-     (Ok 11111111111111111111111111111111111111111111111111111111111111111)) |}]
+     (Ok 11111111111111111111111111111111111111111111111111111111111111111))
+    |}]
 ;;
 
 module Primitive_op = struct
@@ -543,7 +546,8 @@ let%expect_test "BadPrimitives" =
     (mismatch
       (operation (concat (0 000 110100001000111010)))
       (result1 0000110100001000111010)
-      (result2 1111001011110111000101)) |}]
+      (result2 1111001011110111000101))
+    |}]
 ;;
 
 module Test = Make (Expect_test_require)

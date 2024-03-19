@@ -58,7 +58,8 @@ let%expect_test "[compute_tree_branches]" =
     ((branches (3 2)) (num_values (5 2 1)))
     ((branches (3 2)) (num_values (6 2 1)))
     ((branches (3 3)) (num_values (7 3 1)))
-    ((branches (3 3)) (num_values (8 3 1))) |}];
+    ((branches (3 3)) (num_values (8 3 1)))
+    |}];
   (* three steps *)
   for num_values = 0 to 8 do
     test ~steps:3 num_values
@@ -73,7 +74,8 @@ let%expect_test "[compute_tree_branches]" =
     ((branches (2 2 2)) (num_values (5 3 2 1)))
     ((branches (2 2 2)) (num_values (6 3 2 1)))
     ((branches (2 2 2)) (num_values (7 4 2 1)))
-    ((branches (2 2 2)) (num_values (8 4 2 1))) |}];
+    ((branches (2 2 2)) (num_values (8 4 2 1)))
+    |}];
   (* more steps that required *)
   test ~steps:10 1;
   test ~steps:10 2;
@@ -86,7 +88,8 @@ let%expect_test "[compute_tree_branches]" =
     ((branches (2 1 1 1 1 1 1 1 1 1)) (num_values (2 1 1 1 1 1 1 1 1 1 1)))
     ((branches (2 2 2 1 1 1 1 1 1 1)) (num_values (5 3 2 1 1 1 1 1 1 1 1)))
     ((branches (2 2 2 2 1 1 1 1 1 1)) (num_values (9 5 3 2 1 1 1 1 1 1 1)))
-    ((branches (2 2 2 2 1 1 1 1 1 1)) (num_values (10 5 3 2 1 1 1 1 1 1 1))) |}];
+    ((branches (2 2 2 2 1 1 1 1 1 1)) (num_values (10 5 3 2 1 1 1 1 1 1 1)))
+    |}];
   (* larger examples *)
   test ~steps:5 1356;
   [%expect {| ((branches (5 5 4 4 4)) (num_values (1356 272 55 14 4 1))) |}];
@@ -96,7 +99,8 @@ let%expect_test "[compute_tree_branches]" =
   [%expect
     {|
     ((branches (7 7 7 7 6 6 6 6 6 6))
-     (num_values (100000000 14285715 2040817 291546 41650 6942 1157 193 33 6 1))) |}];
+     (num_values (100000000 14285715 2040817 291546 41650 6942 1157 193 33 6 1)))
+    |}];
   test ~steps:4 17;
   [%expect {| ((branches (3 2 2 2)) (num_values (17 6 3 2 1))) |}]
 ;;

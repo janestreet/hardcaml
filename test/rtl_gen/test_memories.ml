@@ -195,5 +195,6 @@ let%expect_test "memory " =
         q2 <= q2_1;
         q3 <= q2_0;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;

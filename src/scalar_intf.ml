@@ -12,6 +12,16 @@ module type S = sig
   end
 
   val apply : ('a -> 'b) t -> 'a t -> 'b t
+
+  val to_with_valid
+    :  (module Comb.S with type t = 'a)
+    -> 'a With_valid.t
+    -> 'a With_valid.t t
+
+  val from_with_valid
+    :  (module Comb.S with type t = 'a)
+    -> 'a With_valid.t t
+    -> 'a With_valid.t
 end
 
 module type S_untyped = S with type 'a t = 'a

@@ -1,3 +1,5 @@
+open Base
+
 module type S = Clocking_intf.S
 
 module Make () = struct
@@ -40,6 +42,19 @@ module Make () = struct
 
     let with_valid_pulse_detect_rising_edge t (v : _ With_valid.t) =
       { v with valid = detect_rising_edge t v.valid }
+    ;;
+
+    let reg_no_clear_with_async_reg_annotation ~num_additional_pipeline_stages t d =
+      let attribute = Rtl_attribute.Vivado.async_reg true in
+      let d_false_path =
+        Signal.reg (to_spec_no_clear t) d |> Fn.flip Signal.add_attribute attribute
+      in
+      let attributes = [ attribute ] in
+      Signal.pipeline
+        ~attributes
+        (to_spec_no_clear t)
+        ~n:num_additional_pipeline_stages
+        d_false_path
     ;;
   end
 

@@ -24,7 +24,8 @@ let%expect_test "top level blackbox" =
         output [31:0] q;
 
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let f_inst scope =
@@ -155,7 +156,8 @@ let%expect_test "Instantiation blackbox" =
         assign _9 = _12;
         assign q = _9;
 
-    endmodule |}];
+    endmodule
+    |}];
   (* Now just print the top level module, plus black boxes for the instantiations *)
   Rtl.print
     ~database:(Scope.circuit_database scope)
@@ -214,5 +216,6 @@ let%expect_test "Instantiation blackbox" =
         assign _9 = _12;
         assign q = _9;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;

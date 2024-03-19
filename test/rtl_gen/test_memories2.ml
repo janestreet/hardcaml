@@ -93,7 +93,8 @@ let%expect_test "multiport memorydata" =
         hc_8 <= hc_7(to_integer(hc_uns(ra)));
         q0 <= hc_8;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   Testing.analyse_vhdl_and_verilog ~show:true (circuit ~data_width:15 ~address_width:1);
   [%expect
     {|
@@ -168,7 +169,8 @@ let%expect_test "multiport memorydata" =
         hc_8 <= hc_7(to_integer(hc_uns(ra)));
         q0 <= hc_8;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   Testing.analyse_vhdl_and_verilog ~show:true (circuit ~data_width:1 ~address_width:2);
   [%expect
     {|
@@ -243,7 +245,8 @@ let%expect_test "multiport memorydata" =
         hc_8 <= hc_7(to_integer(hc_uns(ra)));
         q0 <= hc_8;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   Testing.analyse_vhdl_and_verilog ~show:true (circuit ~data_width:1 ~address_width:1);
   [%expect
     {|
@@ -318,5 +321,6 @@ let%expect_test "multiport memorydata" =
         hc_8 <= hc_7(to_integer(hc_uns(ra)));
         q0 <= hc_8;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;

@@ -20,7 +20,8 @@ let%expect_test "[sexp_of_t]" =
      (fan_out        ())
      (fan_in         ())
      (assertions     ())
-     (instantiations ())) |}]
+     (instantiations ()))
+    |}]
 ;;
 
 let%expect_test "[sexp_of_t] with an output" =
@@ -56,7 +57,8 @@ let%expect_test "[sexp_of_t] with an output" =
      (fan_out ((2 (1))))
      (fan_in ((1 (2)) (2 ())))
      (assertions     ())
-     (instantiations ())) |}]
+     (instantiations ()))
+    |}]
 ;;
 
 let%expect_test "[sexp_of_t] with an input" =
@@ -104,7 +106,8 @@ let%expect_test "[sexp_of_t] with an input" =
        (1 (0))
        (2 (1))))
      (assertions     ())
-     (instantiations ())) |}]
+     (instantiations ()))
+    |}]
 ;;
 
 let%expect_test "[sexp_of_t] with an operator" =
@@ -155,7 +158,8 @@ let%expect_test "[sexp_of_t] with an operator" =
        (2 (3))
        (3 (1))))
      (assertions     ())
-     (instantiations ())) |}]
+     (instantiations ()))
+    |}]
 ;;
 
 let%expect_test "Output signal not driven" =
@@ -166,7 +170,8 @@ let%expect_test "Output signal not driven" =
       output_signal (
         wire
         (width   1)
-        (data_in empty)))) |}]
+        (data_in empty))))
+    |}]
 ;;
 
 let%expect_test "Output signal with no name" =
@@ -177,7 +182,8 @@ let%expect_test "Output signal with no name" =
      (output_signal (
        wire
        (width   1)
-       (data_in 0b1)))) |}]
+       (data_in 0b1))))
+    |}]
 ;;
 
 let%expect_test "Output signal with multiple names" =
@@ -190,7 +196,8 @@ let%expect_test "Output signal with multiple names" =
        wire
        (names (b a))
        (width   1)
-       (data_in 0b1)))) |}]
+       (data_in 0b1))))
+    |}]
 ;;
 
 let%expect_test "Output signal must be a wire" =
@@ -202,15 +209,15 @@ let%expect_test "Output signal must be a wire" =
         const
         (names (gnd))
         (width 1)
-        (value 0b0)))) |}]
+        (value 0b0))))
+    |}]
 ;;
 
 let%expect_test "Port names must be unique" =
   require_does_raise [%here] (fun () ->
     Circuit.create_exn ~name:"test" [ output "a" (input "a" 1) ]);
   [%expect
-    {|
-    ("Port names are not unique" (circuit_name test) (input_and_output_names (a))) |}];
+    {| ("Port names are not unique" (circuit_name test) (input_and_output_names (a))) |}];
   require_does_raise [%here] (fun () ->
     Circuit.create_exn
       ~name:"test"
@@ -238,7 +245,8 @@ let%expect_test "input with no name" =
      (input_signal (
        wire
        (width   1)
-       (data_in empty)))) |}]
+       (data_in empty))))
+    |}]
 ;;
 
 let%expect_test "input with multiple names" =
@@ -251,7 +259,8 @@ let%expect_test "input with multiple names" =
        wire
        (names (b a))
        (width   1)
-       (data_in empty)))) |}]
+       (data_in empty))))
+    |}]
 ;;
 
 let%expect_test "phantom inputs" =
@@ -299,7 +308,8 @@ let%expect_test "phantom inputs" =
        (1 (0))
        (2 (1))))
      (assertions     ())
-     (instantiations ())) |}];
+     (instantiations ()))
+    |}];
   (* Add 2, one of which is already an input (and will be removed) *)
   Circuit.set_phantom_inputs circuit [ "a", 1; "c", 1 ] |> show;
   [%expect
@@ -343,7 +353,8 @@ let%expect_test "phantom inputs" =
        (1 (0))
        (2 (1))))
      (assertions     ())
-     (instantiations ())) |}];
+     (instantiations ()))
+    |}];
   (* Add 2, one of which is already an output *)
   require_does_raise [%here] (fun () ->
     Circuit.set_phantom_inputs circuit [ "b", 1; "c", 1 ] |> show);
@@ -357,7 +368,8 @@ let%expect_test "phantom inputs" =
       (circuit (
         (name test)
         (input_ports  (a))
-        (output_ports (b))))) |}]
+        (output_ports (b)))))
+    |}]
 ;;
 
 let%expect_test "phantom input aliases an internal name" =
@@ -382,7 +394,8 @@ let%expect_test "phantom input aliases an internal name" =
         assign b = ~ a;
         assign c = b;
 
-    endmodule |}];
+    endmodule
+    |}];
   (* Note that the internal name [b] is now mangled correctly *)
   let circuit = Circuit.set_phantom_inputs circuit [ "b", 1 ] in
   Rtl.print Verilog circuit;
@@ -402,7 +415,8 @@ let%expect_test "phantom input aliases an internal name" =
         assign b_0 = ~ a;
         assign c = b_0;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let%expect_test "verify_clock_pins" =
@@ -427,7 +441,8 @@ let%expect_test "verify_clock_pins" =
        ((clock      clock)
         (clock_edge Rising)
         (enable     0b1))
-       (data_in foo))))) |}];
+       (data_in foo)))))
+    |}];
   let circuit_with_wired_clock =
     let foo = input "foo" 1 in
     let clock = wireof (input "clock" 1) -- "clock_wire" in
@@ -453,7 +468,8 @@ let%expect_test "verify_clock_pins" =
        ((clock      clock_wire)
         (clock_edge Rising)
         (enable     0b1))
-       (data_in foo))))) |}];
+       (data_in foo)))))
+    |}];
   let circuit_with_multiport_memory =
     let foo = input "address" 7 in
     let clock0 = input "clock0" 1 in
@@ -506,7 +522,8 @@ let%expect_test "verify_clock_pins" =
        ((clock      clock3)
         (clock_edge Rising)
         (enable     0b1))
-       (data_in memory_read_port))))) |}]
+       (data_in memory_read_port)))))
+    |}]
 ;;
 
 let%expect_test "Raises when encounters duplicated ports in interfaces." =

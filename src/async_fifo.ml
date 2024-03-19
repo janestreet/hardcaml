@@ -28,7 +28,8 @@ let%expect_test "binary_to_gray" =
     1010 -> 1011
     1011 -> 1001
     1001 -> 1000
-    1000 -> 0000 |}]
+    1000 -> 0000
+    |}]
 ;;
 
 let gray_inc bits =

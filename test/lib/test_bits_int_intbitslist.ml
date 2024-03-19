@@ -26,7 +26,8 @@ let%expect_test "bitlist<->bits" =
       (prims (Add Sub Mulu Muls And Or Xor Not Eq Lt Sel Mux Cat))
       (iterations    4)
       (min_bit_width 100)
-      (max_bit_width 200))) |}];
+      (max_bit_width 200)))
+    |}];
   Test.test
     [%here]
     { config with iterations = 20; min_bit_width = 30; max_bit_width = 100 };
@@ -44,7 +45,8 @@ let%expect_test "bitlist<->bits" =
       (prims (Add Sub Mulu Muls And Or Xor Not Eq Lt Sel Mux Cat))
       (iterations    20)
       (min_bit_width 30)
-      (max_bit_width 100))) |}];
+      (max_bit_width 100)))
+    |}];
   Test.test
     [%here]
     { config with iterations = 200; min_bit_width = 1; max_bit_width = 30 };
@@ -62,5 +64,6 @@ let%expect_test "bitlist<->bits" =
       (prims (Add Sub Mulu Muls And Or Xor Not Eq Lt Sel Mux Cat))
       (iterations    200)
       (min_bit_width 1)
-      (max_bit_width 30))) |}]
+      (max_bit_width 30)))
+    |}]
 ;;

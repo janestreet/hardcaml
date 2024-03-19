@@ -22,12 +22,10 @@ let%expect_test "int_of_hchar raises" =
 let%expect_test "[of_binary_string] raises" =
   let to_bstr s = Constant.of_binary_string s in
   require_does_raise [%here] ~cr:CR_soon (fun () -> to_bstr "");
-  [%expect {|
-    "[Constant.of_binary_string] input string is empty" |}];
+  [%expect {| "[Constant.of_binary_string] input string is empty" |}];
   require_does_raise [%here] ~cr:CR_soon (fun () -> to_bstr "z");
   [%expect
-    {|
-    ("[Constant.of_binary_string] input must only consist of '1' or '0'" (got z)) |}]
+    {| ("[Constant.of_binary_string] input must only consist of '1' or '0'" (got z)) |}]
 ;;
 
 let%expect_test "{to,of}_z resepects sign" =
@@ -204,7 +202,8 @@ let%expect_test "intbitslist_of_bstr" =
      (1)
      (1 1 0 0)
      (0 0 1 1)
-     (1 0 1 0 1 1 1 0 1 0 1 0 0 1 1)) |}]
+     (1 0 1 0 1 1 1 0 1 0 1 0 0 1 1))
+    |}]
 ;;
 
 let%expect_test "bstr_of_intbitslist" =
@@ -220,8 +219,7 @@ let%expect_test "bstr_of_intbitslist" =
        ]
       : string list)]
   |> print_s;
-  [%expect {|
-    (0 1 1100 0011 101011101010011) |}]
+  [%expect {| (0 1 1100 0011 101011101010011) |}]
 ;;
 
 let%expect_test "int_of_hstr" =
@@ -247,7 +245,8 @@ let%expect_test "bstr_of_hstr signed" =
     (0000000000000000000000000000000000000000000000000000000000000001
      1111111111111111111111111111111111111111111111111111111111111011
      0000000000000000000000000000000000000000000000000000000111110011
-     1111111111111111111111111111111111111111111111111111111111111111) |}]
+     1111111111111111111111111111111111111111111111111111111111111111)
+    |}]
 ;;
 
 let%expect_test "bstr_of_hstr unsigned" =
@@ -260,7 +259,8 @@ let%expect_test "bstr_of_hstr unsigned" =
     (0000000000000000000000000000000000000000000000000000000000000001
      0000000000000000000000000000000000000000000000000000000000001011
      0000000000000000000000000000000000000000000000000000000111110011
-     1111111111111111111111111111111111111111111111111111111111111111) |}]
+     1111111111111111111111111111111111111111111111111111111111111111)
+    |}]
 ;;
 
 let hstr_of_bstr signedness x =
@@ -310,7 +310,8 @@ let%expect_test "bstr_of_abits_int64" =
      1111111111
      0011111111
      10000000000000000000000000000000000000000000000000000000000000000
-     1111111011011100101110101001100001110110010101000011001000010000) |}]
+     1111111011011100101110101001100001110110010101000011001000010000)
+    |}]
 ;;
 
 let%expect_test "abits_int64_of_bstr" =
@@ -334,7 +335,8 @@ let%expect_test "abits_int64_of_bstr" =
      (1023)
      (255)
      (0 1)
-     (-81985529216486896)) |}]
+     (-81985529216486896))
+    |}]
 ;;
 
 let%expect_test "[Bits.address_bits_for]" =
@@ -387,7 +389,8 @@ let%expect_test "raw strings" =
     ((of_string 00000000000000000000000000000010)
      (to_string "\002\000\000\000")
      (of_bytes  00000000000000000000000000000010)
-     (to_bytes  "\002\000\000\000")) |}];
+     (to_bytes  "\002\000\000\000"))
+    |}];
   test "\001\002\003\004" ~width:8;
   test "\001\002\003\004" ~width:16;
   test "\001\002\003\004" ~width:24;
@@ -414,7 +417,8 @@ let%expect_test "raw strings" =
     ((of_string 0000000000000100000000110000001000000001)
      (to_string "\001\002\003\004\000")
      (of_bytes  0000000000000100000000110000001000000001)
-     (to_bytes  "\001\002\003\004\000")) |}];
+     (to_bytes  "\001\002\003\004\000"))
+    |}];
   for width = 8 to 15 do
     test "\000\255" ~width
   done;
@@ -451,5 +455,6 @@ let%expect_test "raw strings" =
     ((of_string 111111100000000)
      (to_string "\000\127")
      (of_bytes  111111100000000)
-     (to_bytes  "\000\127")) |}]
+     (to_bytes  "\000\127"))
+    |}]
 ;;

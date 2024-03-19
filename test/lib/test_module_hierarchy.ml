@@ -77,41 +77,42 @@ let%expect_test "flattened" =
   test No_path;
   [%expect
     {|
-      module outer (
-          b,
-          a,
-          c0,
-          d0,
-          c1,
-          d1,
-          x
-      );
+    module outer (
+        b,
+        a,
+        c0,
+        d0,
+        c1,
+        d1,
+        x
+    );
 
-          input b;
-          input a;
-          output c0;
-          output d0;
-          output c1;
-          output d1;
-          output x;
+        input b;
+        input a;
+        output c0;
+        output d0;
+        output c1;
+        output d1;
+        output x;
 
-          wire x_0;
-          wire a_0;
-          wire _5;
-          wire _8;
-          wire a_1;
-          assign x_0 = 1'b0;
-          assign a_0 = ~ _8;
-          assign _5 = b;
-          assign _8 = a;
-          assign a_1 = ~ _8;
-          assign c0 = a_1;
-          assign d0 = _5;
-          assign c1 = a_0;
-          assign d1 = _5;
-          assign x = x_0;
+        wire x_0;
+        wire a_0;
+        wire _5;
+        wire _8;
+        wire a_1;
+        assign x_0 = 1'b0;
+        assign a_0 = ~ _8;
+        assign _5 = b;
+        assign _8 = a;
+        assign a_1 = ~ _8;
+        assign c0 = a_1;
+        assign d0 = _5;
+        assign c1 = a_0;
+        assign d1 = _5;
+        assign x = x_0;
 
-      endmodule |}];
+    endmodule
+    |}];
   test Local_path;
   [%expect
     {|
@@ -149,7 +150,8 @@ let%expect_test "flattened" =
         assign d1 = _5;
         assign x = the_middle$x;
 
-    endmodule |}];
+    endmodule
+    |}];
   test Full_path;
   [%expect
     {|
@@ -187,7 +189,8 @@ let%expect_test "flattened" =
         assign d1 = _5;
         assign x = outer$the_middle$x;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let%expect_test "hierarchical" =
@@ -203,122 +206,123 @@ let%expect_test "hierarchical" =
   test No_path;
   [%expect
     {|
-      module inner (
-          b,
-          a,
-          c,
-          d
-      );
+    module inner (
+        b,
+        a,
+        c,
+        d
+    );
 
-          input b;
-          input a;
-          output c;
-          output d;
+        input b;
+        input a;
+        output c;
+        output d;
 
-          wire _2;
-          wire _5;
-          wire a_0;
-          assign _2 = b;
-          assign _5 = a;
-          assign a_0 = ~ _5;
-          assign c = a_0;
-          assign d = _2;
+        wire _2;
+        wire _5;
+        wire a_0;
+        assign _2 = b;
+        assign _5 = a;
+        assign a_0 = ~ _5;
+        assign c = a_0;
+        assign d = _2;
 
-      endmodule
-      module middle (
-          b,
-          a,
-          c0,
-          d0,
-          c1,
-          d1,
-          x
-      );
+    endmodule
+    module middle (
+        b,
+        a,
+        c0,
+        d0,
+        c1,
+        d1,
+        x
+    );
 
-          input b;
-          input a;
-          output c0;
-          output d0;
-          output c1;
-          output d1;
-          output x;
+        input b;
+        input a;
+        output c0;
+        output d0;
+        output c1;
+        output d1;
+        output x;
 
-          wire x_0;
-          wire _13;
-          wire [1:0] _12;
-          wire _14;
-          wire _5;
-          wire _8;
-          wire a_0;
-          assign x_0 = 1'b0;
-          assign _13 = _12[1:1];
-          (* keep_hierarchy="yes" *)
-          inner
-              inner_0
-              ( .a(_8),
-                .b(_5),
-                .d(_12[1:1]),
-                .c(_12[0:0]) );
-          assign _14 = _12[0:0];
-          assign _5 = b;
-          assign _8 = a;
-          assign a_0 = ~ _8;
-          assign c0 = a_0;
-          assign d0 = _5;
-          assign c1 = _14;
-          assign d1 = _13;
-          assign x = x_0;
+        wire x_0;
+        wire _13;
+        wire [1:0] _12;
+        wire _14;
+        wire _5;
+        wire _8;
+        wire a_0;
+        assign x_0 = 1'b0;
+        assign _13 = _12[1:1];
+        (* keep_hierarchy="yes" *)
+        inner
+            inner_0
+            ( .a(_8),
+              .b(_5),
+              .d(_12[1:1]),
+              .c(_12[0:0]) );
+        assign _14 = _12[0:0];
+        assign _5 = b;
+        assign _8 = a;
+        assign a_0 = ~ _8;
+        assign c0 = a_0;
+        assign d0 = _5;
+        assign c1 = _14;
+        assign d1 = _13;
+        assign x = x_0;
 
-      endmodule
-      module outer (
-          b,
-          a,
-          c0,
-          d0,
-          c1,
-          d1,
-          x
-      );
+    endmodule
+    module outer (
+        b,
+        a,
+        c0,
+        d0,
+        c1,
+        d1,
+        x
+    );
 
-          input b;
-          input a;
-          output c0;
-          output d0;
-          output c1;
-          output d1;
-          output x;
+        input b;
+        input a;
+        output c0;
+        output d0;
+        output c1;
+        output d1;
+        output x;
 
-          wire _12;
-          wire _13;
-          wire _14;
-          wire _15;
-          wire _6;
-          wire _8;
-          wire [4:0] _11;
-          wire _16;
-          assign _12 = _11[4:4];
-          assign _13 = _11[3:3];
-          assign _14 = _11[2:2];
-          assign _15 = _11[1:1];
-          assign _6 = b;
-          assign _8 = a;
-          middle
-              the_middle
-              ( .a(_8),
-                .b(_6),
-                .x(_11[4:4]),
-                .d1(_11[3:3]),
-                .c1(_11[2:2]),
-                .d0(_11[1:1]),
-                .c0(_11[0:0]) );
-          assign _16 = _11[0:0];
-          assign c0 = _16;
-          assign d0 = _15;
-          assign c1 = _14;
-          assign d1 = _13;
-          assign x = _12;
+        wire _12;
+        wire _13;
+        wire _14;
+        wire _15;
+        wire _6;
+        wire _8;
+        wire [4:0] _11;
+        wire _16;
+        assign _12 = _11[4:4];
+        assign _13 = _11[3:3];
+        assign _14 = _11[2:2];
+        assign _15 = _11[1:1];
+        assign _6 = b;
+        assign _8 = a;
+        middle
+            the_middle
+            ( .a(_8),
+              .b(_6),
+              .x(_11[4:4]),
+              .d1(_11[3:3]),
+              .c1(_11[2:2]),
+              .d0(_11[1:1]),
+              .c0(_11[0:0]) );
+        assign _16 = _11[0:0];
+        assign c0 = _16;
+        assign d0 = _15;
+        assign c1 = _14;
+        assign d1 = _13;
+        assign x = _12;
 
-      endmodule |}];
+    endmodule
+    |}];
   test Local_path;
   [%expect
     {|
@@ -437,7 +441,8 @@ let%expect_test "hierarchical" =
         assign d1 = _13;
         assign x = _12;
 
-    endmodule |}];
+    endmodule
+    |}];
   test Full_path;
   [%expect
     {|
@@ -556,7 +561,8 @@ let%expect_test "hierarchical" =
         assign d1 = _13;
         assign x = _12;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 module Floating_inner = struct
@@ -608,5 +614,6 @@ let%expect_test "floating ports not in interface" =
       (expected_but_not_in_circuit ())
       (in_circuit_but_not_expected (foo))
       (circuit (
-        (name floating_inner) (input_ports (b foo a)) (output_ports (c d))))) |}]
+        (name floating_inner) (input_ports (b foo a)) (output_ports (c d)))))
+    |}]
 ;;

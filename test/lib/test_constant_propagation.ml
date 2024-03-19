@@ -46,7 +46,8 @@ module Trace = struct
       (+: ((1'b1 1'b0) = 1'b1))
       (1'b1 &: 1'b0 = 1'b0)
       (mux2 ((1'b1 1'b0 1'b1) = 1'b0))
-      (input ((a 1) = a)) |}]
+      (input ((a 1) = a))
+      |}]
   ;;
 
   (* operator tests *)
@@ -185,29 +186,26 @@ let%expect_test "concat" =
           @:
           123'h7ffffffffffffffffffffffffffa8b7
           =
-          246'h0000000000000000000000000002ba4fffffffffffffffffffffffffffa8b7)))))) |}];
+          246'h0000000000000000000000000002ba4fffffffffffffffffffffffffffa8b7))))))
+    |}];
   [%expect {| |}]
 ;;
 
 let%expect_test "concat empty list" =
   show_raise (fun () -> concat_msb []);
-  [%expect {|
-    (raised "[concat] got empty list") |}];
+  [%expect {| (raised "[concat] got empty list") |}];
   show_raise (fun () -> concat_msb_e []);
-  [%expect {|
-    (raised "[concat] got empty list") |}]
+  [%expect {| (raised "[concat] got empty list") |}]
 ;;
 
 let%expect_test "concat_msb empty signal" =
   show_raise (fun () -> concat_msb [ empty ]);
-  [%expect {|
-    (raised ("[concat] got [empty] input" (empty))) |}]
+  [%expect {| (raised ("[concat] got [empty] input" (empty))) |}]
 ;;
 
 let%expect_test "[@:] empty signal" =
   show_raise (fun () -> empty @: empty);
-  [%expect {|
-    (raised ("[concat] got [empty] input" (empty empty))) |}];
+  [%expect {| (raised ("[concat] got [empty] input" (empty empty))) |}];
   show_raise (fun () -> empty @: vdd);
   [%expect
     {|
@@ -217,7 +215,8 @@ let%expect_test "[@:] empty signal" =
           const
           (names (vdd))
           (width 1)
-          (value 0b1))))) |}];
+          (value 0b1)))))
+    |}];
   show_raise (fun () -> vdd @: empty);
   [%expect
     {|
@@ -227,7 +226,8 @@ let%expect_test "[@:] empty signal" =
           (names (vdd))
           (width 1)
           (value 0b1))
-        empty))) |}]
+        empty)))
+    |}]
 ;;
 
 let%expect_test "repeat" =
@@ -243,19 +243,18 @@ let%expect_test "repeat" =
     (repeat (
       ((1'b1        3) = 3'b111)
       ((2'b01       4) = 8'b01010101)
-      ((8'b01111011 1) = 8'b01111011))) |}]
+      ((8'b01111011 1) = 8'b01111011)))
+    |}]
 ;;
 
 let%expect_test "repeat empty" =
   show (repeat empty 1);
-  [%expect {|
-    empty |}]
+  [%expect {| empty |}]
 ;;
 
 let%expect_test "repeat _ 0" =
   show (repeat vdd 0);
-  [%expect {|
-    empty |}]
+  [%expect {| empty |}]
 ;;
 
 let%expect_test "reduce" =
@@ -294,13 +293,13 @@ let%expect_test "reduce" =
         ((1'b0 1'b0 1'b0) = 1'b0)
         ((1'b1 1'b1 1'b1) = 1'b1)
         ((1'b1 1'b0 1'b0) = 1'b1)
-        ((1'b1 1'b0 1'b0 1'b1) = 1'b0)))) |}]
+        ((1'b1 1'b0 1'b0 1'b1) = 1'b0))))
+    |}]
 ;;
 
 let%expect_test "reverse" =
   show (reverse (of_string "1110"));
-  [%expect {|
-    4'b0111 |}]
+  [%expect {| 4'b0111 |}]
 ;;
 
 (* It doesn't make sense if the limit is [>= (1 lsl width)] and an exception should be
@@ -312,7 +311,8 @@ let%expect_test "mod_counter should raise" =
     {|
     ("mod counter limit is great than max counter value"
      (limit     8)
-     (max_value 7)) |}]
+     (max_value 7))
+    |}]
 ;;
 
 let%expect_test "mod_counter" =
@@ -344,7 +344,8 @@ let%expect_test "mod_counter" =
         (3'b100 = 3'b101)
         (3'b101 = 3'b110)
         (3'b110 = 3'b000)
-        (3'b111 = 3'b000)))) |}]
+        (3'b111 = 3'b000))))
+    |}]
 ;;
 
 let%expect_test "tree" =
@@ -370,7 +371,8 @@ let%expect_test "tree" =
       (add_branch_2 (
         (10'h00a 10'h014 10'h01e 10'h028 10'h032 10'h03c 10'h046) = 10'h118))
       (add_branch_3 (
-        (10'h00a 10'h014 10'h01e 10'h028 10'h032 10'h03c 10'h046) = 10'h118))) |}]
+        (10'h00a 10'h014 10'h01e 10'h028 10'h032 10'h03c 10'h046) = 10'h118)))
+    |}]
 ;;
 
 let%expect_test "binary_to_onehot" =
@@ -387,7 +389,8 @@ let%expect_test "binary_to_onehot" =
       (2'b00 = 4'b0001)
       (2'b01 = 4'b0010)
       (2'b10 = 4'b0100)
-      (2'b11 = 4'b1000))) |}]
+      (2'b11 = 4'b1000)))
+    |}]
 ;;
 
 let%expect_test "onehot_to_binary" =
@@ -404,7 +407,8 @@ let%expect_test "onehot_to_binary" =
       (4'b0001 = 2'b00)
       (4'b0010 = 2'b01)
       (4'b0100 = 2'b10)
-      (4'b1000 = 2'b11))) |}]
+      (4'b1000 = 2'b11)))
+    |}]
 ;;
 
 let%expect_test "gray_to_binary" =
@@ -424,7 +428,8 @@ let%expect_test "gray_to_binary" =
       (3'b100 = 3'b111)
       (3'b101 = 3'b110)
       (3'b110 = 3'b100)
-      (3'b111 = 3'b101))) |}]
+      (3'b111 = 3'b101)))
+    |}]
 ;;
 
 let%expect_test "binary_to_gray" =
@@ -444,7 +449,8 @@ let%expect_test "binary_to_gray" =
       (3'b100 = 3'b110)
       (3'b101 = 3'b111)
       (3'b110 = 3'b101)
-      (3'b111 = 3'b100))) |}]
+      (3'b111 = 3'b100)))
+    |}]
 ;;
 
 let%expect_test "[binary_to_gray] and [gray_to_binary] are inverses" =
@@ -465,7 +471,8 @@ let%expect_test "[uresize 0]" =
   [%expect {|
     ("[select] got [hi < lo]"
       (hi -1)
-      (lo 0)) |}]
+      (lo 0))
+    |}]
 ;;
 
 let%expect_test "[sresize 0]" =
@@ -473,7 +480,8 @@ let%expect_test "[sresize 0]" =
   [%expect {|
     ("[select] got [hi < lo]"
       (hi -1)
-      (lo 0)) |}]
+      (lo 0))
+    |}]
 ;;
 
 let%expect_test "resizing" =
@@ -540,7 +548,8 @@ let%expect_test "resizing" =
        (2'b00 = 3'b000)
        (2'b01 = 3'b001)
        (2'b10 = 3'b110)
-       (2'b11 = 3'b111)))) |}]
+       (2'b11 = 3'b111))))
+    |}]
 ;;
 
 let%expect_test "[select]" =
@@ -559,8 +568,7 @@ let%expect_test "[select]" =
           (lazy [%message (split : int) (input : signal) (output : signal)])
     done);
   print_s [%sexp (!num_tests : int)];
-  [%expect {|
-    196 |}]
+  [%expect {| 196 |}]
 ;;
 
 let%expect_test "select" =
@@ -659,16 +667,15 @@ let%expect_test "select" =
         ((5'b11100 3) = 3'b111)
         ((5'b11100 4) = 4'b1110)
         ((5'b11100 5) = 5'b11100)))
-      (bits_of_101 (1'b1 1'b0 1'b1))) |}]
+      (bits_of_101 (1'b1 1'b0 1'b1)))
+    |}]
 ;;
 
 let%expect_test "select_e sexp_of bug? Yes, fixed." =
   show (select_e vdd 1 1);
-  [%expect {|
-    empty |}];
+  [%expect {| empty |}];
   show (select_e gnd (-1) 1);
-  [%expect {|
-    empty |}]
+  [%expect {| empty |}]
 ;;
 
 let%expect_test "insert" =
@@ -689,7 +696,8 @@ let%expect_test "insert" =
       (insert_010_into_0s (
         8'b00000010 8'b00000100 8'b00001000 8'b00010000 8'b00100000 8'b01000000))
       (insert_010_into_1s (
-        8'b11111010 8'b11110101 8'b11101011 8'b11010111 8'b10101111 8'b01011111))) |}]
+        8'b11111010 8'b11110101 8'b11101011 8'b11010111 8'b10101111 8'b01011111)))
+    |}]
 ;;
 
 let%expect_test "split_in_half_msb" =
@@ -713,7 +721,8 @@ let%expect_test "split_in_half_msb" =
       ((left 3'b111)   (right 3'b000))
       ((left 4'b1111)  (right 3'b000))
       ((left 4'b1111)  (right 4'b0000))
-      ((left 5'b11111) (right 4'b0000)))) |}];
+      ((left 5'b11111) (right 4'b0000))))
+    |}];
   print_s
     [%message
       "split"
@@ -730,7 +739,8 @@ let%expect_test "split_in_half_msb" =
       (5 ((left 5'b00000)    (right 4'b0000)))
       (6 ((left 6'b000000)   (right 3'b000)))
       (7 ((left 7'b0000000)  (right 2'b00)))
-      (8 ((left 8'b00000000) (right 1'b0))))) |}]
+      (8 ((left 8'b00000000) (right 1'b0)))))
+    |}]
 ;;
 
 let%expect_test "split_in_half_lsb" =
@@ -754,7 +764,8 @@ let%expect_test "split_in_half_lsb" =
       ((left 3'b111)  (right 3'b000))
       ((left 3'b111)  (right 4'b0000))
       ((left 4'b1111) (right 4'b0000))
-      ((left 4'b1111) (right 5'b00000)))) |}];
+      ((left 4'b1111) (right 5'b00000))))
+    |}];
   print_s
     [%message
       "split"
@@ -771,7 +782,8 @@ let%expect_test "split_in_half_lsb" =
       (5 ((left 4'b0000)     (right 5'b00000)))
       (6 ((left 3'b000)      (right 6'b000000)))
       (7 ((left 2'b00)       (right 7'b0000000)))
-      (8 ((left 1'b0)        (right 8'b00000000))))) |}]
+      (8 ((left 1'b0)        (right 8'b00000000)))))
+    |}]
 ;;
 
 let%expect_test "split_lsb" =
@@ -784,8 +796,7 @@ let%expect_test "split_lsb" =
   split_raises ~part_width:0 vdd;
   [%expect {| ("[split] got [part_width <= 0]" (part_width 0)) |}];
   split_raises ~part_width:1 empty;
-  [%expect {|
-    "[split] got [empty] input" |}];
+  [%expect {| "[split] got [empty] input" |}];
   split ~part_width:1 (of_int ~width:2 1);
   [%expect {| (1'b1 1'b0) |}];
   split ~part_width:2 (of_int ~width:2 1);
@@ -798,7 +809,8 @@ let%expect_test "split_lsb" =
     ("[split ~exact:true] unable to split exactly"
      (input_width        15)
      (part_width         4)
-     (width_of_last_part 3)) |}];
+     (width_of_last_part 3))
+    |}];
   split ~exact:false ~part_width:4 (of_int ~width:15 0x4321);
   [%expect {| (4'b0001 4'b0010 4'b0011 3'b100) |}]
 ;;
@@ -813,8 +825,7 @@ let%expect_test "split_msb" =
   split_raises ~part_width:0 vdd;
   [%expect {| ("[split] got [part_width <= 0]" (part_width 0)) |}];
   split_raises ~part_width:1 empty;
-  [%expect {|
-    "[split] got [empty] input" |}];
+  [%expect {| "[split] got [empty] input" |}];
   split ~part_width:1 (of_int ~width:2 1);
   [%expect {| (1'b0 1'b1) |}];
   split ~part_width:2 (of_int ~width:2 1);
@@ -827,7 +838,8 @@ let%expect_test "split_msb" =
     ("[split ~exact:true] unable to split exactly"
      (input_width        15)
      (part_width         4)
-     (width_of_last_part 3)) |}];
+     (width_of_last_part 3))
+    |}];
   split ~exact:false ~part_width:4 (of_int ~width:15 0x4321);
   [%expect {| (4'b1000 4'b0110 4'b0100 3'b001) |}]
 ;;
@@ -838,15 +850,15 @@ let%expect_test "bswap" =
   [%expect
     {|
     ("bswap argument must be a multiple of 8 bits width" (actual_width 1))
-    ("bswap argument must be a multiple of 8 bits width" (actual_width 13)) |}];
+    ("bswap argument must be a multiple of 8 bits width" (actual_width 13))
+    |}];
   let bswap ~width x =
     print_s [%sexp ((x, bswap (of_int ~width x)) : Int.Hex.t * signal)]
   in
   bswap ~width:8 0xaa;
   [%expect {| (0xaa 8'b10101010) |}];
   bswap ~width:16 0x1122;
-  [%expect {|
-    (0x1122 16'h2211) |}];
+  [%expect {| (0x1122 16'h2211) |}];
   bswap ~width:24 0x123456;
   [%expect {| (0x123456 24'h563412) |}];
   bswap ~width:32 0x3eadbeef;
@@ -934,7 +946,8 @@ let%expect_test "shifting" =
         ((3'b001 2'b00) = 3'b001)
         ((3'b001 2'b01) = 3'b100)
         ((3'b001 2'b10) = 3'b010)
-        ((3'b001 2'b11) = 3'b001)))) |}]
+        ((3'b001 2'b11) = 3'b001))))
+    |}]
 ;;
 
 (* Various exceptions - this will be more exhaustively tested in the features that convert
@@ -946,7 +959,8 @@ let%expect_test "add width exn" =
     {|
     ("[+:] got inputs of different widths" (
       (const (width 3) (value 0b110))
-      (const (width 8) (value 0b00100001)))) |}]
+      (const (width 8) (value 0b00100001))))
+    |}]
 ;;
 
 let%expect_test "sub width exn" =
@@ -955,7 +969,8 @@ let%expect_test "sub width exn" =
     {|
     ("[-:] got inputs of different widths" (
       (const (width 3) (value 0b110))
-      (const (width 8) (value 0b00100001)))) |}]
+      (const (width 8) (value 0b00100001))))
+    |}]
 ;;
 
 let%expect_test "less than width exn" =
@@ -964,7 +979,8 @@ let%expect_test "less than width exn" =
     {|
     ("[<:] got inputs of different widths" (
       (const (width 2) (value 0b01))
-      (const (width 3) (value 0b001)))) |}]
+      (const (width 3) (value 0b001))))
+    |}]
 ;;
 
 let%expect_test "greater than width exn" =
@@ -973,7 +989,8 @@ let%expect_test "greater than width exn" =
     {|
     ("[<:] got inputs of different widths" (
       (const (width 3) (value 0b001))
-      (const (width 2) (value 0b01)))) |}]
+      (const (width 2) (value 0b01))))
+    |}]
 ;;
 
 let%expect_test "less than or equal to width exn" =
@@ -982,7 +999,8 @@ let%expect_test "less than or equal to width exn" =
     {|
     ("[<:] got inputs of different widths" (
       (const (width 3) (value 0b001))
-      (const (width 2) (value 0b01)))) |}]
+      (const (width 2) (value 0b01))))
+    |}]
 ;;
 
 let%expect_test "greater than or equal to width exn" =
@@ -991,7 +1009,8 @@ let%expect_test "greater than or equal to width exn" =
     {|
     ("[<:] got inputs of different widths" (
       (const (width 2) (value 0b01))
-      (const (width 3) (value 0b001)))) |}]
+      (const (width 3) (value 0b001))))
+    |}]
 ;;
 
 let%expect_test "equals width exn" =
@@ -1000,7 +1019,8 @@ let%expect_test "equals width exn" =
     {|
     ("[==:] got inputs of different widths" (
       (const (width 2) (value 0b01))
-      (const (width 3) (value 0b001)))) |}]
+      (const (width 3) (value 0b001))))
+    |}]
 ;;
 
 let%expect_test "not equals width exn" =
@@ -1009,7 +1029,8 @@ let%expect_test "not equals width exn" =
     {|
     ("[<>:] got inputs of different widths" (
       (const (width 2) (value 0b01))
-      (const (width 3) (value 0b001)))) |}]
+      (const (width 3) (value 0b001))))
+    |}]
 ;;
 
 let%expect_test "and width exn" =
@@ -1018,7 +1039,8 @@ let%expect_test "and width exn" =
     {|
     ("[&:] got inputs of different widths" (
       (const (width 4) (value 0b1010))
-      (const (width 3) (value 0b100)))) |}]
+      (const (width 3) (value 0b100))))
+    |}]
 ;;
 
 let%expect_test "or width exn" =
@@ -1027,7 +1049,8 @@ let%expect_test "or width exn" =
     {|
     ("[|:] got inputs of different widths" (
       (const (width 4) (value 0b1010))
-      (const (width 3) (value 0b100)))) |}]
+      (const (width 3) (value 0b100))))
+    |}]
 ;;
 
 let%expect_test "xor width exn" =
@@ -1036,7 +1059,8 @@ let%expect_test "xor width exn" =
     {|
     ("[^:] got inputs of different widths" (
       (const (width 4) (value 0b1010))
-      (const (width 3) (value 0b100)))) |}]
+      (const (width 3) (value 0b100))))
+    |}]
 ;;
 
 let%expect_test "mux exn: idx too narrow" =
@@ -1046,7 +1070,8 @@ let%expect_test "mux exn: idx too narrow" =
     {|
     ("[mux] got too many inputs"
       (inputs_provided  4)
-      (maximum_expected 2)) |}]
+      (maximum_expected 2))
+    |}]
 ;;
 
 let%expect_test "select out of bounds throws exn" =
@@ -1056,7 +1081,8 @@ let%expect_test "select out of bounds throws exn" =
     ("[select] indices are out of bounds"
       (input_width 1)
       (hi          1)
-      (lo          1)) |}]
+      (lo          1))
+    |}]
 ;;
 
 let%expect_test "select hi<lo throws exn" =
@@ -1064,7 +1090,8 @@ let%expect_test "select hi<lo throws exn" =
   [%expect {|
     ("[select] got [hi < lo]"
       (hi 0)
-      (lo 1)) |}]
+      (lo 1))
+    |}]
 ;;
 
 let%expect_test "msbs exn" =
@@ -1072,7 +1099,8 @@ let%expect_test "msbs exn" =
   [%expect {|
     ("[select] got [hi < lo]"
       (hi 0)
-      (lo 1)) |}]
+      (lo 1))
+    |}]
 ;;
 
 let%expect_test "lsbs exn" =
@@ -1080,5 +1108,6 @@ let%expect_test "lsbs exn" =
   [%expect {|
     ("[select] got [hi < lo]"
       (hi -1)
-      (lo 0)) |}]
+      (lo 0))
+    |}]
 ;;

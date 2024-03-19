@@ -17,7 +17,8 @@ let%expect_test "simple" =
     {|
     Wire[id:1 bits:4 names:out deps:3] -> 3
     Op[id:3 bits:4 names: deps:2,2] = add
-    Const[id:2 bits:4 names: deps:] = 1111 |}];
+    Const[id:2 bits:4 names: deps:] = 1111
+    |}];
   let v =
     of_string "1111"
     +: of_string "1111"
@@ -29,12 +30,13 @@ let%expect_test "simple" =
   (* First addition is deduplicated with the last one. Also all constants are deduplicated. *)
   [%expect
     {|
-  Wire[id:1 bits:4 names:out deps:6] -> 6
-  Op[id:6 bits:4 names: deps:5,3] = add
-  Op[id:5 bits:4 names: deps:3,4] = add
-  Op[id:3 bits:4 names: deps:2,2] = add
-  Const[id:2 bits:4 names: deps:] = 1111
-  Const[id:4 bits:4 names: deps:] = 1110 |}]
+    Wire[id:1 bits:4 names:out deps:6] -> 6
+    Op[id:6 bits:4 names: deps:5,3] = add
+    Op[id:5 bits:4 names: deps:3,4] = add
+    Op[id:3 bits:4 names: deps:2,2] = add
+    Const[id:2 bits:4 names: deps:] = 1111
+    Const[id:4 bits:4 names: deps:] = 1110
+    |}]
 ;;
 
 let%expect_test "register" =
@@ -64,7 +66,8 @@ let%expect_test "register" =
     Empty
     Const[id:7 bits:4 names: deps:] = 0000
     Const[id:8 bits:1 names:vdd deps:] = 1
-    Const[id:5 bits:4 names: deps:] = 1111 |}]
+    Const[id:5 bits:4 names: deps:] = 1111
+    |}]
 ;;
 
 let%expect_test "wires" =
@@ -77,7 +80,8 @@ let%expect_test "wires" =
     {|
     Wire[id:2 bits:4 names:out deps:1] -> 1
     Wire[id:1 bits:4 names:x deps:3] -> 3
-    Const[id:3 bits:4 names: deps:] = 1100 |}]
+    Const[id:3 bits:4 names: deps:] = 1100
+    |}]
 ;;
 
 let%expect_test "memory" =
@@ -115,7 +119,8 @@ let%expect_test "memory" =
     Empty
     Const[id:5 bits:4 names: deps:] = 1100
     Const[id:6 bits:1 names: deps:] = 1
-    Const[id:10 bits:4 names: deps:] = 1111 |}]
+    Const[id:10 bits:4 names: deps:] = 1111
+    |}]
 ;;
 
 let trials = 500

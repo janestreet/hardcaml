@@ -14,7 +14,8 @@ let%expect_test "address offsets" =
     (x (
       (a 0)
       (b 2)
-      (c 10))) |}]
+      (c 10)))
+    |}]
 ;;
 
 let%expect_test "scan2" =
@@ -27,5 +28,6 @@ let%expect_test "scan2" =
     (x (
       (a (a 0))
       (b (b 2))
-      (c (c 10)))) |}]
+      (c (c 10))))
+    |}]
 ;;

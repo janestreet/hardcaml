@@ -41,7 +41,8 @@ let%expect_test "simple constant" =
   [%expect {|
     (const
       (width 2)
-      (value 0b10)) |}]
+      (value 0b10))
+    |}]
 ;;
 
 let%expect_test "named constant" =
@@ -50,7 +51,8 @@ let%expect_test "named constant" =
     (const
       (names (vdd))
       (width 1)
-      (value 0b1)) |}]
+      (value 0b1))
+    |}]
 ;;
 
 let%expect_test "large constant" =
@@ -58,7 +60,8 @@ let%expect_test "large constant" =
   [%expect {|
     (const
       (width 9)
-      (value 0x123)) |}]
+      (value 0x123))
+    |}]
 ;;
 
 let%expect_test "unassigned wire" =
@@ -66,7 +69,8 @@ let%expect_test "unassigned wire" =
   [%expect {|
     (wire
       (width   1)
-      (data_in empty)) |}]
+      (data_in empty))
+    |}]
 ;;
 
 let%expect_test "assigned wire" =
@@ -76,7 +80,8 @@ let%expect_test "assigned wire" =
   [%expect {|
     (wire
       (width   1)
-      (data_in 0b1)) |}]
+      (data_in 0b1))
+    |}]
 ;;
 
 let%expect_test "multiple names" =
@@ -86,15 +91,15 @@ let%expect_test "multiple names" =
     (wire
       (names (bar foo))
       (width   1)
-      (data_in empty)) |}]
+      (data_in empty))
+    |}]
 ;;
 
 let%expect_test "multiple names in arg" =
   let w = wire 1 in
   w <== wire 1 -- "foo" -- "bar";
   print_signal w;
-  [%expect {|
-    (wire (width 1) (data_in (bar foo))) |}]
+  [%expect {| (wire (width 1) (data_in (bar foo))) |}]
 ;;
 
 let%expect_test "binary ops" =
@@ -122,7 +127,8 @@ let%expect_test "binary ops" =
     (not (width 4) (arguments (a)))
     (lt (width 1) (arguments (a 0b1101)))
     (eq (width 1) (arguments (a 0b1101)))
-    (cat (width 12) (arguments (a 0b1101 a))) |}]
+    (cat (width 12) (arguments (a 0b1101 a)))
+    |}]
 ;;
 
 let%expect_test "printing at leaves" =
@@ -180,14 +186,14 @@ let%expect_test "printing at leaves" =
       (data_in register))
     (wire
       (width   2)
-      (data_in memory_read_port)) |}]
+      (data_in memory_read_port))
+    |}]
 ;;
 
 let%expect_test "printing at leaves - different types" =
   let a, b = input "a" 2, input "b" 2 in
   print_signal (concat_msb [ concat_msb [ a; b ]; wire 2 -- "cat"; a -- "cat" ]);
-  [%expect {|
-    (cat (width 8) (arguments (cat cat (cat a)))) |}]
+  [%expect {| (cat (width 8) (arguments (cat cat (cat a)))) |}]
 ;;
 
 let%expect_test "mux" =
@@ -197,7 +203,8 @@ let%expect_test "mux" =
     (mux
       (width  16)
       (select sel)
-      (data (0x0000 0x0001 0x0002 0x0003))) |}]
+      (data (0x0000 0x0001 0x0002 0x0003)))
+    |}]
 ;;
 
 let%expect_test "big mux" =
@@ -223,13 +230,13 @@ let%expect_test "big mux" =
         0b00001100
         0b00001101
         0b00001110
-        0b00001111))) |}]
+        0b00001111)))
+    |}]
 ;;
 
 let%expect_test "select" =
   print_signal (select (of_int ~width:4 2) 3 2);
-  [%expect {|
-    (select (width 2) (range (3 2)) (data_in 0b0010)) |}]
+  [%expect {| (select (width 2) (range (3 2)) (data_in 0b0010)) |}]
 ;;
 
 let%expect_test "reg r_none" =
@@ -241,7 +248,8 @@ let%expect_test "reg r_none" =
       ((clock      clock)
        (clock_edge Rising)
        (enable     0b1))
-      (data_in a)) |}]
+      (data_in a))
+    |}]
 ;;
 
 let%expect_test "reg r_async" =
@@ -256,7 +264,8 @@ let%expect_test "reg r_async" =
        (reset_edge Rising)
        (reset_to   0b0)
        (enable     0b1))
-      (data_in a)) |}]
+      (data_in a))
+    |}]
 ;;
 
 let%expect_test "reg r_sync" =
@@ -275,7 +284,8 @@ let%expect_test "reg r_sync" =
        (clear_level High)
        (clear_to    0b0)
        (enable      0b1))
-      (data_in a)) |}]
+      (data_in a))
+    |}]
 ;;
 
 let%expect_test "reg r_full" =
@@ -293,7 +303,8 @@ let%expect_test "reg r_full" =
        (clear_level High)
        (clear_to    0b0)
        (enable      0b1))
-      (data_in a)) |}]
+      (data_in a))
+    |}]
 ;;
 
 let%expect_test "memory" =
@@ -312,7 +323,8 @@ let%expect_test "memory" =
     (memory_read_port
       (width 32)
       ((memory         multiport_memory)
-       (read_addresses r))) |}]
+       (read_addresses r)))
+    |}]
 ;;
 
 let%expect_test "test depth" =
@@ -332,7 +344,8 @@ let%expect_test "test depth" =
           (wire
             (names (a))
             (width   1)
-            (data_in empty)))))))) |}]
+            (data_in empty))))))))
+    |}]
 ;;
 
 let%expect_test "test instantiation" =
@@ -371,7 +384,8 @@ let%expect_test "test instantiation" =
             (float_param      (Real       1.2))
             (bit_vector_param (Bit_vector 11001))))
           (inputs  ((i1 a) (i2 b)))
-          (outputs ((o2 3) (o1 4))))))) |}]
+          (outputs ((o2 3) (o1 4)))))))
+    |}]
 ;;
 
 (* Structural.sexp_of *)

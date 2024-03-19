@@ -49,7 +49,8 @@ let%expect_test "[is_pow2]" =
     (is_pow2 12 = 0)
     (is_pow2 13 = 0)
     (is_pow2 14 = 0)
-    (is_pow2 15 = 0) |}]
+    (is_pow2 15 = 0)
+    |}]
 ;;
 
 let sexp_of_bits_with_valid (t : Bits.t With_valid.t) =
@@ -108,7 +109,8 @@ let%expect_test "[floor_log2]" =
     (floor_log2 12 = 3)
     (floor_log2 13 = 3)
     (floor_log2 14 = 3)
-    (floor_log2 15 = 3) |}]
+    (floor_log2 15 = 3)
+    |}]
 ;;
 
 let%expect_test "ceil_log2" =
@@ -148,5 +150,6 @@ let%expect_test "ceil_log2" =
     (ceil_log2 12 = 4)
     (ceil_log2 13 = 4)
     (ceil_log2 14 = 4)
-    (ceil_log2 15 = 4) |}]
+    (ceil_log2 15 = 4)
+    |}]
 ;;

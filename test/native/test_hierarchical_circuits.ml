@@ -70,7 +70,8 @@ let%expect_test "To_file" =
         assign _2 = _5;
         assign b = _2;
 
-    endmodule |}];
+    endmodule
+    |}];
   return ()
 ;;
 
@@ -199,6 +200,7 @@ let%expect_test "In_directory" =
         hc_2 <= hc_5;
         b <= hc_2;
 
-    end architecture; |}];
+    end architecture;
+    |}];
   return ()
 ;;

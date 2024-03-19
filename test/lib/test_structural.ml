@@ -34,7 +34,8 @@ let%expect_test "Prints with circuit created via With_interface.create_circuit" 
       inout c
     );
 
-    endmodule |}];
+    endmodule
+    |}];
   (* An example that does some simple assignments *)
   Structural.write_verilog
     Stdio.print_string
@@ -67,7 +68,8 @@ let%expect_test "Prints with circuit created via With_interface.create_circuit" 
       assign _9 = { _8, a };
       assign b = _9;
       assign c = _7;
-    endmodule |}];
+    endmodule
+    |}];
   (* An instantiation example *)
   Structural.write_verilog
     Stdio.print_string
@@ -87,7 +89,8 @@ let%expect_test "Prints with circuit created via With_interface.create_circuit" 
         .b(b),
         .c(c)
       );
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 module Structural_sexp_of_test (Base : Comb.Primitives with type t = Structural.signal) =
@@ -196,7 +199,8 @@ let%expect_test "Structural.Base0 sexp_of_t" =
     (Module_output
       (id    19)
       (name  out_indirect)
-      (width 5)) |}]
+      (width 5))
+    |}]
 ;;
 
 (* {[

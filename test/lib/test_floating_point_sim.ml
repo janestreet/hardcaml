@@ -291,5 +291,6 @@ let%expect_test "floating point operations in simulation" =
         (Ok /)
         (Ok %)
         (Ok **)
-        (Ok atan2))))) |}]
+        (Ok atan2)))))
+    |}]
 ;;

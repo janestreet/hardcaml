@@ -16,7 +16,8 @@ let%expect_test "guarded assignment width mistmatch" =
      (expression (
        const
        (width 2)
-       (value 0b00)))) |}]
+       (value 0b00))))
+    |}]
 ;;
 
 let reg_spec = Reg_spec.create () ~clock ~clear
@@ -48,20 +49,16 @@ let%expect_test "[Reg.State_machine.create]" =
   in
   let repeated (state : _ State_machine.t) = state.switch [ 1, []; 1, [] ] in
   require_does_raise [%here] (fun () -> compile [ bad_case (sm ()) ]);
-  [%expect {|
-    ("[Always.State_machine.switch] got unknown states" (2 6)) |}];
+  [%expect {| ("[Always.State_machine.switch] got unknown states" (2 6)) |}];
   require_does_raise [%here] (fun () -> compile [ bad_next (sm ()) ]);
-  [%expect {|
-    ("[Always.State_machine.set_next] got unknown state" 4) |}];
+  [%expect {| ("[Always.State_machine.set_next] got unknown state" 4) |}];
   require_does_raise [%here] (fun () -> compile [ incomplete (sm ()) ]);
   [%expect
-    {|
-    ("[Always.State_machine.switch] without [~default] had unhandled states" (5)) |}];
+    {| ("[Always.State_machine.switch] without [~default] had unhandled states" (5)) |}];
   require_does_not_raise [%here] (fun () -> compile [ incomplete ~default:[] (sm ()) ]);
   [%expect {| |}];
   require_does_raise [%here] (fun () -> compile [ repeated (sm ()) ]);
-  [%expect {|
-    ("[Always.State_machine.switch] got repeated state" 1) |}]
+  [%expect {| ("[Always.State_machine.switch] got repeated state" 1) |}]
 ;;
 
 let%expect_test "Statemachine.statmachine ~encoding" =
@@ -70,32 +67,23 @@ let%expect_test "Statemachine.statmachine ~encoding" =
   let bad_next (state : _ State_machine.t) = state.switch [ 1, [ state.set_next 4 ] ] in
   let bad_test (state : _ State_machine.t) = when_ (state.is 4) [] in
   require_does_raise [%here] (fun () -> compile [ bad_case (sm Binary) ]);
-  [%expect {|
-    ("[Always.State_machine.switch] got unknown states" (2 6)) |}];
+  [%expect {| ("[Always.State_machine.switch] got unknown states" (2 6)) |}];
   require_does_raise [%here] (fun () -> compile [ bad_next (sm Binary) ]);
-  [%expect {|
-    ("[Always.State_machine.set_next] got unknown state" 4) |}];
+  [%expect {| ("[Always.State_machine.set_next] got unknown state" 4) |}];
   require_does_raise [%here] (fun () -> compile [ bad_test (sm Binary) ]);
-  [%expect {|
-    ("[Always.State_machine.is] got unknown state" 4) |}];
+  [%expect {| ("[Always.State_machine.is] got unknown state" 4) |}];
   require_does_raise [%here] (fun () -> compile [ bad_case (sm Onehot) ]);
-  [%expect {|
-    ("[Always.State_machine.switch] got unknown states" (2 6)) |}];
+  [%expect {| ("[Always.State_machine.switch] got unknown states" (2 6)) |}];
   require_does_raise [%here] (fun () -> compile [ bad_next (sm Onehot) ]);
-  [%expect {|
-    ("[Always.State_machine.set_next] got unknown state" 4) |}];
+  [%expect {| ("[Always.State_machine.set_next] got unknown state" 4) |}];
   require_does_raise [%here] (fun () -> compile [ bad_test (sm Onehot) ]);
-  [%expect {|
-    ("[Always.State_machine.is] got unknown state" 4) |}];
+  [%expect {| ("[Always.State_machine.is] got unknown state" 4) |}];
   require_does_raise [%here] (fun () -> compile [ bad_case (sm Gray) ]);
-  [%expect {|
-    ("[Always.State_machine.switch] got unknown states" (2 6)) |}];
+  [%expect {| ("[Always.State_machine.switch] got unknown states" (2 6)) |}];
   require_does_raise [%here] (fun () -> compile [ bad_next (sm Gray) ]);
-  [%expect {|
-    ("[Always.State_machine.set_next] got unknown state" 4) |}];
+  [%expect {| ("[Always.State_machine.set_next] got unknown state" 4) |}];
   require_does_raise [%here] (fun () -> compile [ bad_test (sm Gray) ]);
-  [%expect {|
-    ("[Always.State_machine.is] got unknown state" 4) |}]
+  [%expect {| ("[Always.State_machine.is] got unknown state" 4) |}]
 ;;
 
 let%expect_test "test statemachine encodings" =
@@ -257,7 +245,8 @@ let%expect_test "test statemachine encodings" =
     │               ││────┬───┬───┬───┬───┬───┬───                       │
     │onehot_states  ││ 00 │01 │02 │04 │08 │10 │01                        │
     │               ││────┴───┴───┴───┴───┴───┴───                       │
-    └───────────────┘└───────────────────────────────────────────────────┘ |}];
+    └───────────────┘└───────────────────────────────────────────────────┘
+    |}];
   run_sim ~verbose:false [ nickel; dime; nickel ];
   [%expect
     {|
@@ -272,7 +261,8 @@ let%expect_test "test statemachine encodings" =
     │               ││────┘   └───┘   └───────                           │
     │ok             ││────────────────────────                           │
     │               ││                                                   │
-    └───────────────┘└───────────────────────────────────────────────────┘ |}];
+    └───────────────┘└───────────────────────────────────────────────────┘
+    |}];
   run_sim ~verbose:false [ dime; dime ];
   [%expect
     {|
@@ -287,7 +277,8 @@ let%expect_test "test statemachine encodings" =
     │               ││────────────────────                               │
     │ok             ││────────────────────                               │
     │               ││                                                   │
-    └───────────────┘└───────────────────────────────────────────────────┘ |}];
+    └───────────────┘└───────────────────────────────────────────────────┘
+    |}];
   run_sim ~verbose:false [ nickel; nickel; dime ];
   [%expect
     {|
@@ -302,5 +293,6 @@ let%expect_test "test statemachine encodings" =
     │               ││────┘       └───────────                           │
     │ok             ││────────────────────────                           │
     │               ││                                                   │
-    └───────────────┘└───────────────────────────────────────────────────┘ |}]
+    └───────────────┘└───────────────────────────────────────────────────┘
+    |}]
 ;;

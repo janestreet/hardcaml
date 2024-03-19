@@ -86,7 +86,8 @@ let%expect_test "C" =
         assign C$o$C_port_o = C$C_internal;
         assign C_port_o = C$o$C_port_o;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 module Sim = Cyclesim.With_interface (C.I) (C.O)

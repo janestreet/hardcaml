@@ -224,5 +224,6 @@ let%expect_test "example" =
         zoo <= hc_28;
         moo <= hc_1;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;

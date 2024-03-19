@@ -44,7 +44,8 @@ let%expect_test "3 bit adder, bits" =
     (100 101 110 111 000 001 010 011)
     (101 110 111 000 001 010 011 100)
     (110 111 000 001 010 011 100 101)
-    (111 000 001 010 011 100 101 110) |}]
+    (111 000 001 010 011 100 101 110)
+    |}]
 ;;
 
 module Asic_nand = Comb.Make (Comb.Make_primitives (Make_nand_gates (struct
@@ -484,7 +485,8 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
                         _8 };
         assign c = _155;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 module Fpga_nand = Comb.Make (Comb.Make_primitives (Make_nand_gates (struct
@@ -1075,5 +1077,6 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _8 };
         assign c = _203;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;

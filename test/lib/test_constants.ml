@@ -61,7 +61,8 @@ let%expect_test "of_bit_string" =
         (1     1'b1)
         (10    2'b10)
         (111   3'b111)
-        (10101 5'b10101)))) |}];
+        (10101 5'b10101))))
+    |}];
   require_does_raise [%here] (fun () -> of_bit_string "foo");
   [%expect {| ("[of_bit_string] got invalid binary constant" foo) |}]
 ;;
@@ -92,7 +93,8 @@ let%expect_test "of_int[xx] 2" =
         ((2 0) 2'b00)
         ((2 1) 2'b01)
         ((2 2) 2'b10)
-        ((2 3) 2'b11)))) |}]
+        ((2 3) 2'b11))))
+    |}]
 ;;
 
 let%expect_test "of_int[xx] wrap on overflow" =
@@ -107,7 +109,8 @@ let%expect_test "of_int[xx] wrap on overflow" =
     ("integer constant conversion wraps on overflow"
      (of_int   ((3 8)  3'b000))
      (of_int32 ((3 9)  3'b001))
-     (of_int64 ((3 10) 3'b010))) |}]
+     (of_int64 ((3 10) 3'b010)))
+    |}]
 ;;
 
 type 'a min_max =
@@ -133,7 +136,8 @@ let%expect_test "minimum and maximum" =
        (max ((32 2147483647)  32'h7fffffff))))
      (of_int64 (
        (min ((64 -9223372036854775808) 64'h8000000000000000))
-       (max ((64 9223372036854775807)  64'h7fffffffffffffff))))) |}]
+       (max ((64 9223372036854775807)  64'h7fffffffffffffff)))))
+    |}]
 ;;
 
 let%expect_test "of_hex" =
@@ -194,7 +198,8 @@ let%expect_test "of_hex" =
       (of_hex
         (signed ((104 876543210fedcba9876543210) 104'hf876543210fedcba9876543210))
         (unsigned (
-          (104 876543210fedcba9876543210) 104'h0876543210fedcba9876543210)))) |}]
+          (104 876543210fedcba9876543210) 104'h0876543210fedcba9876543210))))
+    |}]
 ;;
 
 let%expect_test "of_octal" =
@@ -257,7 +262,8 @@ let%expect_test "of_octal" =
         (signed (
           (104 3210765432107654321076543210) 104'h00000688fac688fac688fac688))
         (unsigned (
-          (104 3210765432107654321076543210) 104'h00000688fac688fac688fac688)))) |}]
+          (104 3210765432107654321076543210) 104'h00000688fac688fac688fac688))))
+    |}]
 ;;
 
 let%expect_test "of_decimal_string error" =
@@ -312,7 +318,8 @@ let%expect_test "of_string" =
         (16'd65535   16'hffff)
         (17'd65536   17'h10000)
         (4'd-1       4'b1111)
-        (20'd-247223 20'hc3a49)))) |}];
+        (20'd-247223 20'hc3a49))))
+    |}];
   require_does_raise [%here] (fun () -> of_string "2323");
   [%expect {| ("[of_string] could not convert constant" (const 2323)) |}];
   require_does_raise [%here] (fun () -> of_string "'");
@@ -337,7 +344,8 @@ let%expect_test "of_bit_list" =
       ((0) 1'b0)
       ((1) 1'b1)
       ((0 1) 2'b01)
-      ((1 1 1) 3'b111))) |}]
+      ((1 1 1) 3'b111)))
+    |}]
 ;;
 
 let%expect_test "simple constants" =
@@ -367,7 +375,8 @@ let%expect_test "simple constants" =
         (1 1'b0)
         (2 2'b00)
         (3 3'b000)
-        (4 4'b0000)))) |}]
+        (4 4'b0000))))
+    |}]
 ;;
 
 let%expect_test "widths must be greater than zero" =
@@ -377,7 +386,8 @@ let%expect_test "widths must be greater than zero" =
     {|
     ("Width of constant must be greater than zero"
      (width 0)
-     (const "")) |}];
+     (const ""))
+    |}];
   require_does_raise [%here] (fun () -> of_bit_list []);
   [%expect {| ("Width of constant must be greater than zero" (width 0)) |}];
   require_does_raise [%here] (fun () -> of_int ~width:0 0);
@@ -385,43 +395,50 @@ let%expect_test "widths must be greater than zero" =
     {|
     ("Width of constant must be greater than zero"
      (width 0)
-     (const 0)) |}];
+     (const 0))
+    |}];
   require_does_raise [%here] (fun () -> of_int32 ~width:0 0l);
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
-     (const 0)) |}];
+     (const 0))
+    |}];
   require_does_raise [%here] (fun () -> of_int64 ~width:0 0L);
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
-     (const 0)) |}];
+     (const 0))
+    |}];
   require_does_raise [%here] (fun () -> of_hex ~width:0 "0");
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
-     (const 0)) |}];
+     (const 0))
+    |}];
   require_does_raise [%here] (fun () -> of_hex ~signedness:Signed ~width:0 "0");
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
-     (const 0)) |}];
+     (const 0))
+    |}];
   require_does_raise [%here] (fun () -> of_octal ~width:0 "0");
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
-     (const 0)) |}];
+     (const 0))
+    |}];
   require_does_raise [%here] (fun () -> of_octal ~signedness:Signed ~width:0 "0");
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
-     (const 0)) |}]
+     (const 0))
+    |}]
 ;;
 
 let%expect_test "round trip chars" =

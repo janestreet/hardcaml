@@ -51,6 +51,14 @@ module type S = sig
       :  Signal.t t
       -> Signal.t With_valid.t
       -> Signal.t With_valid.t
+
+    (** Create [1 + num_additional_pipeline_stages] registers in a pipeline with
+        [async_reg] attribute set *)
+    val reg_no_clear_with_async_reg_annotation
+      :  num_additional_pipeline_stages:int
+      -> Signal.t t
+      -> Signal.t
+      -> Signal.t
   end
 end
 

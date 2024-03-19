@@ -8,8 +8,7 @@ let%expect_test "no outputs" =
       ~input_widths:[]
       ~output_widths:[]
       ~create_fn:(fun _ _ -> ()));
-  [%expect {|
-    "[Combinational_op]s require at least one output" |}]
+  [%expect {| "[Combinational_op]s require at least one output" |}]
 ;;
 
 let%expect_test "no inputs" =
@@ -62,7 +61,8 @@ let%expect_test "names must be unique in database" =
   [%expect
     {|
     ("A [Combinational_op] of the same name already exists in the database"
-     (name foo)) |}]
+     (name foo))
+    |}]
 ;;
 
 (* test add_sub; a 2 input, 2 output function *)
@@ -113,7 +113,8 @@ let%expect_test "sexp_of" =
           (name add_sub_mutable)
           (input_widths  (8 8))
           (output_widths (8 8))
-          (create_fn <opaque>)))))) |}]
+          (create_fn <opaque>))))))
+    |}]
 ;;
 
 let create_circuit create_op () =
@@ -161,7 +162,8 @@ let%expect_test "internal representation" =
         assign c = _8;
         assign d = _7;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let%expect_test "internal representation (mutable)" =
@@ -195,7 +197,8 @@ let%expect_test "internal representation (mutable)" =
         assign c = _8;
         assign d = _7;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let sim_functional ~database circuit =
@@ -310,5 +313,6 @@ let%expect_test "functional sim / bits" =
       ((a 00000011)
        (b 00000011)
        (c 00000110)
-       (d 00000000)))) |}]
+       (d 00000000))))
+    |}]
 ;;

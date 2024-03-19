@@ -22,74 +22,60 @@ let t2 = { name = Parameter_name.of_string "N2"; value = Int 2 }
 
 let%expect_test "[sexp_of_t]" =
   show t1;
-  [%expect {|
-    (N1 (Int 1)) |}]
+  [%expect {| (N1 (Int 1)) |}]
 ;;
 
 let%expect_test "[find_name]" =
   find_name [] "foo";
-  [%expect {|
-    () |}];
+  [%expect {| () |}];
   find_name [ t1 ] "N1";
-  [%expect {|
-    ((Int 1)) |}];
+  [%expect {| ((Int 1)) |}];
   find_name [ t1 ] "N2";
-  [%expect {|
-    () |}];
+  [%expect {| () |}];
   find_name [ t1; t2 ] "N2";
-  [%expect {|
-    ((Int 2)) |}]
+  [%expect {| ((Int 2)) |}]
 ;;
 
 let%expect_test "[find_name_exn]" =
   find_name_exn [] "foo";
-  [%expect {|
-    (Error ("couldn't find parameter" (name foo) (parameters ()))) |}];
+  [%expect {| (Error ("couldn't find parameter" (name foo) (parameters ()))) |}];
   find_name_exn [ t1 ] "N1";
-  [%expect {|
-    (Ok (Int 1)) |}];
+  [%expect {| (Ok (Int 1)) |}];
   find_name_exn [ t1 ] "N2";
   [%expect
-    {|
-    (Error ("couldn't find parameter" (name N2) (parameters ((N1 (Int 1)))))) |}];
+    {| (Error ("couldn't find parameter" (name N2) (parameters ((N1 (Int 1)))))) |}];
   find_name_exn [ t1; t2 ] "N2";
-  [%expect {|
-    (Ok (Int 2)) |}]
+  [%expect {| (Ok (Int 2)) |}]
 ;;
 
 let%expect_test "[is_subset]" =
   is_subset [] [];
-  [%expect {|
-    true |}];
+  [%expect {| true |}];
   is_subset [] [ t1 ];
-  [%expect {|
-    true |}];
+  [%expect {| true |}];
   is_subset [ t1 ] [];
-  [%expect {|
-    false |}];
+  [%expect {| false |}];
   is_subset [ t1 ] [ t1 ];
-  [%expect {|
-    true |}];
+  [%expect {| true |}];
   is_subset [ t1 ] [ t2 ];
-  [%expect {|
-    false |}]
+  [%expect {| false |}]
 ;;
 
 let%expect_test "[sort_by_name]" =
   sort_by_name [];
-  [%expect {|
-    () |}];
+  [%expect {| () |}];
   sort_by_name [ t1 ];
-  [%expect {|
-    ((N1 (Int 1))) |}];
+  [%expect {| ((N1 (Int 1))) |}];
   sort_by_name [ t1; t2 ];
   [%expect {|
     ((N1 (Int 1))
-     (N2 (Int 2))) |}];
+     (N2 (Int 2)))
+    |}];
   sort_by_name [ t2; t1 ];
   [%expect {|
     ((N1 (Int 1))
-     (N2 (Int 2))) |}]
+     (N2 (Int 2)))
+    |}]
 ;;
 
 let%expect_test "std_logic rountrip" =
@@ -134,7 +120,8 @@ let%expect_test "std_logic rountrip" =
      (converted (Ok H)))
     ((std_logic _)
      (char      _)
-     (converted (Ok _))) |}]
+     (converted (Ok _)))
+    |}]
 ;;
 
 let%expect_test "bad std_logic" =
@@ -249,7 +236,8 @@ let%expect_test "instantiation in verilog" =
         assign b_vhdl = _4;
         assign b_verilog = _1;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let%expect_test "instantiation in vhdl" =
@@ -320,7 +308,8 @@ let%expect_test "instantiation in vhdl" =
         b_vhdl <= hc_4;
         b_verilog <= hc_1;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 (* Basic std_logic_vector operations work *)

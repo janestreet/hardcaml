@@ -56,5 +56,6 @@ let%expect_test "testbench" =
     (q 1)
     (q 4)
     (q 10)
-    (q 18) |}]
+    (q 18)
+    |}]
 ;;

@@ -19,7 +19,8 @@ let%expect_test "exceptions" =
     {|
     ("[Signal.multiport_memory] size does not match what can be addressed by write port"
      (size          16)
-     (address_width 3)) |}];
+     (address_width 3))
+    |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory
       16
@@ -29,7 +30,8 @@ let%expect_test "exceptions" =
     {|
     ("[Signal.multiport_memory] size does not match what can be addressed by write port"
      (size          16)
-     (address_width 5)) |}];
+     (address_width 5))
+    |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory
       16
@@ -39,7 +41,8 @@ let%expect_test "exceptions" =
     {|
     ("[Signal.multiport_memory] size does not match what can be addressed by read port"
      (size          16)
-     (address_width 3)) |}];
+     (address_width 3))
+    |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory
       16
@@ -49,7 +52,8 @@ let%expect_test "exceptions" =
     {|
     ("[Signal.multiport_memory] size does not match what can be addressed by read port"
      (size          16)
-     (address_width 5)) |}];
+     (address_width 5))
+    |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory
       16
@@ -59,7 +63,8 @@ let%expect_test "exceptions" =
     {|
     ("[Signal.multiport_memory] width of clock must be 1"
      (port               0)
-     (write_enable_width 1)) |}];
+     (write_enable_width 1))
+    |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory
       16
@@ -69,7 +74,8 @@ let%expect_test "exceptions" =
     {|
     ("[Signal.multiport_memory] width of write enable must be 1"
      (port               0)
-     (write_enable_width 2)) |}];
+     (write_enable_width 2))
+    |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory
       16
@@ -89,7 +95,8 @@ let%expect_test "exceptions" =
     ("[Signal.multiport_memory] width of read address is inconsistent"
      (port               1)
      (read_address_width 5)
-     (expected           4)) |}];
+     (expected           4))
+    |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory
       16
@@ -100,7 +107,8 @@ let%expect_test "exceptions" =
     ("[Signal.multiport_memory] width of write address is inconsistent"
      (port                1)
      (write_address_width 5)
-     (expected            4)) |}];
+     (expected            4))
+    |}];
   require_does_raise [%here] (fun () ->
     Signal.multiport_memory
       16
@@ -111,7 +119,8 @@ let%expect_test "exceptions" =
     ("[Signal.multiport_memory] width of write data is inconsistent"
      (port             1)
      (write_data_width 16)
-     (expected         8)) |}]
+     (expected         8))
+    |}]
 ;;
 
 let%expect_test "sexp" =
@@ -151,7 +160,8 @@ let%expect_test "sexp" =
          (read_addresses (
            const
            (width 5)
-           (value 0b00000))))))) |}]
+           (value 0b00000)))))))
+    |}]
 ;;
 
 let%expect_test "verilog, async memory, 1 port" =
@@ -201,7 +211,8 @@ let%expect_test "verilog, async memory, 1 port" =
         assign _8 = _7[read_address];
         assign q0 = _8;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let%expect_test "verilog, async memory, 2 ports" =
@@ -275,7 +286,8 @@ let%expect_test "verilog, async memory, 2 ports" =
         assign q0 = _15;
         assign q1 = _14;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let dual_port ?(collision_mode = Ram.Collision_mode.Read_before_write) () =
@@ -383,7 +395,8 @@ let%expect_test "dual port Verilog" =
         assign q0 = _25;
         assign q1 = _21;
 
-    endmodule |}]
+    endmodule
+    |}]
 ;;
 
 let%expect_test "dual port VHDL" =
@@ -474,7 +487,8 @@ let%expect_test "dual port VHDL" =
         q0 <= hc_25;
         q1 <= hc_21;
 
-    end architecture; |}]
+    end architecture;
+    |}]
 ;;
 
 let%expect_test "simulation - write and read data on both ports" =
@@ -566,7 +580,8 @@ let%expect_test "simulation - write and read data on both ports" =
     │                  ││────────────────────────────────────┬───────────┬─────          │
     │q1                ││ 0000                               │0064       │0280           │
     │                  ││────────────────────────────────────┴───────────┴─────          │
-    └──────────────────┘└────────────────────────────────────────────────────────────────┘ |}]
+    └──────────────────┘└────────────────────────────────────────────────────────────────┘
+    |}]
 ;;
 
 let%expect_test "simulation - write on both ports - highest indexed port wins" =
@@ -646,7 +661,8 @@ let%expect_test "simulation - write on both ports - highest indexed port wins" =
     │             ││────────────────────────┬─────             │
     │q1           ││ 0000                   │00C8              │
     │             ││────────────────────────┴─────             │
-    └─────────────┘└───────────────────────────────────────────┘ |}]
+    └─────────────┘└───────────────────────────────────────────┘
+    |}]
 ;;
 
 let%expect_test "simulation - demonstrate collision modes" =
@@ -719,7 +735,8 @@ let%expect_test "simulation - demonstrate collision modes" =
     │             ││────────────────────────                   │
     │q1           ││ 0000                                      │
     │             ││────────────────────────                   │
-    └─────────────┘└───────────────────────────────────────────┘ |}];
+    └─────────────┘└───────────────────────────────────────────┘
+    |}];
   test Write_before_read;
   [%expect
     {|
@@ -764,5 +781,6 @@ let%expect_test "simulation - demonstrate collision modes" =
     │             ││────────────────────────                   │
     │q1           ││ 0000                                      │
     │             ││────────────────────────                   │
-    └─────────────┘└───────────────────────────────────────────┘ |}]
+    └─────────────┘└───────────────────────────────────────────┘
+    |}]
 ;;
