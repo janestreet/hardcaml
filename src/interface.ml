@@ -412,6 +412,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     ;;
   end
 end
+[@@inline never]
 
 module Update
   (Pre : Interface_intf.Pre) (M : sig
