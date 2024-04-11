@@ -14,7 +14,7 @@ Hardcaml is an OCaml library for designing and testing hardware designs.
 # Install
 
 ```
-opam install hardcaml ppx_deriving_hardcaml hardcaml_waveterm
+opam install hardcaml ppx_deriving_hardcaml hardcaml_waveterm 
 ```
 
 # Documentation
