@@ -89,7 +89,7 @@ and read an output like so:
 - : Bits.t = 1
 # Bits.width !y
 - : int = 1
-# Bits.to_int !y
+# Bits.to_unsigned_int !y
 - : int = 1
 ```
 

@@ -11,6 +11,7 @@ let iter_all_inputs ~min_width ~max_width ~f =
 
 module Trace = struct
   type 'a fn1 = 'a * Signal.t
+  type 'a fn1_opt = 'a * Signal.t option
   type ('a, 'b) fn2 = ('a * 'b) * Signal.t
   type ('a, 'b, 'c) fn3 = ('a * 'b * 'c) * Signal.t
   type signal = Signal.t
@@ -20,6 +21,10 @@ module Trace = struct
   let fn3 f a b c = (a, b, c), f a b c
   let sexp_of_signal = Test_constants.sexp_of_const_signal ?depth:None
   let sexp_of_fn1 sexp_of_a (a, r) = [%message "" ~_:(a : a) ~_:"=" ~_:(r : signal)]
+
+  let sexp_of_fn1_opt sexp_of_a (a, r) =
+    [%message "" ~_:(a : a) ~_:"=" ~_:(r : signal option)]
+  ;;
 
   let sexp_of_fn2 sexp_of_a sexp_of_b ((a, b), r) =
     [%message "" ~_:((a, b) : a * b) ~_:"=" ~_:(r : signal)]
@@ -55,8 +60,7 @@ module Trace = struct
   let op2 bits ~f =
     List.concat
     @@ List.init (1 lsl bits) ~f:(fun x ->
-         List.init (1 lsl bits) ~f:(fun y ->
-           f (of_int ~width:bits x) (of_int ~width:bits y)))
+      List.init (1 lsl bits) ~f:(fun y -> f (of_int ~width:bits x) (of_int ~width:bits y)))
   ;;
 
   let op1 bits ~f = List.init (1 lsl bits) ~f:(fun y -> f (of_int ~width:bits y))
@@ -72,7 +76,7 @@ module Trace = struct
           ([ of_int ~width:8 22 +: of_int ~width:8 33
            ; of_int ~width:123 22345 +: of_int ~width:123 (-22345)
            ]
-            : signal op2 list)
+           : signal op2 list)
         ~int_on_right:
           ([ of_int ~width:7 27 +:. 12; of_int ~width:7 27 +:. -12 ] : int op2 list)]
   ;;
@@ -88,7 +92,7 @@ module Trace = struct
           ([ of_int ~width:8 22 +: of_int ~width:8 33
            ; of_int ~width:123 22345 +: of_int ~width:123 (-22345)
            ]
-            : signal op2 list)]
+           : signal op2 list)]
   ;;
 
   let binary_op_tests_with_one_constant name f =
@@ -113,18 +117,19 @@ module Trace = struct
            ; of_int ~width:2 3 *: of_int ~width:5 8
            ; of_int ~width:2 3 *: of_int ~width:5 16
            ]
-            : signal op2 list)
+           : signal op2 list)
         ~misc:
           ([ of_int ~width:8 22 *: of_int ~width:8 33
            ; of_int ~width:7 27 *: of_int ~width:4 12
            ]
-            : signal op2 list)]
+           : signal op2 list)]
   ;;
 end
 
 open Trace
 
 let show signal = print_s [%sexp (signal : signal)]
+let show_option signal = print_s [%sexp (signal : signal option)]
 
 let%expect_test "concat" =
   print_s
@@ -134,16 +139,16 @@ let%expect_test "concat" =
           (List.map
              ~f:(fn1 concat_msb)
              [ [ vdd; gnd ]; [ vdd; gnd; vdd ]; [ one 4; ones 3; zero 2 ] ]
-            : signal list fn1 list)
-        ~concat_e:
+           : signal list fn1 list)
+        ~concat_with_zero_width:
           (List.map
-             ~f:(fn1 concat_msb_e)
-             [ [ vdd; empty ]
-             ; [ empty; vdd ]
-             ; [ empty; vdd; empty; gnd ]
-             ; [ of_int ~width:3 2; empty; of_int ~width:2 1 ]
+             ~f:(fn1 With_zero_width.concat_msb)
+             [ [ Some vdd; None ]
+             ; [ None; Some vdd ]
+             ; [ None; Some vdd; None; Some gnd ]
+             ; [ Some (of_int ~width:3 2); None; Some (of_int ~width:2 1) ]
              ]
-            : signal list fn1 list)
+           : With_zero_width.t list fn1_opt list)
         ~concat_op:(binary_op_tests_no_rhs_int "@:" ( @: ) : Sexp.t)];
   [%expect
     {|
@@ -151,11 +156,48 @@ let%expect_test "concat" =
        ((1'b1 1'b0) = 2'b10)
        ((1'b1    1'b0   1'b1)  = 3'b101)
        ((4'b0001 3'b111 2'b00) = 9'h03c)))
-     (concat_e (
-       ((1'b1  empty) = 1'b1)
-       ((empty 1'b1)  = 1'b1)
-       ((empty 1'b1 empty 1'b0) = 2'b10)
-       ((3'b010 empty 2'b01) = 5'b01001)))
+     (concat_with_zero_width (
+       ((((
+           const
+           (names (vdd))
+           (width 1)
+           (value 0b1)))
+         ())
+        =
+        (1'b1))
+       ((()
+         ((
+           const
+           (names (vdd))
+           (width 1)
+           (value 0b1))))
+        =
+        (1'b1))
+       ((()
+         ((
+           const
+           (names (vdd))
+           (width 1)
+           (value 0b1)))
+         ()
+         ((
+           const
+           (names (gnd))
+           (width 1)
+           (value 0b0))))
+        =
+        (2'b10))
+       ((((
+           const
+           (width 3)
+           (value 0b010)))
+         ()
+         ((
+           const
+           (width 2)
+           (value 0b01))))
+        =
+        (5'b01001))))
      (concat_op (
        @:
        (all_1_bit (
@@ -194,8 +236,8 @@ let%expect_test "concat" =
 let%expect_test "concat empty list" =
   show_raise (fun () -> concat_msb []);
   [%expect {| (raised "[concat] got empty list") |}];
-  show_raise (fun () -> concat_msb_e []);
-  [%expect {| (raised "[concat] got empty list") |}]
+  show_option (With_zero_width.concat_msb []);
+  [%expect {| () |}]
 ;;
 
 let%expect_test "concat_msb empty signal" =
@@ -231,13 +273,13 @@ let%expect_test "[@:] empty signal" =
 ;;
 
 let%expect_test "repeat" =
-  let repeat = fn2 repeat in
+  let repeat = fn2 (fun x count -> repeat x ~count) in
   print_s
     [%message
       "repeat"
         ~_:
           ([ repeat vdd 3; repeat (of_string "01") 4; repeat (of_int ~width:8 123) 1 ]
-            : (signal, int) fn2 list)];
+           : (signal, int) fn2 list)];
   [%expect
     {|
     (repeat (
@@ -248,13 +290,19 @@ let%expect_test "repeat" =
 ;;
 
 let%expect_test "repeat empty" =
-  show (repeat empty 1);
-  [%expect {| empty |}]
+  require_does_raise (fun () -> repeat empty ~count:1);
+  [%expect {| ("Cannot [repeat] empty signal" (loc ())) |}];
+  show_option (With_zero_width.repeat None ~count:1);
+  [%expect {| () |}]
 ;;
 
-let%expect_test "repeat _ 0" =
-  show (repeat vdd 0);
-  [%expect {| empty |}]
+let%expect_test "repeat zero width or 0 times" =
+  require_does_raise (fun () -> show (repeat vdd ~count:0));
+  [%expect {| ("Cannot [repeat] zero times" (loc ())) |}];
+  show_option (With_zero_width.repeat (Some vdd) ~count:0);
+  [%expect {| () |}];
+  show_option (With_zero_width.repeat None ~count:12);
+  [%expect {| () |}]
 ;;
 
 let%expect_test "reduce" =
@@ -305,8 +353,7 @@ let%expect_test "reverse" =
 (* It doesn't make sense if the limit is [>= (1 lsl width)] and an exception should be
    raised. *)
 let%expect_test "mod_counter should raise" =
-  require_does_raise ~cr:CR_someday [%here] (fun () ->
-    mod_counter ~max:8 (of_string "101"));
+  require_does_raise ~cr:CR_someday (fun () -> mod_counter ~max:8 (of_string "101"));
   [%expect
     {|
     ("mod counter limit is great than max counter value"
@@ -358,13 +405,13 @@ let%expect_test "tree" =
              2
              (reduce ~f:( +: ))
              (List.map ~f:(of_int ~width:10) [ 10; 20; 30; 40; 50; 60; 70 ])
-            : signal list fn1)
+           : signal list fn1)
         ~add_branch_3:
           (tree
              3
              (reduce ~f:( +: ))
              (List.map ~f:(of_int ~width:10) [ 10; 20; 30; 40; 50; 60; 70 ])
-            : signal list fn1)];
+           : signal list fn1)];
   [%expect
     {|
     ("tree with different branching factors"
@@ -382,7 +429,7 @@ let%expect_test "binary_to_onehot" =
       "binary_to_onehot"
         ~_:
           (List.init 4 ~f:(fun i -> binary_to_onehot (of_int ~width:2 i))
-            : signal fn1 list)];
+           : signal fn1 list)];
   [%expect
     {|
     (binary_to_onehot (
@@ -400,7 +447,7 @@ let%expect_test "onehot_to_binary" =
       "onehot_to_binary"
         ~_:
           (List.init 4 ~f:(fun i -> onehot_to_binary (of_int ~width:4 (1 lsl i)))
-            : signal fn1 list)];
+           : signal fn1 list)];
   [%expect
     {|
     (onehot_to_binary (
@@ -459,7 +506,6 @@ let%expect_test "[binary_to_gray] and [gray_to_binary] are inverses" =
     incr num_tests;
     let output = binary_to_gray (gray_to_binary input) in
     require
-      [%here]
       (Sexp.equal [%sexp (input : signal)] [%sexp (output : signal)])
       ~if_false_then_print_s:(lazy [%message (input : signal) (output : signal)]));
   print_s [%sexp (!num_tests : int)];
@@ -467,8 +513,9 @@ let%expect_test "[binary_to_gray] and [gray_to_binary] are inverses" =
 ;;
 
 let%expect_test "[uresize 0]" =
-  require_does_raise [%here] (fun () -> uresize (of_bit_string "0") 0);
-  [%expect {|
+  require_does_raise (fun () -> uresize (of_bit_string "0") ~width:0);
+  [%expect
+    {|
     ("[select] got [hi < lo]"
       (hi -1)
       (lo 0))
@@ -476,8 +523,9 @@ let%expect_test "[uresize 0]" =
 ;;
 
 let%expect_test "[sresize 0]" =
-  require_does_raise [%here] (fun () -> sresize (of_bit_string "0") 0);
-  [%expect {|
+  require_does_raise (fun () -> sresize (of_bit_string "0") ~width:0);
+  [%expect
+    {|
     ("[select] got [hi < lo]"
       (hi -1)
       (lo 0))
@@ -485,28 +533,30 @@ let%expect_test "[sresize 0]" =
 ;;
 
 let%expect_test "resizing" =
-  let uresize, sresize = fn2 uresize, fn2 sresize in
+  let uresize, sresize =
+    fn2 (fun x width -> uresize x ~width), fn2 (fun x width -> sresize x ~width)
+  in
   print_s
     [%message
       ""
         ~uresize_0:
           (List.init 3 ~f:(fun i -> uresize (of_bit_string "0") (i + 1))
-            : (signal, int) fn2 list)
+           : (signal, int) fn2 list)
         ~uresize_1:
           (List.init 3 ~f:(fun i -> uresize (of_bit_string "1") (i + 1))
-            : (signal, int) fn2 list)
+           : (signal, int) fn2 list)
         ~uresize_100:
           (List.init 5 ~f:(fun i -> uresize (of_bit_string "100") (i + 1))
-            : (signal, int) fn2 list)
+           : (signal, int) fn2 list)
         ~sresize_0:
           (List.init 3 ~f:(fun i -> sresize (of_bit_string "0") (i + 1))
-            : (signal, int) fn2 list)
+           : (signal, int) fn2 list)
         ~sresize_1:
           (List.init 3 ~f:(fun i -> sresize (of_bit_string "1") (i + 1))
-            : (signal, int) fn2 list)
+           : (signal, int) fn2 list)
         ~sresize_100:
           (List.init 5 ~f:(fun i -> sresize (of_bit_string "100") (i + 1))
-            : (signal, int) fn2 list)
+           : (signal, int) fn2 list)
         ~ue:(op1 2 ~f:(fn1 ue) : signal fn1 list)
         ~se:(op1 2 ~f:(fn1 se) : signal fn1 list)];
   [%expect
@@ -559,10 +609,13 @@ let%expect_test "[select]" =
     for split = 0 to width - 2 do
       incr num_tests;
       let output =
-        concat_msb_e [ select input (width - 1) (split + 1); select input split 0 ]
+        With_zero_width.concat_msb
+          [ With_zero_width.select (Some input) ~high:(width - 1) ~low:(split + 1)
+          ; With_zero_width.select (Some input) ~high:split ~low:0
+          ]
+        |> Option.value_exn
       in
       require
-        [%here]
         (Sexp.equal [%sexp (input : signal)] [%sexp (output : signal)])
         ~if_false_then_print_s:
           (lazy [%message (split : int) (input : signal) (output : signal)])
@@ -576,34 +629,46 @@ let%expect_test "select" =
     [%message
       "select"
         ~_0_up:
-          (List.init 4 ~f:(fun i -> fn3 select (of_string "1100") i 0)
-            : (signal, int, int) fn3 list)
+          (List.init 4 ~f:(fun i ->
+             fn3 (fun x high low -> select x ~high ~low) (of_string "1100") i 0)
+           : (signal, int, int) fn3 list)
         ~_3_down:
-          (List.init 4 ~f:(fun i -> fn3 select (of_string "1100") 3 (3 - i))
-            : (signal, int, int) fn3 list)
-        ~middle:(fn3 select (of_string "0110") 2 1 : (signal, int, int) fn3)
+          (List.init 4 ~f:(fun i ->
+             fn3 (fun x high low -> select x ~high ~low) (of_string "1100") 3 (3 - i))
+           : (signal, int, int) fn3 list)
+        ~middle:
+          (fn3 (fun x high low -> select x ~high ~low) (of_string "0110") 2 1
+           : (signal, int, int) fn3)
         ~_64_bit_boundary:
-          (fn3 select (of_hex ~width:68 "18000000000000000") 65 62
-            : (signal, int, int) fn3)
+          (fn3
+             (fun x high low -> select x ~high ~low)
+             (of_hex ~width:68 "18000000000000000")
+             65
+             62
+           : (signal, int, int) fn3)
         ~bit:
-          (List.init 4 ~f:(fun i -> fn2 bit (of_string "1100") i)
-            : (signal, int) fn2 list)
+          (List.init 4 ~f:(fun i -> fn2 (fun t pos -> t.:(pos)) (of_string "1100") i)
+           : (signal, int) fn2 list)
         ~lsbs:(List.init 4 ~f:(fun i -> fn1 lsbs (one (i + 2))) : signal fn1 list)
         ~msbs:(List.init 4 ~f:(fun i -> fn1 msbs (one (i + 2))) : signal fn1 list)
         ~lsb:(List.init 4 ~f:(fun i -> fn1 lsb (one (i + 1))) : signal fn1 list)
         ~msb:(List.init 4 ~f:(fun i -> fn1 msb (one (i + 1))) : signal fn1 list)
         ~drop_bottom:
-          (List.init 4 ~f:(fun i -> fn2 drop_bottom (of_string "11100") (i + 1))
-            : (signal, int) fn2 list)
+          (List.init 4 ~f:(fun i ->
+             fn2 (fun x width -> drop_bottom x ~width) (of_string "11100") (i + 1))
+           : (signal, int) fn2 list)
         ~drop_top:
-          (List.init 4 ~f:(fun i -> fn2 drop_top (of_string "11100") (i + 1))
-            : (signal, int) fn2 list)
+          (List.init 4 ~f:(fun i ->
+             fn2 (fun x width -> drop_top x ~width) (of_string "11100") (i + 1))
+           : (signal, int) fn2 list)
         ~sel_bottom:
-          (List.init 5 ~f:(fun i -> fn2 sel_bottom (of_string "11100") (i + 1))
-            : (signal, int) fn2 list)
+          (List.init 5 ~f:(fun i ->
+             fn2 (fun x width -> sel_bottom x ~width) (of_string "11100") (i + 1))
+           : (signal, int) fn2 list)
         ~sel_top:
-          (List.init 5 ~f:(fun i -> fn2 sel_top (of_string "11100") (i + 1))
-            : (signal, int) fn2 list)
+          (List.init 5 ~f:(fun i ->
+             fn2 (fun x width -> sel_top x ~width) (of_string "11100") (i + 1))
+           : (signal, int) fn2 list)
         ~bits_of_101:(bits_msb (of_string "101") : signal list)];
   [%expect
     {|
@@ -672,10 +737,21 @@ let%expect_test "select" =
 ;;
 
 let%expect_test "select_e sexp_of bug? Yes, fixed." =
-  show (select_e vdd 1 1);
-  [%expect {| empty |}];
-  show (select_e gnd (-1) 1);
-  [%expect {| empty |}]
+  require_does_raise (fun () -> With_zero_width.select (Some vdd) ~high:1 ~low:1);
+  [%expect
+    {|
+    ("[select] indices are out of bounds"
+      (input_width 1)
+      (hi          1)
+      (lo          1))
+    |}];
+  require_does_raise (fun () -> With_zero_width.select (Some gnd) ~high:(-1) ~low:1);
+  [%expect
+    {|
+    ("[select] got [hi < lo]"
+      (hi -1)
+      (lo 1))
+    |}]
 ;;
 
 let%expect_test "insert" =
@@ -685,11 +761,11 @@ let%expect_test "insert" =
         ~insert_010_into_0s:
           (List.init 6 ~f:(fun at_offset ->
              insert ~into:(zero 8) (of_string "010") ~at_offset)
-            : signal list)
+           : signal list)
         ~insert_010_into_1s:
           (List.init 6 ~f:(fun at_offset ->
              insert ~into:(ones 8) (of_string "010") ~at_offset)
-            : signal list)];
+           : signal list)];
   [%expect
     {|
     (insert
@@ -701,7 +777,11 @@ let%expect_test "insert" =
 ;;
 
 let%expect_test "split_in_half_msb" =
-  let create b = concat_msb_e [ ones ((b + 1) / 2); zero (b / 2) ] in
+  let create b =
+    With_zero_width.concat_msb
+      [ With_zero_width.ones ((b + 1) / 2); With_zero_width.zero (b / 2) ]
+    |> Option.value_exn
+  in
   let sexp_of_left_and_right (left, right) =
     [%message "" (left : signal) (right : signal)]
   in
@@ -710,7 +790,7 @@ let%expect_test "split_in_half_msb" =
       "split"
         ~_:
           (List.init 8 ~f:(fun b -> split_in_half_msb (create (b + 2)))
-            : left_and_right list)];
+           : left_and_right list)];
   [%expect
     {|
     (split (
@@ -728,7 +808,7 @@ let%expect_test "split_in_half_msb" =
       "split"
         ~_:
           (List.init 8 ~f:(fun b -> b + 1, split_in_half_msb ~msbs:(b + 1) (zero 9))
-            : (int * left_and_right) list)];
+           : (int * left_and_right) list)];
   [%expect
     {|
     (split (
@@ -744,7 +824,11 @@ let%expect_test "split_in_half_msb" =
 ;;
 
 let%expect_test "split_in_half_lsb" =
-  let create b = concat_msb_e [ ones (b / 2); zero ((b + 1) / 2) ] in
+  let create b =
+    With_zero_width.concat_msb
+      [ With_zero_width.ones (b / 2); With_zero_width.zero ((b + 1) / 2) ]
+    |> Option.value_exn
+  in
   let sexp_of_left_and_right (left, right) =
     [%message "" (left : signal) (right : signal)]
   in
@@ -753,7 +837,7 @@ let%expect_test "split_in_half_lsb" =
       "split"
         ~_:
           (List.init 8 ~f:(fun b -> split_in_half_lsb (create (b + 2)))
-            : left_and_right list)];
+           : left_and_right list)];
   [%expect
     {|
     (split (
@@ -771,7 +855,7 @@ let%expect_test "split_in_half_lsb" =
       "split"
         ~_:
           (List.init 8 ~f:(fun b -> b + 1, split_in_half_lsb ~lsbs:(b + 1) (zero 9))
-            : (int * left_and_right) list)];
+           : (int * left_and_right) list)];
   [%expect
     {|
     (split (
@@ -790,9 +874,7 @@ let%expect_test "split_lsb" =
   let split ?exact ~part_width t =
     print_s [%sexp (split_lsb ?exact ~part_width t : signal list)]
   in
-  let split_raises ~part_width t =
-    require_does_raise [%here] (fun () -> split ~part_width t)
-  in
+  let split_raises ~part_width t = require_does_raise (fun () -> split ~part_width t) in
   split_raises ~part_width:0 vdd;
   [%expect {| ("[split] got [part_width <= 0]" (part_width 0)) |}];
   split_raises ~part_width:1 empty;
@@ -819,9 +901,7 @@ let%expect_test "split_msb" =
   let split ?exact ~part_width t =
     print_s [%sexp (split_msb ?exact ~part_width t : signal list)]
   in
-  let split_raises ~part_width t =
-    require_does_raise [%here] (fun () -> split ~part_width t)
-  in
+  let split_raises ~part_width t = require_does_raise (fun () -> split ~part_width t) in
   split_raises ~part_width:0 vdd;
   [%expect {| ("[split] got [part_width <= 0]" (part_width 0)) |}];
   split_raises ~part_width:1 empty;
@@ -845,8 +925,8 @@ let%expect_test "split_msb" =
 ;;
 
 let%expect_test "bswap" =
-  require_does_raise [%here] (fun () -> bswap vdd);
-  require_does_raise [%here] (fun () -> bswap (zero 13));
+  require_does_raise (fun () -> bswap vdd);
+  require_does_raise (fun () -> bswap (zero 13));
   [%expect
     {|
     ("bswap argument must be a multiple of 8 bits width" (actual_width 1))
@@ -866,6 +946,7 @@ let%expect_test "bswap" =
 ;;
 
 let%expect_test "shifting" =
+  let fn2 f x = fn2 (fun a by -> f a ~by) x in
   print_s
     [%message
       "shifting"
@@ -876,24 +957,24 @@ let%expect_test "shifting" =
         ~rotr:(List.init 4 ~f:(fn2 rotr (of_string "001")) : (signal, int) fn2 list)
         ~log_shift_sll:
           (List.init 4 ~f:(fun i ->
-             fn2 (log_shift sll) (of_string "001") (of_int ~width:2 i))
-            : (signal, signal) fn2 list)
+             fn2 (log_shift ~f:sll) (of_string "001") (of_int ~width:2 i))
+           : (signal, signal) fn2 list)
         ~log_shift_srl:
           (List.init 4 ~f:(fun i ->
-             fn2 (log_shift srl) (of_string "100") (of_int ~width:2 i))
-            : (signal, signal) fn2 list)
+             fn2 (log_shift ~f:srl) (of_string "100") (of_int ~width:2 i))
+           : (signal, signal) fn2 list)
         ~log_shift_sra:
           (List.init 4 ~f:(fun i ->
-             fn2 (log_shift sra) (of_string "100") (of_int ~width:2 i))
-            : (signal, signal) fn2 list)
+             fn2 (log_shift ~f:sra) (of_string "100") (of_int ~width:2 i))
+           : (signal, signal) fn2 list)
         ~log_shift_rotl:
           (List.init 4 ~f:(fun i ->
-             fn2 (log_shift rotl) (of_string "001") (of_int ~width:2 i))
-            : (signal, signal) fn2 list)
+             fn2 (log_shift ~f:rotl) (of_string "001") (of_int ~width:2 i))
+           : (signal, signal) fn2 list)
         ~log_shift_rotr:
           (List.init 4 ~f:(fun i ->
-             fn2 (log_shift rotr) (of_string "001") (of_int ~width:2 i))
-            : (signal, signal) fn2 list)];
+             fn2 (log_shift ~f:rotr) (of_string "001") (of_int ~width:2 i))
+           : (signal, signal) fn2 list)];
   [%expect
     {|
     (shifting
@@ -954,7 +1035,7 @@ let%expect_test "shifting" =
    exceptions to sexps. *)
 
 let%expect_test "add width exn" =
-  require_does_raise [%here] (fun () -> of_int ~width:3 22 +: of_int ~width:8 33);
+  require_does_raise (fun () -> of_int ~width:3 22 +: of_int ~width:8 33);
   [%expect
     {|
     ("[+:] got inputs of different widths" (
@@ -964,7 +1045,7 @@ let%expect_test "add width exn" =
 ;;
 
 let%expect_test "sub width exn" =
-  require_does_raise [%here] (fun () -> of_int ~width:3 22 -: of_int ~width:8 33);
+  require_does_raise (fun () -> of_int ~width:3 22 -: of_int ~width:8 33);
   [%expect
     {|
     ("[-:] got inputs of different widths" (
@@ -974,7 +1055,7 @@ let%expect_test "sub width exn" =
 ;;
 
 let%expect_test "less than width exn" =
-  require_does_raise [%here] (fun () -> of_string "01" <: of_string "001");
+  require_does_raise (fun () -> of_string "01" <: of_string "001");
   [%expect
     {|
     ("[<:] got inputs of different widths" (
@@ -984,7 +1065,7 @@ let%expect_test "less than width exn" =
 ;;
 
 let%expect_test "greater than width exn" =
-  require_does_raise [%here] (fun () -> of_string "01" >: of_string "001");
+  require_does_raise (fun () -> of_string "01" >: of_string "001");
   [%expect
     {|
     ("[<:] got inputs of different widths" (
@@ -994,7 +1075,7 @@ let%expect_test "greater than width exn" =
 ;;
 
 let%expect_test "less than or equal to width exn" =
-  require_does_raise [%here] (fun () -> of_string "01" <=: of_string "001");
+  require_does_raise (fun () -> of_string "01" <=: of_string "001");
   [%expect
     {|
     ("[<:] got inputs of different widths" (
@@ -1004,7 +1085,7 @@ let%expect_test "less than or equal to width exn" =
 ;;
 
 let%expect_test "greater than or equal to width exn" =
-  require_does_raise [%here] (fun () -> of_string "01" >=: of_string "001");
+  require_does_raise (fun () -> of_string "01" >=: of_string "001");
   [%expect
     {|
     ("[<:] got inputs of different widths" (
@@ -1014,7 +1095,7 @@ let%expect_test "greater than or equal to width exn" =
 ;;
 
 let%expect_test "equals width exn" =
-  require_does_raise [%here] (fun () -> of_string "01" ==: of_string "001");
+  require_does_raise (fun () -> of_string "01" ==: of_string "001");
   [%expect
     {|
     ("[==:] got inputs of different widths" (
@@ -1024,7 +1105,7 @@ let%expect_test "equals width exn" =
 ;;
 
 let%expect_test "not equals width exn" =
-  require_does_raise [%here] (fun () -> of_string "01" <>: of_string "001");
+  require_does_raise (fun () -> of_string "01" <>: of_string "001");
   [%expect
     {|
     ("[<>:] got inputs of different widths" (
@@ -1034,7 +1115,7 @@ let%expect_test "not equals width exn" =
 ;;
 
 let%expect_test "and width exn" =
-  require_does_raise [%here] (fun () -> of_string "1010" &: of_string "100");
+  require_does_raise (fun () -> of_string "1010" &: of_string "100");
   [%expect
     {|
     ("[&:] got inputs of different widths" (
@@ -1044,7 +1125,7 @@ let%expect_test "and width exn" =
 ;;
 
 let%expect_test "or width exn" =
-  require_does_raise [%here] (fun () -> of_string "1010" |: of_string "100");
+  require_does_raise (fun () -> of_string "1010" |: of_string "100");
   [%expect
     {|
     ("[|:] got inputs of different widths" (
@@ -1054,7 +1135,7 @@ let%expect_test "or width exn" =
 ;;
 
 let%expect_test "xor width exn" =
-  require_does_raise [%here] (fun () -> of_string "1010" ^: of_string "100");
+  require_does_raise (fun () -> of_string "1010" ^: of_string "100");
   [%expect
     {|
     ("[^:] got inputs of different widths" (
@@ -1065,7 +1146,7 @@ let%expect_test "xor width exn" =
 
 let%expect_test "mux exn: idx too narrow" =
   let data4 = List.map ~f:(of_int ~width:5) [ 0; 10; 20; 30 ] in
-  require_does_raise [%here] (fun () -> mux vdd data4);
+  require_does_raise (fun () -> mux vdd data4);
   [%expect
     {|
     ("[mux] got too many inputs"
@@ -1075,7 +1156,7 @@ let%expect_test "mux exn: idx too narrow" =
 ;;
 
 let%expect_test "select out of bounds throws exn" =
-  require_does_raise [%here] (fun () -> select vdd 1 1);
+  require_does_raise (fun () -> vdd.:[1, 1]);
   [%expect
     {|
     ("[select] indices are out of bounds"
@@ -1086,8 +1167,9 @@ let%expect_test "select out of bounds throws exn" =
 ;;
 
 let%expect_test "select hi<lo throws exn" =
-  require_does_raise [%here] (fun () -> select (of_int ~width:2 0) 0 1);
-  [%expect {|
+  require_does_raise (fun () -> (of_int ~width:2 0).:[0, 1]);
+  [%expect
+    {|
     ("[select] got [hi < lo]"
       (hi 0)
       (lo 1))
@@ -1095,8 +1177,9 @@ let%expect_test "select hi<lo throws exn" =
 ;;
 
 let%expect_test "msbs exn" =
-  require_does_raise [%here] (fun () -> msbs vdd);
-  [%expect {|
+  require_does_raise (fun () -> msbs vdd);
+  [%expect
+    {|
     ("[select] got [hi < lo]"
       (hi 0)
       (lo 1))
@@ -1104,8 +1187,9 @@ let%expect_test "msbs exn" =
 ;;
 
 let%expect_test "lsbs exn" =
-  require_does_raise [%here] (fun () -> lsbs vdd);
-  [%expect {|
+  require_does_raise (fun () -> lsbs vdd);
+  [%expect
+    {|
     ("[select] got [hi < lo]"
       (hi -1)
       (lo 0))

@@ -66,11 +66,11 @@ works as would any cyclesim simulator.
 
 ```ocaml
 # let cycle sim foo bar =
-    (Cyclesim.in_port sim "foo") := Bits.of_int ~width:32 foo;
-    (Cyclesim.in_port sim "bar") := Bits.of_int ~width:32 bar;
+    (Cyclesim.in_port sim "foo") := Bits.of_unsigned_int ~width:32 foo;
+    (Cyclesim.in_port sim "bar") := Bits.of_unsigned_int ~width:32 bar;
     Cyclesim.cycle sim;
     Stdio.printf "%d + %d = %d\n"
-      foo bar (Bits.to_int !(Cyclesim.out_port sim "baz"));
+      foo bar (Bits.to_unsigned_int !(Cyclesim.out_port sim "baz"));
   ;;
 val cycle : ('a, 'b) Cyclesim.t -> int -> int -> unit = <fun>
 

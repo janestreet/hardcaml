@@ -37,38 +37,36 @@ let foo_in_superset_sim () =
 ;;
 
 let%expect_test "Port sets differ - inputs" =
-  require_does_raise [%here] (fun () -> Cyclesim.combine (xor_sim ()) (foo_in_sim ()));
+  require_does_raise (fun () -> Cyclesim.combine (xor_sim ()) (foo_in_sim ()));
   [%expect {| ("Input port was not found" (name b)) |}];
-  require_does_not_raise [%here] (fun () ->
+  require_does_not_raise (fun () ->
     ignore
       (Cyclesim.combine ~port_sets_may_differ:true (xor_sim ()) (foo_in_sim ())
-        : _ Cyclesim.t));
+       : _ Cyclesim.t));
   [%expect {| |}]
 ;;
 
 let%expect_test "Port sets differ - outputs" =
-  require_does_raise [%here] (fun () -> Cyclesim.combine (xor_sim ()) (foo_out_sim ()));
+  require_does_raise (fun () -> Cyclesim.combine (xor_sim ()) (foo_out_sim ()));
   [%expect {| ("Output port was not found" (name c)) |}];
-  require_does_not_raise [%here] (fun () ->
+  require_does_not_raise (fun () ->
     ignore
       (Cyclesim.combine ~port_sets_may_differ:true (xor_sim ()) (foo_out_sim ())
-        : _ Cyclesim.t));
+       : _ Cyclesim.t));
   [%expect {| |}]
 ;;
 
 let%expect_test "Port supersets differ" =
-  require_does_raise [%here] (fun () ->
-    Cyclesim.combine (xor_sim ()) (foo_in_superset_sim ()));
+  require_does_raise (fun () -> Cyclesim.combine (xor_sim ()) (foo_in_superset_sim ()));
   [%expect {| ("Input port was not found" (name foo)) |}];
-  require_does_raise [%here] (fun () ->
-    Cyclesim.combine (foo_in_superset_sim ()) (xor_sim ()));
+  require_does_raise (fun () -> Cyclesim.combine (foo_in_superset_sim ()) (xor_sim ()));
   [%expect {| ("Input port was not found" (name foo)) |}]
 ;;
 
 let%expect_test "Test comparison" =
   let sim = Cyclesim.combine (xor_sim ()) (or_sim ()) in
   let a, b = Cyclesim.in_port sim "a", Cyclesim.in_port sim "b" in
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     (* expected to differ on cycle 3, when both a and b are 1 *)
     for i = 0 to 1 do
       for j = 0 to 1 do

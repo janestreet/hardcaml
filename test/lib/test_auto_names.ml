@@ -5,9 +5,9 @@ open Signal
 let naming_scheme = Scope.Naming_scheme.Auto
 
 module Make (X : sig
-  val name : string
-  val op : Scope.t -> Signal.t -> Signal.t
-end) =
+    val name : string
+    val op : Scope.t -> Signal.t -> Signal.t
+  end) =
 struct
   module I = struct
     type 'a t = { i : 'a [@rtlprefix X.name ^ "_port_"] } [@@deriving hardcaml]
@@ -26,19 +26,19 @@ struct
 end
 
 module A = Make (struct
-  let name = "A"
-  let op _ i = i +:. 1
-end)
+    let name = "A"
+    let op _ i = i +:. 1
+  end)
 
 module B = Make (struct
-  let name = "B"
-  let op scope i = (A.hierarchy scope { A.I.i }).o +:. 1
-end)
+    let name = "B"
+    let op scope i = (A.hierarchy scope { A.I.i }).o +:. 1
+  end)
 
 module C = Make (struct
-  let name = "C"
-  let op scope i = (B.hierarchy scope { B.I.i }).o +:. 1
-end)
+    let name = "C"
+    let op scope i = (B.hierarchy scope { B.I.i }).o +:. 1
+  end)
 
 module Circuit = Circuit.With_interface (C.I) (C.O)
 

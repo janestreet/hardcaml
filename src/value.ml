@@ -3,9 +3,9 @@ open Base
 module type Arg = Value_intf.Arg
 
 module Make (S : sig
-  val port_name : string
-  val port_width : int
-end) =
+    val port_name : string
+    val port_width : int
+  end) =
 struct
   module T = struct
     type 'a t = 'a

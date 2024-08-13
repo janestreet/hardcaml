@@ -13,9 +13,11 @@ depends: [
   "ocaml" {>= "5.1.0"}
   "base"
   "bin_prot"
+  "core"
   "core_kernel"
   "ppx_jane"
   "ppx_sexp_conv"
+  "sexplib"
   "stdio"
   "dune"          {>= "3.11.0"}
   "ppxlib"        {>= "0.28.0"}

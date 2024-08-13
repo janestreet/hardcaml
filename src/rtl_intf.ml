@@ -1,20 +1,13 @@
 open Base
 
 module type Rtl = sig
-  module Language : sig
-    type t =
-      | Verilog
-      | Vhdl
-    [@@deriving sexp_of]
-
-    val file_extension : t -> string
-  end
+  module Language = Rtl_language
 
   (** RTL generation options. *)
   module Output_mode : sig
     type t =
       | In_directory of string
-          (** Write each circuit into a file in the given directory.  The file name consists
+      (** Write each circuit into a file in the given directory.  The file name consists
           of the circuit name and the approriate file extension ([.v] for Verilog and
           [.vhd] for VHDL). *)
       | To_buffer of Buffer.t (** Write all circuits into one buffer. *)

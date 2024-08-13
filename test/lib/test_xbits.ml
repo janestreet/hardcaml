@@ -12,7 +12,8 @@ let test_op f =
 
 let%expect_test "&:" =
   test_op Bits.( &: );
-  [%expect {|
+  [%expect
+    {|
     (x 000111xxx)
     (y 01x01x01x)
     (r 00x01xxxx)
@@ -21,7 +22,8 @@ let%expect_test "&:" =
 
 let%expect_test "|:" =
   test_op Bits.( |: );
-  [%expect {|
+  [%expect
+    {|
     (x 000111xxx)
     (y 01x01x01x)
     (r 01x11xxxx)
@@ -30,7 +32,8 @@ let%expect_test "|:" =
 
 let%expect_test "^:" =
   test_op Bits.( ^: );
-  [%expect {|
+  [%expect
+    {|
     (x 000111xxx)
     (y 01x01x01x)
     (r 01x10xxxx)

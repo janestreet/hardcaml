@@ -2,9 +2,9 @@ open! Core
 module Synth = Hardcaml_xilinx_reports
 
 module Make (Bits : sig
-  val multiply_by : int
-  val bits : int
-end) =
+    val multiply_by : int
+    val bits : int
+  end) =
 struct
   open Hardcaml.Signal
 

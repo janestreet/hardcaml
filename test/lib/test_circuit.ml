@@ -10,6 +10,14 @@ let%expect_test "[sexp_of_t]" =
   [%expect
     {|
     ((name name)
+     (config (
+       (detect_combinational_loops true)
+       (normalize_uids             true)
+       (assertions ())
+       (port_checks        Port_sets_and_widths)
+       (add_phantom_inputs true)
+       (modify_outputs     <opaque>)
+       (rtl_compatibility  Vivado)))
      (signal_by_uid  ())
      (inputs         ())
      (outputs        ())
@@ -29,6 +37,14 @@ let%expect_test "[sexp_of_t] with an output" =
   [%expect
     {|
     ((name name)
+     (config (
+       (detect_combinational_loops true)
+       (normalize_uids             true)
+       (assertions ())
+       (port_checks        Port_sets_and_widths)
+       (add_phantom_inputs true)
+       (modify_outputs     <opaque>)
+       (rtl_compatibility  Vivado)))
      (signal_by_uid (
        (1 (
          wire
@@ -68,6 +84,14 @@ let%expect_test "[sexp_of_t] with an input" =
   [%expect
     {|
     ((name name)
+     (config (
+       (detect_combinational_loops true)
+       (normalize_uids             true)
+       (assertions ())
+       (port_checks        Port_sets_and_widths)
+       (add_phantom_inputs true)
+       (modify_outputs     <opaque>)
+       (rtl_compatibility  Vivado)))
      (signal_by_uid (
        (0 empty)
        (1 (
@@ -117,6 +141,14 @@ let%expect_test "[sexp_of_t] with an operator" =
   [%expect
     {|
     ((name name)
+     (config (
+       (detect_combinational_loops true)
+       (normalize_uids             true)
+       (assertions ())
+       (port_checks        Port_sets_and_widths)
+       (add_phantom_inputs true)
+       (modify_outputs     <opaque>)
+       (rtl_compatibility  Vivado)))
      (signal_by_uid (
        (0 empty)
        (1 (
@@ -163,7 +195,7 @@ let%expect_test "[sexp_of_t] with an operator" =
 ;;
 
 let%expect_test "Output signal not driven" =
-  require_does_raise [%here] (fun () -> Circuit.create_exn ~name:"test" [ wire 1 ]);
+  require_does_raise (fun () -> Circuit.create_exn ~name:"test" [ wire 1 ]);
   [%expect
     {|
     ("circuit output signal is not driven" (
@@ -175,7 +207,7 @@ let%expect_test "Output signal not driven" =
 ;;
 
 let%expect_test "Output signal with no name" =
-  require_does_raise [%here] (fun () -> Circuit.create_exn ~name:"test" [ wireof vdd ]);
+  require_does_raise (fun () -> Circuit.create_exn ~name:"test" [ wireof vdd ]);
   [%expect
     {|
     ("circuit output signal must have a port name"
@@ -187,7 +219,7 @@ let%expect_test "Output signal with no name" =
 ;;
 
 let%expect_test "Output signal with multiple names" =
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Circuit.create_exn ~name:"test" [ wireof vdd -- "a" -- "b" ]);
   [%expect
     {|
@@ -201,7 +233,7 @@ let%expect_test "Output signal with multiple names" =
 ;;
 
 let%expect_test "Output signal must be a wire" =
-  require_does_raise [%here] (fun () -> Circuit.create_exn ~name:"test" [ gnd ]);
+  require_does_raise (fun () -> Circuit.create_exn ~name:"test" [ gnd ]);
   [%expect
     {|
     ("circuit output signal must be a wire" (
@@ -214,16 +246,16 @@ let%expect_test "Output signal must be a wire" =
 ;;
 
 let%expect_test "Port names must be unique" =
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Circuit.create_exn ~name:"test" [ output "a" (input "a" 1) ]);
   [%expect
     {| ("Port names are not unique" (circuit_name test) (input_and_output_names (a))) |}];
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Circuit.create_exn
       ~name:"test"
       [ output "a" (input "b" 1 +: input "b" 1 +: input "c" 1) ]);
   [%expect {| ("Input port names are not unique" (circuit_name test) (repeated (b))) |}];
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Circuit.create_exn ~name:"test" [ output "a" (input "b" 1); output "a" (input "c" 1) ]);
   [%expect {| ("Output port names are not unique" (circuit_name test) (repeated (a))) |}]
 ;;
@@ -231,14 +263,13 @@ let%expect_test "Port names must be unique" =
 (* This probably shouldn't, otherwise we would have to check all reserved identifiers for
    VHDL, Verilog and C (and other backends). *)
 let%expect_test "Port name clashes with reserved name" =
-  require_does_not_raise [%here] (fun () ->
+  require_does_not_raise (fun () ->
     ignore (Circuit.create_exn ~name:"test" [ output "module" (input "x" 1) ] : Circuit.t));
   [%expect {| |}]
 ;;
 
 let%expect_test "input with no name" =
-  require_does_raise [%here] (fun () ->
-    Circuit.create_exn ~name:"test" [ output "o" (wire 1) ]);
+  require_does_raise (fun () -> Circuit.create_exn ~name:"test" [ output "o" (wire 1) ]);
   [%expect
     {|
     ("circuit input signal must have a port name (unassigned wire?)"
@@ -250,7 +281,7 @@ let%expect_test "input with no name" =
 ;;
 
 let%expect_test "input with multiple names" =
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Circuit.create_exn ~name:"test" [ output "o" (wire 1 -- "a" -- "b") ]);
   [%expect
     {|
@@ -270,6 +301,14 @@ let%expect_test "phantom inputs" =
   [%expect
     {|
     ((name test)
+     (config (
+       (detect_combinational_loops true)
+       (normalize_uids             true)
+       (assertions ())
+       (port_checks        Port_sets_and_widths)
+       (add_phantom_inputs true)
+       (modify_outputs     <opaque>)
+       (rtl_compatibility  Vivado)))
      (signal_by_uid (
        (0 empty)
        (1 (
@@ -315,6 +354,14 @@ let%expect_test "phantom inputs" =
   [%expect
     {|
     ((name test)
+     (config (
+       (detect_combinational_loops true)
+       (normalize_uids             true)
+       (assertions ())
+       (port_checks        Port_sets_and_widths)
+       (add_phantom_inputs true)
+       (modify_outputs     <opaque>)
+       (rtl_compatibility  Vivado)))
      (signal_by_uid (
        (0 empty)
        (1 (
@@ -356,7 +403,7 @@ let%expect_test "phantom inputs" =
      (instantiations ()))
     |}];
   (* Add 2, one of which is already an output *)
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Circuit.set_phantom_inputs circuit [ "b", 1; "c", 1 ] |> show);
   [%expect
     {|
@@ -427,9 +474,9 @@ let%expect_test "verify_clock_pins" =
     let bar = output "bar" bar in
     Circuit.create_exn ~name:"the_foo_bar" [ bar ]
   in
-  require_does_not_raise [%here] (fun () ->
+  require_does_not_raise (fun () ->
     Design_rule_checks.verify_clock_pins circuit ~expected_clock_pins:[ "clock" ]);
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Design_rule_checks.verify_clock_pins circuit ~expected_clock_pins:[ "bar" ]);
   [%expect
     {|
@@ -450,11 +497,11 @@ let%expect_test "verify_clock_pins" =
     let bar = output "bar" bar in
     Circuit.create_exn ~name:"the_foo_bar" [ bar ]
   in
-  require_does_not_raise [%here] (fun () ->
+  require_does_not_raise (fun () ->
     Design_rule_checks.verify_clock_pins
       circuit_with_wired_clock
       ~expected_clock_pins:[ "clock" ]);
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Design_rule_checks.verify_clock_pins
       circuit_with_wired_clock
       ~expected_clock_pins:[ "clock_wire" ]);
@@ -504,11 +551,11 @@ let%expect_test "verify_clock_pins" =
          ~f:(fun i s -> output (Printf.sprintf "ram_%d" i) s)
          (Array.to_list ram_outputs))
   in
-  require_does_not_raise [%here] (fun () ->
+  require_does_not_raise (fun () ->
     Design_rule_checks.verify_clock_pins
       circuit_with_multiport_memory
       ~expected_clock_pins:[ "clock0"; "clock1"; "clock2"; "clock3" ]);
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Design_rule_checks.verify_clock_pins
       circuit_with_multiport_memory
       ~expected_clock_pins:[ "clock0"; "clock1"; "clock2"; "clock5" ]);
@@ -540,9 +587,9 @@ let%expect_test "Raises when encounters duplicated ports in interfaces." =
   end
   in
   let module C = Circuit.With_interface (I) (O) in
-  Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+  Expect_test_helpers_base.require_does_raise (fun () ->
     C.create_exn ~name:"circuit" (fun (input : _ I.t) ->
-      { O.baz = input.foo +: uresize input.bar 30 }));
+      { O.baz = input.foo +: uresize input.bar ~width:30 }));
   [%expect
     {| ("Input port names are not unique" (circuit_name circuit) (repeated (hello))) |}]
 ;;

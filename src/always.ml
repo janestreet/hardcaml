@@ -81,6 +81,7 @@ let ( <-- ) (a : Variable.t) b =
 ;;
 
 let ( <--. ) (a : Variable.t) b = a <-- Signal.of_int ~width:(Signal.width a.value) b
+let incr ?(by = 1) (a : Variable.t) = a <-- Signal.(a.value +:. by)
 let list_of_set s = Set.fold s ~init:[] ~f:(fun l e -> e :: l)
 
 let rec find_targets set statements =
@@ -203,7 +204,7 @@ module State_machine = struct
       | Gray -> Bits.binary_to_gray (Bits.of_int ~width:ls i)
       | Onehot ->
         let nstates' = if nstates = 1 then 1 else nstates - 1 in
-        Bits.(select (binary_to_onehot (of_int ~width:ls i)) nstates' 0)
+        Bits.(select (binary_to_onehot (of_int ~width:ls i)) ~high:nstates' ~low:0)
     in
     let state_signal i = state_bits i |> Bits.to_constant |> Signal.of_constant in
     let states = List.mapi State.all ~f:(fun i s -> s, (i, state_signal i)) in
@@ -274,12 +275,12 @@ module State_machine = struct
         proc
           (List.map cases ~f:(fun (s, c) ->
              let i, _ = find_state "switch" s in
-             when_ (Signal.bit current i) c))
+             when_ current.Signal.:(i) c))
     in
     let is s =
       match encoding with
       | Binary | Gray -> state_val "is" s ==: current
-      | Onehot -> Signal.bit var.value (fst (find_state "is" s))
+      | Onehot -> var.value.Signal.:(fst (find_state "is" s))
     in
     if auto_wave_format
     then (

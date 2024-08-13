@@ -48,9 +48,9 @@ module type S = sig
 end
 
 module Make (M : sig
-  val width : int
-  val log2_depth : int
-end) =
+    val width : int
+    val log2_depth : int
+  end) =
 struct
   let address_width = M.log2_depth
   let fifo_capacity = 1 lsl address_width
@@ -159,7 +159,7 @@ struct
       let var = Always.Variable.reg spec ~enable:vdd ~width in
       ignore
         (Signal.add_attribute var.value (Rtl_attribute.Vivado.async_reg true) -- name
-          : Signal.t);
+         : Signal.t);
       var
     in
     let reg_var ~name ~clock ~reset ~width =
@@ -257,7 +257,7 @@ struct
             else waddr_rd_ffs.(idx) <-- waddr_rd_ffs.(idx - 1).value)
           |> Array.to_list
           |> proc
-        ; waddr_rd <-- (Array.last waddr_rd_ffs).value
+        ; waddr_rd <-- (Array.last_exn waddr_rd_ffs).value
         ; (* @(posedge clk_write) *)
           Array.init (Array.length raddr_wd_ffs) ~f:(fun idx ->
             if idx = 0
@@ -265,7 +265,7 @@ struct
             else raddr_wd_ffs.(idx) <-- raddr_wd_ffs.(idx - 1).value)
           |> Array.to_list
           |> proc
-        ; raddr_wd <-- (Array.last raddr_wd_ffs).value
+        ; raddr_wd <-- (Array.last_exn raddr_wd_ffs).value
         ; (* @(posedge clk_write) *)
           when_
             (i.write_enable &: ~:full)

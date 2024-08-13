@@ -15,7 +15,7 @@ let sexp_of_const_signal ?(depth = 1) signal =
           (Int.to_string (width signal)
            ^ "'h"
            ^ (Signal.to_constant signal |> Constant.to_hex_string ~signedness:Unsigned)
-            : string)]
+           : string)]
     else (
       match names signal with
       | [] ->
@@ -52,7 +52,7 @@ let%expect_test "of_bit_string" =
       "binary string to signal conversion"
         ~of_bit_string:
           (List.map ~f:of_bit_string [ "0"; "1"; "10"; "111"; "10101" ]
-            : string const_function list)];
+           : string const_function list)];
   [%expect
     {|
     ("binary string to signal conversion" (
@@ -63,7 +63,7 @@ let%expect_test "of_bit_string" =
         (111   3'b111)
         (10101 5'b10101))))
     |}];
-  require_does_raise [%here] (fun () -> of_bit_string "foo");
+  require_does_raise (fun () -> of_bit_string "foo");
   [%expect {| ("[of_bit_string] got invalid binary constant" foo) |}]
 ;;
 
@@ -267,9 +267,9 @@ let%expect_test "of_octal" =
 ;;
 
 let%expect_test "of_decimal_string error" =
-  require_does_raise [%here] (fun () -> of_decimal_string ~width:10 "a");
+  require_does_raise (fun () -> of_decimal_string ~width:10 "a");
   [%expect {| (Invalid_argument "Z.of_substring_base: invalid digit") |}];
-  require_does_raise [%here] (fun () -> of_decimal_string ~width:10 "");
+  require_does_raise (fun () -> of_decimal_string ~width:10 "");
   [%expect {| "[of_decimal_string] got empty string" |}]
 ;;
 
@@ -285,19 +285,19 @@ let%expect_test "of_string" =
            ; of_string "3'b1"
            ; of_string "10'b1010101010"
            ]
-            : string const_function list)
+           : string const_function list)
         ~decimal:
           ([ of_string "16'd65535"; of_string "17'd65536" ] : string const_function list)
         ~hex:
           ([ of_string "5'h4"; of_string "5'h8"; of_string "5'H4"; of_string "5'H8" ]
-            : string const_function list)
+           : string const_function list)
         ~decimal:
           ([ raw_of_string "16'd65535"
            ; raw_of_string "17'd65536"
            ; raw_of_string "4'd-1"
            ; raw_of_string "20'd-247223"
            ]
-            : string const_function list)];
+           : string const_function list)];
   [%expect
     {|
     ("verilog style constant conversion"
@@ -320,13 +320,13 @@ let%expect_test "of_string" =
         (4'd-1       4'b1111)
         (20'd-247223 20'hc3a49))))
     |}];
-  require_does_raise [%here] (fun () -> of_string "2323");
+  require_does_raise (fun () -> of_string "2323");
   [%expect {| ("[of_string] could not convert constant" (const 2323)) |}];
-  require_does_raise [%here] (fun () -> of_string "'");
+  require_does_raise (fun () -> of_string "'");
   [%expect {| ("[of_string] could not convert constant" (const ')) |}];
-  require_does_raise [%here] (fun () -> of_string "5'b");
+  require_does_raise (fun () -> of_string "5'b");
   [%expect {| ("[of_string] could not convert constant" (const 5'b)) |}];
-  require_does_raise [%here] (fun () -> of_string "5'J1");
+  require_does_raise (fun () -> of_string "5'J1");
   [%expect {| ("[of_string] could not convert constant" (const 5'J1)) |}]
 ;;
 
@@ -337,7 +337,7 @@ let%expect_test "of_bit_list" =
       "int bits list to signal conversion"
         ~_:
           (List.map ~f:of_bit_list [ [ 0 ]; [ 1 ]; [ 0; 1 ]; [ 1; 1; 1 ] ]
-            : int list const_function list)];
+           : int list const_function list)];
   [%expect
     {|
     ("int bits list to signal conversion" (
@@ -381,58 +381,58 @@ let%expect_test "simple constants" =
 
 let%expect_test "widths must be greater than zero" =
   let open Signal in
-  require_does_raise [%here] (fun () -> of_bit_string "");
+  require_does_raise (fun () -> of_bit_string "");
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
      (const ""))
     |}];
-  require_does_raise [%here] (fun () -> of_bit_list []);
+  require_does_raise (fun () -> of_bit_list []);
   [%expect {| ("Width of constant must be greater than zero" (width 0)) |}];
-  require_does_raise [%here] (fun () -> of_int ~width:0 0);
+  require_does_raise (fun () -> of_int ~width:0 0);
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
      (const 0))
     |}];
-  require_does_raise [%here] (fun () -> of_int32 ~width:0 0l);
+  require_does_raise (fun () -> of_int32 ~width:0 0l);
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
      (const 0))
     |}];
-  require_does_raise [%here] (fun () -> of_int64 ~width:0 0L);
+  require_does_raise (fun () -> of_int64 ~width:0 0L);
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
      (const 0))
     |}];
-  require_does_raise [%here] (fun () -> of_hex ~width:0 "0");
+  require_does_raise (fun () -> of_hex ~width:0 "0");
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
      (const 0))
     |}];
-  require_does_raise [%here] (fun () -> of_hex ~signedness:Signed ~width:0 "0");
+  require_does_raise (fun () -> of_hex ~signedness:Signed ~width:0 "0");
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
      (const 0))
     |}];
-  require_does_raise [%here] (fun () -> of_octal ~width:0 "0");
+  require_does_raise (fun () -> of_octal ~width:0 "0");
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
      (const 0))
     |}];
-  require_does_raise [%here] (fun () -> of_octal ~signedness:Signed ~width:0 "0");
+  require_does_raise (fun () -> of_octal ~signedness:Signed ~width:0 "0");
   [%expect
     {|
     ("Width of constant must be greater than zero"
@@ -442,7 +442,7 @@ let%expect_test "widths must be greater than zero" =
 ;;
 
 let%expect_test "round trip chars" =
-  require_does_raise [%here] (fun () -> to_char vdd);
+  require_does_raise (fun () -> to_char vdd);
   [%expect {| ("[to_char] signal must be 8 bits wide" (actual_width 1)) |}];
   for i = 0 to 255 do
     let c = Char.of_int_exn i in

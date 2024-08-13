@@ -428,7 +428,7 @@ let%expect_test "Try to generate a Verilog module name with dashes" =
   let input = Signal.input "in" 32 in
   let a = wire 32 -- "a" in
   a <== input;
-  Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+  Expect_test_helpers_base.require_does_raise (fun () ->
     let circuit = Circuit.create_exn ~name:"mod-with-dash" [ output "out" a ] in
     Rtl.print Verilog circuit);
   [%expect
@@ -443,7 +443,7 @@ let%expect_test "Try to generate a Verilog module name that starts with a number
   let input = Signal.input "in" 32 in
   let a = wire 32 -- "a" in
   a <== input;
-  Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+  Expect_test_helpers_base.require_does_raise (fun () ->
     let circuit = Circuit.create_exn ~name:"999" [ output "out" a ] in
     Rtl.print Verilog circuit);
   [%expect
@@ -455,7 +455,7 @@ let%expect_test "Try to generate a Verilog module name that starts with a number
 ;;
 
 let%expect_test "Module name rules apply to instantiations also" =
-  Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+  Expect_test_helpers_base.require_does_raise (fun () ->
     let input = Signal.input "in" 32 in
     let outputs =
       Instantiation.create ~name:"a^b" ~inputs:[ "a", input ] ~outputs:[ "b", 1 ] ()
@@ -476,7 +476,7 @@ let%expect_test "Try to generate Verilog port names with dashes" =
   let input = input "in-with-dash" 32 in
   let a = wire 32 -- "a" in
   a <== input;
-  Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+  Expect_test_helpers_base.require_does_raise (fun () ->
     let circuit = Circuit.create_exn ~name:"mod" [ output "out-with-dash" a ] in
     Rtl.print Verilog circuit);
   [%expect

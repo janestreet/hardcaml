@@ -34,7 +34,7 @@ let trace' sim assertion_manager =
   let asserts =
     Map.to_alist assertions
     |> List.map ~f:(fun (port_name, _) ->
-         port_name, Cyclesim.out_port sim ~clock_edge:Before port_name)
+      port_name, Cyclesim.out_port sim ~clock_edge:Before port_name)
   in
   let check_assertions () =
     List.iter asserts ~f:(fun (name, bits) ->

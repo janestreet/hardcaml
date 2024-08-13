@@ -27,4 +27,6 @@ module type Rtl_name = sig
 
   (** Returns the mangled name for the memory array, and (in VHDL) array type. *)
   val mangle_multiport_mem_name : t -> Signal.t -> string * string
+
+  val of_language : Rtl_language.t -> t
 end

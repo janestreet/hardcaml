@@ -144,8 +144,8 @@ let create =
   (* The program block with a call to [compile] *)
   Always.(compile [
     if_ (a ==: b) [
-      c_wire <-- (sll a 1);
-      c_reg  <-- (sll a 1)
+      c_wire <-- (sll a ~by:1);
+      c_reg  <-- (sll a ~by:1)
     ] [
       c_wire <-- (a +: b);
       c_reg  <-- (a +: b);

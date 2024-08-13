@@ -10,7 +10,7 @@ let assign_reg dst src =
 let%expect_test "Cyclesim.internal_port can peek at combinational node" =
   let create_sim () =
     let acc, a, b = input "acc" 8, input "a" 8, input "b" 8 in
-    let foo = uresize (a *: b) 8 -- "foo" in
+    let foo = uresize (a *: b) ~width:8 -- "foo" in
     let summed = acc +: foo -- "summed" in
     let c = output "c" summed in
     Circuit.create_exn ~name:"sim" [ c ]
@@ -32,7 +32,8 @@ let%expect_test "Cyclesim.internal_port can peek at combinational node" =
   in
   Stdio.print_endline [%string "Foo = %{foo#Int}"];
   Stdio.print_endline [%string "Summed = %{summed#Int}"];
-  [%expect {|
+  [%expect
+    {|
     Foo = 60
     Summed = 70
     |}]
@@ -51,7 +52,7 @@ let%expect_test "lookup_reg can peek and poke internal registers" =
   let x = Cyclesim.in_port sim "x" in
   let x1 = Option.value_exn (Cyclesim.lookup_reg_by_name sim "x1") in
   let x2 = Option.value_exn (Cyclesim.lookup_reg_by_name sim "x2") in
-  Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+  Expect_test_helpers_base.require_does_raise (fun () ->
     Option.value_exn
       ~message:"Cannot lookup reg as memory"
       (Cyclesim.lookup_mem_by_name sim "x1"));
@@ -112,7 +113,7 @@ let%expect_test "lookup_mem can read and write internal memory" =
   let write_enable = Cyclesim.in_port sim "write_enable" in
   let read_data = Cyclesim.out_port sim "read_data" in
   (* Cannot lookup a memory as a reg. *)
-  Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+  Expect_test_helpers_base.require_does_raise (fun () ->
     Option.value_exn
       ~message:"Cannot lookup memory as reg"
       (Cyclesim.lookup_reg_by_name sim "bar"));

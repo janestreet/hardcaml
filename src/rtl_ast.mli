@@ -193,11 +193,11 @@ type t =
   ; declarations : declaration list
   ; statements : statement list
   ; var_map : declaration Map.M(Signal.Uid).t
-      (** Map all input, output and internal signals to a var declaration *)
+  (** Map all input, output and internal signals to a var declaration *)
   }
 [@@deriving sexp_of]
 
-val of_circuit : blackbox:bool -> Rtl_name.t -> Circuit.t -> t
+val of_circuit : blackbox:bool -> language:Rtl_language.t -> Circuit.t -> t
 
 (** Map signal names to mangled RTL names. This used in [Hardcaml_verilator]. *)
 module Signals_name_map : sig

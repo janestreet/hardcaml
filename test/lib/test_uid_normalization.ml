@@ -25,7 +25,7 @@ let design () =
     memory
       4
       ~write_port:
-        { write_clock = clock; write_enable = bit a 1; write_address = b; write_data = a }
+        { write_clock = clock; write_enable = a.:(1); write_address = b; write_data = a }
       ~read_address:a
   in
   let w = wireof a in

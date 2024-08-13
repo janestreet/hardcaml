@@ -27,8 +27,52 @@ module Instantiation_sexp = struct
   let sexp_of_t (t : t) = [%message "" (t.inst_name : string) (t.inst_instance : string)]
 end
 
+module Port_checks = struct
+  type t =
+    | Relaxed
+    | Port_sets
+    | Port_sets_and_widths
+  [@@deriving sexp_of]
+end
+
+module Config = struct
+  type t =
+    { detect_combinational_loops : bool
+    ; normalize_uids : bool
+    ; assertions : Assertion_manager.t option
+    ; port_checks : Port_checks.t
+    ; add_phantom_inputs : bool
+    ; modify_outputs : (Signal.t list -> Signal.t list[@sexp.opaque])
+    ; rtl_compatibility : Rtl_compatibility.t
+    }
+  [@@deriving sexp_of]
+
+  let default =
+    { detect_combinational_loops = true
+    ; normalize_uids = true
+    ; assertions = None
+    ; port_checks = Port_sets_and_widths
+    ; add_phantom_inputs = true
+    ; modify_outputs = Fn.id
+    ; rtl_compatibility = Vivado
+    }
+  ;;
+
+  let default_for_simulations =
+    { detect_combinational_loops = false
+    ; normalize_uids = false
+    ; assertions = None
+    ; port_checks = Port_sets_and_widths
+    ; add_phantom_inputs = true
+    ; modify_outputs = Fn.id
+    ; rtl_compatibility = Vivado
+    }
+  ;;
+end
+
 type t =
   { name : string
+  ; config : Config.t
   ; signal_by_uid : Signal_map.t
   ; inputs : Signal.t list
   ; outputs : Signal.t list
@@ -53,44 +97,6 @@ module Summary = struct
         ~name:(t.name : string)
         ~input_ports:(t.inputs : signal list)
         ~output_ports:(t.outputs : signal list)]
-  ;;
-end
-
-module Port_checks = struct
-  type t =
-    | Relaxed
-    | Port_sets
-    | Port_sets_and_widths
-end
-
-module Config = struct
-  type t =
-    { detect_combinational_loops : bool
-    ; normalize_uids : bool
-    ; assertions : Assertion_manager.t option
-    ; port_checks : Port_checks.t
-    ; add_phantom_inputs : bool
-    ; modify_outputs : Signal.t list -> Signal.t list
-    }
-
-  let default =
-    { detect_combinational_loops = true
-    ; normalize_uids = true
-    ; assertions = None
-    ; port_checks = Port_sets_and_widths
-    ; add_phantom_inputs = true
-    ; modify_outputs = Fn.id
-    }
-  ;;
-
-  let default_for_simulations =
-    { detect_combinational_loops = false
-    ; normalize_uids = false
-    ; assertions = None
-    ; port_checks = Port_sets_and_widths
-    ; add_phantom_inputs = true
-    ; modify_outputs = Fn.id
-    }
   ;;
 end
 
@@ -189,21 +195,21 @@ let create_exn ?(config = Config.default) ~name outputs =
       signal_graph
       ~init:(assertions, [])
       ~f:(fun (assertions, instantiations) signal ->
-      if Signal.is_empty signal
-      then assertions, instantiations
-      else (
-        let assertions =
-          List.fold (Signal.names signal) ~init:assertions ~f:(fun assertions name ->
-            Map.change assertions name ~f:(function
-              | Some _ -> Some signal
-              | None -> None))
-        in
-        let instantiations =
-          match signal with
-          | Signal.Type.Inst inst -> inst.instantiation :: instantiations
-          | _ -> instantiations
-        in
-        assertions, instantiations))
+        if Signal.is_empty signal
+        then assertions, instantiations
+        else (
+          let assertions =
+            List.fold (Signal.names signal) ~init:assertions ~f:(fun assertions name ->
+              Map.change assertions name ~f:(function
+                | Some _ -> Some signal
+                | None -> None))
+          in
+          let instantiations =
+            match signal with
+            | Signal.Type.Inst inst -> inst.instantiation :: instantiations
+            | _ -> instantiations
+          in
+          assertions, instantiations))
   in
   (* check for combinational loops *)
   if config.detect_combinational_loops
@@ -212,6 +218,7 @@ let create_exn ?(config = Config.default) ~name outputs =
   check_port_names_are_well_formed name inputs outputs;
   (* construct the circuit *)
   { name
+  ; config
   ; signal_by_uid = Signal_map.create signal_graph
   ; inputs
   ; outputs
@@ -274,6 +281,7 @@ let fan_out_map t = Lazy.force t.fan_out
 let fan_in_map t = Lazy.force t.fan_in
 let signal_map c = c.signal_by_uid
 let assertions t = t.assertions
+let config t = t.config
 
 let structural_compare ?check_names c0 c1 =
   (* Number of inputs and outputs match *)
@@ -302,10 +310,10 @@ let structural_compare ?check_names c0 c1 =
          (outputs c1)
          ~init:(Uid_set.empty, true)
          ~f:(fun (set, b) s t ->
-         let set, b' =
-           Signal.Type.structural_compare ?check_names ~initial_deps:set s t
-         in
-         set, b && b'))
+           let set, b' =
+             Signal.Type.structural_compare ?check_names ~initial_deps:set s t
+           in
+           set, b && b'))
   in
   num_ports_match inputs
   && num_ports_match outputs
@@ -406,7 +414,7 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
   let check_alist_of_one_direction name direction alist =
     ignore
       (check_ports_in_one_direction name direction (List.map ~f:snd alist)
-        : Set.M(String).t)
+       : Set.M(String).t)
   ;;
 
   let create_exn ?(config = Config.default) ~name logic =

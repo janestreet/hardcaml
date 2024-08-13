@@ -53,7 +53,7 @@ module type Test_bits = sig
       | Bool_list
       | X_list
       | Bits
-          (** Special module which breaks a few primtives by inverting the result.  Used to
+      (** Special module which breaks a few primtives by inverting the result.  Used to
           test the test-framework itself. *)
       | BadPrimitives
     [@@deriving sexp_of, enumerate]

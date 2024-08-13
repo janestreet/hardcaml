@@ -10,7 +10,8 @@ type 'a t =
 let%expect_test "address offsets" =
   let x = scan port_widths ~init:0 ~f:(fun acc width -> acc + width, acc) in
   print_s [%message (x : int t)];
-  [%expect {|
+  [%expect
+    {|
     (x (
       (a 0)
       (b 2)
@@ -24,7 +25,8 @@ let%expect_test "scan2" =
       acc + width, (name, acc))
   in
   print_s [%message (x : (string * int) t)];
-  [%expect {|
+  [%expect
+    {|
     (x (
       (a (a 0))
       (b (b 2))

@@ -10,7 +10,7 @@ let%expect_test "file IO" =
       Verilog
       (Circuit.create_exn ~name:"test" [ output "x" (input "y" 1) ])
   in
-  require_does_raise [%here] (fun () -> output (To_file "/foo"));
+  require_does_raise (fun () -> output (To_file "/foo"));
   [%expect
     {|
     ("Error while initializing output mode."
@@ -19,7 +19,7 @@ let%expect_test "file IO" =
       (output_mode (To_file   /foo))
       (exn         (Sys_error "/foo: Permission denied")))
     |}];
-  require_does_raise [%here] (fun () -> output (In_directory "/foo"));
+  require_does_raise (fun () -> output (In_directory "/foo"));
   [%expect
     {|
     ("Error while writing circuit"

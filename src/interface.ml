@@ -257,29 +257,37 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
         (widths x)
         port_names_and_widths
         ~f:(fun actual_width (port_name, expected_width) ->
-        if actual_width <> expected_width
-        then
-          raise_s
-            [%message
-              "Port width mismatch in interface"
-                (port_name : string)
-                (expected_width : int)
-                (actual_width : int)])
+          if actual_width <> expected_width
+          then
+            raise_s
+              [%message
+                "Port width mismatch in interface"
+                  (port_name : string)
+                  (expected_width : int)
+                  (actual_width : int)])
     ;;
 
     let of_int i = map port_widths ~f:(fun b -> Comb.of_int ~width:b i)
     let of_ints i = map2 port_widths i ~f:(fun width -> Comb.of_int ~width)
 
     let pack ?(rev = false) t =
+      assert_widths t;
       if rev then to_list t |> Comb.concat_msb else to_list_rev t |> Comb.concat_msb
     ;;
 
     let unpack ?(rev = false) comb =
+      if Comb.width comb <> sum_of_port_widths
+      then
+        raise_s
+          [%message
+            "Unpack called with an incorrect width"
+              ~expected_width:(sum_of_port_widths : int)
+              ~actual_width:(Comb.width comb : int)];
       let rec loop fields ~offset =
         match fields with
         | [] -> []
         | (tag, width) :: fields ->
-          (tag, Comb.select comb (offset + width - 1) offset)
+          (tag, Comb.select comb ~high:(offset + width - 1) ~low:offset)
           :: loop fields ~offset:(offset + width)
       in
       loop
@@ -415,9 +423,10 @@ end
 [@@inline never]
 
 module Update
-  (Pre : Interface_intf.Pre) (M : sig
-    val port_names_and_widths : (string * int) Pre.t
-  end) =
+    (Pre : Interface_intf.Pre)
+    (M : sig
+       val port_names_and_widths : (string * int) Pre.t
+     end) =
 struct
   module T = struct
     include Pre
@@ -433,37 +442,38 @@ module Empty = struct
   type 'a t = None [@@deriving sexp_of]
 
   include Make (struct
-    type nonrec 'a t = 'a t [@@deriving sexp_of]
+      type nonrec 'a t = 'a t [@@deriving sexp_of]
 
-    let port_names_and_widths = None
-    let iter _ ~f:_ = ()
-    let iter2 _ _ ~f:_ = ()
-    let map _ ~f:_ = None
-    let map2 _ _ ~f:_ = None
-    let to_list _ = []
-  end)
+      let port_names_and_widths = None
+      let iter _ ~f:_ = ()
+      let iter2 _ _ ~f:_ = ()
+      let map _ ~f:_ = None
+      let map2 _ _ ~f:_ = None
+      let to_list _ = []
+    end)
 end
 
 module Make_interface_with_conversion
-  (Repr : S) (M : sig
-    type 'a t [@@deriving sexp_of]
+    (Repr : S)
+    (M : sig
+       type 'a t [@@deriving sexp_of]
 
-    val t_of_repr : 'a Repr.t -> 'a t
-    val repr_of_t : 'a t -> 'a Repr.t
-  end) =
+       val t_of_repr : 'a Repr.t -> 'a t
+       val repr_of_t : 'a t -> 'a Repr.t
+     end) =
 struct
   type 'a t = 'a M.t [@@deriving sexp_of]
 
   include Make (struct
-    type nonrec 'a t = 'a t [@@deriving sexp_of]
+      type nonrec 'a t = 'a t [@@deriving sexp_of]
 
-    let port_names_and_widths = M.t_of_repr Repr.port_names_and_widths
-    let map t ~f = M.t_of_repr (Repr.map (M.repr_of_t t) ~f)
-    let map2 a b ~f = M.t_of_repr (Repr.map2 (M.repr_of_t a) (M.repr_of_t b) ~f)
-    let iter t ~f = Repr.iter (M.repr_of_t t) ~f
-    let iter2 a b ~f = Repr.iter2 (M.repr_of_t a) (M.repr_of_t b) ~f
-    let to_list t = Repr.to_list (M.repr_of_t t)
-  end)
+      let port_names_and_widths = M.t_of_repr Repr.port_names_and_widths
+      let map t ~f = M.t_of_repr (Repr.map (M.repr_of_t t) ~f)
+      let map2 a b ~f = M.t_of_repr (Repr.map2 (M.repr_of_t a) (M.repr_of_t b) ~f)
+      let iter t ~f = Repr.iter (M.repr_of_t t) ~f
+      let iter2 a b ~f = Repr.iter2 (M.repr_of_t a) (M.repr_of_t b) ~f
+      let to_list t = Repr.to_list (M.repr_of_t t)
+    end)
 end
 
 module type S_with_ast = sig

@@ -151,3 +151,8 @@ let mangle_multiport_mem_name t signal =
     raise_s
       [%message "[Rtl_name.mangle_mem_name] requires a Mem signal" (signal : Signal.t)]
 ;;
+
+let of_language = function
+  | Rtl_language.Verilog -> create (module Verilog)
+  | Vhdl -> create (module Vhdl)
+;;

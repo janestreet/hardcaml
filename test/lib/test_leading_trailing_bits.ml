@@ -167,7 +167,6 @@ let%expect_test "random" =
     let value = Bits.to_int value in
     let sw = if value = 0 then bits else bits - (Int.floor_log2 value + 1) in
     require
-      [%here]
       (hw = sw)
       ~if_false_then_print_s:
         (lazy [%message "" ~_:((bits, value, hw, sw) : int * int * int * int)])

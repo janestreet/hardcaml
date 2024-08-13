@@ -38,7 +38,7 @@ module T = struct
      -> d:Signal.t
      -> rd:Signal.t
      -> Signal.t t)
-    create_params
+      create_params
 end
 
 module Kinded_fifo = struct

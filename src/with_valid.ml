@@ -130,14 +130,14 @@ module Wrap = struct
 end
 
 module Vector (X : sig
-  val width : int
-end) =
+    val width : int
+  end) =
 struct
   type 'a t = 'a T.t
 
   include Interface.Make (struct
-    include T
+      include T
 
-    let port_names_and_widths = { value = "value", X.width; valid = "valid", 1 }
-  end)
+      let port_names_and_widths = { value = "value", X.width; valid = "valid", 1 }
+    end)
 end

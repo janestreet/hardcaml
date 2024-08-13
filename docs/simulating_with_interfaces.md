@@ -80,16 +80,16 @@ convenience of record fields.
     let print_outputs () =
       Stdio.print_s (
         [%sexp_of: int O.t]
-          (O.map outputs ~f:(fun p -> Bits.to_int !p)))
+          (O.map outputs ~f:(fun p -> Bits.to_unsigned_int !p)))
     in
 
-    inputs.foo := Bits.of_int ~width:8 1;
-    inputs.bar := Bits.of_int ~width:8 2;
+    inputs.foo := Bits.of_unsigned_int ~width:8 1;
+    inputs.bar := Bits.of_unsigned_int ~width:8 2;
     Cyclesim.cycle sim;
     print_outputs ();
 
-    inputs.foo := Bits.of_int ~width:8 7;
-    inputs.bar := Bits.of_int ~width:8 9;
+    inputs.foo := Bits.of_unsigned_int ~width:8 7;
+    inputs.bar := Bits.of_unsigned_int ~width:8 9;
     Cyclesim.cycle sim;
     print_outputs ();
   ;;

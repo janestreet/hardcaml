@@ -10,7 +10,7 @@ let write_port address_width data_width =
 ;;
 
 let%expect_test "exceptions" =
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 3 8 |]
@@ -21,7 +21,7 @@ let%expect_test "exceptions" =
      (size          16)
      (address_width 3))
     |}];
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 5 8 |]
@@ -32,7 +32,7 @@ let%expect_test "exceptions" =
      (size          16)
      (address_width 5))
     |}];
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8 |]
@@ -43,7 +43,7 @@ let%expect_test "exceptions" =
      (size          16)
      (address_width 3))
     |}];
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8 |]
@@ -54,7 +54,7 @@ let%expect_test "exceptions" =
      (size          16)
      (address_width 5))
     |}];
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Signal.multiport_memory
       16
       ~write_ports:[| { (write_port 4 8) with write_clock = Signal.of_int ~width:2 0 } |]
@@ -65,7 +65,7 @@ let%expect_test "exceptions" =
      (port               0)
      (write_enable_width 1))
     |}];
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Signal.multiport_memory
       16
       ~write_ports:[| { (write_port 4 8) with write_enable = Signal.of_int ~width:2 0 } |]
@@ -76,16 +76,16 @@ let%expect_test "exceptions" =
      (port               0)
      (write_enable_width 2))
     |}];
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Signal.multiport_memory
       16
       ~write_ports:[||]
       ~read_addresses:[| Signal.of_int ~width:4 0 |]);
   [%expect {| "[Signal.multiport_memory] requires at least one write port" |}];
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Signal.multiport_memory 16 ~write_ports:[| write_port 4 8 |] ~read_addresses:[||]);
   [%expect {| "[Signal.multiport_memory] requires at least one read port" |}];
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8 |]
@@ -97,7 +97,7 @@ let%expect_test "exceptions" =
      (read_address_width 5)
      (expected           4))
     |}];
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8; write_port 5 8 |]
@@ -109,7 +109,7 @@ let%expect_test "exceptions" =
      (write_address_width 5)
      (expected            4))
     |}];
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8; write_port 4 16 |]

@@ -4,7 +4,7 @@ open! Always
 open Hardcaml_waveterm_cyclesim
 
 let%expect_test "guarded assignment width mistmatch" =
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     let w = Variable.wire ~default:vdd in
     compile [ w <-- zero 2 ]);
   [%expect
@@ -36,7 +36,7 @@ let%expect_test "single state State_machine compiles" =
   end
   in
   let sm = State_machine.create (module State) reg_spec ~enable in
-  require_does_not_raise [%here] (fun () ->
+  require_does_not_raise (fun () ->
     compile [ sm.switch ~default:[] [ 1, [ sm.set_next 1 ] ] ])
 ;;
 
@@ -48,16 +48,16 @@ let%expect_test "[Reg.State_machine.create]" =
     state.switch ?default [ 1, []; 3, [] ]
   in
   let repeated (state : _ State_machine.t) = state.switch [ 1, []; 1, [] ] in
-  require_does_raise [%here] (fun () -> compile [ bad_case (sm ()) ]);
+  require_does_raise (fun () -> compile [ bad_case (sm ()) ]);
   [%expect {| ("[Always.State_machine.switch] got unknown states" (2 6)) |}];
-  require_does_raise [%here] (fun () -> compile [ bad_next (sm ()) ]);
+  require_does_raise (fun () -> compile [ bad_next (sm ()) ]);
   [%expect {| ("[Always.State_machine.set_next] got unknown state" 4) |}];
-  require_does_raise [%here] (fun () -> compile [ incomplete (sm ()) ]);
+  require_does_raise (fun () -> compile [ incomplete (sm ()) ]);
   [%expect
     {| ("[Always.State_machine.switch] without [~default] had unhandled states" (5)) |}];
-  require_does_not_raise [%here] (fun () -> compile [ incomplete ~default:[] (sm ()) ]);
+  require_does_not_raise (fun () -> compile [ incomplete ~default:[] (sm ()) ]);
   [%expect {| |}];
-  require_does_raise [%here] (fun () -> compile [ repeated (sm ()) ]);
+  require_does_raise (fun () -> compile [ repeated (sm ()) ]);
   [%expect {| ("[Always.State_machine.switch] got repeated state" 1) |}]
 ;;
 
@@ -66,23 +66,23 @@ let%expect_test "Statemachine.statmachine ~encoding" =
   let bad_case (state : _ State_machine.t) = state.switch [ 1, []; 2, []; 6, [] ] in
   let bad_next (state : _ State_machine.t) = state.switch [ 1, [ state.set_next 4 ] ] in
   let bad_test (state : _ State_machine.t) = when_ (state.is 4) [] in
-  require_does_raise [%here] (fun () -> compile [ bad_case (sm Binary) ]);
+  require_does_raise (fun () -> compile [ bad_case (sm Binary) ]);
   [%expect {| ("[Always.State_machine.switch] got unknown states" (2 6)) |}];
-  require_does_raise [%here] (fun () -> compile [ bad_next (sm Binary) ]);
+  require_does_raise (fun () -> compile [ bad_next (sm Binary) ]);
   [%expect {| ("[Always.State_machine.set_next] got unknown state" 4) |}];
-  require_does_raise [%here] (fun () -> compile [ bad_test (sm Binary) ]);
+  require_does_raise (fun () -> compile [ bad_test (sm Binary) ]);
   [%expect {| ("[Always.State_machine.is] got unknown state" 4) |}];
-  require_does_raise [%here] (fun () -> compile [ bad_case (sm Onehot) ]);
+  require_does_raise (fun () -> compile [ bad_case (sm Onehot) ]);
   [%expect {| ("[Always.State_machine.switch] got unknown states" (2 6)) |}];
-  require_does_raise [%here] (fun () -> compile [ bad_next (sm Onehot) ]);
+  require_does_raise (fun () -> compile [ bad_next (sm Onehot) ]);
   [%expect {| ("[Always.State_machine.set_next] got unknown state" 4) |}];
-  require_does_raise [%here] (fun () -> compile [ bad_test (sm Onehot) ]);
+  require_does_raise (fun () -> compile [ bad_test (sm Onehot) ]);
   [%expect {| ("[Always.State_machine.is] got unknown state" 4) |}];
-  require_does_raise [%here] (fun () -> compile [ bad_case (sm Gray) ]);
+  require_does_raise (fun () -> compile [ bad_case (sm Gray) ]);
   [%expect {| ("[Always.State_machine.switch] got unknown states" (2 6)) |}];
-  require_does_raise [%here] (fun () -> compile [ bad_next (sm Gray) ]);
+  require_does_raise (fun () -> compile [ bad_next (sm Gray) ]);
   [%expect {| ("[Always.State_machine.set_next] got unknown state" 4) |}];
-  require_does_raise [%here] (fun () -> compile [ bad_test (sm Gray) ]);
+  require_does_raise (fun () -> compile [ bad_test (sm Gray) ]);
   [%expect {| ("[Always.State_machine.is] got unknown state" 4) |}]
 ;;
 

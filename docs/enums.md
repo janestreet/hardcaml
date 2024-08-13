@@ -116,11 +116,11 @@ let exhaustive_matching =
   let open Signal in
   Hello.Binary.Of_signal.match_
     y
-    [ Foo Foo_a, of_int ~width:10 55
-    ; Foo Foo_b, of_int ~width:10 44
-    ; Bar Bar_a, of_int ~width:10 66
-    ; Bar Bar_b, of_int ~width:10 88
-    ; Bar Bar_c, of_int ~width:10 77
+    [ Foo Foo_a, of_unsigned_int ~width:10 55
+    ; Foo Foo_b, of_unsigned_int ~width:10 44
+    ; Bar Bar_a, of_unsigned_int ~width:10 66
+    ; Bar Bar_b, of_unsigned_int ~width:10 88
+    ; Bar Bar_c, of_unsigned_int ~width:10 77
     ]
 ;;
 ```
@@ -228,17 +228,17 @@ number of possible cases.
 
 ```ocaml
 # let this_will_raise_due_to_a_width_mismatch =
-    Hello.Binary.Of_signal.of_raw (Signal.of_int ~width:30 10)
+    Hello.Binary.Of_signal.of_raw (Signal.of_unsigned_int ~width:30 10)
   ;;
 Exception: (Failure "Width mismatch. Enum expects 3, but obtained 30").
 
 # let this_is_valid_and_fine =
-    Hello.Binary.Of_signal.of_raw (Signal.of_int ~width:3 0)
+    Hello.Binary.Of_signal.of_raw (Signal.of_unsigned_int ~width:3 0)
   ;;
 val this_is_valid_and_fine : Reg_spec.signal Hello.Binary.t = <abstr>
 
 # let this_is_undefined_and_will_not_raise =
-    Hello.Binary.Of_signal.of_raw (Signal.of_int ~width:3 6)
+    Hello.Binary.Of_signal.of_raw (Signal.of_unsigned_int ~width:3 6)
   ;;
 val this_is_undefined_and_will_not_raise : Reg_spec.signal Hello.Binary.t =
   <abstr>
@@ -326,7 +326,7 @@ let outputs = Cyclesim.outputs sim
 
 let print () =
   let prev_hello = Or_error.ok_exn (Hello.Binary.sim_get outputs.prev_hello) in
-  let counter = Bits.to_int !(outputs.counter) in
+  let counter = Bits.to_unsigned_int !(outputs.counter) in
   Stdio.print_s [%message
     (prev_hello : Hello.Enum.t)
     (counter : int)

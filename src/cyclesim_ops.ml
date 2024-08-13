@@ -22,16 +22,11 @@ let[@inline always] get64 bytes address =
 ;;
 
 let[@inline always] get64i bytes address = get64 bytes address |> Int64.to_int_trunc
-let[@inline always] int64_equal a b = if Int64.(a = b) then 1L else 0L
-(* let[@inline always] int64_equal a b = Bool.select Int64.(a = b) 1L 0L *)
+let[@inline always] int64_equal a b = Bool.select Int64.(a = b) 1L 0L
 
 let[@inline always] int64_less_than a b =
-  if Stdlib.Int64.unsigned_compare a b = -1 then 1L else 0L
+  Bool.select (Stdlib.Int64.unsigned_compare a b = -1) 1L 0L
 ;;
-
-(* let[@inline always] int64_less_than a b =
- *   Bool.select (Stdlib.Int64.unsigned_compare a b = -1) 1L 0L
- * ;; *)
 
 let dispatch_on_width width ~less_than_64 ~exactly_64 ~more_than_64 =
   if width < 64 then less_than_64 else if width = 64 then exactly_64 else more_than_64
@@ -205,7 +200,7 @@ let mux t ~dst_address ~select_address ~select_width ~cases ~size_in_words =
     else (
       let mux_small () =
         let select = get64i t select_address in
-        let select = if select > max then max else select in
+        let select = Bool.select (select > max) max select in
         (* let select = Bool.select (select > max) max select in *)
         set64 t dst_address (get64 t (Array.unsafe_get cases select))
       in

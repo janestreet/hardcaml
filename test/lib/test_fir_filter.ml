@@ -52,7 +52,8 @@ let%expect_test "testbench" =
   i.d := Bits.of_int ~width:16 3;
   S.cycle sim;
   print_s [%message "" ~q:(Bits.to_int !(o.q) : int)];
-  [%expect {|
+  [%expect
+    {|
     (q 1)
     (q 4)
     (q 10)

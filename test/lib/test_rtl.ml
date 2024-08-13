@@ -4,13 +4,13 @@ open Signal
 let rtl_write_null outputs = Rtl.print Verilog (Circuit.create_exn ~name:"test" outputs)
 
 let%expect_test "Port names must be unique" =
-  require_does_raise [%here] (fun () -> rtl_write_null [ output "a" (input "a" 1) ]);
+  require_does_raise (fun () -> rtl_write_null [ output "a" (input "a" 1) ]);
   [%expect
     {| ("Port names are not unique" (circuit_name test) (input_and_output_names (a))) |}]
 ;;
 
 let%expect_test "Port names must be legal" =
-  require_does_raise [%here] (fun () -> rtl_write_null [ output "a" (input "1^7" 1) ]);
+  require_does_raise (fun () -> rtl_write_null [ output "a" (input "1^7" 1) ]);
   [%expect
     {|
     ("Error while writing circuit"
@@ -31,8 +31,7 @@ let%expect_test "Port names must be legal" =
 ;;
 
 let%expect_test "Port name clashes with reserved name" =
-  require_does_raise [%here] (fun () ->
-    rtl_write_null [ output "generate" (input "x" 1) ]);
+  require_does_raise (fun () -> rtl_write_null [ output "generate" (input "x" 1) ]);
   [%expect
     {|
     ("Error while writing circuit"
@@ -51,7 +50,7 @@ let%expect_test "Port name clashes with reserved name" =
 
 let%expect_test "output wire is width 0 (or empty)" =
   (* The exception is raised by the [output] function. *)
-  require_does_raise [%here] (fun () -> rtl_write_null [ output "x" (empty +: empty) ]);
+  require_does_raise (fun () -> rtl_write_null [ output "x" (empty +: empty) ]);
   [%expect
     {|
     ("width of wire was specified as 0" (
@@ -63,7 +62,7 @@ let%expect_test "output wire is width 0 (or empty)" =
 ;;
 
 let%expect_test "instantiation input is empty" =
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     let a = Signal.empty in
     let inst =
       Instantiation.create () ~name:"example" ~inputs:[ "a", a ] ~outputs:[ "b", 1 ]

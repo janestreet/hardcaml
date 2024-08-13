@@ -2,8 +2,8 @@ open! Core
 module Synth = Hardcaml_xilinx_reports
 
 module Make (Bits : sig
-  val bits : int
-end) =
+    val bits : int
+  end) =
 struct
   open Hardcaml.Signal
 
@@ -20,7 +20,7 @@ struct
   let create_recursive_decomp _scope (i : _ I.t) =
     let rec leading_zeros_pow2 t =
       if width t = 2
-      then ~:(bit t 1)
+      then ~:(t.:(1))
       else (
         let lhs, rhs = split_in_half_msb t in
         let lhs_empty = lhs ==:. 0 in

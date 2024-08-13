@@ -78,7 +78,7 @@ will be output in the state `S_write_result`.
       sm.switch [
         S_wait, [
           (* the [a <--. b] is semantically equivalent to
-              [a <-- Signal.of_int ~width:(Signal.width a.value) b].
+              [a <-- Signal.of_unsigned_int ~width:(Signal.width a.value) b].
 
               Similar syntatic sugar exists for [+:.] and [-:.]
           *)
@@ -135,10 +135,10 @@ Lets now write a testbench which traces the sequence of states and the computed 
     let inputs, outputs = Cyclesim.inputs sim, Cyclesim.outputs sim in
     let print_state_and_outputs () =
       let state =
-        List.nth_exn States.all (Bits.to_int !(outputs.state))
+        List.nth_exn States.all (Bits.to_unsigned_int !(outputs.state))
       in
       let done_ = Bits.is_vdd !(outputs.done_) in
-      let result = Bits.to_int !(outputs.result) in
+      let result = Bits.to_unsigned_int !(outputs.result) in
       Stdio.print_s [%message
         (state : States.t) (done_ : bool) (result : int)
       ]
@@ -155,7 +155,7 @@ Lets now write a testbench which traces the sequence of states and the computed 
 
     (* Cycle 1 *)
     inputs.start := Bits.vdd;
-    inputs.n := Bits.of_int ~width:8 4;
+    inputs.n := Bits.of_unsigned_int ~width:8 4;
     Cyclesim.cycle sim;
     print_state_and_outputs ();
     inputs.start := Bits.gnd;

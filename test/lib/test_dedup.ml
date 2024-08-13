@@ -136,9 +136,9 @@ let%test_unit "registers/memories not eliminated" =
     ~trials
     (Generator.gen_circuit ~allow_inputs:true ~depth:3)
     ~f:(fun circuit ->
-    let circuit1 = Dedup.deduplicate circuit in
-    [%test_result: int] (num_registers circuit1) ~expect:(num_registers circuit);
-    [%test_result: int] (num_memories circuit1) ~expect:(num_memories circuit))
+      let circuit1 = Dedup.deduplicate circuit in
+      [%test_result: int] (num_registers circuit1) ~expect:(num_registers circuit);
+      [%test_result: int] (num_memories circuit1) ~expect:(num_memories circuit))
 ;;
 
 let cycle_count = 10

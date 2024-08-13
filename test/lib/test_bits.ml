@@ -38,7 +38,7 @@ let%expect_test "set of [Bits.t]s" =
   print_s
     [%sexp
       (Set.of_list (module Bits) (List.map [ "0"; "1"; "01"; "11" ] ~f:of_bit_string)
-        : Set.M(Bits).t)];
+       : Set.M(Bits).t)];
   [%expect {| (0 1 01 11) |}]
 ;;
 
@@ -227,7 +227,7 @@ module Bits_module = struct
       let ( *: ) a b = ~:(a *: b)
       let concat_msb d = ~:(concat_msb d)
       let mux s d = ~:(mux s d)
-      let select d h l = ~:(select d h l)
+      let select d ~high ~low = ~:(select d ~high ~low)
     end
     in
     { name = "BadPrimitives"; short_name = "bad"; module_ = (module BadPrimitives) }
@@ -269,13 +269,13 @@ module type Test = Test_ with type config := Config.t
 
 module Expect_test_require = struct
   let require here eq ~error_message =
-    require here eq ~if_false_then_print_s:error_message
+    require ~here eq ~if_false_then_print_s:error_message
   ;;
 end
 
 module Expect_test_require_nocr = struct
   let require here eq ~error_message =
-    require here eq ~cr:CR.Comment ~if_false_then_print_s:error_message
+    require ~here eq ~cr:CR.Comment ~if_false_then_print_s:error_message
   ;;
 end
 
@@ -358,8 +358,8 @@ module Make (R : Require) = struct
       let arg = srand bits in
       require_bits_equal
         here
-        (B1.select (const1 arg) high low)
-        (B2.select (const2 arg) high low)
+        (B1.select (const1 arg) ~high ~low)
+        (B2.select (const2 arg) ~high ~low)
         ~operation:(lazy [%message "select" arg ~_:(high : int) ~_:(low : int)])
     ;;
 

@@ -59,6 +59,6 @@ module type With_valid = sig
   end
 
   module Vector (X : sig
-    val width : int
-  end) : Interface.S with type 'a t = 'a t
+      val width : int
+    end) : Interface.S with type 'a t = 'a t
 end

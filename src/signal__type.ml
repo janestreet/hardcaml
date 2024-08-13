@@ -21,7 +21,7 @@ module Uid = struct
       -> (int64[@unboxed])
       -> Base.Hash.state
       = "Base_internalhash_fold_int64" "Base_internalhash_fold_int64_unboxed"
-      [@@noalloc]
+    [@@noalloc]
 
     let hash_fold_t state t = fold_int64 state (Int64.of_int_exn t)
     let hash t = Hash.get_hash_value (hash_fold_t (Hash.alloc ()) t)
@@ -177,8 +177,8 @@ module type Is_a = Signal__type_intf.Is_a with type t := t and type signal_op :=
 module type Deps = Signal__type_intf.Deps with type t := t
 
 module Make_deps (Fold : sig
-  val fold : t -> init:'a -> f:('a -> t -> 'a) -> 'a
-end) =
+    val fold : t -> init:'a -> f:('a -> t -> 'a) -> 'a
+  end) =
 struct
   open Fold
 
@@ -190,48 +190,48 @@ struct
 end
 
 module Deps = Make_deps (struct
-  let fold t ~init ~f =
-    match t with
-    | Empty | Const _ -> init
-    | Wire { driver; _ } -> f init !driver
-    | Select { arg; _ } -> f init arg
-    | Reg { register; d; _ } ->
-      let arg = f init d in
-      let arg = f arg register.reg_clock in
-      let arg = f arg register.reg_reset in
-      let arg = f arg register.reg_reset_value in
-      let arg = f arg register.reg_clear in
-      let arg = f arg register.reg_clear_value in
-      let arg = f arg register.reg_enable in
-      arg
-    | Multiport_mem { write_ports; _ } ->
-      Array.fold
-        write_ports
-        ~init
-        ~f:(fun arg { write_clock; write_address; write_data; write_enable } ->
-        let arg = f arg write_clock in
-        let arg = f arg write_address in
-        let arg = f arg write_data in
-        let arg = f arg write_enable in
-        arg)
-    | Mem_read_port { memory; read_address; _ } ->
-      let arg = f init read_address in
-      let arg = f arg memory in
-      arg
-    | Inst { instantiation = { inst_inputs; _ }; _ } ->
-      List.fold ~init inst_inputs ~f:(fun arg (_, s) -> f arg s)
-    | Op2 { arg_a; arg_b; _ } ->
-      let arg = f init arg_a in
-      let arg = f arg arg_b in
-      arg
-    | Not { arg; _ } -> f init arg
-    | Cat { args; _ } -> List.fold ~init args ~f
-    | Mux { select; cases; _ } ->
-      let arg = f init select in
-      let arg = List.fold ~init:arg cases ~f in
-      arg
-  ;;
-end)
+    let fold t ~init ~f =
+      match t with
+      | Empty | Const _ -> init
+      | Wire { driver; _ } -> f init !driver
+      | Select { arg; _ } -> f init arg
+      | Reg { register; d; _ } ->
+        let arg = f init d in
+        let arg = f arg register.reg_clock in
+        let arg = f arg register.reg_reset in
+        let arg = f arg register.reg_reset_value in
+        let arg = f arg register.reg_clear in
+        let arg = f arg register.reg_clear_value in
+        let arg = f arg register.reg_enable in
+        arg
+      | Multiport_mem { write_ports; _ } ->
+        Array.fold
+          write_ports
+          ~init
+          ~f:(fun arg { write_clock; write_address; write_data; write_enable } ->
+            let arg = f arg write_clock in
+            let arg = f arg write_address in
+            let arg = f arg write_data in
+            let arg = f arg write_enable in
+            arg)
+      | Mem_read_port { memory; read_address; _ } ->
+        let arg = f init read_address in
+        let arg = f arg memory in
+        arg
+      | Inst { instantiation = { inst_inputs; _ }; _ } ->
+        List.fold ~init inst_inputs ~f:(fun arg (_, s) -> f arg s)
+      | Op2 { arg_a; arg_b; _ } ->
+        let arg = f init arg_a in
+        let arg = f arg arg_b in
+        arg
+      | Not { arg; _ } -> f init arg
+      | Cat { args; _ } -> List.fold ~init args ~f
+      | Mux { select; cases; _ } ->
+        let arg = f init select in
+        let arg = List.fold ~init:arg cases ~f in
+        arg
+    ;;
+  end)
 
 let signal_id s =
   match s with
@@ -340,11 +340,11 @@ let structural_compare
               (Deps.to_list b)
               ~init:(set, true)
               ~f:(fun (set, b) x y ->
-              if b
-              then (
-                let set, b' = structural_compare set x y in
-                set, b && b')
-              else set, b)
+                if b
+                then (
+                  let set, b' = structural_compare set x y in
+                  set, b && b')
+                else set, b)
           with
           | Ok b -> b
           | Unequal_lengths -> set, false)

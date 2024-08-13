@@ -42,7 +42,6 @@ module Wave_data = Wave_data
 module Rtl = struct
   include Rtl
   module Ast = Rtl_ast
-  module Deprecated = Rtl_deprecated
   module Name = Rtl_name
   module Verilog = Rtl_verilog_of_ast
   module Vhdl = Rtl_vhdl_of_ast

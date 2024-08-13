@@ -28,7 +28,7 @@ module Make () = struct
       then Core.(raise_s [%message "stretch length must be >1" (n : int)])
       else (
         let n = n - 1 in
-        d |: lsb (reg_fb spec ~width:n ~f:(fun s -> mux2 d (ones n) (srl s 1))))
+        d |: lsb (reg_fb spec ~width:n ~f:(fun s -> mux2 d (ones n) (srl s ~by:1))))
     ;;
 
     let stretch_no_clear t ~n d = stretch (to_spec_no_clear t) ~n d

@@ -10,31 +10,36 @@ let%expect_test "rtl name legalization" =
         ~vhdl:(Rtl.Name.legalize vhdl name : string)]
     |> print_s
   in
-  require_does_raise ~cr:CR_someday [%here] (fun () -> show "");
+  require_does_raise ~cr:CR_someday (fun () -> show "");
   [%expect {| "[Rtl_name] string is empty" |}];
   (* underscore really is a valid verilog name... *)
   show "_";
-  [%expect {|
+  [%expect
+    {|
     ((verilog _)
      (vhdl    hc__))
     |}];
   show "1";
-  [%expect {|
+  [%expect
+    {|
     ((verilog _1)
      (vhdl    hc_1))
     |}];
   show "_1";
-  [%expect {|
+  [%expect
+    {|
     ((verilog _1)
      (vhdl    hc__1))
     |}];
   show "$";
-  [%expect {|
+  [%expect
+    {|
     ((verilog _$)
      (vhdl    hc__))
     |}];
   show "foo!\"£$%^&*()\"";
-  [%expect {|
+  [%expect
+    {|
     ((verilog foo____$_______)
      (vhdl    foo____________))
     |}]

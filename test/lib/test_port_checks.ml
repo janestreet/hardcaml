@@ -27,11 +27,11 @@ let%expect_test "too many inputs" =
          ~config:{ Hardcaml.Circuit.Config.default with port_checks }
          ~name:"foo"
          create
-        : Hardcaml.Circuit.t)
+       : Hardcaml.Circuit.t)
   in
   circuit Relaxed;
   [%expect {| |}];
-  require_does_raise [%here] (fun () -> circuit Port_sets);
+  require_does_raise (fun () -> circuit Port_sets);
   [%expect
     {|
     ("Port sets do not match"
@@ -57,11 +57,11 @@ let%expect_test "too few inputs" =
            }
          ~name:"foo"
          create
-        : Hardcaml.Circuit.t)
+       : Hardcaml.Circuit.t)
   in
   circuit Relaxed;
   [%expect {| |}];
-  require_does_raise [%here] (fun () -> circuit Port_sets);
+  require_does_raise (fun () -> circuit Port_sets);
   [%expect
     {|
     ("Port sets do not match"
@@ -91,13 +91,13 @@ let%expect_test "output width does not match" =
          ~config:{ Hardcaml.Circuit.Config.default with port_checks }
          ~name:"foo"
          create
-        : Hardcaml.Circuit.t)
+       : Hardcaml.Circuit.t)
   in
   circuit Relaxed;
   [%expect {| |}];
   circuit Port_sets;
   [%expect {| |}];
-  require_does_raise [%here] (fun () -> circuit Port_sets_and_widths);
+  require_does_raise (fun () -> circuit Port_sets_and_widths);
   [%expect
     {|
     ("Port width of "

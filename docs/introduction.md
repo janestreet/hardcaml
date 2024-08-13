@@ -114,13 +114,13 @@ let sim = Hardcaml.Cyclesim.create circuit;;
 let a = Hardcaml.Cyclesim.in_port sim "a";;
 let b = Hardcaml.Cyclesim.in_port sim "b";;
 let c = Hardcaml.Cyclesim.out_port sim "c";;
-a := Hardcaml.Bits.of_int ~width:8 10;;
-b := Hardcaml.Bits.of_int ~width:8 20;;
+a := Hardcaml.Bits.of_unsigned_int ~width:8 10;;
+b := Hardcaml.Bits.of_unsigned_int ~width:8 20;;
 Hardcaml.Cyclesim.cycle sim;;
 ```
 
 ```ocaml
-# Stdio.printf "c = %i\n" (Hardcaml.Bits.to_int !c);;
+# Stdio.printf "c = %i\n" (Hardcaml.Bits.to_unsigned_int !c);;
 c = 30
 - : unit = ()
 ```

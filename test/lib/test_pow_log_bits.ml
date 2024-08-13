@@ -65,8 +65,8 @@ let test name (bits_f : Bits.t -> Bits.t With_valid.t) int_f =
     for i = 0 to (1 lsl bits) - 1 do
       let result = bits_f (Bits.of_int ~width:bits i) in
       (match int_f i with
-       | exception _ -> require [%here] (Bits.is_gnd result.valid)
-       | x -> require_equal [%here] (module Int) x (result.value |> Bits.to_int));
+       | exception _ -> require (Bits.is_gnd result.valid)
+       | x -> require_equal (module Int) x (result.value |> Bits.to_int));
       print_s [%message name ~_:(i : int) "=" ~_:(result : bits_with_valid)]
     done
   done

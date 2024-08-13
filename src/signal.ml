@@ -114,7 +114,7 @@ module Base = struct
       Cat { signal_id = make_id len; args = a }
   ;;
 
-  let select arg high low =
+  let select arg ~high ~low =
     Select { signal_id = make_id (high - low + 1); arg; high; low }
   ;;
 
@@ -234,7 +234,7 @@ module Const_prop = struct
           then a *: b
           else (
             let p = Bits.to_int @@ (Bits.floor_log2 c).value in
-            if p = 0 then uresize d w else uresize (d @: zero p) w))
+            if p = 0 then uresize d ~width:w else uresize (d @: zero p) ~width:w))
       in
       match is_const a, is_const b with
       | true, true -> cst (Bits.( *: ) (cv a) (cv b))
@@ -300,12 +300,12 @@ module Const_prop = struct
       let optimise_consts l =
         List.group l ~break:(fun a b -> not (Bool.equal (is_const a) (is_const b)))
         |> List.map ~f:(function
-             | [] -> []
-             | [ x ] -> [ x ]
-             | h :: _ as l ->
-               if is_const h
-               then [ List.map l ~f:const_value |> Bits.concat_msb |> cst ]
-               else l)
+          | [] -> []
+          | [ x ] -> [ x ]
+          | h :: _ as l ->
+            if is_const h
+            then [ List.map l ~f:const_value |> Bits.concat_msb |> cst ]
+            else l)
         |> List.concat
       in
       concat_msb (optimise_consts l)
@@ -346,12 +346,12 @@ module Const_prop = struct
       else mux sel els
     ;;
 
-    let select d h l =
+    let select d ~high:h ~low:l =
       if is_const d
-      then cst (Bits.select (cv d) h l)
+      then cst (Bits.select (cv d) ~high:h ~low:l)
       else if l = 0 && h = width d - 1
       then d
-      else select d h l
+      else select d ~high:h ~low:l
     ;;
   end
 
@@ -393,6 +393,7 @@ let assert_width_or_empty signal w msg =
 ;;
 
 let form_spec spec enable d =
+  let zero_or_empty w = if w = 0 then empty else zero w in
   assert_width spec.reg_clock 1 "clock is invalid";
   assert_width_or_empty spec.reg_reset 1 "reset is invalid";
   assert_width_or_empty spec.reg_reset_value (width d) "reset value is invalid";
@@ -402,9 +403,13 @@ let form_spec spec enable d =
   assert_width_or_empty enable 1 "enable is invalid";
   { spec with
     reg_reset_value =
-      (if is_empty spec.reg_reset_value then zero (width d) else spec.reg_reset_value)
+      (if is_empty spec.reg_reset_value
+       then zero_or_empty (width d)
+       else spec.reg_reset_value)
   ; reg_clear_value =
-      (if is_empty spec.reg_clear_value then zero (width d) else spec.reg_clear_value)
+      (if is_empty spec.reg_clear_value
+       then zero_or_empty (width d)
+       else spec.reg_clear_value)
   ; reg_enable =
       (let e0 = if is_empty spec.reg_enable then vdd else spec.reg_enable in
        let e1 = if is_empty enable then vdd else enable in
@@ -437,6 +442,22 @@ let rec pipeline ?(attributes = []) spec ~n ?enable d =
   else
     maybe_add_attributes
       (reg spec ?enable (pipeline ~attributes ~n:(n - 1) spec ?enable d))
+;;
+
+let prev spec ?enable d =
+  let tbl = Hashtbl.create (module Int) in
+  Hashtbl.set tbl ~key:0 ~data:d;
+  let rec f n =
+    if n < 0 then raise_s [%message "[Signal.prev] cannot look into the future" (n : int)];
+    match Hashtbl.find tbl n with
+    | Some x -> x
+    | None ->
+      let p = f (n - 1) in
+      let r = reg spec ?enable p in
+      Hashtbl.set tbl ~key:n ~data:r;
+      r
+  in
+  Staged.stage f
 ;;
 
 let multiport_memory
@@ -576,8 +597,8 @@ let ram_wbr ?name ?attributes ~write_port ~(read_port : _ Read_port.t) size =
 let pp fmt t = Stdlib.Format.fprintf fmt "%s" ([%sexp (t : t)] |> Sexp.to_string_hum)
 
 module _ = Pretty_printer.Register (struct
-  type nonrec t = t
+    type nonrec t = t
 
-  let module_name = "Hardcaml.Signal"
-  let to_string = to_bstr
-end)
+    let module_name = "Hardcaml.Signal"
+    let to_string = to_bstr
+  end)

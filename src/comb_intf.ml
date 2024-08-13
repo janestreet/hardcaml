@@ -78,7 +78,7 @@ module type Gates = sig
   val concat_msb : t list -> t
 
   (** select a range of bits *)
-  val select : t -> int -> int -> t
+  val select : t -> high:int -> low:int -> t
 
   (** names a signal *)
   val ( -- ) : t -> string -> t
@@ -165,11 +165,33 @@ module type S = sig
   (** convert binary string to constant *)
   val of_bit_string : string -> t
 
-  (** convert integer to constant *)
+  (** Convert integer to constant. Negative values are sign extended up to [width]. Input
+      values which are larger or smaller than those representable in [width] bits are
+      truncated. *)
+  val of_int_trunc : width:int -> int -> t
+
+  val of_int32_trunc : width:int -> int32 -> t
+  val of_int64_trunc : width:int -> int64 -> t
+
+  (** Same as [of_int_trunc] *)
   val of_int : width:int -> int -> t
 
   val of_int32 : width:int -> int32 -> t
   val of_int64 : width:int -> int64 -> t
+
+  (** Convert non-negative values to constant. Input values which are not representable in
+      [width] bits will raise. *)
+  val of_unsigned_int : width:int -> int -> t
+
+  val of_unsigned_int32 : width:int -> int32 -> t
+  val of_unsigned_int64 : width:int -> int64 -> t
+
+  (** Convert signed values to constant. Input values which are not representable in
+      [width] bits will raise. *)
+  val of_signed_int : width:int -> int -> t
+
+  val of_signed_int32 : width:int -> int32 -> t
+  val of_signed_int64 : width:int -> int64 -> t
 
   (** convert hex string to a constant. If the target width is greater than the hex length
       and [signedness] is [Signed] then the result is sign extended. Otherwise the result
@@ -206,9 +228,6 @@ module type S = sig
   (** convert a [bool] to [vdd] or [gnd] *)
   val of_bool : bool -> t
 
-  (** Convert bits to a Zarith.t *)
-  val to_z : t -> signedness:Signedness.t -> Zarith.Z.t
-
   (** [concat ts] concatenates a list of signals - the msb of the head of the list will
       become the msb of the result.
 
@@ -220,12 +239,6 @@ module type S = sig
   (** Similar to [concat_msb] except the lsb of the head of the list will become the lsb
       of the result. *)
   val concat_lsb : t list -> t
-
-  (** same as [concat_msb] except empty signals are first filtered out *)
-  val concat_msb_e : t list -> t
-
-  (** same as [concat_lsb] except empty signals are first filtered out *)
-  val concat_lsb_e : t list -> t
 
   (** concatenate two signals.
 
@@ -253,16 +266,13 @@ module type S = sig
   (** [one w] makes a one valued constant of width [w] *)
   val one : int -> t
 
-  (** [select t hi lo] selects from [t] bits in the range [hi]...[lo], inclusive.
-      [select] raises unless [hi] and [lo] fall within [0 .. width t - 1] and [hi >=
+  (** [select t ~high ~low] selects from [t] bits in the range [high]...[low], inclusive.
+      [select] raises unless [high] and [low] fall within [0 .. width t - 1] and [high >=
       lo]. *)
-  val select : t -> int -> int -> t
-
-  (** same as [select] except invalid indices return [empty] *)
-  val select_e : t -> int -> int -> t
+  val select : t -> high:int -> low:int -> t
 
   (** select a single bit *)
-  val bit : t -> int -> t
+  val bit : t -> pos:int -> t
 
   (** get most significant bit *)
   val msb : t -> t
@@ -276,17 +286,17 @@ module type S = sig
   (** get most significant bits *)
   val msbs : t -> t
 
-  (** [drop_bottom s n] drop bottom [n] bits of [s] *)
-  val drop_bottom : t -> int -> t
+  (** [drop_bottom s ~width] drop bottom [width] bits of [s] *)
+  val drop_bottom : t -> width:int -> t
 
-  (** [drop_top s n] drop top [n] bits of [s] *)
-  val drop_top : t -> int -> t
+  (** [drop_top s ~width] drop top [width] bits of [s] *)
+  val drop_top : t -> width:int -> t
 
-  (** [sel_bottom s n] select bottom [n] bits of [s] *)
-  val sel_bottom : t -> int -> t
+  (** [sel_bottom s ~width] select bottom [width] bits of [s] *)
+  val sel_bottom : t -> width:int -> t
 
-  (** [sel_top s n] select top [n] bits of [s] *)
-  val sel_top : t -> int -> t
+  (** [sel_top s ~width] select top [width] bits of [s] *)
+  val sel_top : t -> width:int -> t
 
   (* Verilog-like addressing operators. These operators are less verbose than
      the function counterparts. See IEEE 1800 Syntax 11-5. *)
@@ -441,19 +451,39 @@ module type S = sig
       - If [width t >= Int.num_bits] and [bit t (Int.num_bits-1) = vdd] (i.e. the msb of
         the resulting [Int.t] is set), then the result is negative.
       - If [t] is [Signal.t] and not a constant value, an exception is raised. *)
+  val to_int_trunc : t -> int
+
+  val to_int32_trunc : t -> int32
+  val to_int64_trunc : t -> int64
+
+  (** Same as [to_int_trunc]. *)
   val to_int : t -> int
 
-  (** [to_sint t] treats [t] as signed and resizes it to fit exactly within an OCaml
+  val to_int32 : t -> int32
+  val to_int64 : t -> int64
+
+  (** [to_signed_int t] treats [t] as signed and resizes it to fit exactly within an OCaml
       [Int.t].
 
-      - If [width t > Int.num_bits] then the upper bits are truncated.
+      - An exception is raised if the value cannot fit in the resulting int.
       - If [t] is [Signal.t] and not a constant value, an exception is raised. *)
-  val to_sint : t -> int
+  val to_signed_int : t -> int
 
-  val to_int32 : t -> int32
-  val to_sint32 : t -> int32
-  val to_int64 : t -> int64
-  val to_sint64 : t -> int64
+  val to_signed_int32 : t -> int32
+  val to_signed_int64 : t -> int64
+
+  (** [to_unsigned_int t] treats [t] as unsigned and resizes it to fit exactly within an
+      OCaml [Int.t].
+
+      - An exception is raised if the value cannot fit in the resulting int.
+      - The value [int] value must be unsigned (so the max width is [Int.num_bits - 1]).
+      - If [t] is [Signal.t] and not a constant value, an exception is raised. *)
+  val to_unsigned_int : t -> int
+
+  val to_unsigned_int32 : t -> int32
+  val to_unsigned_int64 : t -> int64
+
+  (** Convert signal to a [bool].  The signal must be 1 bit wide. *)
   val to_bool : t -> bool
 
   (** Convert signal to a [char].  The signal must be 8 bits wide. *)
@@ -461,6 +491,9 @@ module type S = sig
 
   (** create binary string from signal *)
   val to_bstr : t -> string
+
+  (** Convert bits to a Zarith.t *)
+  val to_z : t -> signedness:Signedness.t -> Zarith.Z.t
 
   (** convert signal to a list of bits with msb at head of list *)
   val bits_msb : t -> t list
@@ -474,8 +507,8 @@ module type S = sig
   (** [of_array a] convert array [a] of bits to signal with lsb at index 0 *)
   val of_array : t array -> t
 
-  (** repeat signal n times *)
-  val repeat : t -> int -> t
+  (** repeat signal [count] times *)
+  val repeat : t -> count:int -> t
 
   (** Split signal in half. The most significant bits will be in the left half of the
       returned tuple.
@@ -521,32 +554,32 @@ module type S = sig
   val bswap : t -> t
 
   (** shift left logical *)
-  val sll : t -> int -> t
+  val sll : t -> by:int -> t
 
   (** shift right logical *)
-  val srl : t -> int -> t
+  val srl : t -> by:int -> t
 
   (** shift right arithmetic *)
-  val sra : t -> int -> t
+  val sra : t -> by:int -> t
 
   (** rotate left *)
-  val rotl : t -> int -> t
+  val rotl : t -> by:int -> t
 
   (** rotate right *)
-  val rotr : t -> int -> t
+  val rotr : t -> by:int -> t
 
   (** shift by variable amount *)
-  val log_shift : (t -> int -> t) -> t -> t -> t
+  val log_shift : f:(t -> by:int -> t) -> t -> by:t -> t
 
-  (** [uresize t w] returns the unsigned resize of [t] to width [w].  If [w = width t],
-      this is a no-op.  If [w < width t], this [select]s the [w] low bits of [t].  If [w >
-      width t], this extends [t] with [zero (w - width t)]. *)
-  val uresize : t -> int -> t
+  (** [uresize t ~width:w] returns the unsigned resize of [t] to width [w]. If [w = width
+      t], this is a no-op. If [w < width t], this [select]s the [w] low bits of [t]. If [w
+      > width t], this extends [t] with [zero (w - width t)]. *)
+  val uresize : t -> width:int -> t
 
-  (** [sresize t w] returns the signed resize of [t] to width [w].  If [w = width t], this
-      is a no-op.  If [w < width t], this [select]s the [w] low bits of [t].  If [w >
-      width t], this extends [t] with [w - width t] copies of [msb t]. *)
-  val sresize : t -> int -> t
+  (** [sresize t ~width:w] returns the signed resize of [t] to width [w]. If [w = width
+      t], this is a no-op. If [w < width t], this [select]s the [w] low bits of [t]. If [w
+      > width t], this extends [t] with [w - width t] copies of [msb t]. *)
+  val sresize : t -> width:int -> t
 
   (** unsigned resize by +1 bit *)
   val ue : t -> t
@@ -554,7 +587,7 @@ module type S = sig
   (** signed resize by +1 bit *)
   val se : t -> t
 
-  (** [resize_list ?resize l] finds the maximum width in [l] and applies [resize el max]
+  (** [resize_list ~resize l] finds the maximum width in [l] and applies [resize el max]
       to each element. *)
   val resize_list : resize:(t -> int -> t) -> t list -> t list
 
@@ -644,6 +677,30 @@ module type S = sig
 
   (** create random constant vector of given width *)
   val random : width:int -> t
+
+  (** Concatention, selection and resizing functions for signals encoded as an option
+      where [None] means zero width. *)
+  module With_zero_width : sig
+    type non_zero_width = t [@@deriving sexp_of]
+    type t = non_zero_width option [@@deriving sexp_of]
+
+    val of_non_zero_width : non_zero_width -> t
+    val to_non_zero_width : ?default:non_zero_width -> t -> non_zero_width
+    val zero_width : t
+    val zero : int -> t
+    val one : int -> t
+    val ones : int -> t
+    val concat_msb : t list -> t
+    val concat_lsb : t list -> t
+    val select : t -> high:int -> low:int -> t
+    val lsbs : t -> t
+    val msbs : t -> t
+    val drop_bottom : t -> width:int -> t
+    val drop_top : t -> width:int -> t
+    val sel_bottom : t -> width:int -> t
+    val sel_top : t -> width:int -> t
+    val repeat : t -> count:int -> t
+  end
 
   module type Typed_math = Typed_math with type t := t
 

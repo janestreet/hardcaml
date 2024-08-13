@@ -1,4 +1,6 @@
+open! Core
 open Hardcaml
+open Expect_test_helpers_core
 
 (* We cannot compile these examples unless we also compile their dependancies. Which would
    mean building a work library in a separate directory (otherwise parallel builds clash)
@@ -301,29 +303,32 @@ let%expect_test "all parameter types" =
   in
   let module C = Circuit.With_interface (I) (O) in
   let circuit =
-    C.create_exn ~name:"temp" (fun (i : _ I.t) ->
-      let module I = Instantiation.With_interface (I) (O) in
-      I.create
-        ~name:"foo"
-        ~parameters:
-          [ Parameter.create ~name:"a" ~value:(Bit true)
-          ; Parameter.create ~name:"a2" ~value:(Bit false)
-          ; Parameter.create ~name:"b" ~value:(Bit_vector [ 1; 0 ])
-          ; Parameter.create ~name:"c" ~value:(Bool true)
-          ; Parameter.create ~name:"c2" ~value:(Bool false)
-          ; Parameter.create ~name:"d" ~value:(Int 123)
-          ; Parameter.create ~name:"e" ~value:(Real 1.24)
-          ; Parameter.create ~name:"f" ~value:(Std_logic U)
-          ; Parameter.create
-              ~name:"g"
-              ~value:(Std_logic_vector [ U; X; L0; L1; Z; W; L; H; Don't_care ])
-          ; Parameter.create ~name:"h" ~value:(Std_ulogic W)
-          ; Parameter.create
-              ~name:"i"
-              ~value:(Std_ulogic_vector [ U; X; L0; L1; Z; W; L; H; Don't_care ])
-          ; Parameter.create ~name:"j" ~value:(String "foo")
-          ]
-        i)
+    C.create_exn
+      ~config:{ Circuit.Config.default with rtl_compatibility = Modelsim }
+      ~name:"temp"
+      (fun (i : _ I.t) ->
+         let module I = Instantiation.With_interface (I) (O) in
+         I.create
+           ~name:"foo"
+           ~parameters:
+             [ Parameter.create ~name:"a" ~value:(Bit true)
+             ; Parameter.create ~name:"a2" ~value:(Bit false)
+             ; Parameter.create ~name:"b" ~value:(Bit_vector [ 1; 0 ])
+             ; Parameter.create ~name:"c" ~value:(Bool true)
+             ; Parameter.create ~name:"c2" ~value:(Bool false)
+             ; Parameter.create ~name:"d" ~value:(Int 123)
+             ; Parameter.create ~name:"e" ~value:(Real 1.24)
+             ; Parameter.create ~name:"f" ~value:(Std_logic U)
+             ; Parameter.create
+                 ~name:"g"
+                 ~value:(Std_logic_vector [ U; X; L0; L1; Z; W; L; H; Don't_care ])
+             ; Parameter.create ~name:"h" ~value:(Std_ulogic W)
+             ; Parameter.create
+                 ~name:"i"
+                 ~value:(Std_ulogic_vector [ U; X; L0; L1; Z; W; L; H; Don't_care ])
+             ; Parameter.create ~name:"j" ~value:(String "foo")
+             ]
+           i)
   in
   Testing.analyse_vhdl_and_verilog ~quiet:true ~show:true circuit;
   [%expect
@@ -492,5 +497,149 @@ let%expect_test "phantom input" =
         zoo <= hc_2;
 
     end architecture;
+    |}]
+;;
+
+(* Ensure (resolved) Std_{u}logic values are mapped to bit types in Verilog for the
+   (default) Vivado compatibility mode.  Tests above show the mapping for Modelsim. *)
+let%expect_test "vivado compatibility mode" =
+  let module I = struct
+    type 'a t =
+      { foo : 'a
+      ; bar : 'a
+      }
+    [@@deriving sexp_of, hardcaml]
+  end
+  in
+  let module O = struct
+    type 'a t = { zoo : 'a } [@@deriving sexp_of, hardcaml]
+  end
+  in
+  let module C = Circuit.With_interface (I) (O) in
+  let circuit ~with_dodgy_std_logic_parameter =
+    C.create_exn ~name:"temp" (fun (i : _ I.t) ->
+      let module I = Instantiation.With_interface (I) (O) in
+      I.create
+        ~name:"foo"
+        ~parameters:
+          ([ Parameter.create ~name:"a" ~value:(Std_logic L0)
+           ; Parameter.create ~name:"b" ~value:(Std_logic L1)
+           ; Parameter.create ~name:"c" ~value:(Std_logic L0)
+           ; Parameter.create ~name:"d" ~value:(Std_logic L1)
+           ]
+           @
+           if with_dodgy_std_logic_parameter
+           then [ Parameter.create ~name:"e" ~value:(Std_logic U) ]
+           else [])
+        i)
+  in
+  Testing.analyse_vhdl_and_verilog
+    ~quiet:true
+    ~show:true
+    (circuit ~with_dodgy_std_logic_parameter:false);
+  [%expect
+    {|
+    ("Icarus Verilog failed with" (error_code (Error (Exit_non_zero 2))))
+    module temp (
+        bar,
+        foo,
+        zoo
+    );
+
+        input bar;
+        input foo;
+        output zoo;
+
+        wire _2;
+        wire _4;
+        wire _8;
+        wire _5;
+        assign _2 = bar;
+        assign _4 = foo;
+        foo
+            #( .a(1'b0),
+               .b(1'b1),
+               .c(1'b0),
+               .d(1'b1) )
+            the_foo
+            ( .foo(_4),
+              .bar(_2),
+              .zoo(_8) );
+        assign _5 = _8;
+        assign zoo = _5;
+
+    endmodule
+    ("GHDL failed with" (error_code (Error (Exit_non_zero 1))))
+    library ieee;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_std.all;
+
+    entity temp is
+        port (
+            bar : in std_logic;
+            foo : in std_logic;
+            zoo : out std_logic
+        );
+    end entity;
+
+    architecture rtl of temp is
+
+        -- conversion functions
+        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
+        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
+        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
+        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
+        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
+        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
+        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
+        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
+        signal hc_2 : std_logic;
+        signal hc_4 : std_logic;
+        signal hc_8 : std_logic;
+        signal hc_5 : std_logic;
+
+    begin
+
+        hc_2 <= bar;
+        hc_4 <= foo;
+        the_foo: entity work.foo (rtl)
+            generic map ( a => '0',
+                          b => '1',
+                          c => '0',
+                          d => '1' )
+            port map ( foo => hc_4,
+                       bar => hc_2,
+                       zoo => hc_8 );
+        hc_5 <= hc_8;
+        zoo <= hc_5;
+
+    end architecture;
+    |}];
+  require_does_raise (fun () ->
+    Testing.analyse_vhdl_and_verilog
+      ~quiet:true
+      ~show:true
+      (circuit ~with_dodgy_std_logic_parameter:true));
+  [%expect
+    {|
+    ("[Rtl_ast] failed to create statement for signal"
+     (signal (
+       instantiation
+       (width 1)
+       ("work.foo(rtl){the_foo}"
+         (parameters (
+           (a (Std_logic 0))
+           (b (Std_logic 1))
+           (c (Std_logic 0))
+           (d (Std_logic 1))
+           (e (Std_logic U))))
+         (inputs (
+           (foo wire)
+           (bar wire)))
+         (outputs ((zoo 1))))))
+     (exn ("Cannot map Std_logic value to Bit type" (v U))))
     |}]
 ;;

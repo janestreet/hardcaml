@@ -3,6 +3,6 @@
 type t =
   | High
   | Low
-[@@deriving sexp_of, equal]
+[@@deriving sexp_of, equal, compare]
 
 val to_int : t -> int

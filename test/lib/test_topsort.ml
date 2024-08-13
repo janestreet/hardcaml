@@ -4,19 +4,22 @@ let%expect_test "Uid hashes are equal between ocaml and javascript" =
   let `New new_id, _ = Signal.Uid.generator () in
   let id = new_id () in
   print_s [%message (id : Signal.Uid.t) (Signal.Uid.hash id : int)];
-  [%expect {|
+  [%expect
+    {|
     ((id                   1)
      ("Signal.Uid.hash id" 746625832))
     |}];
   let id = new_id () in
   print_s [%message (id : Signal.Uid.t) (Signal.Uid.hash id : int)];
-  [%expect {|
+  [%expect
+    {|
     ((id                   2)
      ("Signal.Uid.hash id" 391307823))
     |}];
   let id = new_id () in
   print_s [%message (id : Signal.Uid.t) (Signal.Uid.hash id : int)];
-  [%expect {|
+  [%expect
+    {|
     ((id                   3)
      ("Signal.Uid.hash id" 834235799))
     |}]
@@ -31,7 +34,7 @@ let sexp_of_topsort = [%sexp_of: (signal list, signal list) Result.t]
 
 let%expect_test "signed resize" =
   let a = Signal.input "a" 4 in
-  let b = Signal.sresize a 8 in
+  let b = Signal.sresize a ~width:8 in
   let result = topsort [ b ] in
   print_s [%sexp (result : topsort)];
   [%expect {| (Ok (empty a select cat cat cat)) |}]

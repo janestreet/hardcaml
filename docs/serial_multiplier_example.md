@@ -52,12 +52,12 @@ the above code to the Hardcaml `Bits` type.
 # open Hardcaml
 # open Hardcaml.Bits
 # let rec umul a b =
-  if to_int b = 0 then zero (width a)
+  if to_unsigned_int b = 0 then zero (width a)
   else
     let partial_product = mux2 b.:[0,0] a (zero (width a)) in
-    partial_product +: umul (sll a 1) (srl b 1)
+    partial_product +: umul (sll a ~by:1) (srl b ~by:1)
 val umul : t -> t -> t = <fun>
-# to_int (umul (of_int ~width:2 3) (of_int ~width:3 5))
+# to_unsigned_int (umul (of_unsigned_int ~width:2 3) (of_unsigned_int ~width:3 5))
 - : int = 3
 ```
 
@@ -66,11 +66,11 @@ partial product terms using the bit-width of `a`. We need to
 also include the width of `b`.
 
 ```ocaml
-# let umul a b = umul (uresize a (width a + width b)) b
+# let umul a b = umul (uresize a ~width:(width a + width b)) b
 val umul : t -> t -> t = <fun>
-# to_int (umul (of_int ~width:2 3) (of_int ~width:3 5))
+# to_unsigned_int (umul (of_unsigned_int ~width:2 3) (of_unsigned_int ~width:3 5))
 - : int = 15
-# to_int (umul (of_int ~width:7 100) (of_int ~width:7 99))
+# to_unsigned_int (umul (of_unsigned_int ~width:7 100) (of_unsigned_int ~width:7 99))
 - : int = 9900
 ```
 
@@ -200,10 +200,10 @@ val test : Bits.t -> Bits.t -> Waveform.t * Bits.t = <fun>
 Let's test our running examples of multiplying `3*5` and `100*99`.
 
 ```ocaml
-# let waves, result = test (Bits.of_int ~width:2 3) (Bits.of_int ~width:3 5)
+# let waves, result = test (Bits.of_unsigned_int ~width:2 3) (Bits.of_unsigned_int ~width:3 5)
 val waves : Waveform.t = <abstr>
 val result : Bits.t = 01111
-# Stdio.printf "%i" (Bits.to_int result)
+# Stdio.printf "%i" (Bits.to_unsigned_int result)
 15
 - : unit = ()
 # Waveform.print ~display_height:25 waves
@@ -233,9 +233,9 @@ val result : Bits.t = 01111
 │               ││                                                   │
 └───────────────┘└───────────────────────────────────────────────────┘
 - : unit = ()
-# let _, result = test (Bits.of_int ~width:7 100) (Bits.of_int ~width:7 99)
+# let _, result = test (Bits.of_unsigned_int ~width:7 100) (Bits.of_unsigned_int ~width:7 99)
 val result : Bits.t = 10011010101100
-# Stdio.printf "%i" (Bits.to_int result)
+# Stdio.printf "%i" (Bits.to_unsigned_int result)
 9900
 - : unit = ()
 ```

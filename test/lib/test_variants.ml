@@ -43,7 +43,7 @@ module Test (Enum : Hardcaml.Enum.S_enum with module Cases := Cases) = struct
   ;;
 
   let%expect_test "Raises when non exhaustive without default" =
-    Expect_test_helpers_base.require_does_raise [%here] (fun () ->
+    Expect_test_helpers_base.require_does_raise (fun () ->
       Enum.Of_bits.match_ (Enum.of_enum (module Bits) C0) []);
     [%expect
       {| (Failure "[mux] on enum cases not exhaustive, and [default] not provided") |}]

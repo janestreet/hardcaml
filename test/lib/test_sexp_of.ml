@@ -38,7 +38,8 @@ let%expect_test "empty" =
 
 let%expect_test "simple constant" =
   print_signal (of_int ~width:2 2);
-  [%expect {|
+  [%expect
+    {|
     (const
       (width 2)
       (value 0b10))
@@ -47,7 +48,8 @@ let%expect_test "simple constant" =
 
 let%expect_test "named constant" =
   print_signal vdd;
-  [%expect {|
+  [%expect
+    {|
     (const
       (names (vdd))
       (width 1)
@@ -57,7 +59,8 @@ let%expect_test "named constant" =
 
 let%expect_test "large constant" =
   print_signal (of_int ~width:9 0x123);
-  [%expect {|
+  [%expect
+    {|
     (const
       (width 9)
       (value 0x123))
@@ -66,7 +69,8 @@ let%expect_test "large constant" =
 
 let%expect_test "unassigned wire" =
   print_signal (wire 1);
-  [%expect {|
+  [%expect
+    {|
     (wire
       (width   1)
       (data_in empty))
@@ -77,7 +81,8 @@ let%expect_test "assigned wire" =
   let w = wire 1 in
   w <== vdd;
   print_signal w;
-  [%expect {|
+  [%expect
+    {|
     (wire
       (width   1)
       (data_in 0b1))
@@ -143,7 +148,7 @@ let%expect_test "printing at leaves" =
     ; wireof (a <: b)
     ; wireof ~:a
     ; wireof (mux2 vdd a b)
-    ; wireof (bit a 1)
+    ; wireof a.:(1)
     ; wireof (concat_msb [ a; b ])
     ; wireof (reg (Reg_spec.create () ~clock) ~enable:empty a)
     ; wireof
@@ -152,7 +157,7 @@ let%expect_test "printing at leaves" =
            ~write_port:
              { write_clock = clock
              ; write_address = a
-             ; write_enable = bit b 1
+             ; write_enable = b.:(1)
              ; write_data = b
              }
            ~read_address:a)
@@ -235,7 +240,7 @@ let%expect_test "big mux" =
 ;;
 
 let%expect_test "select" =
-  print_signal (select (of_int ~width:4 2) 3 2);
+  print_signal (of_int ~width:4 2).:[3, 2];
   [%expect {| (select (width 2) (range (3 2)) (data_in 0b0010)) |}]
 ;;
 

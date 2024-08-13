@@ -1,6 +1,6 @@
 (library
  (name hardcaml_test)
  (libraries core expect_test_helpers_core.expect_test_helpers_base hardcaml
-   hardcaml_waveterm.cyclesim)
+   hardcaml_waveterm.cyclesim hardcaml_waveterm.kernel re stdio zarith)
  (preprocess
   (pps ppx_hardcaml ppx_jane)))

@@ -41,12 +41,12 @@ let structure_kind (signal : Signal.t) =
 ;;
 
 module Children = Signal.Type.Make_deps (struct
-  let fold t ~init ~f =
-    match structure_kind t with
-    | Structure_kind.Dont_dedup _ -> init
-    | _ -> Signal.Type.Deps.fold t ~init ~f
-  ;;
-end)
+    let fold t ~init ~f =
+      match structure_kind t with
+      | Structure_kind.Dont_dedup _ -> init
+      | _ -> Signal.Type.Deps.fold t ~init ~f
+    ;;
+  end)
 
 let map_children signal ~f =
   match signal with
@@ -232,8 +232,8 @@ let fix_mem_read_ports signals =
 let compress_wires signals =
   Signal_graph.create signals
   |> Signal_graph.iter ~f:(function
-       | Signal.Type.Wire { driver; _ } -> driver := unwrap_wire !driver
-       | _ -> ())
+    | Signal.Type.Wire { driver; _ } -> driver := unwrap_wire !driver
+    | _ -> ())
 ;;
 
 let canonicalize signals =

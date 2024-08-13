@@ -78,7 +78,7 @@ let create
            for associating attrributes correctly. *)
       if one_output
       then Signal.wireof signal
-      else Signal.select signal (offset + width - 1) offset ))
+      else Signal.select signal ~high:(offset + width - 1) ~low:offset ))
   |> Map.of_alist_exn (module String)
 ;;
 

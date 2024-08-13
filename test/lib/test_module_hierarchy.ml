@@ -597,7 +597,7 @@ end
 let%expect_test "floating ports not in interface" =
   let module Circ = Circuit.With_interface (Floating_outer.I) (Floating_outer.O) in
   let scope = Scope.create ~flatten_design:false () in
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     let circ =
       Circ.create_exn
         ~config:{ Circuit.Config.default with port_checks = Relaxed }

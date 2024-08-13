@@ -14,7 +14,7 @@ let%expect_test "negate" =
            ; negate (of_int ~width:63 Int.min_value)
            ; negate (of_int ~width:63 (Int.min_value + 1))
            ]
-            : signal fn1 list)];
+           : signal fn1 list)];
   [%expect
     {|
     (negate (

@@ -36,6 +36,9 @@ module Vivado : sig
       boundaries. Can only be applied to modules or instances. *)
   val keep_hierarchy : bool -> t
 
+  (** Setting USE_DSP to yes can force an operation to utilize the DSP. *)
+  val use_dsp : bool -> t
+
   (** Select encoding of finite state machine.  Apply to state register. *)
   val fsm_encoding : [ `auto | `gray | `johnson | `none | `one_hot | `sequential ] -> t
 

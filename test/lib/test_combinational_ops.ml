@@ -1,7 +1,7 @@
 open! Import
 
 let%expect_test "no outputs" =
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Combinational_op.create
       ()
       ~name:"no_outputs"
@@ -12,7 +12,7 @@ let%expect_test "no outputs" =
 ;;
 
 let%expect_test "no inputs" =
-  require_does_not_raise [%here] (fun () ->
+  require_does_not_raise (fun () ->
     ignore
       (Combinational_op.create
          ()
@@ -20,12 +20,12 @@ let%expect_test "no inputs" =
          ~input_widths:[]
          ~output_widths:[ 1 ]
          ~create_fn:(fun _ _ -> ())
-        : Combinational_op.t));
+       : Combinational_op.t));
   [%expect {| |}]
 ;;
 
 let%expect_test "bad output width" =
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Combinational_op.create
       ()
       ~name:"bad_width"
@@ -36,7 +36,7 @@ let%expect_test "bad output width" =
 ;;
 
 let%expect_test "bad input width" =
-  require_does_raise [%here] (fun () ->
+  require_does_raise (fun () ->
     Combinational_op.create
       ()
       ~name:"bad_width"
@@ -57,7 +57,7 @@ let%expect_test "names must be unique in database" =
   in
   let database = Combinational_ops_database.create () in
   Combinational_ops_database.insert database op;
-  require_does_raise [%here] (fun () -> Combinational_ops_database.insert database op);
+  require_does_raise (fun () -> Combinational_ops_database.insert database op);
   [%expect
     {|
     ("A [Combinational_op] of the same name already exists in the database"
@@ -88,11 +88,11 @@ let create_op_mutable () =
     ~input_widths:[ num_bits; num_bits ]
     ~output_widths:[ num_bits; num_bits ]
     ~create_fn:(fun i o ->
-    match i, o with
-    | [ a; b ], [ c; d ] ->
-      Bits.Mutable.( +: ) c a b;
-      Bits.Mutable.( -: ) d a b
-    | _ -> raise_s [%message "invalid arguments"])
+      match i, o with
+      | [ a; b ], [ c; d ] ->
+        Bits.Mutable.( +: ) c a b;
+        Bits.Mutable.( -: ) d a b
+      | _ -> raise_s [%message "invalid arguments"])
 ;;
 
 let%expect_test "sexp_of" =
@@ -240,9 +240,9 @@ let%expect_test "functional sim / bits" =
       o
       o'
   in
-  require [%here] (equal o1 o2);
-  require [%here] (equal o1 o3);
-  require [%here] (equal o1 o4);
+  require (equal o1 o2);
+  require (equal o1 o3);
+  require (equal o1 o4);
   let sexp_of_result (a, b, c, d) =
     [%message "" (a : Bits.t) (b : Bits.t) (c : Bits.t) (d : Bits.t)]
   in

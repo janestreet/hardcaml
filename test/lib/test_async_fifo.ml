@@ -3,9 +3,9 @@ open Hardcaml_waveterm_kernel
 open Hardcaml_waveterm_cyclesim
 
 module Async_fifo = Async_fifo.Make (struct
-  let width = 72
-  let log2_depth = 4
-end)
+    let width = 72
+    let log2_depth = 4
+  end)
 
 module I = Async_fifo.I
 module O = Async_fifo.O

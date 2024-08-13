@@ -88,6 +88,14 @@ module type Regs = sig
     -> ?enable:t
     -> t
     -> t
+
+  (** [Staged.unstage (prev spec ?enable d)] returns a function [prev n] which provides
+      [d] registered [n] times (ie the value of [d] [n] cycles in the past). [n=0] means
+      the current (combinational value).
+
+      The internal registers are shared between calls. When called multiple times with a
+      maximum value of [n] exactly [n] registers are created. *)
+  val prev : Reg_spec.t -> ?enable:t -> t -> (int -> t) Staged.t
 end
 
 module type Memories = sig

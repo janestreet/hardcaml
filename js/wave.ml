@@ -270,10 +270,10 @@ module Gui = struct
       let td = D.createTd d in
       td##.className := jstr "wave-name";
       td##.innerHTML
-        := jstr
-             (if data.nbits = 1
-              then data.name
-              else data.name ^ "[" ^ string_of_int data.nbits ^ "]");
+      := jstr
+           (if data.nbits = 1
+            then data.name
+            else data.name ^ "[" ^ string_of_int data.nbits ^ "]");
       Dom.appendChild trow td;
       (* value *)
       let tdv = D.createTd d in
@@ -334,14 +334,14 @@ module Gui = struct
     in
     let onclick c =
       c##.onclick
-        := D.handler (fun e ->
-             let clientLeft =
-               int_of_float (Js.to_float c##getBoundingClientRect##.left +. 0.5)
-             in
-             let x = ((e##.clientX - clientLeft) / !w_width) + !ofs in
-             cycle##.innerHTML := jstri x;
-             set_values x;
-             Js._false)
+      := D.handler (fun e ->
+           let clientLeft =
+             int_of_float (Js.to_float c##getBoundingClientRect##.left +. 0.5)
+           in
+           let x = ((e##.clientX - clientLeft) / !w_width) + !ofs in
+           cycle##.innerHTML := jstri x;
+           set_values x;
+           Js._false)
     in
     Array.iter (fun (_, c, _, _) -> onclick c) waves;
     Dom.appendChild par table;

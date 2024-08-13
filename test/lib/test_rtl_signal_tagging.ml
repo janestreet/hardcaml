@@ -119,7 +119,7 @@ let%expect_test "Signal attributes on top of signals in Verilog" =
 ;;
 
 let%expect_test "Signal attributes on top of signals in VHDL" =
-  require_does_not_raise [%here] (fun () -> rtl_write_null Vhdl [ output ]);
+  require_does_not_raise (fun () -> rtl_write_null Vhdl [ output ]);
   [%expect
     {|
     library ieee;

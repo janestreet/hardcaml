@@ -6,14 +6,15 @@ let deriver = "hardcaml"
 let raise_errorf = Location.raise_errorf
 
 (*
- * Option parsing
- *)
+   * Option parsing
+*)
 
 type options_t =
   { rtlprefix : expression option
   ; rtlsuffix : expression option
   ; rtlmangle : expression option
   ; ast : bool
+  ; derive_from_map2 : bool
   }
 
 let parse_rtlmangle expr ~loc =
@@ -24,8 +25,8 @@ let parse_rtlmangle expr ~loc =
 ;;
 
 (*
- * Attribute definition and parsing
- *)
+   * Attribute definition and parsing
+*)
 
 module Attribute : sig
   type t
@@ -114,8 +115,8 @@ let get_doc ~loc label_declaration =
 ;;
 
 (*
- * Identifier manipulation
- *)
+   * Identifier manipulation
+*)
 
 let mk_rtlident ~loc name prefix suffix =
   match prefix, suffix with
@@ -134,8 +135,8 @@ let mangle_name ~loc name mangle =
 ;;
 
 (*
- * Code generation utility functions
- *)
+   * Code generation utility functions
+*)
 
 let expand_array_init ~loc vname label_declaration =
   let nbits = get_bits ~loc label_declaration in
@@ -154,8 +155,8 @@ let expand_array_init_str ~loc vname mapid mid label_declaration =
 ;;
 
 (*
- * Expand t label
- *)
+   * Expand t label
+*)
 
 let expand_port_names_and_widths_label_array
   var
@@ -286,14 +287,18 @@ let expand_port_names_and_widths_label
         | None -> raise_errorf ~loc "[%s] exists attribute must be in [option]" deriver
       in
       [%expr if [%e exists] then Some [%e expand_inner_expression ptyp_desc] else None]
-    | ptyp_desc -> expand_inner_expression ptyp_desc
+    | ptyp_desc ->
+      (match Attribute.(find exists) label_declaration with
+       | Some _ -> raise_errorf ~loc "[%s] exists attribute must be in [option]" deriver
+       | None -> ());
+      expand_inner_expression ptyp_desc
   in
   Located.mk ~loc (Lident txt), expr
 ;;
 
 (*
- * Expand map label
- *)
+   * Expand map label
+*)
 
 let mkfield var memb =
   let loc = Location.none in
@@ -451,8 +456,8 @@ let expand_map_label iter_or_map var ({ pld_name = { txt; loc }; _ } as label_de
 ;;
 
 (*
- * Expand map2 label
- *)
+   * Expand map2 label
+*)
 
 let expand_map2_label_list iter_or_map var loc ident0 ident1 = function
   (* 'a *)
@@ -566,8 +571,8 @@ let expand_map2_label
 ;;
 
 (*
- * Expand to_list label
- *)
+   * Expand to_list label
+*)
 
 let expand_to_list_label_list var loc ident = function
   (* 'a *)
@@ -650,8 +655,8 @@ let build_expr_list labels =
 ;;
 
 (*
- * Expand ast label
- *)
+   * Expand ast label
+*)
 
 let expand_ast_label
   opts
@@ -739,8 +744,8 @@ let expand_ast_label
 ;;
 
 (*
- * PPX deriving
- *)
+   * PPX deriving
+*)
 
 let pexp_sequenceN ~loc exprs =
   match List.rev exprs with
@@ -800,28 +805,44 @@ let str_of_type ~options ({ ptype_loc = loc; _ } as type_decl) =
              ~loc
              ~pat:(pvar ~loc "port_names_and_widths")
              ~expr:str_port_names_and_widths
-         ; value_binding ~loc ~pat:(pvar ~loc "iter") ~expr:(str_map Iter)
-         ; value_binding ~loc ~pat:(pvar ~loc "iter2") ~expr:(str_map2 Iter)
-         ; value_binding ~loc ~pat:(pvar ~loc "map") ~expr:(str_map Map)
          ; value_binding ~loc ~pat:(pvar ~loc "map2") ~expr:(str_map2 Map)
-         ; value_binding ~loc ~pat:(pvar ~loc "to_list") ~expr:str_to_list
          ]
          @
-         if options.ast
-         then [ value_binding ~loc ~pat:(pvar ~loc "ast") ~expr:(str_ast ()) ]
-         else [])
-    ; [%stri
-        include Ppx_hardcaml_runtime.Interface.Make (struct
-          type nonrec 'a t = 'a t
+         if options.derive_from_map2
+         then []
+         else
+           [ value_binding ~loc ~pat:(pvar ~loc "iter") ~expr:(str_map Iter)
+           ; value_binding ~loc ~pat:(pvar ~loc "iter2") ~expr:(str_map2 Iter)
+           ; value_binding ~loc ~pat:(pvar ~loc "map") ~expr:(str_map Map)
+           ; value_binding ~loc ~pat:(pvar ~loc "to_list") ~expr:str_to_list
+           ]
+           @
+           if options.ast
+           then [ value_binding ~loc ~pat:(pvar ~loc "ast") ~expr:(str_ast ()) ]
+           else [])
+    ; (if options.derive_from_map2
+       then
+         [%stri
+           include Ppx_hardcaml_runtime.Derive_interface_from_map2 (struct
+               type nonrec 'a t = 'a t
 
-          let sexp_of_t = sexp_of_t
-          let port_names_and_widths = port_names_and_widths
-          let iter = iter
-          let iter2 = iter2
-          let map = map
-          let map2 = map2
-          let to_list = to_list
-        end)]
+               let sexp_of_t = sexp_of_t
+               let port_names_and_widths = port_names_and_widths
+               let map2 = map2
+             end)]
+       else
+         [%stri
+           include Ppx_hardcaml_runtime.Interface.Make (struct
+               type nonrec 'a t = 'a t
+
+               let sexp_of_t = sexp_of_t
+               let port_names_and_widths = port_names_and_widths
+               let iter = iter
+               let iter2 = iter2
+               let map = map
+               let map2 = map2
+               let to_list = to_list
+             end)])
     ]
   | _ -> raise_errorf ~loc "[%s] str_of_type: only supports record types" deriver
 ;;
@@ -848,12 +869,12 @@ let declare_let_binding_extension ~name ~generate_naming_function =
     Expression
     pattern
     (fun ~loc ~path:_ ~arg recursive_flag bindings rhs ->
-    (* We don't support recursive let bindings *)
-    (match recursive_flag.txt with
-     | Recursive ->
-       Location.raise_errorf ~loc:recursive_flag.loc "[let rec] not supported."
-     | Nonrecursive -> ());
-    (* Wrap all the bindings in a naming function. Turns:
+       (* We don't support recursive let bindings *)
+       (match recursive_flag.txt with
+        | Recursive ->
+          Location.raise_errorf ~loc:recursive_flag.loc "[let rec] not supported."
+        | Nonrecursive -> ());
+       (* Wrap all the bindings in a naming function. Turns:
           {v
              let x = 0
              and y = 1
@@ -870,75 +891,75 @@ let declare_let_binding_extension ~name ~generate_naming_function =
           let { x; y } = something in rhs
 
           aren't supported. *)
-    let bindings =
-      List.map bindings ~f:(fun { pvb_pat; pvb_expr; pvb_attributes; pvb_loc } ->
-        (* The [pvb_pat] must be a simple assignment to a name right now. Maybe we
+       let bindings =
+         List.map bindings ~f:(fun { pvb_pat; pvb_expr; pvb_attributes; pvb_loc } ->
+           (* The [pvb_pat] must be a simple assignment to a name right now. Maybe we
               can add support for structure unpacking later. *)
-        let loc = { pvb_loc with loc_ghost = true } in
-        match pvb_pat.ppat_desc with
-        | Ppat_var { txt; loc = _ } ->
-          { pvb_pat
-          ; pvb_expr =
-              [%expr [%e generate_naming_function ~arg ~loc ~name:txt] [%e pvb_expr]]
-          ; pvb_attributes
-          ; pvb_loc
-          }
-        | _ ->
-          Location.raise_errorf
-            ~loc:pvb_pat.ppat_loc
-            "This form of let binding is not currently supported")
-    in
-    pexp_let ~loc Nonrecursive bindings rhs)
+           let loc = { pvb_loc with loc_ghost = true } in
+           match pvb_pat.ppat_desc with
+           | Ppat_var { txt; loc = _ } ->
+             { pvb_pat
+             ; pvb_expr =
+                 [%expr [%e generate_naming_function ~arg ~loc ~name:txt] [%e pvb_expr]]
+             ; pvb_attributes
+             ; pvb_loc
+             }
+           | _ ->
+             Location.raise_errorf
+               ~loc:pvb_pat.ppat_loc
+               "This form of let binding is not currently supported")
+       in
+       pexp_let ~loc Nonrecursive bindings rhs)
 ;;
 
 let hardcaml_name () =
   declare_let_binding_extension
     ~name:"hw"
     ~generate_naming_function:(fun ~arg ~loc ~name ->
-    match arg with
-    | None ->
-      [%expr
-        fun signal_to_name ->
-          Hardcaml.Scope.naming scope signal_to_name [%e estring ~loc name]]
-    | Some { loc = _; txt = module_of_type_of_expression_being_named } ->
-      let apply_names =
-        String.concat
-          ~sep:"."
-          (Longident.flatten_exn module_of_type_of_expression_being_named
-           @ [ "apply_names" ])
-      in
-      [%expr
-        fun intf_to_name ->
-          (* Ignore the result of 'apply_names'. Of_always.apply_names returns a unit,
+      match arg with
+      | None ->
+        [%expr
+          fun signal_to_name ->
+            Hardcaml.Scope.naming scope signal_to_name [%e estring ~loc name]]
+      | Some { loc = _; txt = module_of_type_of_expression_being_named } ->
+        let apply_names =
+          String.concat
+            ~sep:"."
+            (Longident.flatten_exn module_of_type_of_expression_being_named
+             @ [ "apply_names" ])
+        in
+        [%expr
+          fun intf_to_name ->
+            (* Ignore the result of 'apply_names'. Of_always.apply_names returns a unit,
                but Of_signal.apply_names just returns a Signal that we want to ignore. It
                is assumed that a scope named [scope] is present when calling this
                fucntion. *)
-          let (_ : _) =
-            [%e evar ~loc apply_names]
-              ~prefix:[%e estring ~loc (name ^ "$")]
-              ~naming_op:(Hardcaml.Scope.naming scope)
-              intf_to_name
-          in
-          intf_to_name])
+            let (_ : _) =
+              [%e evar ~loc apply_names]
+                ~prefix:[%e estring ~loc (name ^ "$")]
+                ~naming_op:(Hardcaml.Scope.naming scope)
+                intf_to_name
+            in
+            intf_to_name])
 ;;
 
 let hardcaml_name_var () =
   declare_let_binding_extension
     ~name:"hw_var"
     ~generate_naming_function:(fun ~arg ~loc ~name ->
-    match arg with
-    | None ->
-      [%expr
-        fun (variable_to_name : Hardcaml.Always.Variable.t) ->
-          let (_ : Hardcaml.Signal.t) =
-            Hardcaml.Scope.naming scope variable_to_name.value [%e estring ~loc name]
-          in
-          variable_to_name]
-    | Some _ ->
-      Location.raise_errorf
-        ~loc
-        "[hw_var] does not take a module argument. It is only used with plain \
-         [Variable.t]s - use [let%%hw.Your_type_here.Of_always] instead")
+      match arg with
+      | None ->
+        [%expr
+          fun (variable_to_name : Hardcaml.Always.Variable.t) ->
+            let (_ : Hardcaml.Signal.t) =
+              Hardcaml.Scope.naming scope variable_to_name.value [%e estring ~loc name]
+            in
+            variable_to_name]
+      | Some _ ->
+        Location.raise_errorf
+          ~loc
+          "[hw_var] does not take a module argument. It is only used with plain \
+           [Variable.t]s - use [let%%hw.Your_type_here.Of_always] instead")
 ;;
 
 let () =
@@ -953,10 +974,23 @@ let () =
              +> arg "rtlprefix" Ast_pattern.__
              +> arg "rtlsuffix" Ast_pattern.__
              +> arg "rtlmangle" Ast_pattern.__
-             +> flag "ast")
-           (fun ~loc ~path:_ (_, type_declarations) rtlprefix rtlsuffix rtlmangle ast ->
+             +> flag "ast"
+             +> flag "derive_from_map2")
+           (fun ~loc
+             ~path:_
+             (_, type_declarations)
+             rtlprefix
+             rtlsuffix
+             rtlmangle
+             ast
+             derive_from_map2 ->
              let options =
-               { rtlprefix; rtlsuffix; rtlmangle = get_bool_option ~loc rtlmangle; ast }
+               { rtlprefix
+               ; rtlsuffix
+               ; rtlmangle = get_bool_option ~loc rtlmangle
+               ; ast
+               ; derive_from_map2
+               }
              in
              List.concat_map type_declarations ~f:(fun decl -> str_of_type ~options decl)))
       ~sig_type_decl:

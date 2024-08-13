@@ -272,18 +272,18 @@ module Make_bit_list (Bit : Bit) = struct
     to_binary_string t
     |> String.to_list
     |> List.map ~f:(function
-         | '0' -> Bit.gnd
-         | _ -> Bit.vdd)
+      | '0' -> Bit.gnd
+      | _ -> Bit.vdd)
   ;;
 end
 
 module Bits = Make_bit_list (struct
-  type t = int
+    type t = int
 
-  let vdd = 1
-  let gnd = 0
-  let equal = Int.equal
-end)
+    let vdd = 1
+    let gnd = 0
+    let equal = Int.equal
+  end)
 
 let of_bit_list = Bits.to_constant
 let to_bit_list = Bits.of_constant
@@ -298,8 +298,8 @@ end
 let pp fmt t = Stdlib.Format.fprintf fmt "%s" (to_binary_string_hum t)
 
 module _ = Pretty_printer.Register (struct
-  type nonrec t = t
+    type nonrec t = t
 
-  let module_name = "Hardcaml.Constant"
-  let to_string t = to_binary_string_hum t
-end)
+    let module_name = "Hardcaml.Constant"
+    let to_string t = to_binary_string_hum t
+  end)

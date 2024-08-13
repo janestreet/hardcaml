@@ -9,21 +9,21 @@ let%expect_test "list_of_string" =
 let%expect_test "int_of_hchar" =
   [%sexp
     (List.map ~f:Constant.int_of_hex_char @@ String.to_list "0123456789abcdefABCDEF"
-      : int list)]
+     : int list)]
   |> print_s;
   [%expect {| (0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 10 11 12 13 14 15) |}]
 ;;
 
 let%expect_test "int_of_hchar raises" =
-  require_does_raise [%here] (fun () -> Constant.int_of_hex_char 'g');
+  require_does_raise (fun () -> Constant.int_of_hex_char 'g');
   [%expect {| ("Invalid hex char" g) |}]
 ;;
 
 let%expect_test "[of_binary_string] raises" =
   let to_bstr s = Constant.of_binary_string s in
-  require_does_raise [%here] ~cr:CR_soon (fun () -> to_bstr "");
+  require_does_raise ~cr:CR_soon (fun () -> to_bstr "");
   [%expect {| "[Constant.of_binary_string] input string is empty" |}];
-  require_does_raise [%here] ~cr:CR_soon (fun () -> to_bstr "z");
+  require_does_raise ~cr:CR_soon (fun () -> to_bstr "z");
   [%expect
     {| ("[Constant.of_binary_string] input must only consist of '1' or '0'" (got z)) |}]
 ;;
@@ -58,7 +58,7 @@ let test_round_trip =
     in
     for width = 1 to 10 do
       for i = 0 to (1 lsl width) - 1 do
-        require_equal [%here] (module Int) i (i |> round_trip width)
+        require_equal (module Int) i (i |> round_trip width)
       done
     done
   in
@@ -73,7 +73,7 @@ let test_round_trip =
         let s =
           String.init bit_width ~f:(fun _ -> if Random.int 2 = 0 then '0' else '1')
         in
-        require_equal [%here] (module String) s (round_trip bit_width s)
+        require_equal (module String) s (round_trip bit_width s)
       done
     done
   in
@@ -87,8 +87,8 @@ let test_round_trip =
 let%expect_test "roundtrips" =
   let max_bit_width = 200 in
   let int =
-    (* Test at 32 bits, which is compatible with 64 bit OCaml and js_of_ocaml *)
-    32, fun width x -> x |> Constant.to_int |> Constant.of_int ~width
+    (* Test at 32 bits (on 64 bit native and js_of_ocaml backend) or 31 bits (on Wasm) *)
+    Int.min 32 Int.num_bits, fun width x -> x |> Constant.to_int |> Constant.of_int ~width
   in
   let binary_string =
     max_bit_width, fun _ x -> x |> Constant.to_binary_string |> Constant.of_binary_string
@@ -132,7 +132,7 @@ let%expect_test "int_of_bstr" =
   let int_of_bstr s = Constant.of_binary_string s |> Constant.to_int in
   [%sexp
     ([ int_of_bstr "0"; int_of_bstr "1"; int_of_bstr "110"; int_of_bstr "11111111" ]
-      : int list)]
+     : int list)]
   |> print_s;
   [%expect {| (0 1 6 255) |}]
 ;;
@@ -145,7 +145,7 @@ let%expect_test "int32_of_bstr" =
      ; int32_of_bstr "110"
      ; int32_of_bstr "11111111"
      ]
-      : int32 list)]
+     : int32 list)]
   |> print_s;
   [%expect {| (0 1 6 255) |}]
 ;;
@@ -158,7 +158,7 @@ let%expect_test "int64_of_bstr" =
      ; int64_of_bstr "110"
      ; int64_of_bstr "11111111"
      ]
-      : int64 list)]
+     : int64 list)]
   |> print_s;
   [%expect {| (0 1 6 255) |}]
 ;;
@@ -167,7 +167,7 @@ let%expect_test "bstr_of_int" =
   let bstr_of_int width x = Constant.of_int ~width x |> Constant.to_binary_string in
   [%sexp
     ([ bstr_of_int 1 0; bstr_of_int 2 1; bstr_of_int 3 6; bstr_of_int 8 255 ]
-      : string list)]
+     : string list)]
   |> print_s;
   [%expect {| (0 01 110 11111111) |}]
 ;;
@@ -176,7 +176,7 @@ let%expect_test "bstr_of_int32" =
   let bstr_of_int32 width x = Constant.of_int32 ~width x |> Constant.to_binary_string in
   [%sexp
     ([ bstr_of_int32 1 0l; bstr_of_int32 2 1l; bstr_of_int32 3 6l; bstr_of_int32 8 255l ]
-      : string list)]
+     : string list)]
   |> print_s;
   [%expect {| (0 01 110 11111111) |}]
 ;;
@@ -185,7 +185,7 @@ let%expect_test "bstr_of_int64" =
   let bstr_of_int64 width x = Constant.of_int64 ~width x |> Constant.to_binary_string in
   [%sexp
     ([ bstr_of_int64 1 0L; bstr_of_int64 2 1L; bstr_of_int64 3 6L; bstr_of_int64 8 255L ]
-      : string list)]
+     : string list)]
   |> print_s;
   [%expect {| (0 01 110 11111111) |}]
 ;;
@@ -194,7 +194,7 @@ let%expect_test "intbitslist_of_bstr" =
   let intbitslist_of_bstr x = Constant.of_binary_string x |> Constant.to_bit_list in
   [%sexp
     (List.map ~f:intbitslist_of_bstr [ "0"; "1"; "1100"; "0011"; "101011101010011" ]
-      : int list list)]
+     : int list list)]
   |> print_s;
   [%expect
     {|
@@ -217,7 +217,7 @@ let%expect_test "bstr_of_intbitslist" =
        ; [ 0; 0; 1; 1 ]
        ; [ 1; 0; 1; 0; 1; 1; 1; 0; 1; 0; 1; 0; 0; 1; 1 ]
        ]
-      : string list)]
+     : string list)]
   |> print_s;
   [%expect {| (0 1 1100 0011 101011101010011) |}]
 ;;
@@ -238,7 +238,7 @@ let bstr_of_hstr signedness width x =
 let%expect_test "bstr_of_hstr signed" =
   [%sexp
     (List.map ~f:(bstr_of_hstr Signed 64) [ "1"; "B"; "1f3"; "FFFFFFFFFFFFFFFF" ]
-      : string list)]
+     : string list)]
   |> print_s;
   [%expect
     {|
@@ -252,7 +252,7 @@ let%expect_test "bstr_of_hstr signed" =
 let%expect_test "bstr_of_hstr unsigned" =
   [%sexp
     (List.map ~f:(bstr_of_hstr Unsigned 64) [ "1"; "B"; "1f3"; "FFFFFFFFFFFFFFFF" ]
-      : string list)]
+     : string list)]
   |> print_s;
   [%expect
     {|
@@ -272,7 +272,7 @@ let%expect_test "hstr_of_bstr signed" =
     (List.map
        ~f:(hstr_of_bstr Signed)
        [ "1"; "110101"; "00101100100101"; "1111111111111111" ]
-      : string list)]
+     : string list)]
   |> print_s;
   [%expect {| (f f5 0b25 ffff) |}]
 ;;
@@ -282,7 +282,7 @@ let%expect_test "hstr_of_bstr unsigned" =
     (List.map
        ~f:(hstr_of_bstr Unsigned)
        [ "1"; "110101"; "00101100100101"; "1111111111111111" ]
-      : string list)]
+     : string list)]
   |> print_s;
   [%expect {| (1 35 0b25 ffff) |}]
 ;;
@@ -301,7 +301,7 @@ let%expect_test "bstr_of_abits_int64" =
        ; 65, [| 0L; 1L |]
        ; 64, [| 0xfedcba9876543210L |]
        ]
-      : string list)]
+     : string list)]
   |> print_s;
   [%expect
     {|
@@ -326,7 +326,7 @@ let%expect_test "abits_int64_of_bstr" =
        ; "10000000000000000000000000000000000000000000000000000000000000000"
        ; "1111111011011100101110101001100001110110010101000011001000010000"
        ]
-      : int64 array list)]
+     : int64 array list)]
   |> print_s;
   [%expect
     {|
@@ -340,14 +340,14 @@ let%expect_test "abits_int64_of_bstr" =
 ;;
 
 let%expect_test "[Bits.address_bits_for]" =
-  require_does_raise [%here] (fun () -> Bits.address_bits_for (-1));
+  require_does_raise (fun () -> Bits.address_bits_for (-1));
   [%expect {| ("arg to [address_bits_for] must be >= 0" (got -1)) |}];
   print_s [%message "" ~_:(List.init 10 ~f:Bits.address_bits_for : int list)];
   [%expect {| (1 1 1 2 2 3 3 3 3 4) |}]
 ;;
 
 let%expect_test "[Bits.num_bits_to_represent]" =
-  require_does_raise [%here] (fun () -> Bits.num_bits_to_represent (-1));
+  require_does_raise (fun () -> Bits.num_bits_to_represent (-1));
   [%expect {| ("arg to [num_bits_to_represent] must be >= 0" (got -1)) |}];
   print_s [%message "" ~_:(List.init 10 ~f:Bits.num_bits_to_represent : int list)];
   [%expect {| (1 1 2 2 3 3 3 3 4 4) |}]

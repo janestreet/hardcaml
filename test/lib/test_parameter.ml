@@ -14,7 +14,7 @@ let find_name_exn ts name =
   print_s
     [%sexp
       (try_with (fun () -> find_name_exn ts (Parameter_name.of_string name))
-        : Value.t Or_error.t)]
+       : Value.t Or_error.t)]
 ;;
 
 let t1 = { name = Parameter_name.of_string "N1"; value = Int 1 }
@@ -67,12 +67,14 @@ let%expect_test "[sort_by_name]" =
   sort_by_name [ t1 ];
   [%expect {| ((N1 (Int 1))) |}];
   sort_by_name [ t1; t2 ];
-  [%expect {|
+  [%expect
+    {|
     ((N1 (Int 1))
      (N2 (Int 2)))
     |}];
   sort_by_name [ t2; t1 ];
-  [%expect {|
+  [%expect
+    {|
     ((N1 (Int 1))
      (N2 (Int 2)))
     |}]
@@ -86,7 +88,6 @@ let%expect_test "std_logic rountrip" =
       [%message
         "" (std_logic : Std_logic.t) (char : char) (converted : Std_logic.t Or_error.t)];
     require
-      [%here]
       (match converted with
        | Error _ -> false
        | Ok x -> Std_logic.equal x std_logic)
@@ -179,6 +180,7 @@ let create_instantiation_test =
   let a = Signal.input "a" 1 in
   let circ hdl =
     Circuit.create_exn
+      ~config:{ Circuit.Config.default with rtl_compatibility = Modelsim }
       ~name:("test_parameter_instantiation_" ^ hdl)
       [ inst "vhdl" a; inst "verilog" a ]
   in

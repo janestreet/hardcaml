@@ -11,29 +11,33 @@ module Port_checks : sig
     | Relaxed (** No checks *)
     | Port_sets (** Input and output port sets agree *)
     | Port_sets_and_widths
-        (** Input and output port sets agree, and their widths are the same. *)
+    (** Input and output port sets agree, and their widths are the same. *)
+  [@@deriving sexp_of]
 end
 
 module Config : sig
   type t =
     { detect_combinational_loops : bool
-        (** Check circuit for combinational loops (cyclic paths that do not pass through a
+    (** Check circuit for combinational loops (cyclic paths that do not pass through a
         register or memory). *)
     ; normalize_uids : bool
-        (** Renumber the [Uid]s of all signals in the circuit starting at one.
+    (** Renumber the [Uid]s of all signals in the circuit starting at one.
 
         Uid normalization ensures that circuits will print the same (as sexps or rtl)
         regardless of the environment in which they are constructed (in particular with
         regard to the global uid generator). *)
     ; assertions : Assertion_manager.t option
     ; port_checks : Port_checks.t
-        (** Perform validation checks on inputs and outputs ([With_interface] only) *)
+    (** Perform validation checks on inputs and outputs ([With_interface] only) *)
     ; add_phantom_inputs : bool
-        (** Add inputs defined in an [Interface] but not used within the [Circuit]
+    (** Add inputs defined in an [Interface] but not used within the [Circuit]
         ([With_interface] only). *)
     ; modify_outputs : Signal.t list -> Signal.t list
-        (** Map over circuit outputs just before constructing the circuit. *)
+    (** Map over circuit outputs just before constructing the circuit. *)
+    ; rtl_compatibility : Rtl_compatibility.t
+    (** Compatibility with different vendor tools. *)
     }
+  [@@deriving sexp_of]
 
   (** Perform combinational loop checks, uid normalization, strict port checks, and add
       phantom inputs. *)
@@ -58,6 +62,9 @@ val signal_graph : t -> Signal_graph.t
 
 (** return circuit name *)
 val name : t -> string
+
+(** Return the config the circuit was built with. *)
+val config : t -> Config.t
 
 (** Return identical circuit except for the name. *)
 val with_name : t -> name:string -> t

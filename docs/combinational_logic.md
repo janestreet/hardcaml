@@ -59,40 +59,44 @@ val x : t = 100
 ```
 
 A feature of the `Bits` module (but not `Signal`s) is the ability to convert
-back to an OCaml value. We can do so with the `to_int` function.
+back to an OCaml value. We can do so with the `to_unsigned_int` function.
 
 ```ocaml
-# to_int x
+# to_unsigned_int x
 - : int = 4
 ```
 
-`to_int` has interpreted `x` as an unsigned, three-bit integer value.
-`to_sint` will treat it as a signed, twos-complement integer value.
+`to_unsigned_int` has interpreted `x` as an unsigned, three-bit integer value.
+`to_signed_int` will treat it as a signed, twos-complement integer value.
 
 ```ocaml
-# to_sint x
+# to_signed_int x
 - : int = -4
 ```
 
-Care should be taken with vector widths that are greater than (or equal to) the
-actual width of an OCaml integer, as the conversion will not raise if the value
-does not fit.
+If the resulting value cannot fit in an integer then the functions will raise.
+`to_int_trunc` may be useful in such cases if used carefully.
 
 # Richer constants
 
-Probably the most useful constant-generating function is `of_int`.
+Probably the most useful constant-generating functions are `of_unsigned_int` and `of_signed_int`.
 
 ```ocaml
-# of_int ~width:10 514
+# of_unsigned_int ~width:10 514
 - : t = 1000000010
 ```
 
 If the given value is negative, it will be sign extended to the appropriate width.
 
 ```ocaml
-# of_int ~width:10 (-1)
+# of_signed_int ~width:10 (-1)
 - : t = 1111111111
 ```
+
+Values too large or too small to be represented in `width` bits will raise an exception.
+`of_int_trunc` will silently truncate the input value. Variants for `Int32.t` and
+`Int64.t` are also provided.
+
 
 The function `of_string` is actually more general than just converting
 binary values. It can also take a specification string which roughly
@@ -193,7 +197,7 @@ however, and the last element in the list is logically repeated as
 much as needed.
 
 ```ocaml
-# List.init 4 ~f:(fun sel -> mux (of_int ~width:2 sel) [ gnd; vdd ]);;
+# List.init 4 ~f:(fun sel -> mux (of_unsigned_int ~width:2 sel) [ gnd; vdd ]);;
 - : t list = [0; 1; 1; 1]
 ```
 
@@ -202,7 +206,7 @@ much as needed.
 A range of bits can be extracted from the vector using `select`.
 
 ```ocaml
-# select (of_string "001100") 3 2
+# select (of_string "001100") ~high:3 ~low:2
 - : t = 11
 ```
 

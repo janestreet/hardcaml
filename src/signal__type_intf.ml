@@ -237,7 +237,7 @@ module type Type = sig
     ; inst_generics : Parameter.t list (** [Parameter.int ...] *)
     ; inst_inputs : (string * t) list (** name and input signal *)
     ; inst_outputs : (string * (int * int)) list
-        (** name, width and low index of output *)
+    (** name, width and low index of output *)
     ; inst_lib : string
     ; inst_arch : string
     }
@@ -259,8 +259,8 @@ module type Signal__type = sig
 
   (** Construction of custom dependencies. *)
   module Make_deps (Fold : sig
-    val fold : t -> init:'a -> f:('a -> t -> 'a) -> 'a
-  end) : Deps
+      val fold : t -> init:'a -> f:('a -> t -> 'a) -> 'a
+    end) : Deps
 
   (** Represents a signal's full set of dependencies. *)
   module Deps : Deps

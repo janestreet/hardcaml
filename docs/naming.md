@@ -36,7 +36,7 @@ as `_<uid>`. It is possible to manually label any vector with a new
 name using the `(--)` operator.
 
 ```ocaml
-# let foo = Hardcaml.Signal.(of_int ~width:8 7 -- "foo")
+# let foo = Hardcaml.Signal.(of_unsigned_int ~width:8 7 -- "foo")
 val foo : Hardcaml.Signal.t =
   (const (names (foo)) (width 8) (value 0b00000111))
 ```

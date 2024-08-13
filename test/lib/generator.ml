@@ -72,7 +72,7 @@ and gen_select width depth inputs =
   let new_width = Int.min (width * 2) max_width in
   let%bind v = gen_signal new_width (depth - 1) inputs in
   let%map start = Int.gen_incl 0 (new_width - width) in
-  Signal.select v (start + width - 1) start
+  v.:[start + width - 1, start]
 
 and gen_register width depth inputs =
   let%bind enable = gen_signal 1 (depth - 1) inputs in
@@ -175,9 +175,9 @@ let gen_input_data circuit =
   let inputs =
     Circuit.inputs circuit
     |> List.filter ~f:(fun signal ->
-         match List.hd_exn (Signal.names signal) with
-         | "reset" | "clock" -> false
-         | _ -> true)
+      match List.hd_exn (Signal.names signal) with
+      | "reset" | "clock" -> false
+      | _ -> true)
   in
   let names = List.map inputs ~f:(fun signal -> List.hd_exn (Signal.names signal)) in
   let widths = List.map inputs ~f:Signal.width in

@@ -49,7 +49,7 @@ let wrap ?(capacity = 4) ~create_fn (i : _ I.t) =
     create_fn ~capacity ~clock:i.clock ~clear:i.clear ~wr:i.wr ~d:i.d ~rd:i.rd
   in
   let o =
-    { O.q; full; empty; nearly_full; nearly_empty; used = uresize used used_bits }
+    { O.q; full; empty; nearly_full; nearly_empty; used = uresize used ~width:used_bits }
   in
   o
 ;;

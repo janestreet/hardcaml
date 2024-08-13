@@ -35,7 +35,7 @@ module type Ast = sig
       ; type_ : Type.t (** Field type - a signal or a sub-module *)
       ; sequence : Sequence.t option (** Is the field type an array or list? *)
       ; doc : string option
-          (** OCaml documentation string, if any. Note that this must be placed in the [ml]
+      (** OCaml documentation string, if any. Note that this must be placed in the [ml]
           and not [mli].*)
       }
     [@@deriving sexp_of]
@@ -102,7 +102,7 @@ module type Comb_monomorphic = sig
 
   val priority_select
     : ((comb, t) Comb.with_valid2 list -> (comb, t) Comb.with_valid2)
-      Comb.optional_branching_factor
+        Comb.optional_branching_factor
 
   val priority_select_with_default
     : ((comb, t) Comb.with_valid2 list -> default:t -> t) Comb.optional_branching_factor
@@ -380,19 +380,21 @@ module type Interface = sig
 
   (** Recreate a Hardcaml Interface with the same type, but different port names / widths. *)
   module Update
-    (Pre : Pre) (M : sig
-      val port_names_and_widths : (string * int) Pre.t
-    end) : S with type 'a t = 'a Pre.t
+      (Pre : Pre)
+      (M : sig
+         val port_names_and_widths : (string * int) Pre.t
+       end) : S with type 'a t = 'a Pre.t
 
   (** Creates a new hardcaml interface by converting between functions. This can
       be used to implement Hardcaml.Interface.S on types that otherwise can't
       use [@@deriving hardcaml]
   *)
   module Make_interface_with_conversion
-    (Repr : S) (M : sig
-      type 'a t [@@deriving sexp_of]
+      (Repr : S)
+      (M : sig
+         type 'a t [@@deriving sexp_of]
 
-      val t_of_repr : 'a Repr.t -> 'a t
-      val repr_of_t : 'a t -> 'a Repr.t
-    end) : S with type 'a t = 'a M.t
+         val t_of_repr : 'a Repr.t -> 'a t
+         val repr_of_t : 'a t -> 'a Repr.t
+       end) : S with type 'a t = 'a M.t
 end

@@ -50,7 +50,7 @@ external add
   -> width_in_bits:int
   -> unit
   = "hardcaml_bits_packed_add"
-  [@@noalloc]
+[@@noalloc]
 
 external sub
   :  Bytes.t
@@ -60,7 +60,7 @@ external sub
   -> width_in_bits:int
   -> unit
   = "hardcaml_bits_packed_sub"
-  [@@noalloc]
+[@@noalloc]
 
 external umul_packed
   :  Bytes.t
@@ -71,7 +71,7 @@ external umul_packed
   -> width_in_bits_b:int
   -> unit
   = "hardcaml_bits_packed_umul_bc" "hardcaml_bits_packed_umul"
-  [@@noalloc]
+[@@noalloc]
 
 let mulu t ~dst_address ~src_address_a ~src_address_b ~width_in_bits_a ~width_in_bits_b =
   let width_in_bits = width_in_bits_a + width_in_bits_b in
@@ -95,7 +95,7 @@ external smul_packed
   -> width_in_bits_b:int
   -> unit
   = "hardcaml_bits_packed_smul_bc" "hardcaml_bits_packed_smul"
-  [@@noalloc]
+[@@noalloc]
 
 let muls t ~dst_address ~src_address_a ~src_address_b ~width_in_bits_a ~width_in_bits_b =
   let width_in_bits = width_in_bits_a + width_in_bits_b in

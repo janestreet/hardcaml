@@ -128,7 +128,7 @@ Always DSL in action.
     let sim = Cyclesim.create circuit in
     let print_state_and_outputs () =
       let state =
-        List.nth_exn States.all (Bits.to_int !(Cyclesim.out_port sim "state"))
+        List.nth_exn States.all (Bits.to_unsigned_int !(Cyclesim.out_port sim "state"))
       in
       let done_ = Bits.is_vdd !(Cyclesim.out_port sim "done") in
       Stdio.print_s [%message

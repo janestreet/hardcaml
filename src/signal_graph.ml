@@ -280,27 +280,27 @@ let topological_sort ~deps (graph : t) =
 ;;
 
 module Deps_for_simulation_scheduling = Signal.Type.Make_deps (struct
-  let fold (t : Signal.t) ~init ~f =
-    match t with
-    | Mem_read_port { read_address; _ } -> f init read_address
-    | Reg _ -> init
-    | Multiport_mem _ -> init
-    | Empty | Const _ | Op2 _ | Mux _ | Cat _ | Not _ | Wire _ | Select _ | Inst _ ->
-      Signal.Type.Deps.fold t ~init ~f
-  ;;
-end)
+    let fold (t : Signal.t) ~init ~f =
+      match t with
+      | Mem_read_port { read_address; _ } -> f init read_address
+      | Reg _ -> init
+      | Multiport_mem _ -> init
+      | Empty | Const _ | Op2 _ | Mux _ | Cat _ | Not _ | Wire _ | Select _ | Inst _ ->
+        Signal.Type.Deps.fold t ~init ~f
+    ;;
+  end)
 
 module Deps_for_loop_checking = Signal.Type.Make_deps (struct
-  let fold (t : Signal.t) ~init ~f =
-    match t with
-    | Mem_read_port { read_address; _ } -> f init read_address
-    | Reg _ -> init
-    | Multiport_mem _ -> init
-    | Inst _ -> init
-    | Empty | Const _ | Op2 _ | Mux _ | Cat _ | Not _ | Wire _ | Select _ ->
-      Signal.Type.Deps.fold t ~init ~f
-  ;;
-end)
+    let fold (t : Signal.t) ~init ~f =
+      match t with
+      | Mem_read_port { read_address; _ } -> f init read_address
+      | Reg _ -> init
+      | Multiport_mem _ -> init
+      | Inst _ -> init
+      | Empty | Const _ | Op2 _ | Mux _ | Cat _ | Not _ | Wire _ | Select _ ->
+        Signal.Type.Deps.fold t ~init ~f
+    ;;
+  end)
 
 let detect_combinational_loops t =
   match topological_sort ~deps:(module Deps_for_loop_checking) t with

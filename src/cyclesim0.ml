@@ -40,6 +40,49 @@ module Node = Cyclesim_lookup.Node
 module Reg = Cyclesim_lookup.Reg
 module Memory = Cyclesim_lookup.Memory
 
+(* Find all nodes we wish to trace, and generate unique names. *)
+module Traced_nodes = struct
+  let create_mangler circuit =
+    let mangler = Mangler.create ~case_sensitive:true in
+    let io_port_names =
+      Circuit.inputs circuit @ Circuit.outputs circuit
+      |> List.map ~f:(fun s -> Signal.names s |> List.hd_exn)
+    in
+    Mangler.add_identifiers_exn mangler io_port_names;
+    mangler
+  ;;
+
+  let internal_signal mangler signal =
+    let mangled_names = Signal.names signal |> List.map ~f:(Mangler.mangle mangler) in
+    { Traced.signal; mangled_names }
+  ;;
+
+  let io_port signal =
+    let name = Signal.names signal |> List.hd_exn in
+    { Traced.signal; name }
+  ;;
+
+  let create circuit ~is_internal_port =
+    let internal_signals =
+      match is_internal_port with
+      | None -> []
+      | Some f ->
+        let mangler = create_mangler circuit in
+        Signal_graph.filter (Circuit.signal_graph circuit) ~f:(fun s ->
+          (not (Circuit.is_input circuit s))
+          && (not (Circuit.is_output circuit s))
+          && (not (Signal.is_empty s))
+          && f s)
+        |> List.rev
+        |> List.map ~f:(internal_signal mangler)
+    in
+    { Traced.input_ports = List.map (Circuit.inputs circuit) ~f:io_port
+    ; output_ports = List.map (Circuit.outputs circuit) ~f:io_port
+    ; internal_signals
+    }
+  ;;
+end
+
 type ('i, 'o) t =
   { in_ports : Port_list.t
   ; out_ports_before_clock_edge : Port_list.t

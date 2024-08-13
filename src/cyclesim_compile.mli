@@ -1,11 +1,5 @@
-module Traced_nodes : sig
-  val create
-    :  Circuit.t
-    -> is_internal_port:(Signal.t -> bool) option
-    -> Cyclesim0.Traced.t
-end
+(** A [Cyclesim] implementation where the simulation data is packed into a single array. *)
 
-val create
-  :  ?config:Cyclesim0.Config.t
-  -> Circuit.t
-  -> ((string * Bits.t ref) list, (string * Bits.t ref) list) Cyclesim0.t
+module Config = Cyclesim0.Config
+
+val create : ?config:Config.t -> Circuit.t -> Cyclesim0.t_port_list

@@ -5,18 +5,7 @@ include Rtl_intf
 module Out_channel = Stdio.Out_channel
 module Filename = Stdlib.Filename
 module Signals_name_map = Rtl_ast.Signals_name_map
-
-module Language = struct
-  type t =
-    | Verilog
-    | Vhdl
-  [@@deriving sexp_of]
-
-  let file_extension = function
-    | Verilog -> ".v"
-    | Vhdl -> ".vhd"
-  ;;
-end
+module Language = Rtl_language
 
 module Hierarchy_path : sig
   type t [@@deriving sexp_of]
@@ -84,44 +73,17 @@ module Output = struct
       ; name_map : Signals_name_map.t
       }
 
-    let output_new ~blackbox ~(language : Language.t) circuit =
+    let output ~blackbox ~(language : Language.t) circuit =
       let buffer = Buffer.create 1024 in
       match language with
       | Verilog ->
-        let ast =
-          Rtl_ast.of_circuit ~blackbox (Rtl_name.create (module Rtl_name.Verilog)) circuit
-        in
+        let ast = Rtl_ast.of_circuit ~blackbox ~language circuit in
         Rtl_verilog_of_ast.to_buffer buffer ast;
         { rtl = buffer; name_map = Rtl_ast.Signals_name_map.create ast }
       | Vhdl ->
-        let ast =
-          Rtl_ast.of_circuit ~blackbox (Rtl_name.create (module Rtl_name.Vhdl)) circuit
-        in
+        let ast = Rtl_ast.of_circuit ~blackbox ~language circuit in
         Rtl_vhdl_of_ast.to_buffer buffer ast;
         { rtl = buffer; name_map = Rtl_ast.Signals_name_map.create ast }
-    ;;
-
-    let output_deprecated ~blackbox ~language circuit =
-      let buffer = Buffer.create 1024 in
-      let name_map =
-        match (language : Language.t) with
-        | Vhdl -> Rtl_deprecated.Vhdl.write blackbox (Buffer.add_string buffer) circuit
-        | Verilog ->
-          Rtl_deprecated.Verilog.write blackbox (Buffer.add_string buffer) circuit
-      in
-      { rtl = buffer; name_map }
-    ;;
-
-    let use_deprecated_generator = false
-
-    let output ~blackbox ~language output circuit =
-      let rtl =
-        if use_deprecated_generator
-        then output_deprecated ~blackbox ~language circuit
-        else output_new ~blackbox ~language circuit
-      in
-      output rtl.rtl;
-      rtl.name_map
     ;;
   end
 
@@ -149,9 +111,12 @@ module Output = struct
               if Hierarchy_path.is_top_circuit hierarchy_path circuit
               then Out_channel.close out_channel )
       in
-      let ret = Output_rtl.output ~blackbox ~language:t.language output circuit in
+      let { rtl; name_map } : Output_rtl.t =
+        Output_rtl.output ~blackbox ~language:t.language circuit
+      in
+      output rtl;
       close ();
-      ret
+      name_map
     with
     | exn ->
       raise_s
@@ -235,7 +200,7 @@ let output_with_name_map
 let output ?output_mode ?database ?blackbox language circuit =
   ignore
     (output_with_name_map ?output_mode ?database ?blackbox language circuit
-      : Signals_name_map.t)
+     : Signals_name_map.t)
 ;;
 
 let print ?database ?blackbox language circuit =

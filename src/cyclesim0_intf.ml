@@ -80,6 +80,10 @@ module type Cyclesim0 = sig
   module Reg = Cyclesim_lookup.Reg
   module Memory = Cyclesim_lookup.Memory
 
+  module Traced_nodes : sig
+    val create : Circuit.t -> is_internal_port:(Signal.t -> bool) option -> Traced.t
+  end
+
   type task = unit -> unit
 
   type ('i, 'o) t =
@@ -110,15 +114,15 @@ module type Cyclesim0 = sig
   module Config : sig
     type t =
       { is_internal_port : (Signal.t -> bool) option
-          (** Passed each signal in the design which has a name. Returns [true] if the
+      (** Passed each signal in the design which has a name. Returns [true] if the
           simulator should expose it for reading in the testbench (or display in a
           waveform). *)
       ; combinational_ops_database : Combinational_ops_database.t
-          (** Database of instantiations which may be replace by a combinational operation. *)
+      (** Database of instantiations which may be replace by a combinational operation. *)
       ; deduplicate_signals : bool
-          (** Perform a pass which finds structurally equal signals and shares them. *)
+      (** Perform a pass which finds structurally equal signals and shares them. *)
       ; store_circuit : bool
-          (** Stores the post-processed circuit that is used to compile the
+      (** Stores the post-processed circuit that is used to compile the
           simulation. This should generally be set to false, so that the Circuit
           can be garbage collected once the simulation is constructed.
       *)
@@ -133,13 +137,13 @@ module type Cyclesim0 = sig
 
   module Private :
     Private
-      with type ('i, 'o) t = ('i, 'o) t
-       and type port_list = Port_list.t
-       and type t_port_list = t_port_list
-       and type traced = Traced.t
-       and type traced_io_port = Traced.io_port
-       and type traced_internal_signal = Traced.internal_signal
-       and type node = Node.t
-       and type reg = Reg.t
-       and type memory = Memory.t
+    with type ('i, 'o) t = ('i, 'o) t
+     and type port_list = Port_list.t
+     and type t_port_list = t_port_list
+     and type traced = Traced.t
+     and type traced_io_port = Traced.io_port
+     and type traced_internal_signal = Traced.internal_signal
+     and type node = Node.t
+     and type reg = Reg.t
+     and type memory = Memory.t
 end

@@ -409,15 +409,15 @@ module With_interface (Config : Config) = struct
     type nonrec 'a t = 'a t
 
     include Interface.Make (struct
-      include Fifo_intf.T
+        include Fifo_intf.T
 
-      let port_names_and_widths =
-        { port_names_and_widths with
-          q = "q", Config.data_width
-        ; used = "used", used_bits
-        }
-      ;;
-    end)
+        let port_names_and_widths =
+          { port_names_and_widths with
+            q = "q", Config.data_width
+          ; used = "used", used_bits
+          }
+        ;;
+      end)
   end
 
   let create_fn

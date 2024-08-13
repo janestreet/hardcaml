@@ -53,17 +53,19 @@ let declare_io_ports buffer (ast : Rtl_ast.t) =
       ; List.map
           ast.outputs
           ~f:(fun { output = { name; range; attributes; _ }; driven_by = _ } ->
-          ( name
-          , match attributes with
-            | [] -> output name range
-            | attrs ->
-              [%string "%{attributes_to_string attrs}\n%{tab}%{output name range}"] ))
+            ( name
+            , match attributes with
+              | [] -> output name range
+              | attrs ->
+                [%string "%{attributes_to_string attrs}\n%{tab}%{output name range}"] ))
       ]
   in
   let io_ports_decl =
     List.map io_ports ~f:fst |> String.concat ~sep:[%string ",\n%{tab}"]
   in
-  add_string [%string {|module %{ast.name} (
+  add_string
+    [%string
+      {|module %{ast.name} (
 %{tab}%{io_ports_decl}
 );
 
