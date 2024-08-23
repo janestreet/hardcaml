@@ -12,8 +12,7 @@ val add
   -> src_address_a:int
   -> src_address_b:int
   -> width_in_bits:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 val sub
   :  Bytes.t
@@ -21,8 +20,7 @@ val sub
   -> src_address_a:int
   -> src_address_b:int
   -> width_in_bits:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 val mulu
   :  Bytes.t
@@ -31,8 +29,7 @@ val mulu
   -> src_address_b:int
   -> width_in_bits_a:int
   -> width_in_bits_b:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 val muls
   :  Bytes.t
@@ -41,8 +38,7 @@ val muls
   -> src_address_b:int
   -> width_in_bits_a:int
   -> width_in_bits_b:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 val and_
   :  Bytes.t
@@ -50,8 +46,7 @@ val and_
   -> src_address_a:int
   -> src_address_b:int
   -> width_in_bits:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 val or_
   :  Bytes.t
@@ -59,8 +54,7 @@ val or_
   -> src_address_a:int
   -> src_address_b:int
   -> width_in_bits:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 val xor
   :  Bytes.t
@@ -68,8 +62,7 @@ val xor
   -> src_address_a:int
   -> src_address_b:int
   -> width_in_bits:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 val eq
   :  Bytes.t
@@ -77,8 +70,7 @@ val eq
   -> src_address_a:int
   -> src_address_b:int
   -> width_in_bits:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 val lt
   :  Bytes.t
@@ -86,16 +78,14 @@ val lt
   -> src_address_a:int
   -> src_address_b:int
   -> width_in_bits:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 val not_
   :  Bytes.t
   -> dst_address:int
   -> src_address:int
   -> width_in_bits:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 val mux
   :  Bytes.t
@@ -104,16 +94,14 @@ val mux
   -> select_width:int
   -> cases:int array
   -> size_in_words:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 val cat
   :  Bytes.t
   -> dst_address:int
   -> Bits_packed.Cat_src.t list
   -> width_in_bits:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 val select
   :  Bytes.t
@@ -121,8 +109,7 @@ val select
   -> src_address:int
   -> high:int
   -> low:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 val mem_read
   :  Bytes.t
@@ -131,13 +118,11 @@ val mem_read
   -> memory_address:int
   -> memory_size:int
   -> size_in_words:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 type clear =
   { clear : int
   ; clear_value : int
-  ; level : int
   }
 
 val reg
@@ -147,8 +132,7 @@ val reg
   -> dst_address:int
   -> src_address:int
   -> size_in_words:int
-  -> unit
-  -> unit
+  -> (unit -> unit)
 
 val mem_write_port
   :  Bytes.t
@@ -158,5 +142,4 @@ val mem_write_port
   -> write_address:int
   -> write_data:int
   -> size_in_words:int
-  -> unit
-  -> unit
+  -> (unit -> unit)

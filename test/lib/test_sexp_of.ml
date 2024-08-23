@@ -283,12 +283,11 @@ let%expect_test "reg r_sync" =
     {|
     (register
       (width 1)
-      ((clock       clock)
-       (clock_edge  Falling)
-       (clear       clear)
-       (clear_level High)
-       (clear_to    0b0)
-       (enable      0b1))
+      ((clock      clock)
+       (clock_edge Falling)
+       (clear      clear)
+       (clear_to   0b0)
+       (enable     0b1))
       (data_in a))
     |}]
 ;;
@@ -299,15 +298,14 @@ let%expect_test "reg r_full" =
     {|
     (register
       (width 1)
-      ((clock       clock)
-       (clock_edge  Rising)
-       (reset       reset)
-       (reset_edge  Rising)
-       (reset_to    0b0)
-       (clear       clear)
-       (clear_level High)
-       (clear_to    0b0)
-       (enable      0b1))
+      ((clock      clock)
+       (clock_edge Rising)
+       (reset      reset)
+       (reset_edge Rising)
+       (reset_to   0b0)
+       (clear      clear)
+       (clear_to   0b0)
+       (enable     0b1))
       (data_in a))
     |}]
 ;;

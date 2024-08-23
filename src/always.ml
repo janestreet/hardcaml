@@ -30,23 +30,34 @@ module Variable = struct
     { value = wire; internal = { assigns_to_wire = wire; default } }
   ;;
 
-  let reg ?enable ~width spec =
+  let reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~width =
     let wire = Signal.wire width in
-    let reg = Signal.reg spec ?enable wire in
+    let reg = Signal.reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec wire in
     { value = reg; internal = { assigns_to_wire = wire; default = reg } }
   ;;
 
-  let pipeline ?enable ~width ~depth (spec : Reg_spec.t) =
+  let pipeline ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~width ~depth =
     if depth = 0
-    then
-      if (* use a wire - need to derive the default value *)
-         Signal.is_empty spec.reg_reset_value
-      then wire ~default:(Signal.zero width)
-      else wire ~default:spec.reg_reset_value
+    then (
+      (* use a wire - need to derive the default value *)
+      match reset_to with
+      | None -> wire ~default:(Signal.zero width)
+      | Some default -> wire ~default)
     else (
-      let r = reg spec ?enable ~width in
+      let r = reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~width in
       (* delay the output by the pipeline length, minus 1 *)
-      { r with value = Signal.pipeline ~n:(depth - 1) spec ?enable r.value })
+      { r with
+        value =
+          Signal.pipeline
+            ?enable
+            ?initialize_to
+            ?reset_to
+            ?clear
+            ?clear_to
+            ~n:(depth - 1)
+            spec
+            r.value
+      })
   ;;
 end
 
@@ -212,12 +223,10 @@ module State_machine = struct
       match encoding with
       | Binary | Gray -> Variable.reg reg_spec ~enable ~width:ls
       | Onehot ->
-        Variable.reg
-          { reg_spec with
-            (* must be reset to get into state 0 *)
-            reg_clear_value = Signal.one nstates
-          ; reg_reset_value = Signal.one nstates
-          }
+        Variable.reg (* must be reset to get into state 0 *)
+          reg_spec
+          ~clear_to:(Signal.one nstates)
+          ~reset_to:(Signal.one nstates)
           ~enable
           ~width:nstates
     in

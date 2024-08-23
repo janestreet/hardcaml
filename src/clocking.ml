@@ -12,12 +12,15 @@ module Make () = struct
   let add_clear t clear = { t with clear = Signal.( |: ) t.clear clear }
   let to_spec t = Reg_spec.create ~clock:t.clock ~clear:t.clear ()
   let to_spec_no_clear t = Reg_spec.create ~clock:t.clock ()
-  let reg t ?enable d = Signal.reg ?enable (to_spec t) d
+  let reg t ?enable ?clear ?clear_to d = Signal.reg ?enable ?clear ?clear_to (to_spec t) d
   let reg_no_clear t ?enable d = Signal.reg ?enable (to_spec_no_clear t) d
-  let reg_fb ?enable t ~width ~f = Signal.reg_fb ?enable (to_spec t) ~width ~f
 
-  let pipeline ?attributes ?enable t ~n d =
-    Signal.pipeline ?attributes ?enable (to_spec t) ~n d
+  let reg_fb ?enable ?clear ?clear_to t ~width ~f =
+    Signal.reg_fb ?enable ?clear ?clear_to (to_spec t) ~width ~f
+  ;;
+
+  let pipeline ?attributes ?enable ?clear ?clear_to t ~n d =
+    Signal.pipeline ?attributes ?clear ?enable ?clear_to (to_spec t) ~n d
   ;;
 
   module Cdc = struct
@@ -59,15 +62,13 @@ module Make () = struct
   end
 
   module Var = struct
-    let reg ?enable clocking ~width =
-      Always.Variable.reg ?enable (to_spec clocking) ~width
+    let reg ?enable ?clear ?clear_to clocking ~width =
+      Always.Variable.reg ?enable ?clear ?clear_to (to_spec clocking) ~width
     ;;
 
-    let reg_with_default ?enable clocking ~width ~clear_to =
-      Always.Variable.reg
-        ?enable
-        (Reg_spec.override ~clear_to:(Signal.of_int ~width clear_to) (to_spec clocking))
-        ~width
+    let reg_with_int_default ?enable ?clear clocking ~width ~clear_to =
+      let clear_to = Signal.of_int ~width clear_to in
+      reg ?enable ?clear ~clear_to clocking ~width
     ;;
   end
 end

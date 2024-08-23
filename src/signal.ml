@@ -392,59 +392,99 @@ let assert_width_or_empty signal w msg =
           (signal : t)]
 ;;
 
-let form_spec spec enable d =
+type 'a with_register_spec =
+  ?enable:t
+  -> ?initialize_to:t
+  -> ?reset_to:t
+  -> ?clear:t
+  -> ?clear_to:t
+  -> Reg_spec.t
+  -> 'a
+
+let form_register (spec : reg_spec) ~enable ~initialize_to ~reset_to ~clear_to ~clear d =
   let zero_or_empty w = if w = 0 then empty else zero w in
-  assert_width spec.reg_clock 1 "clock is invalid";
-  assert_width_or_empty spec.reg_reset 1 "reset is invalid";
-  assert_width_or_empty spec.reg_reset_value (width d) "reset value is invalid";
-  assert_width_or_empty spec.reg_clear 1 "clear signal is invalid";
-  assert_width_or_empty spec.reg_clear_value (width d) "clear value is invalid";
-  assert_width_or_empty spec.reg_enable 1 "enable is invalid";
+  if width d = 0 then raise_s [%message "Zero width registers are not allowed"];
+  assert_width spec.clock 1 "clock is invalid";
+  assert_width_or_empty spec.reset 1 "reset is invalid";
+  Option.iter initialize_to ~f:(fun initialize_to ->
+    assert_width initialize_to (width d) "initial value is invalid";
+    if not (is_const initialize_to)
+    then raise_s [%message "Register initializer is not constant" (initialize_to : t)]);
+  assert_width_or_empty reset_to (width d) "reset value is invalid";
+  assert_width_or_empty spec.clear 1 "clear signal is invalid";
+  assert_width_or_empty clear_to (width d) "clear value is invalid";
   assert_width_or_empty enable 1 "enable is invalid";
-  { spec with
-    reg_reset_value =
-      (if is_empty spec.reg_reset_value
-       then zero_or_empty (width d)
-       else spec.reg_reset_value)
-  ; reg_clear_value =
-      (if is_empty spec.reg_clear_value
-       then zero_or_empty (width d)
-       else spec.reg_clear_value)
-  ; reg_enable =
-      (let e0 = if is_empty spec.reg_enable then vdd else spec.reg_enable in
-       let e1 = if is_empty enable then vdd else enable in
-       if is_vdd e0 && is_vdd e1
-       then vdd
-       else if is_vdd e0
-       then e1
-       else if is_vdd e1
-       then e0
-       else e0 &: e1)
+  { spec =
+      { spec with
+        clear =
+          (match clear with
+           | None -> spec.clear
+           | Some clear -> clear)
+      }
+  ; initialize_to
+  ; reset_to = (if is_empty reset_to then zero_or_empty (width d) else reset_to)
+  ; clear_to = (if is_empty clear_to then zero_or_empty (width d) else clear_to)
+  ; enable = (if is_empty enable then vdd else enable)
   }
 ;;
 
-let reg spec ?(enable = vdd) d =
-  let spec = form_spec spec enable d in
+let reg
+  ?(enable = vdd)
+  ?initialize_to
+  ?(reset_to = empty)
+  ?clear
+  ?(clear_to = empty)
+  spec
+  d
+  =
+  (* if width d = 0 then raise_s [%message "[Signal.reg] width of data input is 0"]; *)
+  let spec = form_register spec ~enable ~initialize_to ~reset_to ~clear_to ~clear d in
   Reg { signal_id = make_id (width d); register = spec; d }
 ;;
 
-let reg_fb ?enable spec ~width ~f =
+let reg_fb ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~width ~f =
   let d = wire width in
-  let q = reg spec ?enable d in
+  let q = reg spec ?enable ?initialize_to ?reset_to ?clear_to ?clear d in
   d <== f q;
   q
 ;;
 
-let rec pipeline ?(attributes = []) spec ~n ?enable d =
+let rec pipeline
+  ?(attributes = [])
+  ?enable
+  ?initialize_to
+  ?reset_to
+  ?clear
+  ?clear_to
+  spec
+  ~n
+  d
+  =
   let maybe_add_attributes s = List.fold attributes ~init:s ~f:add_attribute in
   if n = 0
   then d
   else
     maybe_add_attributes
-      (reg spec ?enable (pipeline ~attributes ~n:(n - 1) spec ?enable d))
+      (reg
+         ?enable
+         ?initialize_to
+         ?reset_to
+         ?clear
+         ?clear_to
+         spec
+         (pipeline
+            ~attributes
+            ?enable
+            ?initialize_to
+            ?reset_to
+            ?clear
+            ?clear_to
+            spec
+            ~n:(n - 1)
+            d))
 ;;
 
-let prev spec ?enable d =
+let prev ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
   let tbl = Hashtbl.create (module Int) in
   Hashtbl.set tbl ~key:0 ~data:d;
   let rec f n =
@@ -453,7 +493,7 @@ let prev spec ?enable d =
     | Some x -> x
     | None ->
       let p = f (n - 1) in
-      let r = reg spec ?enable p in
+      let r = reg spec ?enable ?initialize_to ?reset_to ?clear ?clear_to p in
       Hashtbl.set tbl ~key:n ~data:r;
       r
   in
@@ -570,7 +610,7 @@ let memory size ~write_port ~read_address =
 ;;
 
 let ram_rbw ?name ?attributes ~write_port ~(read_port : _ Read_port.t) size =
-  let spec = { Reg_spec.reg_empty with reg_clock = read_port.read_clock } in
+  let spec = Reg_spec.create ~clock:read_port.read_clock () in
   reg
     spec
     ~enable:read_port.read_enable
@@ -583,7 +623,7 @@ let ram_rbw ?name ?attributes ~write_port ~(read_port : _ Read_port.t) size =
 ;;
 
 let ram_wbr ?name ?attributes ~write_port ~(read_port : _ Read_port.t) size =
-  let spec = { Reg_spec.reg_empty with reg_clock = read_port.read_clock } in
+  let spec = Reg_spec.create ~clock:read_port.read_clock () in
   (multiport_memory
      size
      ?name

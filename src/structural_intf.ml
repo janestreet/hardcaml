@@ -10,7 +10,6 @@ module type Lib = sig
     -> ?reset_edge:Edge.t
     -> ?reset_value:t
     -> ?clear:t
-    -> ?clear_level:Level.t
     -> ?clear_value:t
     -> ?enable:t
     -> t

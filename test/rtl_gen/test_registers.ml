@@ -6,13 +6,15 @@ let reset = Signal.input "reset" 1
 let enable = Signal.input "enable" 1
 let d = Signal.input "d" 1
 
-let of_spec spec ~enable =
-  Circuit.create_exn ~name:"my_register" [ Signal.output "q" (Signal.reg spec ~enable d) ]
+let of_spec ?initialize_to ?reset_to ?clear_to ?enable spec =
+  Circuit.create_exn
+    ~name:"my_register"
+    [ Signal.output "q" (Signal.reg spec ?enable ?initialize_to ?reset_to ?clear_to d) ]
 ;;
 
 let%expect_test "clock" =
   let spec = Reg_spec.create ~clock () in
-  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec);
   [%expect
     {|
     module my_register (
@@ -282,6 +284,79 @@ let%expect_test "clock" =
             end if;
         end process;
         q <= hc_7;
+
+    end architecture;
+    |}];
+  Testing.analyse_vhdl_and_verilog
+    ~show:true
+    (of_spec spec ~initialize_to:(Signal.of_string "1"));
+  [%expect
+    {|
+    module my_register (
+        clock,
+        d,
+        q
+    );
+
+        input clock;
+        input d;
+        output q;
+
+        wire vdd;
+        wire _4;
+        wire _6;
+        reg _8 = 1'b1;
+        assign vdd = 1'b1;
+        assign _4 = 1'b1;
+        assign _6 = 1'b0;
+        always @(negedge clock) begin
+            _8 <= d;
+        end
+        assign q = _8;
+
+    endmodule
+    library ieee;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_std.all;
+
+    entity my_register is
+        port (
+            clock : in std_logic;
+            d : in std_logic;
+            q : out std_logic
+        );
+    end entity;
+
+    architecture rtl of my_register is
+
+        -- conversion functions
+        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
+        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
+        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
+        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
+        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
+        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
+        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
+        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
+        signal vdd : std_logic;
+        signal hc_4 : std_logic;
+        signal hc_6 : std_logic;
+        signal hc_8 : std_logic := '1';
+
+    begin
+
+        vdd <= '1';
+        hc_4 <= '1';
+        hc_6 <= '0';
+        process (clock) begin
+            if falling_edge(clock) then
+                hc_8 <= d;
+            end if;
+        end process;
+        q <= hc_8;
 
     end architecture;
     |}]
@@ -838,84 +913,6 @@ let%expect_test "clock + clear" =
         q <= hc_8;
 
     end architecture;
-    |}];
-  let spec = Reg_spec.override spec ~clear_level:Low in
-  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
-  [%expect
-    {|
-    module my_register (
-        clear,
-        clock,
-        d,
-        q
-    );
-
-        input clear;
-        input clock;
-        input d;
-        output q;
-
-        wire vdd;
-        wire _6;
-        reg _8;
-        assign vdd = 1'b1;
-        assign _6 = 1'b0;
-        always @(posedge clock) begin
-            if (clear == 0)
-                _8 <= _6;
-            else
-                _8 <= d;
-        end
-        assign q = _8;
-
-    endmodule
-    library ieee;
-    use ieee.std_logic_1164.all;
-    use ieee.numeric_std.all;
-
-    entity my_register is
-        port (
-            clear : in std_logic;
-            clock : in std_logic;
-            d : in std_logic;
-            q : out std_logic
-        );
-    end entity;
-
-    architecture rtl of my_register is
-
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal vdd : std_logic;
-        signal hc_6 : std_logic;
-        signal hc_8 : std_logic;
-
-    begin
-
-        vdd <= '1';
-        hc_6 <= '0';
-        process (clock) begin
-            if rising_edge(clock) then
-                if clear = '0' then
-                    hc_8 <= hc_6;
-                else
-                    hc_8 <= d;
-                end if;
-            end if;
-        end process;
-        q <= hc_8;
-
-    end architecture;
     |}]
 ;;
 
@@ -1184,9 +1181,7 @@ let%expect_test "clock + reset + clear" =
 
     end architecture;
     |}];
-  let spec =
-    Reg_spec.override spec ~clock_edge:Falling ~reset_edge:Falling ~clear_level:Low
-  in
+  let spec = Reg_spec.override spec ~clock_edge:Falling ~reset_edge:Falling in
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
@@ -1213,7 +1208,7 @@ let%expect_test "clock + reset + clear" =
             if (reset == 0)
                 _9 <= _8;
             else
-                if (clear == 0)
+                if (clear)
                     _9 <= _8;
                 else
                     if (enable)
@@ -1262,7 +1257,7 @@ let%expect_test "clock + reset + clear" =
                 hc_9 <= hc_8;
             else
                 if falling_edge(clock) then
-                    if clear = '0' then
+                    if clear = '1' then
                         hc_9 <= hc_8;
                     else
                         if enable = '1' then
@@ -1276,8 +1271,9 @@ let%expect_test "clock + reset + clear" =
 
     end architecture;
     |}];
-  let spec = Reg_spec.override spec ~reset_to:Signal.vdd ~clear_to:Signal.vdd in
-  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
+  Testing.analyse_vhdl_and_verilog
+    ~show:true
+    (of_spec spec ~enable ~reset_to:Signal.vdd ~clear_to:Signal.vdd);
   [%expect
     {|
     module my_register (
@@ -1303,7 +1299,7 @@ let%expect_test "clock + reset + clear" =
             if (reset == 0)
                 _8 <= vdd;
             else
-                if (clear == 0)
+                if (clear)
                     _8 <= vdd;
                 else
                     if (enable)
@@ -1352,7 +1348,7 @@ let%expect_test "clock + reset + clear" =
                 hc_8 <= vdd;
             else
                 if falling_edge(clock) then
-                    if clear = '0' then
+                    if clear = '1' then
                         hc_8 <= vdd;
                     else
                         if enable = '1' then

@@ -90,12 +90,19 @@ let declaration buffer (decl : Rtl_ast.declaration) =
   let is_write_var (decl : Rtl_ast.logic_declaration) var =
     Rtl_ast.equal_var var decl.write
   in
-  let write_var ~write_attrs decl (var : Rtl_ast.var) =
+  let write_var ~write_attrs (decl : Rtl_ast.logic_declaration) (var : Rtl_ast.var) =
     let comment = get_comment var.comment in
+    let initialize_to =
+      Option.value_map ~default:"" decl.initialize_to ~f:(fun initialize_to ->
+        let width = Bits.width initialize_to in
+        let value = Bits.to_bstr initialize_to in
+        [%string " = %{width#Int}'b%{value}"])
+    in
     (* we write attributes on the aliases as well - which is one choice. *)
     if write_attrs then write_attr var;
     if Rtl_ast.equal_reg_or_wire var.reg_or_wire Reg && is_write_var decl var
-    then add_string [%string "%{tab}%{reg var.name var.range}%{comment};\n"]
+    then
+      add_string [%string "%{tab}%{reg var.name var.range}%{initialize_to}%{comment};\n"]
     else add_string [%string "%{tab}%{wire var.name var.range}%{comment};\n"]
   in
   match decl with

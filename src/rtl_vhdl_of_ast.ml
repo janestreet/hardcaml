@@ -65,15 +65,25 @@ let vhdl_doesnt_support_attributes_yet attributes =
   then raise_vhdl_doesnt_support_attributes_yet ()
 ;;
 
+let vhdl_constant constant =
+  if Bits.width constant = 1
+  then [%string "'%{Bits.to_bstr constant}'"]
+  else [%string "\"%{Bits.to_bstr constant}\""]
+;;
+
 let declaration buffer (decl : Rtl_ast.declaration) =
   let add_string = Buffer.add_string buffer in
-  let write_var (var : Rtl_ast.var) =
+  let write_var (decl : Rtl_ast.logic_declaration) (var : Rtl_ast.var) =
+    let initialize_to =
+      Option.value_map ~default:"" decl.initialize_to ~f:(fun i ->
+        [%string " := %{vhdl_constant i}"])
+    in
     vhdl_doesnt_support_attributes_yet var.attributes;
-    add_string [%string "%{tab}signal %{var.name} : %{slv var.range};\n"]
+    add_string [%string "%{tab}signal %{var.name} : %{slv var.range}%{initialize_to};\n"]
   in
   match decl with
-  | Logic decl -> List.iter decl.all_names ~f:write_var
-  | Inst inst -> List.iter inst.all_names ~f:write_var
+  | Logic decl -> List.iter decl.all_names ~f:(write_var decl)
+  | Inst inst -> List.iter inst.all_names ~f:(write_var inst)
   | Multiport_memory { memory; memory_type; depth; range = _ } ->
     vhdl_doesnt_support_attributes_yet memory.attributes;
     add_string
@@ -243,9 +253,7 @@ let rec statement buffer (stat : Rtl_ast.statement) =
       add_string
         [%string "%{tab}%{lhs.name} <= %{arg.name}(%{high#Int} downto %{low#Int});\n"]
   | Assignment (Const { lhs; constant }) ->
-    if Bits.width constant = 1
-    then add_string [%string "%{tab}%{lhs.name} <= '%{Bits.to_bstr constant}';\n"]
-    else add_string [%string "%{tab}%{lhs.name} <= \"%{Bits.to_bstr constant}\";\n"]
+    add_string [%string "%{tab}%{lhs.name} <= %{vhdl_constant constant};\n"]
   | Assignment (Mux { lhs; select; cases }) ->
     let num_cases = List.length cases in
     let cases =

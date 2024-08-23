@@ -64,6 +64,10 @@ module Vivado = struct
             | `None -> "none"))
   ;;
 
+  let max_fanout n = create "max_fanout" ~value:(Value.Int n)
+  let extract_enable b = create "extract_enable" ~value:(true_or_false_string b)
+  let extract_reset b = create "extract_reset" ~value:(true_or_false_string b)
+
   module Ram_style = struct
     let block = create "RAM_STYLE" ~value:(String "block")
     let distributed = create "RAM_STYLE" ~value:(String "distributed")

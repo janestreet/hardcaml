@@ -29,6 +29,7 @@ type logic_declaration =
   { read : var
   ; write : var
   ; all_names : var list
+  ; initialize_to : Bits.t option
   }
 [@@deriving sexp_of]
 

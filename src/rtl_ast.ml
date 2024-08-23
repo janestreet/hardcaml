@@ -29,6 +29,7 @@ type logic_declaration =
   { read : var
   ; write : var
   ; all_names : var list
+  ; initialize_to : Bits.t option
   }
 [@@deriving sexp_of]
 
@@ -211,9 +212,17 @@ let bit_or_vec = function
 
 let bit_or_vec_of_signal s = bit_or_vec (Signal.width s)
 
+let initializer_of_reg (s : Signal.t) =
+  match s with
+  | Reg { register = { initialize_to; _ }; _ } ->
+    Option.map initialize_to ~f:(fun s -> Signal.to_constant s |> Bits.of_constant)
+  | _ -> None
+;;
+
 let declaration_of_logic ~reg_or_wire ~rtl_name signal =
   let names = Rtl_name.mangle_signal_names rtl_name signal in
   let range = bit_or_vec_of_signal signal in
+  let initialize_to = initializer_of_reg signal in
   let var name =
     { name
     ; range
@@ -224,7 +233,12 @@ let declaration_of_logic ~reg_or_wire ~rtl_name signal =
   in
   match names with
   | [] -> (* the mangler will return at least one name *) assert false
-  | name :: _ -> { read = var name; write = var name; all_names = List.map names ~f:var }
+  | name :: _ ->
+    { read = var name
+    ; write = var name
+    ; all_names = List.map names ~f:var
+    ; initialize_to
+    }
 ;;
 
 let declaration_of_multiport_memory ~rtl_name signal =
@@ -295,24 +309,22 @@ let always_of_reg var_map (register : Signal.Type.register) ~q ~d =
   let find = find_logic var_map in
   let q_of d : always = Assignment { lhs = (find q).write; rhs = (find d).read } in
   let enabled =
-    if Signal.is_empty register.reg_enable || Signal.is_vdd register.reg_enable
+    if Signal.is_empty register.enable || Signal.is_vdd register.enable
     then q_of d
     else
       If
-        { condition = Level { level = High; var = (find register.reg_enable).read }
+        { condition = Level { level = High; var = (find register.enable).read }
         ; on_true = [ q_of d ]
         ; on_false = []
         }
   in
   let cleared =
-    if Signal.is_empty register.reg_clear
+    if Signal.is_empty register.spec.clear
     then enabled
     else (
-      let clear_to = q_of register.reg_clear_value in
+      let clear_to = q_of register.clear_to in
       If
-        { condition =
-            Level
-              { level = register.reg_clear_level; var = (find register.reg_clear).read }
+        { condition = Level { level = High; var = (find register.spec.clear).read }
         ; on_true = [ clear_to ]
         ; on_false = [ enabled ]
         })
@@ -322,18 +334,19 @@ let always_of_reg var_map (register : Signal.Type.register) ~q ~d =
       If
         { condition =
             Clock
-              { edge = register.reg_clock_edge; clock = (find register.reg_clock).read }
+              { edge = register.spec.clock_edge; clock = (find register.spec.clock).read }
         ; on_true = [ cleared ]
         ; on_false = []
         }
     in
-    if Signal.is_empty register.reg_reset
+    if Signal.is_empty register.spec.reset
     then clocked
     else (
-      let reset_to = q_of register.reg_reset_value in
+      let reset_to = q_of register.reset_to in
       If
         { condition =
-            Edge { edge = register.reg_reset_edge; var = (find register.reg_reset).read }
+            Edge
+              { edge = register.spec.reset_edge; var = (find register.spec.reset).read }
         ; on_true = [ reset_to ]
         ; on_false = [ clocked ]
         })
@@ -345,10 +358,10 @@ let always_of_reg var_map (register : Signal.Type.register) ~q ~d =
     in
     Edges
       (List.filter_opt
-         [ Some (at_edge register.reg_clock register.reg_clock_edge)
-         ; (if Signal.is_empty register.reg_reset
+         [ Some (at_edge register.spec.clock register.spec.clock_edge)
+         ; (if Signal.is_empty register.spec.reset
             then None
-            else Some (at_edge register.reg_reset register.reg_reset_edge))
+            else Some (at_edge register.spec.reset register.spec.reset_edge))
          ])
   in
   Always { sensitivity_list; always = clock_and_reset }
@@ -638,7 +651,7 @@ let add_io_vars ~var_map vars =
     Map.add_exn
       map
       ~key:uid
-      ~data:(Logic { read = var; write = var; all_names = [ var ] }))
+      ~data:(Logic { read = var; write = var; all_names = [ var ]; initialize_to = None }))
 ;;
 
 let create_var_map inputs internal_vars =

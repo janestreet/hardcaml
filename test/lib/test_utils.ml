@@ -458,3 +458,37 @@ let%expect_test "raw strings" =
      (to_bytes  "\000\127"))
     |}]
 ;;
+
+let%expect_test "Bits.Mutable.randomize" =
+  let random_state = Splittable_random.of_int 0 in
+  let test width =
+    let bits = Bits.Mutable.create width in
+    Bits.Mutable.randomize ~random_state bits;
+    print_s [%message ((bits :> bytes) : Core.Bytes.Hexdump.t)]
+  in
+  test 1;
+  [%expect
+    {|
+    ("(bits :> bytes)" (
+      "00000000  01 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|"))
+    |}];
+  test 8;
+  [%expect
+    {|
+    ("(bits :> bytes)" (
+      "00000000  08 00 00 00 00 00 00 00  d7 00 00 00 00 00 00 00  |................|"))
+    |}];
+  test 32;
+  [%expect
+    {|
+    ("(bits :> bytes)" (
+      "00000000  20 00 00 00 00 00 00 00  83 b9 b6 98 00 00 00 00  | ...............|"))
+    |}];
+  test 120;
+  [%expect
+    {|
+    ("(bits :> bytes)" (
+      "00000000  78 00 00 00 00 00 00 00  7e 09 c1 06 82 c4 e4 6a  |x.......~......j|"
+      "00000010  87 e8 a1 a6 4c 67 95 00                           |....Lg..|"))
+    |}]
+;;

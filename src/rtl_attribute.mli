@@ -45,12 +45,30 @@ module Vivado : sig
   (** Export net for debugging with chipscope. *)
   val mark_debug : bool -> t
 
-  (** Similar to dont_touch *)
+  (** Similar to dont_touch. *)
   val keep : bool -> t
 
   (** io_buffer_type Vivado attribute. Applied to top level ports and instructs Vivado not
       to infer the buffer type, instead using the attribute below. *)
   val io_buffer_type : [ `IBUF | `OBUF | `None ] -> t
+
+  (** For registers, set the maximun fanout for that net. Suggests to Vivado to use
+      register replication if fanout above [n]. *)
+  val max_fanout : int -> t
+
+  (** EXTRACT_ENABLE controls whether registers infer enables. Typically, Vivado will
+      extract or not extract enables based on heuristics that typically benefit the most
+      amount of designs. In cases where Vivado is not behaving in a desired way, this
+      attribute overrides the default behavior of the tool.
+
+      If there is an undesired enable going to the CE pin of the flip-flop, this attribute
+      can force it to the D input logic. Conversely, if the tool is not inferring an
+      enable that is specified in the RTL, this attribute can tell the tool to move that
+      enable to the CE pin of the flip-flop. *)
+  val extract_enable : bool -> t
+
+  (** See [extract_enable] *)
+  val extract_reset : bool -> t
 
   module Ram_style : sig
     val block : t
@@ -68,7 +86,7 @@ module Vivado : sig
       - reg_srl: The tool infers an SRL and leaves one register before the SRL.
       - reg_srl_reg: The tool infers an SRL and leaves one register before and one
         register after the SRL.
-      - block: The tool infers the SRL inside a block RAM
+      - block: The tool infers the SRL inside a block RAM.
   *)
   module Srl_style : sig
     val register : t

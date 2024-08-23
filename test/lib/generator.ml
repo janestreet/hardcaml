@@ -80,26 +80,17 @@ and gen_register width depth inputs =
   let%bind clear =
     if want_clear then gen_signal 1 (depth - 1) inputs else return Signal.empty
   in
-  let%bind clear_value =
+  let%bind clear_to =
     if want_clear then gen_signal width (depth - 1) inputs else return Signal.empty
   in
   (* cyclesim only supports global reset signal *)
-  let%bind reset_value = gen_const width in
+  let%bind reset_to = gen_const width in
   let reg_spec =
-    { Reg_spec.reg_clock = clock
-    ; reg_clock_edge = Rising
-    ; reg_reset = reset_sig
-    ; reg_reset_edge = Rising
-    ; reg_reset_value = reset_value
-    ; reg_clear = clear
-    ; reg_clear_level = High
-    ; reg_clear_value = clear_value
-    ; reg_enable = enable
-    }
+    { Reg_spec.clock; clock_edge = Rising; reset = reset_sig; reset_edge = Rising; clear }
   in
   (* reg_fb *)
   let d = wire width in
-  let q = reg reg_spec ~enable d in
+  let q = reg reg_spec ~reset_to ~clear_to ~enable d in
   let%map input = gen_signal width (depth - 1) (q :: inputs) in
   d <== input;
   q

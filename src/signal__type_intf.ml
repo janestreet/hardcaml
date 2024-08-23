@@ -214,21 +214,28 @@ module type Type = sig
       template, where each part is optional:
 
       {v
+       reg [7:0] d = initialize_to;
+
        always @(?edge clock, ?edge reset)
-         if (reset == reset_level) d <= reset_value;
-         else if (clear == clear_level) d <= clear_value;
+         if (reset == reset_level) d <= reset_to;
+         else if (clear) d <= clear_to;
          else if (enable) d <= ...;
      v} *)
+
+  and reg_spec =
+    { clock : t (** clock *)
+    ; clock_edge : Edge.t (** active clock edge *)
+    ; reset : t (** asynchronous reset *)
+    ; reset_edge : Edge.t (** asynchronous reset edge *)
+    ; clear : t (** synchronous clear *)
+    }
+
   and register =
-    { reg_clock : t (** clock *)
-    ; reg_clock_edge : Edge.t (** active clock edge *)
-    ; reg_reset : t (** asynchronous reset *)
-    ; reg_reset_edge : Edge.t (** asynchronous reset edge *)
-    ; reg_reset_value : t (** asychhronous reset value *)
-    ; reg_clear : t (** synchronous clear *)
-    ; reg_clear_level : Level.t (** synchronous clear level *)
-    ; reg_clear_value : t (** sychhronous clear value *)
-    ; reg_enable : t (** global system enable *)
+    { spec : reg_spec
+    ; enable : t (** clock enable *)
+    ; initialize_to : t option (** initial value (not supported by all tools) *)
+    ; reset_to : t (** asychhronous reset value *)
+    ; clear_to : t (** sychhronous clear value *)
     }
 
   and instantiation =

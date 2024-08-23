@@ -29,7 +29,7 @@ let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
       ~f_before:(fun unchanged signal ->
         match signal with
         | Reg { register = r; _ } ->
-          let clock_domain = transitively_resolve r.reg_clock in
+          let clock_domain = transitively_resolve r.spec.clock in
           Map.add_multi
             unchanged
             ~key:(Signal.uid clock_domain)

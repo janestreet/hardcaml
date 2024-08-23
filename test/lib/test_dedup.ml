@@ -65,7 +65,7 @@ let%expect_test "register" =
     Wire[id:1 bits:1 names:clock deps:0] -> 0
     Empty
     Const[id:7 bits:4 names: deps:] = 0000
-    Const[id:8 bits:1 names:vdd deps:] = 1
+    Const[id:8 bits:1 names: deps:] = 1
     Const[id:5 bits:4 names: deps:] = 1111
     |}]
 ;;

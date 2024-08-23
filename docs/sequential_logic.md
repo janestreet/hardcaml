@@ -27,36 +27,14 @@ val clock : Signal.t = (wire (names (clock)) (width 1) (data_in empty))
 val clear : Signal.t = (wire (names (clear)) (width 1) (data_in empty))
 # let spec = Reg_spec.create ~clock ~clear ()
 val spec : Reg_spec.t =
-  {Hardcaml.Reg_spec.reg_clock =
-    (wire (names (clock)) (width 1) (data_in empty));
-   reg_clock_edge = Hardcaml__.Edge.Rising; reg_reset = empty;
-   reg_reset_edge = Hardcaml__.Edge.Rising; reg_reset_value = empty;
-   reg_clear = (wire (names (clear)) (width 1) (data_in empty));
-   reg_clear_level = Hardcaml__.Level.High; reg_clear_value = empty;
-   reg_enable = empty}
+  {Hardcaml.Reg_spec.clock = (wire (names (clock)) (width 1) (data_in empty));
+   clock_edge = Hardcaml__.Edge.Rising; reset = empty;
+   reset_edge = Hardcaml__.Edge.Rising;
+   clear = (wire (names (clear)) (width 1) (data_in empty))}
 ```
 
 Multiple sequential elements are then able to refer to the same
 `Reg_spec.t`.
-
-`Reg_spec`s can be overridden and can change the value of the register
-when it is reset or cleared.
-
-```ocaml
-# let new_spec = Reg_spec.override spec ~clear_to:Signal.vdd
-val new_spec : Reg_spec.t =
-  {Hardcaml.Reg_spec.reg_clock =
-    (wire (names (clock)) (width 1) (data_in empty));
-   reg_clock_edge = Hardcaml__.Edge.Rising; reg_reset = empty;
-   reg_reset_edge = Hardcaml__.Edge.Rising; reg_reset_value = empty;
-   reg_clear = (wire (names (clear)) (width 1) (data_in empty));
-   reg_clear_level = Hardcaml__.Level.High;
-   reg_clear_value = (const (names (vdd)) (width 1) (value 0b1));
-   reg_enable = empty}
-```
-
-By default, registers start with the value `gnd` (or 0). Registers
-built with `new_spec` will start with the value `vdd` (or 1).
 
 # Registers, pipelines
 
@@ -68,8 +46,8 @@ val d_in : Reg_spec.signal = (wire (names (d_in)) (width 8) (data_in empty))
 # let q_out = Signal.reg spec ~enable:Signal.vdd d_in
 val q_out : Reg_spec.signal =
   (register (width 8)
- ((clock clock) (clock_edge Rising) (clear clear) (clear_level High)
-  (clear_to 0b00000000) (enable 0b1))
+ ((clock clock) (clock_edge Rising) (clear clear) (clear_to 0b00000000)
+  (enable 0b1))
  (data_in d_in))
 ```
 
@@ -79,8 +57,8 @@ The pipeline function will delay its input for multiple cycles.
 # let q_out_after_3_clocks = Signal.pipeline spec ~enable:Signal.vdd ~n:3 d_in
 val q_out_after_3_clocks : Reg_spec.signal =
   (register (width 8)
- ((clock clock) (clock_edge Rising) (clear clear) (clear_level High)
-  (clear_to 0b00000000) (enable 0b1))
+ ((clock clock) (clock_edge Rising) (clear clear) (clear_to 0b00000000)
+  (enable 0b1))
  (data_in register))
 ```
 
@@ -98,8 +76,8 @@ the next one.
 # let counter = Signal.reg_fb spec ~enable:Signal.vdd  ~width:8 ~f:(fun d -> Signal.(d +:. 1))
 val counter : Reg_spec.signal =
   (register (width 8)
- ((clock clock) (clock_edge Rising) (clear clear) (clear_level High)
-  (clear_to 0b00000000) (enable 0b1))
+ ((clock clock) (clock_edge Rising) (clear clear) (clear_to 0b00000000)
+  (enable 0b1))
  (data_in wire))
 ```
 

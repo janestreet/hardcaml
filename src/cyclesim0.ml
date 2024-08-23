@@ -117,11 +117,32 @@ let sexp_of_t sexp_of_i sexp_of_o t =
 type t_port_list = (Port_list.t, Port_list.t) t
 
 module Config = struct
+  module Random_initializer = struct
+    type t =
+      { random_state : Splittable_random.t
+      ; initialize : Signal.t -> bool
+      }
+
+    let create ?random_state initialize =
+      { random_state =
+          (match random_state with
+           | None -> Splittable_random.of_int 0
+           | Some r -> r)
+      ; initialize
+      }
+    ;;
+
+    let randomize_regs = Signal.Type.is_reg
+    let randomize_memories = Signal.Type.is_mem
+    let randomize_all s = randomize_regs s || randomize_memories s
+  end
+
   type t =
     { is_internal_port : (Signal.t -> bool) option
     ; combinational_ops_database : Combinational_ops_database.t
     ; deduplicate_signals : bool
     ; store_circuit : bool
+    ; random_initializer : Random_initializer.t option
     }
 
   let empty_ops_database = Combinational_ops_database.create ()
@@ -131,6 +152,7 @@ module Config = struct
     ; combinational_ops_database = empty_ops_database
     ; deduplicate_signals = false
     ; store_circuit = false
+    ; random_initializer = None
     }
   ;;
 
@@ -143,10 +165,12 @@ module Config = struct
     ; combinational_ops_database = empty_ops_database
     ; deduplicate_signals = false
     ; store_circuit = false
+    ; random_initializer = None
     }
   ;;
 
   let trace_all = trace `All_named
+  let add_random_initialization t i = { t with random_initializer = Some i }
 end
 
 module type Private = Cyclesim0_intf.Private

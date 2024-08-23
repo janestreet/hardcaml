@@ -162,24 +162,23 @@ let normalize_uids t =
         | Reg { signal_id; register; d } ->
           let d = rewrite_signal_upto_wires d in
           let register =
-            let reg_clock = rewrite_signal_upto_wires register.reg_clock in
-            let reg_clock_edge = register.reg_clock_edge in
-            let reg_reset = rewrite_signal_upto_wires register.reg_reset in
-            let reg_reset_edge = register.reg_reset_edge in
-            let reg_reset_value = rewrite_signal_upto_wires register.reg_reset_value in
-            let reg_clear = rewrite_signal_upto_wires register.reg_clear in
-            let reg_clear_level = register.reg_clear_level in
-            let reg_clear_value = rewrite_signal_upto_wires register.reg_clear_value in
-            let reg_enable = rewrite_signal_upto_wires register.reg_enable in
-            { Type.reg_clock
-            ; reg_clock_edge
-            ; reg_reset
-            ; reg_reset_edge
-            ; reg_reset_value
-            ; reg_clear
-            ; reg_clear_level
-            ; reg_clear_value
-            ; reg_enable
+            let clock = rewrite_signal_upto_wires register.spec.clock in
+            let clock_edge = register.spec.clock_edge in
+            let reset = rewrite_signal_upto_wires register.spec.reset in
+            let reset_edge = register.spec.reset_edge in
+            let initialize_to =
+              Option.map register.initialize_to ~f:(fun initialize_to ->
+                rewrite_signal_upto_wires initialize_to)
+            in
+            let reset_to = rewrite_signal_upto_wires register.reset_to in
+            let clear = rewrite_signal_upto_wires register.spec.clear in
+            let clear_to = rewrite_signal_upto_wires register.clear_to in
+            let enable = rewrite_signal_upto_wires register.enable in
+            { Type.spec = { clock; clock_edge; reset; reset_edge; clear }
+            ; initialize_to
+            ; reset_to
+            ; clear_to
+            ; enable
             }
           in
           Reg { signal_id = update_id signal_id; register; d }

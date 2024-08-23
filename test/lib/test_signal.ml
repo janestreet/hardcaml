@@ -117,23 +117,21 @@ let reg_error
   ?reset_edge
   ?reset_to
   ?clear
-  ?clear_level
   ?clear_to
   ?enable
   here
   =
   require_does_raise ~here (fun () ->
     reg
-      (Reg_spec.override
-         (Reg_spec.create () ~clock:(Option.value clock ~default:g_clock))
-         ?clock
+      (Reg_spec.create
+         ~clock:(Option.value clock ~default:g_clock)
          ?clock_edge
          ?reset
          ?reset_edge
-         ?reset_to
          ?clear
-         ?clear_level
-         ?clear_to)
+         ())
+      ?clear_to
+      ?reset_to
       ~enable:(Option.value enable ~default:g_enable)
       (input "d" 8))
 ;;

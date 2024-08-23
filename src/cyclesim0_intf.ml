@@ -112,6 +112,27 @@ module type Cyclesim0 = sig
   type t_port_list = (Port_list.t, Port_list.t) t
 
   module Config : sig
+    (** Allow a simulation to randomly initialize the values of registers and/or memories
+        at simulation startup. *)
+    module Random_initializer : sig
+      type t =
+        { random_state : Splittable_random.t
+        ; initialize : Signal.t -> bool
+        }
+
+      (** Create the random initializer. Each register and memory signal in the simulation
+          is passed to the function which returns true if the value should be randomly
+          initialized.
+
+          The optional [random_state] argument can be used to seed the random number
+          generation. *)
+      val create : ?random_state:Splittable_random.t -> (Signal.t -> bool) -> t
+
+      val randomize_regs : Signal.t -> bool
+      val randomize_memories : Signal.t -> bool
+      val randomize_all : Signal.t -> bool
+    end
+
     type t =
       { is_internal_port : (Signal.t -> bool) option
       (** Passed each signal in the design which has a name. Returns [true] if the
@@ -126,11 +147,17 @@ module type Cyclesim0 = sig
           simulation. This should generally be set to false, so that the Circuit
           can be garbage collected once the simulation is constructed.
       *)
+      ; random_initializer : Random_initializer.t option
+      (** How to initializer stateful circuit elements at the start of simulation. If not
+          configured, all state starts at [0]. *)
       }
 
     val default : t
     val trace : [ `Everything | `All_named | `Ports_only ] -> t
     val trace_all : t
+
+    (** Enable random initialization of state values at simulation startup. *)
+    val add_random_initialization : t -> Random_initializer.t -> t
   end
 
   module type Private = Private

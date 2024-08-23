@@ -138,28 +138,26 @@ let transform_sequential_signal canonical signal =
     { instantiation with inst_inputs }
   in
   let rewrite_register register =
-    let { Reg_spec.reg_clock
-        ; reg_clock_edge
-        ; reg_reset
-        ; reg_reset_edge
-        ; reg_reset_value
-        ; reg_clear
-        ; reg_clear_level
-        ; reg_clear_value
-        ; reg_enable
+    let { Signal.Type.spec = { clock; clock_edge; reset; reset_edge; clear }
+        ; initialize_to
+        ; reset_to
+        ; clear_to
+        ; enable
         }
       =
       register
     in
-    { Reg_spec.reg_clock = get_canonical reg_clock
-    ; reg_clock_edge
-    ; reg_reset = get_canonical reg_reset
-    ; reg_reset_edge
-    ; reg_reset_value = get_canonical reg_reset_value
-    ; reg_clear = get_canonical reg_clear
-    ; reg_clear_level
-    ; reg_clear_value = get_canonical reg_clear_value
-    ; reg_enable = get_canonical reg_enable
+    { Signal.Type.spec =
+        { clock = get_canonical clock
+        ; clock_edge
+        ; reset = get_canonical reset
+        ; reset_edge
+        ; clear = get_canonical clear
+        }
+    ; initialize_to = Option.map initialize_to ~f:get_canonical
+    ; reset_to = get_canonical reset_to
+    ; clear_to = get_canonical clear_to
+    ; enable = get_canonical enable
     }
   in
   let rewrite_signal_id (signal_id : Signal.Type.signal_id) =

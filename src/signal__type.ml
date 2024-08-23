@@ -134,21 +134,27 @@ type t =
    template, where each part is optional:
 
    {v
+       reg [7:0] d = initialize_to;
+
        always @(?edge clock, ?edge reset)
-         if (reset == reset_level) d <= reset_value;
-         else if (clear == clear_level) d <= clear_value;
+         if (reset == reset_level) d <= reset_to;
+         else if (clear) d <= clear_to;
          else if (enable) d <= ...;
      v} *)
+and reg_spec =
+  { clock : t
+  ; clock_edge : Edge.t
+  ; reset : t
+  ; reset_edge : Edge.t
+  ; clear : t
+  }
+
 and register =
-  { reg_clock : t
-  ; reg_clock_edge : Edge.t
-  ; reg_reset : t
-  ; reg_reset_edge : Edge.t
-  ; reg_reset_value : t
-  ; reg_clear : t
-  ; reg_clear_level : Level.t
-  ; reg_clear_value : t
-  ; reg_enable : t
+  { spec : reg_spec
+  ; enable : t
+  ; initialize_to : t option
+  ; reset_to : t
+  ; clear_to : t
   }
 
 and instantiation =
@@ -195,14 +201,25 @@ module Deps = Make_deps (struct
       | Empty | Const _ -> init
       | Wire { driver; _ } -> f init !driver
       | Select { arg; _ } -> f init arg
-      | Reg { register; d; _ } ->
+      | Reg
+          { register =
+              { spec = { clock; clock_edge = _; reset; reset_edge = _; clear }
+              ; enable
+              ; initialize_to
+              ; clear_to
+              ; reset_to
+              }
+          ; d
+          ; _
+          } ->
         let arg = f init d in
-        let arg = f arg register.reg_clock in
-        let arg = f arg register.reg_reset in
-        let arg = f arg register.reg_reset_value in
-        let arg = f arg register.reg_clear in
-        let arg = f arg register.reg_clear_value in
-        let arg = f arg register.reg_enable in
+        let arg = f arg clock in
+        let arg = f arg reset in
+        let arg = f arg reset_to in
+        let arg = f arg clear in
+        let arg = f arg clear_to in
+        let arg = Option.value_map ~default:arg initialize_to ~f:(f arg) in
+        let arg = f arg enable in
         arg
       | Multiport_mem { write_ports; _ } ->
         Array.fold
@@ -457,26 +474,17 @@ and sexp_of_register_recursive ?show_uids ~depth reg =
     | Empty -> None
     | _ -> Some (Edge.sexp_of_t s)
   in
-  let sexp_of_level g s =
-    match g with
-    | Empty -> None
-    | _ -> Some (Level.sexp_of_t s)
-  in
   [%message
     ""
-      ~clock:(sexp_of_next reg.reg_clock : Sexp.t)
-      ~clock_edge:(reg.reg_clock_edge : Edge.t)
-      ~reset:(sexp_of_opt reg.reg_reset reg.reg_reset : (Sexp.t option[@sexp.option]))
+      ~clock:(sexp_of_next reg.spec.clock : Sexp.t)
+      ~clock_edge:(reg.spec.clock_edge : Edge.t)
+      ~reset:(sexp_of_opt reg.spec.reset reg.spec.reset : (Sexp.t option[@sexp.option]))
       ~reset_edge:
-        (sexp_of_edge reg.reg_reset reg.reg_reset_edge : (Sexp.t option[@sexp.option]))
-      ~reset_to:
-        (sexp_of_opt reg.reg_reset reg.reg_reset_value : (Sexp.t option[@sexp.option]))
-      ~clear:(sexp_of_opt reg.reg_clear reg.reg_clear : (Sexp.t option[@sexp.option]))
-      ~clear_level:
-        (sexp_of_level reg.reg_clear reg.reg_clear_level : (Sexp.t option[@sexp.option]))
-      ~clear_to:
-        (sexp_of_opt reg.reg_clear reg.reg_clear_value : (Sexp.t option[@sexp.option]))
-      ~enable:(sexp_of_opt reg.reg_enable reg.reg_enable : (Sexp.t option[@sexp.option]))]
+        (sexp_of_edge reg.spec.reset reg.spec.reset_edge : (Sexp.t option[@sexp.option]))
+      ~reset_to:(sexp_of_opt reg.spec.reset reg.reset_to : (Sexp.t option[@sexp.option]))
+      ~clear:(sexp_of_opt reg.spec.clear reg.spec.clear : (Sexp.t option[@sexp.option]))
+      ~clear_to:(sexp_of_opt reg.spec.clear reg.clear_to : (Sexp.t option[@sexp.option]))
+      ~enable:(sexp_of_opt reg.enable reg.enable : (Sexp.t option[@sexp.option]))]
 
 and sexp_of_memory_recursive
   ?show_uids
