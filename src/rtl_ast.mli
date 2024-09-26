@@ -29,6 +29,7 @@ type logic_declaration =
   { read : var
   ; write : var
   ; all_names : var list
+  ; initialize_to : Bits.t option
   }
 [@@deriving sexp_of]
 
@@ -125,6 +126,11 @@ type always =
       ; index : var
       ; rhs : var
       }
+  | Constant_memory_assignment of
+      { lhs : var
+      ; index : int
+      ; value : Bits.t
+      }
   | Case of
       { select : var
       ; cases : always list list
@@ -173,12 +179,16 @@ type statement =
       { sensitivity_list : sensitivity_list
       ; always : always
       }
+  | Initial of { always : always array }
   | Mux of
       { to_assignment : unit -> statement
       ; to_always : unit -> statement
       ; is_mux2 : bool
       }
-  | Multiport_mem of { always : statement array }
+  | Multiport_mem of
+      { always : statement array
+      ; initial : statement option
+      }
   | Mem_read_port of
       { lhs : var
       ; memory : var

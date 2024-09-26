@@ -5,9 +5,9 @@ let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
     match signal with
     | Empty -> assert false
     | Wire { signal_id = _; driver } ->
-      (match !driver with
-       | Empty -> signal
-       | otherwise -> transitively_resolve otherwise)
+      (match driver with
+       | None -> signal
+       | Some otherwise -> transitively_resolve otherwise)
     | Op2 _
     | Not _
     | Cat _
@@ -29,7 +29,7 @@ let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
       ~f_before:(fun unchanged signal ->
         match signal with
         | Reg { register = r; _ } ->
-          let clock_domain = transitively_resolve r.reg_clock in
+          let clock_domain = transitively_resolve r.clock.clock in
           Map.add_multi
             unchanged
             ~key:(Signal.uid clock_domain)

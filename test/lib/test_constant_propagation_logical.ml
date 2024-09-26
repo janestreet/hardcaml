@@ -3,7 +3,7 @@ open Signal
 open Test_constant_propagation.Trace
 
 let%expect_test "and" =
-  print_s @@ binary_op_tests "&:" ( &: ) ( &:. );
+  print_s @@ binary_op_tests "&:" ( &: ) ( &:. ) ( &+. );
   [%expect
     {|
     (&:
@@ -64,10 +64,7 @@ let%expect_test "[&:] with one constant" =
            (const
              (width 2)
              (value 0b01))
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))))))))
+           (wire (names (x)) (width 2))))))))
     (x
      &:
      2'b01
@@ -77,10 +74,7 @@ let%expect_test "[&:] with one constant" =
          and
          (width 2)
          (arguments (
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))
+           (wire (names (x)) (width 2))
            (const
              (width 2)
              (value 0b01))))))))
@@ -96,10 +90,7 @@ let%expect_test "[&:] with one constant" =
            (const
              (width 2)
              (value 0b10))
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))))))))
+           (wire (names (x)) (width 2))))))))
     (x
      &:
      2'b10
@@ -109,10 +100,7 @@ let%expect_test "[&:] with one constant" =
          and
          (width 2)
          (arguments (
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))
+           (wire (names (x)) (width 2))
            (const
              (width 2)
              (value 0b10))))))))
@@ -122,7 +110,7 @@ let%expect_test "[&:] with one constant" =
 ;;
 
 let%expect_test "or" =
-  print_s @@ binary_op_tests "|:" ( |: ) ( |:. );
+  print_s @@ binary_op_tests "|:" ( |: ) ( |:. ) ( |+. );
   [%expect
     {|
     (|:
@@ -183,10 +171,7 @@ let%expect_test "[|:] with one constant" =
            (const
              (width 2)
              (value 0b01))
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))))))))
+           (wire (names (x)) (width 2))))))))
     (x
      |:
      2'b01
@@ -196,10 +181,7 @@ let%expect_test "[|:] with one constant" =
          or
          (width 2)
          (arguments (
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))
+           (wire (names (x)) (width 2))
            (const
              (width 2)
              (value 0b01))))))))
@@ -215,10 +197,7 @@ let%expect_test "[|:] with one constant" =
            (const
              (width 2)
              (value 0b10))
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))))))))
+           (wire (names (x)) (width 2))))))))
     (x
      |:
      2'b10
@@ -228,10 +207,7 @@ let%expect_test "[|:] with one constant" =
          or
          (width 2)
          (arguments (
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))
+           (wire (names (x)) (width 2))
            (const
              (width 2)
              (value 0b10))))))))
@@ -241,7 +217,7 @@ let%expect_test "[|:] with one constant" =
 ;;
 
 let%expect_test "xor" =
-  print_s @@ binary_op_tests "^:" ( ^: ) ( ^:. );
+  print_s @@ binary_op_tests "^:" ( ^: ) ( ^:. ) ( ^+. );
   [%expect
     {|
     (^:

@@ -109,7 +109,7 @@ type ('a, 'b) with_valid2 = ('a, 'b) Comb_intf.with_valid2
 module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   include X
 
-  type tag = int
+  type tag = int [@@deriving equal]
 
   let port_names = map port_names_and_widths ~f:fst
   let port_widths = map port_names_and_widths ~f:snd
@@ -369,6 +369,12 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
 
   module Of_bits = Make_comb (Bits)
 
+  let opt t =
+    match t with
+    | None -> const None
+    | Some t -> map t ~f:(fun t -> Some t)
+  ;;
+
   module Of_signal = struct
     include Make_comb (Signal)
 
@@ -384,10 +390,33 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
       if named then map2 wires port_names ~f:Signal.( -- ) else wires
     ;;
 
-    let reg ?enable spec t = map ~f:(Signal.reg ?enable spec) t
+    let reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec t =
+      map4
+        (opt initialize_to)
+        (opt reset_to)
+        (opt clear_to)
+        t
+        ~f:(fun initialize_to reset_to clear_to d ->
+          Signal.reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d)
+    ;;
 
-    let pipeline ?attributes ?enable ~n spec t =
-      map ~f:(Signal.pipeline ?attributes ?enable ~n spec) t
+    let pipeline ?attributes ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~n t =
+      map4
+        (opt initialize_to)
+        (opt reset_to)
+        (opt clear_to)
+        t
+        ~f:(fun initialize_to reset_to clear_to d ->
+          Signal.pipeline
+            ?attributes
+            ?enable
+            ?initialize_to
+            ?reset_to
+            ?clear
+            ?clear_to
+            ~n
+            spec
+            d)
     ;;
 
     let inputs () = wires () ~named:true
@@ -407,10 +436,24 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
 
   module Of_always = struct
     let assign dst src = map2 dst src ~f:Always.( <-- ) |> to_list |> Always.proc
+    let ( <-- ) = assign
     let value t = map t ~f:(fun a -> a.Always.Variable.value)
 
-    let reg ?enable spec =
-      map port_widths ~f:(fun width -> Always.Variable.reg spec ?enable ~width)
+    let reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec =
+      map4
+        (opt initialize_to)
+        (opt reset_to)
+        (opt clear_to)
+        port_widths
+        ~f:(fun initialize_to reset_to clear_to width ->
+          Always.Variable.reg
+            spec
+            ?enable
+            ?initialize_to
+            ?reset_to
+            ?clear
+            ?clear_to
+            ~width)
     ;;
 
     let wire f = map port_widths ~f:(fun width -> Always.Variable.wire ~default:(f width))

@@ -116,7 +116,6 @@ module Structural_rtl_component = struct
           { name : string
           ; clock_edge : Edge.t
           ; reset_edge : Edge.t
-          ; clear_level : Level.t
           ; width : int
           }
     [@@deriving compare, sexp_of]
@@ -144,7 +143,7 @@ module Structural_rtl_component = struct
     | Mul { signed = true; name; width_a; width_b } ->
       Circuit.create_exn ~name [ output "o" (input "i0" width_a *+ input "i1" width_b) ]
     | Not { name; width } -> Circuit.create_exn ~name [ output "o" ~:(input "i" width) ]
-    | Reg { name; clock_edge; reset_edge; clear_level; width } ->
+    | Reg { name; clock_edge; reset_edge; width } ->
       Circuit.create_exn
         ~name
         [ output
@@ -152,16 +151,14 @@ module Structural_rtl_component = struct
             (reg
                (Reg_spec.create
                   ~clock:(input "clock" 1)
-                  ~clear:(input "clear" 1)
+                  ~clock_edge
                   ~reset:(input "reset" 1)
-                  ()
-                |> Reg_spec.override
-                     ~clock_edge
-                     ~reset_edge
-                     ~reset_to:(input "reset_value" width)
-                     ~clear_level
-                     ~clear_to:(input "clear_value" width))
+                  ~reset_edge
+                  ~clear:(input "clear" 1)
+                  ())
                ~enable:(input "enable" 1)
+               ~reset_to:(input "reset_to" width)
+               ~clear_to:(input "clear_to" width)
                (input "d" width))
         ]
   ;;
@@ -670,7 +667,6 @@ module Lib () = struct
     ?(reset_edge = Edge.Rising)
     ?reset_value
     ?clear
-    ?(clear_level = Level.High)
     ?clear_value
     ?enable
     data
@@ -687,28 +683,12 @@ module Lib () = struct
       ;;
     end
     in
-    let module L = struct
-      let to_string = function
-        | Level.High -> "h"
-        | Low -> "l"
-      ;;
-
-      let to_int = function
-        | Level.High -> 1
-        | Low -> 0
-      ;;
-    end
-    in
     let wd = width data in
     let or_gnd = Option.value ~default:gnd in
     let or_vdd = Option.value ~default:vdd in
     let or_edge = function
       | Edge.Rising -> or_gnd
       | Falling -> or_vdd
-    in
-    let or_level = function
-      | Level.High -> or_gnd
-      | Low -> or_vdd
     in
     let or_zero = function
       | None -> zero wd
@@ -719,16 +699,16 @@ module Lib () = struct
       [ "w" ==> GInt (width data)
       ; "ce" ==> GInt (E.to_int clock_edge)
       ; "re" ==> GInt (E.to_int reset_edge)
-      ; "cl" ==> GInt (L.to_int clear_level)
+      ; "cl" ==> GInt 1
       ]
     in
     let i =
       [ "clock" ==> clock
       ; "reset" ==> or_edge reset_edge reset
       ; "reset_value" ==> or_zero reset_value
-      ; "clear" ==> or_level clear_level clear
+      ; "clear" ==> or_gnd clear
       ; "clear_value" ==> or_zero clear_value
-      ; "enable" ==> or_gnd enable
+      ; "enable" ==> or_vdd enable
       ; "d" ==> data
       ]
     in
@@ -737,13 +717,10 @@ module Lib () = struct
       let name = "reg" in
       if use_generic_instantiations
       then g, [%string "%{prefix}%{name}"]
-      else
-        ( []
-        , [%string
-            "%{prefix}%{name}_%{wd#Int}_%{clock_edge#E}%{reset_edge#E}%{clear_level#L}"] )
+      else [], [%string "%{prefix}%{name}_%{wd#Int}_%{clock_edge#E}%{reset_edge#E}"]
     in
     add_structural_rtl_component
-      (Reg { name; clock_edge; reset_edge; clear_level; width = width data });
+      (Reg { name; clock_edge; reset_edge; width = width data });
     inst name ~g ~i ~o;
     q
   ;;

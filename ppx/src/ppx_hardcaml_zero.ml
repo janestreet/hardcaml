@@ -892,18 +892,20 @@ let declare_let_binding_extension ~name ~generate_naming_function =
 
           aren't supported. *)
        let bindings =
-         List.map bindings ~f:(fun { pvb_pat; pvb_expr; pvb_attributes; pvb_loc } ->
+         List.map bindings ~f:(fun { pvb_pat; pvb_expr; pvb_attributes; pvb_loc; _ } ->
            (* The [pvb_pat] must be a simple assignment to a name right now. Maybe we
               can add support for structure unpacking later. *)
            let loc = { pvb_loc with loc_ghost = true } in
            match pvb_pat.ppat_desc with
            | Ppat_var { txt; loc = _ } ->
-             { pvb_pat
-             ; pvb_expr =
-                 [%expr [%e generate_naming_function ~arg ~loc ~name:txt] [%e pvb_expr]]
-             ; pvb_attributes
-             ; pvb_loc
-             }
+             let vb =
+               value_binding
+                 ~loc:pvb_loc
+                 ~pat:pvb_pat
+                 ~expr:
+                   [%expr [%e generate_naming_function ~arg ~loc ~name:txt] [%e pvb_expr]]
+             in
+             { vb with pvb_attributes }
            | _ ->
              Location.raise_errorf
                ~loc:pvb_pat.ppat_loc

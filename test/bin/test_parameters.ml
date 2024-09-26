@@ -1,7 +1,9 @@
 (* Generate Hardcaml instantiations for VHDL and Verilog to test various
    parameter types.  See hardcaml/test/rtl/README. *)
 
-open! Import
+open Core
+open Hardcaml
+open Hardcaml_test
 
 let () =
   Out_channel.with_file "test_instantiate_verilog.v" ~f:(fun f ->

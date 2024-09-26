@@ -346,6 +346,7 @@ module type S = sig
   val ( &: ) : t -> t -> t
 
   val ( &:. ) : t -> int -> t
+  val ( &+. ) : t -> int -> t
 
   (** a <>:. 0 &: b <>:. 0 *)
   val ( &&: ) : t -> t -> t
@@ -354,6 +355,7 @@ module type S = sig
   val ( |: ) : t -> t -> t
 
   val ( |:. ) : t -> int -> t
+  val ( |+. ) : t -> int -> t
 
   (** a <>:. 0 |: b <>:. 0 *)
   val ( ||: ) : t -> t -> t
@@ -362,6 +364,7 @@ module type S = sig
   val ( ^: ) : t -> t -> t
 
   val ( ^:. ) : t -> int -> t
+  val ( ^+. ) : t -> int -> t
 
   (** logical not *)
   val ( ~: ) : t -> t
@@ -370,11 +373,13 @@ module type S = sig
   val ( +: ) : t -> t -> t
 
   val ( +:. ) : t -> int -> t
+  val ( ++. ) : t -> int -> t
 
   (** subtraction *)
   val ( -: ) : t -> t -> t
 
   val ( -:. ) : t -> int -> t
+  val ( -+. ) : t -> int -> t
 
   (** negation *)
   val negate : t -> t
@@ -389,11 +394,13 @@ module type S = sig
   val ( ==: ) : t -> t -> t
 
   val ( ==:. ) : t -> int -> t
+  val ( ==+. ) : t -> int -> t
 
   (** inequality *)
   val ( <>: ) : t -> t -> t
 
   val ( <>:. ) : t -> int -> t
+  val ( <>+. ) : t -> int -> t
 
   (** less than *)
   val ( <: ) : t -> t -> t

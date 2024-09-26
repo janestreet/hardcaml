@@ -84,6 +84,7 @@ end
 module type Printable = sig
   type t
   type register
+  type reg_spec
 
   (** [sexp_of_signal_recursive ~depth signal] converts a signal recursively to a sexp for
       up to [depth] levels.  If [show_uids] is false then signal identifiers will not be
@@ -97,6 +98,7 @@ module type Printable = sig
 
   val sexp_of_t : t -> Sexp.t
   val sexp_of_register : register -> Sexp.t
+  val sexp_of_reg_spec : reg_spec -> Sexp.t
   val to_string : t -> string
 end
 
@@ -181,7 +183,7 @@ module type Type = sig
         }
     | Wire of
         { signal_id : signal_id
-        ; driver : t ref
+        ; mutable driver : t option
         }
     | Select of
         { signal_id : signal_id
@@ -191,13 +193,14 @@ module type Type = sig
         }
     | Reg of
         { signal_id : signal_id
-        ; register : register
+        ; register : t register
         ; d : t
         }
     | Multiport_mem of
         { signal_id : signal_id
         ; size : int
         ; write_ports : t Write_port.t array
+        ; initialize_to : Bits.t array option
         }
     | Mem_read_port of
         { signal_id : signal_id
@@ -214,21 +217,44 @@ module type Type = sig
       template, where each part is optional:
 
       {v
+       reg [7:0] d = initialize_to;
+
        always @(?edge clock, ?edge reset)
-         if (reset == reset_level) d <= reset_value;
-         else if (clear == clear_level) d <= clear_value;
+         if (reset == reset_level) d <= reset_to;
+         else if (clear) d <= clear_to;
          else if (enable) d <= ...;
      v} *)
-  and register =
-    { reg_clock : t (** clock *)
-    ; reg_clock_edge : Edge.t (** active clock edge *)
-    ; reg_reset : t (** asynchronous reset *)
-    ; reg_reset_edge : Edge.t (** asynchronous reset edge *)
-    ; reg_reset_value : t (** asychhronous reset value *)
-    ; reg_clear : t (** synchronous clear *)
-    ; reg_clear_level : Level.t (** synchronous clear level *)
-    ; reg_clear_value : t (** sychhronous clear value *)
-    ; reg_enable : t (** global system enable *)
+
+  and reg_spec =
+    { clock : t
+    ; clock_edge : Edge.t
+    ; reset : t option
+    ; reset_edge : Edge.t
+    ; clear : t option
+    }
+
+  and 'a clock_spec =
+    { clock : 'a (** clock *)
+    ; clock_edge : Edge.t (** active clock edge *)
+    }
+
+  and 'a reset_spec =
+    { reset : 'a (** asynchronous reset *)
+    ; reset_edge : Edge.t (** asynchronous reset edge *)
+    ; reset_to : 'a (** asynchronous reset value *)
+    }
+
+  and 'a clear_spec =
+    { clear : 'a (** synchronous clear *)
+    ; clear_to : 'a (** synchronous clear value *)
+    }
+
+  and 'a register =
+    { clock : 'a clock_spec
+    ; reset : 'a reset_spec option
+    ; clear : 'a clear_spec option
+    ; enable : 'a option (** clock enable *)
+    ; initialize_to : 'a option (** initial value (not supported by all tools) *)
     }
 
   and instantiation =
@@ -241,6 +267,24 @@ module type Type = sig
     ; inst_lib : string
     ; inst_arch : string
     }
+end
+
+module type Register = sig
+  type signal
+  type reg_spec
+  type 'a t
+
+  val map : 'a t -> f:('a -> 'b) -> 'b t
+
+  val of_reg_spec
+    :  reg_spec
+    -> enable:signal option
+    -> initialize_to:signal option
+    -> reset_to:signal option
+    -> clear_to:signal option
+    -> clear:signal option
+    -> signal
+    -> signal t
 end
 
 module type Signal__type = sig
@@ -265,7 +309,18 @@ module type Signal__type = sig
   (** Represents a signal's full set of dependencies. *)
   module Deps : Deps
 
-  module type Printable = Printable with type t := t and type register := register
+  module Register :
+    Register
+    with type 'a t = 'a register
+     and type signal := t
+     and type reg_spec := reg_spec
+
+  module type Printable =
+    Printable
+    with type t := t
+     and type register := t register
+     and type reg_spec := reg_spec
+
   module type Is_a = Is_a with type t := t and type signal_op := signal_op
 
   include Printable
@@ -311,6 +366,15 @@ module type Signal__type = sig
 
   (** Constructs a signal_id type. *)
   val make_id : int -> signal_id
+
+  (** Create a constant *)
+  val of_bits : Bits.t -> t
+
+  val is_vdd : t -> bool
+  val is_gnd : t -> bool
+
+  (** Signal is a register or a memory with an [initialize_to] value specified *)
+  val has_initializer : t -> bool
 
   (** Functions for working with metadata. *)
 

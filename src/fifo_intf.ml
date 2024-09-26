@@ -23,7 +23,6 @@ module T = struct
     ?nearly_empty:int (** default is [1] **)
     -> ?nearly_full:int (** default is [depth-1] **)
     -> ?overflow_check:bool (** default is [true] *)
-    -> ?reset:Signal.t (** default is [empty] **)
     -> ?underflow_check:bool (** default is [true] *)
     -> ?ram_attributes:Rtl_attribute.t list (** default is blockram *)
     -> ?scope:Scope.t (* to override naming prefix *)
@@ -77,10 +76,6 @@ module type S = sig
 
   (** [create ~clock ~clear ~wr ~d ~rd capacity] builds a FIFO with [capacity] elements
       which is written with [d] when [wr] is high and read when [rd] is high.
-
-      The default reset configuration is to use a synchronous [clr] signal. An
-      asynchronous [rst] may be optionally provided. One of [clr] or [rst] must be
-      non-empty.
 
       Optional overflow and underflow checking may be used. Data will not be
       written(/read) when the fifo is [full](/[empty]) regardles or the [wr]/([rd])

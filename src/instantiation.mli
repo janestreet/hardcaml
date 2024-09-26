@@ -28,18 +28,6 @@ module With_interface (I : Interface.S) (O : Interface.S) : sig
     -> Interface.Create_fn(I)(O).t
 end
 
-val create_with_interface
-  :  (module Interface.S_Of_signal with type Of_signal.t = 'i)
-  -> (module Interface.S_Of_signal with type Of_signal.t = 'o)
-  -> ?lib:string
-  -> ?arch:string
-  -> ?instance:string
-  -> ?parameters:Parameter.t list
-  -> ?attributes:Rtl_attribute.t list
-  -> name:string
-  -> 'i
-  -> 'o
-
 module Expert : sig
   (* Check that name only contains alphanumeric or underscore characters.  *)
   val validate_module_name : string -> unit

@@ -326,8 +326,8 @@ let structural_compare ?check_names c0 c1 =
 
 let instantiations t = t.instantiations
 
-module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = struct
-  type create = I.Of_signal.t -> O.Of_signal.t
+module With_interface (I : Interface.S) (O : Interface.S) = struct
+  type create = Interface.Create_fn(I)(O).t
 
   let check_io_port_sets_match circuit =
     let actual_ports ports =
@@ -406,18 +406,20 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
     check_widths_match circuit
   ;;
 
-  let move_port_attributes from_ to_ =
-    Signal.Type.set_attributes to_ (Signal.Type.get_attributes from_);
-    Signal.Type.set_attributes from_ []
-  ;;
-
   let check_alist_of_one_direction name direction alist =
     ignore
       (check_ports_in_one_direction name direction (List.map ~f:snd alist)
        : Set.M(String).t)
   ;;
 
-  let create_exn ?(config = Config.default) ~name logic =
+  let create_exn
+    ?(config = Config.default)
+    ?input_attributes
+    ?output_attributes
+    ~name
+    create_fn
+    =
+    (* Create inputs and apply attributes. *)
     let circuit_inputs =
       let ports =
         List.map I.Names_and_widths.port_names_and_widths ~f:(fun (n, b) ->
@@ -426,8 +428,13 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
       check_alist_of_one_direction name "Input" ports;
       I.Unsafe_assoc_by_port_name.of_alist ports
     in
+    Option.iter input_attributes ~f:(fun input_attributes ->
+      I.iter2 circuit_inputs input_attributes ~f:Signal.Type.set_attributes);
+    (* Create wires on the inputs - [create_fn] may want to set names and such on them. *)
     let inputs = I.map circuit_inputs ~f:Signal.wireof in
-    let outputs = logic inputs in
+    (* Create the design. *)
+    let outputs = create_fn inputs in
+    (* Construct outputs and apply attributes. *)
     let circuit_outputs =
       let ports =
         List.map2_exn O.Names_and_widths.port_names (O.to_list outputs) ~f:(fun n s ->
@@ -436,16 +443,21 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
       check_alist_of_one_direction name "Output" ports;
       O.Unsafe_assoc_by_port_name.of_alist ports
     in
-    I.iter2 inputs circuit_inputs ~f:move_port_attributes;
-    O.iter2 outputs circuit_outputs ~f:move_port_attributes;
+    Option.iter output_attributes ~f:(fun output_attributes ->
+      O.iter2 circuit_outputs output_attributes ~f:Signal.Type.set_attributes);
+    (* Create the circuit. *)
     let circuit =
       create_exn ~config ~name (config.modify_outputs (O.to_list circuit_outputs))
     in
+    (* Bodge - create phantom inputs which are inputs which may not be used in the
+       implementation (perhaps due to some configuration option) but exist in the
+       interface. *)
     let circuit =
       if config.add_phantom_inputs
       then set_phantom_inputs circuit I.Names_and_widths.port_names_and_widths
       else circuit
     in
+    (* Perform port checks. *)
     (match config.port_checks with
      | Relaxed -> ()
      | Port_sets -> check_io_port_sets_match circuit
@@ -453,12 +465,3 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
     circuit
   ;;
 end
-
-let create_with_interface
-  (type i o)
-  (module I : Interface.S_Of_signal with type Of_signal.t = i)
-  (module O : Interface.S_Of_signal with type Of_signal.t = o)
-  =
-  let module C = With_interface (I) (O) in
-  C.create_exn
-;;

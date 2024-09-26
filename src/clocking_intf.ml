@@ -8,12 +8,22 @@ module type S = sig
   val add_clear : Signal.t t -> Signal.t -> Signal.t t
   val to_spec : Signal.t t -> Reg_spec.t
   val to_spec_no_clear : Signal.t t -> Reg_spec.t
-  val reg : Signal.t t -> ?enable:Signal.t -> Signal.t -> Signal.t
+
+  val reg
+    :  Signal.t t
+    -> ?enable:Signal.t
+    -> ?clear:Signal.t
+    -> ?clear_to:Signal.t
+    -> Signal.t
+    -> Signal.t
+
   val reg_no_clear : Signal.t t -> ?enable:Signal.t -> Signal.t -> Signal.t
 
   val pipeline
     :  ?attributes:Rtl_attribute.t list
     -> ?enable:Signal.t
+    -> ?clear:Signal.t
+    -> ?clear_to:Signal.t
     -> Signal.t t
     -> n:int
     -> Signal.t
@@ -21,16 +31,25 @@ module type S = sig
 
   val reg_fb
     :  ?enable:Signal.t
+    -> ?clear:Signal.t
+    -> ?clear_to:Signal.t
     -> Signal.t t
     -> width:int
     -> f:(Signal.t -> Signal.t)
     -> Signal.t
 
   module Var : sig
-    val reg : ?enable:Signal.t -> Signal.t t -> width:int -> Always.Variable.t
-
-    val reg_with_default
+    val reg
       :  ?enable:Signal.t
+      -> ?clear:Signal.t
+      -> ?clear_to:Signal.t
+      -> Signal.t t
+      -> width:int
+      -> Always.Variable.t
+
+    val reg_with_int_default
+      :  ?enable:Signal.t
+      -> ?clear:Signal.t
       -> Signal.t t
       -> width:int
       -> clear_to:int

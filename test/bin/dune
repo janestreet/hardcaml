@@ -1,7 +1,8 @@
 (executables
  (modes byte exe)
- (names test_parameters test_multiport_memory auto_naming)
- (libraries base hardcaml hardcaml_test hardcaml_waveterm.interactive stdio)
+ (names test_parameters test_multiport_memory auto_naming test_rom)
+ (libraries core core_unix.command_unix hardcaml hardcaml_test
+   hardcaml_waveterm.interactive stdio)
  (preprocess
   (pps ppx_jane)))
 

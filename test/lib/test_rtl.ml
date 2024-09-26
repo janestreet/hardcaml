@@ -22,11 +22,7 @@ let%expect_test "Port names must be legal" =
         (name       1^7)
         (legal_name _1_7)
         (note       "Hardcaml will not change ports names.")
-        (port (
-          wire
-          (names (1^7))
-          (width   1)
-          (data_in empty))))))
+        (port (wire (names (1^7)) (width 1))))))
     |}]
 ;;
 
@@ -50,15 +46,8 @@ let%expect_test "Port name clashes with reserved name" =
 
 let%expect_test "output wire is width 0 (or empty)" =
   (* The exception is raised by the [output] function. *)
-  require_does_raise (fun () -> rtl_write_null [ output "x" (empty +: empty) ]);
-  [%expect
-    {|
-    ("width of wire was specified as 0" (
-      wire (
-        wire
-        (width   0)
-        (data_in empty))))
-    |}]
+  require_does_raise (fun () -> rtl_write_null [ output "x" empty ]);
+  [%expect {| ("Width of signals must be >= 0" (width 0)) |}]
 ;;
 
 let%expect_test "instantiation input is empty" =

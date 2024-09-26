@@ -1,34 +1,40 @@
+(** Clock, reset and clear specification for registers. *)
+
+open Base
+
+type t [@@deriving sexp_of]
 type signal = Signal__type.t
 
-type t = Signal__type.register =
-  { reg_clock : signal
-  ; reg_clock_edge : Edge.t
-  ; reg_reset : signal
-  ; reg_reset_edge : Edge.t
-  ; reg_reset_value : signal
-  ; reg_clear : signal
-  ; reg_clear_level : Level.t
-  ; reg_clear_value : signal
-  ; reg_enable : signal
-  }
-[@@deriving sexp_of]
+(** Create a [Reg_spec.t]. You must at a minimum provide a clock. [clear] and [reset] are
+    optional. The [clock_edge] and [reset_edge] default to [Rising]. *)
+val create
+  :  ?clock_edge:Edge.t
+  -> ?reset:signal
+  -> ?reset_edge:Edge.t
+  -> ?clear:signal
+  -> unit
+  -> clock:signal
+  -> t
 
-val create : ?clear:signal -> ?reset:signal -> unit -> clock:signal -> t
-
+(** Override one or more fields of an existing [Reg_spec.t]. *)
 val override
   :  ?clock:signal
   -> ?clock_edge:Edge.t
   -> ?reset:signal
   -> ?reset_edge:Edge.t
-  -> ?reset_to:signal
   -> ?clear:signal
-  -> ?clear_level:Level.t
-  -> ?clear_to:signal
-  -> ?global_enable:signal
   -> t
   -> t
 
-val reg_empty : t
 val clock : t -> signal
-val clear : t -> signal
-val reset : t -> signal
+val clock_edge : t -> Edge.t
+val reset : t -> signal option
+val reset_exn : t -> signal
+val reset_edge : t -> Edge.t
+val clear : t -> signal option
+val clear_exn : t -> signal
+
+(** For internal use. *)
+module Expert : sig
+  val to_signal_type_reg_spec : t -> Signal__type.reg_spec
+end

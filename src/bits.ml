@@ -32,6 +32,17 @@ module Mutable = struct
     done
   ;;
 
+  let randomize ~random_state t =
+    let words = words t in
+    for i = 0 to words - 1 do
+      unsafe_set_int64
+        t
+        i
+        (Splittable_random.int64 random_state ~lo:Int64.min_value ~hi:Int64.max_value)
+    done;
+    mask t
+  ;;
+
   let wire _ = empty
   let ( -- ) a _ = a
   let vdd = of_constant (Constant.of_int ~width:1 1)

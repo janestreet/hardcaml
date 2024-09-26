@@ -1,69 +1,64 @@
 (** Definition of clock, reset and clear signals for sequential logic (ie registers). *)
 
-type signal = Signal__type.t
+open Base
 
-type t = Signal__type.register =
-  { reg_clock : signal
-  ; reg_clock_edge : Edge.t
-  ; reg_reset : signal
-  ; reg_reset_edge : Edge.t
-  ; reg_reset_value : signal
-  ; reg_clear : signal
-  ; reg_clear_level : Level.t
-  ; reg_clear_value : signal
-  ; reg_enable : signal
+type signal = Signal__type.t [@@deriving sexp_of]
+
+type t = Signal__type.reg_spec =
+  { clock : signal
+  ; clock_edge : Edge.t
+  ; reset : signal option
+  ; reset_edge : Edge.t
+  ; clear : signal option
   }
+[@@deriving fields ~getters]
 
-let sexp_of_t = Signal__type.sexp_of_register
+let sexp_of_t = Signal__type.sexp_of_reg_spec
+let reset_exn t = reset t |> Option.value_exn
+let clear_exn t = clear t |> Option.value_exn
 
-let reg_empty : t =
-  { reg_clock = Empty
-  ; reg_clock_edge = Rising
-  ; reg_reset = Empty
-  ; reg_reset_edge = Rising
-  ; reg_reset_value = Empty
-  ; reg_clear = Empty
-  ; reg_clear_level = High
-  ; reg_clear_value = Empty
-  ; reg_enable = Empty
-  }
+let assert_non_empty typ_ t =
+  if Signal__type.is_empty t
+  then raise_s [%message "[Reg_spec] signal must not be empty" typ_ (t : signal)]
 ;;
 
-let override
-  ?clock
-  ?clock_edge
-  ?reset
-  ?reset_edge
-  ?reset_to
-  ?clear
-  ?clear_level
-  ?clear_to
-  ?global_enable
-  (spec : t)
+let assert_non_empty_or_option typ_ t = Option.iter t ~f:(assert_non_empty typ_)
+
+let validate { clock; clock_edge = _; reset; reset_edge = _; clear } =
+  assert_non_empty "clock" clock;
+  assert_non_empty_or_option "reset" reset;
+  assert_non_empty_or_option "clear" clear
+;;
+
+let create ?(clock_edge = Edge.Rising) ?reset ?(reset_edge = Edge.Rising) ?clear () ~clock
   =
-  { Signal__type.reg_clock = Option.value clock ~default:spec.reg_clock
-  ; reg_clock_edge = Option.value clock_edge ~default:spec.reg_clock_edge
-  ; reg_reset = Option.value reset ~default:spec.reg_reset
-  ; reg_reset_edge = Option.value reset_edge ~default:spec.reg_reset_edge
-  ; reg_reset_value = Option.value reset_to ~default:spec.reg_reset_value
-  ; reg_clear = Option.value clear ~default:spec.reg_clear
-  ; reg_clear_level = Option.value clear_level ~default:spec.reg_clear_level
-  ; reg_clear_value = Option.value clear_to ~default:spec.reg_clear_value
-  ; reg_enable = Option.value global_enable ~default:spec.reg_enable
-  }
+  let t = { clock; clock_edge; reset; reset_edge; clear } in
+  validate t;
+  t
 ;;
 
-let create ?clear ?reset () ~clock =
-  let spec =
-    match clear, reset with
-    | None, None -> reg_empty
-    | None, Some reset -> { reg_empty with reg_reset = reset }
-    | Some clear, None -> { reg_empty with reg_clear = clear }
-    | Some clear, Some reset -> { reg_empty with reg_reset = reset; reg_clear = clear }
+let override ?clock ?clock_edge ?reset ?reset_edge ?clear (spec : t) =
+  let t =
+    { Signal__type.clock =
+        (match clock with
+         | None -> spec.clock
+         | Some clock -> clock)
+    ; clock_edge = Option.value clock_edge ~default:spec.clock_edge
+    ; reset =
+        (match reset with
+         | None -> spec.reset
+         | Some reset -> Some reset)
+    ; reset_edge = Option.value reset_edge ~default:spec.reset_edge
+    ; clear =
+        (match clear with
+         | None -> spec.clear
+         | Some clear -> Some clear)
+    }
   in
-  { spec with reg_clock = clock }
+  validate t;
+  t
 ;;
 
-let clock (spec : t) = spec.reg_clock
-let clear (spec : t) = spec.reg_clear
-let reset (spec : t) = spec.reg_reset
+module Expert = struct
+  let to_signal_type_reg_spec = Fn.id
+end

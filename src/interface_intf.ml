@@ -148,15 +148,27 @@ module type Of_signal_functions = sig
     -> t
 
   (** Defines a register over values in this interface. [enable] defaults to vdd. *)
-  val reg : ?enable:Signal.t -> Reg_spec.t -> t -> t
+  val reg
+    :  ?enable:Signal.t
+    -> ?initialize_to:t
+    -> ?reset_to:t
+    -> ?clear:Signal.t
+    -> ?clear_to:t
+    -> Reg_spec.t
+    -> t
+    -> t
 
   (** Defines a register pipeline over values in this interface. [enable]
       defaults to vdd and [attributes] defaults to an empty list. *)
   val pipeline
     :  ?attributes:Rtl_attribute.t list
     -> ?enable:Signal.t
-    -> n:int
+    -> ?initialize_to:t
+    -> ?reset_to:t
+    -> ?clear:Signal.t
+    -> ?clear_to:t
     -> Reg_spec.t
+    -> n:int
     -> t
     -> t
 
@@ -192,7 +204,7 @@ module type S = sig
   (** [const x] sets each port to [x] *)
   val const : 'a -> 'a t
 
-  type tag
+  type tag [@@deriving equal]
 
   val tags : tag t
 
@@ -285,8 +297,18 @@ module type S = sig
     (** Assign a interface containing variables in an always block. *)
     val assign : Always.Variable.t t -> Signal.t t -> Always.t
 
+    (** Shorthand for [assign]. *)
+    val ( <-- ) : Always.Variable.t t -> Signal.t t -> Always.t
+
     (** Creates a interface container with register variables. *)
-    val reg : ?enable:Signal.t -> Reg_spec.t -> Always.Variable.t t
+    val reg
+      :  ?enable:Signal.t
+      -> ?initialize_to:Signal.t t
+      -> ?reset_to:Signal.t t
+      -> ?clear:Signal.t
+      -> ?clear_to:Signal.t t
+      -> Reg_spec.t
+      -> Always.Variable.t t
 
     (** Creates a interface container with wire variables, e.g. [Foo.Of_always.wire
         Signal.zero], which would yield wires defaulting to zero. *)

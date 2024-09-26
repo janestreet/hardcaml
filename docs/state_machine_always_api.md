@@ -26,7 +26,7 @@ A state machine is constructed with the following function:
     ?auto_wave_format:bool ->
     ?enable:t ->
     (module Hardcaml.Always.State_machine.State with type t = 'a) ->
-    Type.register -> 'a Always.State_machine.t
+    Hardcaml.Reg_spec.t -> 'a Always.State_machine.t
 = <fun>
 ```
 

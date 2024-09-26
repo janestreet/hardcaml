@@ -109,18 +109,16 @@ val structural_compare : ?check_names:bool -> t -> t -> bool
 (** returns the list of instantiations in this circuit *)
 val instantiations : t -> Signal.Type.instantiation list
 
-val create_with_interface
-  :  (module Interface.S_Of_signal with type Of_signal.t = 'i)
-  -> (module Interface.S_Of_signal with type Of_signal.t = 'o)
-  -> ?config:Config.t
-  -> name:string
-  -> ('i -> 'o)
-  -> t
-
 module With_interface (I : Interface.S) (O : Interface.S) : sig
   type create = Interface.Create_fn(I)(O).t
 
   (** Create a circuit with [inputs] and [outputs] automatically defined and labelled
       according to the input ([I]) and output ([O]) interfaces. *)
-  val create_exn : ?config:Config.t -> name:string -> create -> t
+  val create_exn
+    :  ?config:Config.t
+    -> ?input_attributes:Rtl_attribute.t list I.t
+    -> ?output_attributes:Rtl_attribute.t list O.t
+    -> name:string
+    -> create
+    -> t
 end

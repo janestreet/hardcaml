@@ -52,22 +52,20 @@ let inputs graph =
     depth_first_search graph ~init:[] ~f_before:(fun acc signal ->
       let open Signal in
       match signal with
-      | Wire { driver; _ } ->
-        if not (Signal.is_empty !driver)
-        then acc
-        else (
-          match names signal with
-          | [ _ ] -> signal :: acc
-          | [] ->
-            raise_s
-              [%message
-                "circuit input signal must have a port name (unassigned wire?)"
-                  ~input_signal:(signal : Signal.t)]
-          | _ ->
-            raise_s
-              [%message
-                "circuit input signal should only have one port name"
-                  ~input_signal:(signal : Signal.t)])
+      | Wire { driver = Some _; _ } -> acc
+      | Wire { driver = None; _ } ->
+        (match names signal with
+         | [ _ ] -> signal :: acc
+         | [] ->
+           raise_s
+             [%message
+               "circuit input signal must have a port name (unassigned wire?)"
+                 ~input_signal:(signal : Signal.t)]
+         | _ ->
+           raise_s
+             [%message
+               "circuit input signal should only have one port name"
+                 ~input_signal:(signal : Signal.t)])
       | _ -> acc))
 ;;
 
@@ -161,29 +159,9 @@ let normalize_uids t =
           Select { signal_id = update_id signal_id; arg; high; low }
         | Reg { signal_id; register; d } ->
           let d = rewrite_signal_upto_wires d in
-          let register =
-            let reg_clock = rewrite_signal_upto_wires register.reg_clock in
-            let reg_clock_edge = register.reg_clock_edge in
-            let reg_reset = rewrite_signal_upto_wires register.reg_reset in
-            let reg_reset_edge = register.reg_reset_edge in
-            let reg_reset_value = rewrite_signal_upto_wires register.reg_reset_value in
-            let reg_clear = rewrite_signal_upto_wires register.reg_clear in
-            let reg_clear_level = register.reg_clear_level in
-            let reg_clear_value = rewrite_signal_upto_wires register.reg_clear_value in
-            let reg_enable = rewrite_signal_upto_wires register.reg_enable in
-            { Type.reg_clock
-            ; reg_clock_edge
-            ; reg_reset
-            ; reg_reset_edge
-            ; reg_reset_value
-            ; reg_clear
-            ; reg_clear_level
-            ; reg_clear_value
-            ; reg_enable
-            }
-          in
+          let register = Signal.Type.Register.map register ~f:rewrite_signal_upto_wires in
           Reg { signal_id = update_id signal_id; register; d }
-        | Multiport_mem { signal_id; size; write_ports } ->
+        | Multiport_mem { signal_id; size; write_ports; initialize_to } ->
           let rewrite_write_port (write_port : _ Write_port.t) =
             let write_clock = rewrite_signal_upto_wires write_port.write_clock in
             let write_address = rewrite_signal_upto_wires write_port.write_address in
@@ -192,7 +170,8 @@ let normalize_uids t =
             { Write_port.write_clock; write_address; write_enable; write_data }
           in
           let write_ports = Array.map write_ports ~f:rewrite_write_port in
-          Multiport_mem { signal_id = update_id signal_id; size; write_ports }
+          Multiport_mem
+            { signal_id = update_id signal_id; size; write_ports; initialize_to }
         | Mem_read_port { signal_id; memory; read_address } ->
           let read_address = rewrite_signal_upto_wires read_address in
           let memory = rewrite_signal_upto_wires memory in
@@ -221,22 +200,20 @@ let normalize_uids t =
       ~new_signal:
         (match old_wire with
          | Wire { signal_id; _ } ->
-           Wire
-             { signal_id = { signal_id with s_id = fresh_id () }
-             ; driver = ref Signal.empty
-             }
+           Wire { signal_id = { signal_id with s_id = fresh_id () }; driver = None }
          | _ -> expecting_a_wire old_wire));
   (* rewrite from every wire *)
   List.iter old_wires ~f:(function
-    | Wire { driver; _ } -> ignore (rewrite_signal_upto_wires !driver : Signal.t)
+    | Wire { driver; _ } ->
+      Option.iter driver ~f:(fun driver ->
+        ignore (rewrite_signal_upto_wires driver : Signal.t))
     | signal -> expecting_a_wire signal);
   (* re-attach wires *)
   List.iter old_wires ~f:(fun old_wire ->
     match old_wire with
     | Wire { driver; _ } ->
-      if not (Signal.is_empty !driver)
-      then (
-        let new_driver = new_signal !driver in
+      Option.iter driver ~f:(fun driver ->
+        let new_driver = new_signal driver in
         let new_wire = new_signal old_wire in
         Signal.(new_wire <== new_driver))
     | signal -> expecting_a_wire signal);

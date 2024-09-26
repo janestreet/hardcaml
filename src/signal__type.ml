@@ -101,7 +101,7 @@ type t =
       }
   | Wire of
       { signal_id : signal_id
-      ; driver : t ref
+      ; mutable driver : t option
       }
   | Select of
       { signal_id : signal_id
@@ -111,13 +111,14 @@ type t =
       }
   | Reg of
       { signal_id : signal_id
-      ; register : register
+      ; register : t register
       ; d : t
       }
   | Multiport_mem of
       { signal_id : signal_id
       ; size : int
       ; write_ports : t Write_port.t array
+      ; initialize_to : Bits.t array option
       }
   | Mem_read_port of
       { signal_id : signal_id
@@ -134,21 +135,43 @@ type t =
    template, where each part is optional:
 
    {v
+       reg [7:0] d = initialize_to;
+
        always @(?edge clock, ?edge reset)
-         if (reset == reset_level) d <= reset_value;
-         else if (clear == clear_level) d <= clear_value;
+         if (reset == reset_level) d <= reset_to;
+         else if (clear) d <= clear_to;
          else if (enable) d <= ...;
      v} *)
-and register =
-  { reg_clock : t
-  ; reg_clock_edge : Edge.t
-  ; reg_reset : t
-  ; reg_reset_edge : Edge.t
-  ; reg_reset_value : t
-  ; reg_clear : t
-  ; reg_clear_level : Level.t
-  ; reg_clear_value : t
-  ; reg_enable : t
+and reg_spec =
+  { clock : t
+  ; clock_edge : Edge.t
+  ; reset : t option
+  ; reset_edge : Edge.t
+  ; clear : t option
+  }
+
+and 'a clock_spec =
+  { clock : 'a
+  ; clock_edge : Edge.t
+  }
+
+and 'a reset_spec =
+  { reset : 'a
+  ; reset_edge : Edge.t
+  ; reset_to : 'a
+  }
+
+and 'a clear_spec =
+  { clear : 'a
+  ; clear_to : 'a
+  }
+
+and 'a register =
+  { clock : 'a clock_spec
+  ; reset : 'a reset_spec option
+  ; clear : 'a clear_spec option
+  ; enable : 'a option
+  ; initialize_to : 'a option
   }
 
 and instantiation =
@@ -171,7 +194,10 @@ module Uid_set = struct
 end
 
 module type Printable =
-  Signal__type_intf.Printable with type t := t and type register := register
+  Signal__type_intf.Printable
+  with type t := t
+   and type register := t register
+   and type reg_spec := reg_spec
 
 module type Is_a = Signal__type_intf.Is_a with type t := t and type signal_op := signal_op
 module type Deps = Signal__type_intf.Deps with type t := t
@@ -193,16 +219,31 @@ module Deps = Make_deps (struct
     let fold t ~init ~f =
       match t with
       | Empty | Const _ -> init
-      | Wire { driver; _ } -> f init !driver
+      | Wire { driver; _ } -> Option.value_map driver ~default:init ~f:(f init)
       | Select { arg; _ } -> f init arg
-      | Reg { register; d; _ } ->
+      | Reg
+          { register =
+              { clock = { clock; clock_edge = _ }; reset; clear; enable; initialize_to }
+          ; d
+          ; _
+          } ->
         let arg = f init d in
-        let arg = f arg register.reg_clock in
-        let arg = f arg register.reg_reset in
-        let arg = f arg register.reg_reset_value in
-        let arg = f arg register.reg_clear in
-        let arg = f arg register.reg_clear_value in
-        let arg = f arg register.reg_enable in
+        let arg = f arg clock in
+        let arg =
+          Option.value_map
+            ~default:arg
+            reset
+            ~f:(fun { reset; reset_edge = _; reset_to } ->
+              let arg = f arg reset in
+              f arg reset_to)
+        in
+        let arg =
+          Option.value_map ~default:arg clear ~f:(fun { clear; clear_to } ->
+            let arg = f arg clear in
+            f arg clear_to)
+        in
+        let arg = Option.value_map ~default:arg initialize_to ~f:(f arg) in
+        let arg = Option.value_map ~default:arg enable ~f:(f arg) in
         arg
       | Multiport_mem { write_ports; _ } ->
         Array.fold
@@ -445,38 +486,44 @@ let rec sexp_of_instantiation_recursive ?show_uids ~depth inst =
       ~inputs:(inst.inst_inputs : (string * next) list)
       ~outputs:(inst.inst_outputs : (string * output_width) list)]
 
-and sexp_of_register_recursive ?show_uids ~depth reg =
+and sexp_of_register_recursive ?show_uids ~depth (reg : t register) =
   let sexp_of_next s = sexp_of_signal_recursive ?show_uids ~depth:(depth - 1) s in
-  let sexp_of_opt g s =
-    match g with
-    | Empty -> None
-    | _ -> Some (sexp_of_next s)
-  in
-  let sexp_of_edge g s =
-    match g with
-    | Empty -> None
-    | _ -> Some (Edge.sexp_of_t s)
-  in
-  let sexp_of_level g s =
-    match g with
-    | Empty -> None
-    | _ -> Some (Level.sexp_of_t s)
-  in
+  let sexp_of_opt s ~f = Option.map s ~f:(fun s -> sexp_of_next (f s)) in
   [%message
     ""
-      ~clock:(sexp_of_next reg.reg_clock : Sexp.t)
-      ~clock_edge:(reg.reg_clock_edge : Edge.t)
-      ~reset:(sexp_of_opt reg.reg_reset reg.reg_reset : (Sexp.t option[@sexp.option]))
+      ~clock:(sexp_of_next reg.clock.clock : Sexp.t)
+      ~clock_edge:(reg.clock.clock_edge : Edge.t)
+      ~initialize_to:
+        (sexp_of_opt reg.initialize_to ~f:Fn.id : (Sexp.t option[@sexp.option]))
+      ~reset:
+        (sexp_of_opt reg.reset ~f:(fun { reset; _ } -> reset)
+         : (Sexp.t option[@sexp.option]))
       ~reset_edge:
-        (sexp_of_edge reg.reg_reset reg.reg_reset_edge : (Sexp.t option[@sexp.option]))
+        (Option.map reg.reset ~f:(fun { reset_edge; _ } -> reset_edge)
+         : (Edge.t option[@sexp.option]))
       ~reset_to:
-        (sexp_of_opt reg.reg_reset reg.reg_reset_value : (Sexp.t option[@sexp.option]))
-      ~clear:(sexp_of_opt reg.reg_clear reg.reg_clear : (Sexp.t option[@sexp.option]))
-      ~clear_level:
-        (sexp_of_level reg.reg_clear reg.reg_clear_level : (Sexp.t option[@sexp.option]))
+        (sexp_of_opt reg.reset ~f:(fun { reset_to; _ } -> reset_to)
+         : (Sexp.t option[@sexp.option]))
+      ~clear:
+        (sexp_of_opt reg.clear ~f:(fun { clear; _ } -> clear)
+         : (Sexp.t option[@sexp.option]))
       ~clear_to:
-        (sexp_of_opt reg.reg_clear reg.reg_clear_value : (Sexp.t option[@sexp.option]))
-      ~enable:(sexp_of_opt reg.reg_enable reg.reg_enable : (Sexp.t option[@sexp.option]))]
+        (sexp_of_opt reg.clear ~f:(fun { clear_to; _ } -> clear_to)
+         : (Sexp.t option[@sexp.option]))
+      ~enable:(sexp_of_opt reg.enable ~f:Fn.id : (Sexp.t option[@sexp.option]))]
+
+and sexp_of_reg_spec_recursive ?show_uids ~depth spec =
+  let sexp_of_next s = sexp_of_signal_recursive ?show_uids ~depth:(depth - 1) s in
+  let sexp_of_opt s = Option.map s ~f:(fun s -> sexp_of_next s) in
+  let sexp_of_edge g s = Option.map g ~f:(fun _ -> Edge.sexp_of_t s) in
+  [%message
+    ""
+      ~clock:(sexp_of_next spec.clock : Sexp.t)
+      ~clock_edge:(spec.clock_edge : Edge.t)
+      ~reset:(sexp_of_opt spec.reset : (Sexp.t option[@sexp.option]))
+      ~reset_edge:
+        (sexp_of_edge spec.reset spec.reset_edge : (Sexp.t option[@sexp.option]))
+      ~clear:(sexp_of_opt spec.clear : (Sexp.t option[@sexp.option]))]
 
 and sexp_of_memory_recursive
   ?show_uids
@@ -591,7 +638,7 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
     | Cat { args; _ } -> create tag ~arguments:args
     | Not { arg; _ } -> create tag ~arguments:[ arg ]
     | Op2 { arg_a; arg_b; _ } -> create tag ~arguments:[ arg_a; arg_b ]
-    | Wire { driver; _ } -> create tag ~data_in:!driver
+    | Wire { driver; _ } -> create tag ?data_in:driver
     | Select { arg; high; low; _ } -> create tag ~data_in:arg ~range:(high, low)
     | Inst { instantiation; _ } -> create tag ~instantiation
     | Reg { register; d; _ } -> create tag ~register ~data_in:d
@@ -603,6 +650,7 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
 
 let sexp_of_t s = sexp_of_signal_recursive ~show_uids:false ~depth:1 s
 let sexp_of_register register = sexp_of_register_recursive register ~depth:1
+let sexp_of_reg_spec register = sexp_of_reg_spec_recursive register ~depth:1
 
 let to_string signal =
   let names s =
@@ -632,7 +680,11 @@ let to_string signal =
   | Not _ -> "Op[" ^ sid signal ^ "] = " ^ "not"
   | Cat _ -> "Op[" ^ sid signal ^ "] = " ^ "cat"
   | Mux _ -> "Op[" ^ sid signal ^ "] = " ^ "mux"
-  | Wire { driver; _ } -> "Wire[" ^ sid signal ^ "] -> " ^ Uid.to_string (uid !driver)
+  | Wire { driver; _ } ->
+    "Wire["
+    ^ sid signal
+    ^ "] -> "
+    ^ Option.value_map driver ~default:"()" ~f:(fun driver -> Uid.to_string (uid driver))
   | Select { high; low; _ } ->
     "Select[" ^ sid signal ^ "] " ^ Int.to_string high ^ ".." ^ Int.to_string low
   | Reg _ -> "Reg[" ^ sid signal ^ "]"
@@ -651,7 +703,7 @@ let const_value =
 ;;
 
 let wire_driver = function
-  | Wire { driver; _ } when not (is_empty !driver) -> Some !driver
+  | Wire { driver; _ } -> driver
   | _ -> None
 ;;
 
@@ -659,9 +711,10 @@ let has_name t = not (List.is_empty (names t))
 let `New new_id, `Reset reset_id = Uid.generator ()
 let default_wave_format = Wave_format.Bit_or Binary
 
-let make_id w =
+let make_id width =
+  if width <= 0 then raise_s [%message "Width of signals must be >= 0" (width : int)];
   { s_id = new_id ()
-  ; s_width = w
+  ; s_width = width
   ; s_metadata =
       Option.map (Caller_id.get () ~skip:[]) ~f:(fun caller_id ->
         { names = []
@@ -701,8 +754,33 @@ let change_metadata t ~f =
     f metadata)
 ;;
 
+let check_attribute_applies_to t = function
+  | Rtl_attribute.Applies_to.Non_wires when not (is_wire t) -> true
+  | Regs when is_reg t -> true
+  | Memories when is_mem t -> true
+  | Instantiations when is_inst t -> true
+  | Non_wires | Regs | Memories | Instantiations -> false
+;;
+
+let check_attribute t attr =
+  let applies_to = Rtl_attribute.applies_to attr in
+  match applies_to with
+  | [] -> ()
+  | applies_to ->
+    if List.fold applies_to ~init:false ~f:(fun acc app ->
+         acc || check_attribute_applies_to t app)
+    then ()
+    else
+      raise_s
+        [%message
+          "Rtl_attribute is applied to wrong type of signal"
+            (t : t)
+            (attr : Rtl_attribute.t)]
+;;
+
 let add_attribute t attr =
   change_metadata t ~f:(fun metadata ->
+    check_attribute t attr;
     metadata.attributes <- attr :: metadata.attributes)
 ;;
 
@@ -711,7 +789,9 @@ let get_attributes t =
 ;;
 
 let set_attributes t attributes =
-  change_metadata t ~f:(fun metadata -> metadata.attributes <- attributes)
+  change_metadata t ~f:(fun metadata ->
+    List.iter attributes ~f:(check_attribute t);
+    metadata.attributes <- attributes)
 ;;
 
 let set_comment t comment =
@@ -744,3 +824,127 @@ let get_wave_format t =
   | Some metadata -> metadata.wave_format
   | None -> default_wave_format
 ;;
+
+let is_vdd = function
+  | Const { constant; _ } when Bits.equal constant Bits.vdd -> true
+  | _ -> false
+;;
+
+let is_gnd = function
+  | Const { constant; _ } when Bits.equal constant Bits.gnd -> true
+  | _ -> false
+;;
+
+let of_bits constant = Const { signal_id = make_id (Bits.width constant); constant }
+
+let has_initializer = function
+  | Reg { register = { initialize_to = Some _; _ }; _ } -> true
+  | Multiport_mem { initialize_to = Some _; _ } -> true
+  | _ -> false
+;;
+
+module Register = struct
+  type 'a t = 'a register
+
+  let map { clock = { clock; clock_edge }; reset; clear; initialize_to; enable } ~f =
+    let clock = f clock in
+    let reset =
+      Option.map reset ~f:(fun { reset; reset_edge; reset_to } ->
+        let reset = f reset in
+        let reset_to = f reset_to in
+        { reset; reset_edge; reset_to })
+    in
+    let clear =
+      Option.map clear ~f:(fun { clear; clear_to } ->
+        let clear = f clear in
+        let clear_to = f clear_to in
+        { clear; clear_to })
+    in
+    let initialize_to = Option.map initialize_to ~f in
+    let enable = Option.map enable ~f in
+    { clock = { clock; clock_edge }; reset; clear; initialize_to; enable }
+  ;;
+
+  (* error checking *)
+  let assert_width signal w msg =
+    if width signal <> w
+    then
+      raise_s
+        [%message
+          msg ~info:"signal has unexpected width" ~expected_width:(w : int) (signal : t)]
+  ;;
+
+  let assert_width_or_none signal w msg =
+    match signal with
+    | None -> ()
+    | Some signal ->
+      if width signal <> w
+      then
+        raise_s
+          [%message
+            msg
+              ~info:"signal should have expected width or be empty"
+              ~expected_width:(w : int)
+              (signal : t)]
+  ;;
+
+  let zero w = of_bits (Bits.zero w)
+
+  let of_reg_spec (spec : reg_spec) ~enable ~initialize_to ~reset_to ~clear_to ~clear d =
+    if width d = 0 then raise_s [%message "Zero width registers are not allowed"];
+    assert_width spec.clock 1 "clock is invalid";
+    assert_width_or_none spec.reset 1 "reset is invalid";
+    let reset =
+      Option.map spec.reset ~f:(fun reset ->
+        (* If there is a reset, ensure there is a reset_to of the correct width (default
+           to zero) *)
+        let reset_to =
+          match reset_to with
+          | None -> zero (width d)
+          | Some reset_to ->
+            assert_width reset_to (width d) "reset_to is invalid";
+            (* if not (is_const reset_to)
+             * then raise_s [%message "Register reset_to is not constant" (reset_to : t)]; *)
+            reset_to
+        in
+        { reset; reset_edge = spec.reset_edge; reset_to })
+    in
+    (* override the clear if required. *)
+    let clear =
+      match clear with
+      | Some clear -> Some clear
+      | None -> spec.clear
+    in
+    assert_width_or_none clear 1 "clear signal is invalid";
+    let clear =
+      (* If there is a clear, ensure there is a clear_to of the correct width (default to
+       zero) *)
+      Option.map clear ~f:(fun clear ->
+        let clear_to =
+          match clear_to with
+          | None -> zero (width d)
+          | Some clear_to ->
+            assert_width clear_to (width d) "clear_to is invalid";
+            clear_to
+        in
+        { clear; clear_to })
+    in
+    let enable =
+      match enable with
+      | None -> None
+      | Some enable ->
+        assert_width enable 1 "enable is invalid";
+        if is_vdd enable then None else Some enable
+    in
+    Option.iter initialize_to ~f:(fun initialize_to ->
+      assert_width initialize_to (width d) "initial value is invalid";
+      if not (is_const initialize_to)
+      then raise_s [%message "Register initializer is not constant" (initialize_to : t)]);
+    { clock = { clock = spec.clock; clock_edge = spec.clock_edge }
+    ; reset
+    ; clear
+    ; initialize_to
+    ; enable
+    }
+  ;;
+end

@@ -3,5 +3,6 @@
 open Base
 
 val verilog : string list
+val systemverilog : string list
 val vhdl : string list
 val ocaml : string list

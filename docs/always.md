@@ -37,9 +37,7 @@ clock signal provided within a `Reg_spec.t` type.
 ```ocaml
 # (* Creates a register variable. *)
   Always.Variable.reg
-- : ?enable:Signal.t ->
-    width:int -> Signal.Type.register -> Always.Variable.t
-= <fun>
+- : (width:int -> Always.Variable.t) Signal.with_register_spec = <fun>
 ```
 
 A `wire` is one whose value is updated combinatorially, meaning that
@@ -50,7 +48,7 @@ such assignment exists, the variable will possess the `default` value.
 ```ocaml
 # (* Creates a wire register, that is, the value of the wire *)
   Always.Variable.wire
-- : default:Reg_spec.signal -> Always.Variable.t = <fun>
+- : default:Signal.t -> Always.Variable.t = <fun>
 ```
 
 Both kinds of variable will return the same type, namely an `Always.Variable.t`
@@ -58,8 +56,7 @@ Both kinds of variable will return the same type, namely an `Always.Variable.t`
 ```ocaml
 # let foo = Always.Variable.wire ~default:Signal.gnd ;;
 val foo : Always.Variable.t =
-  {Hardcaml.Always.Variable.value = (wire (width 1) (data_in empty));
-   internal = <abstr>}
+  {Hardcaml.Always.Variable.value = (wire (width 1)); internal = <abstr>}
 ```
 
 Variables may be assigned within an Always block. To read the value
@@ -68,7 +65,7 @@ that can be used to form expressions.
 
 ```ocaml
 # foo.value;;
-- : Reg_spec.signal = (wire (width 1) (data_in empty))
+- : Signal.t = (wire (width 1))
 ```
 
 ## 2. Writing an Always Program

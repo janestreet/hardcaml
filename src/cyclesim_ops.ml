@@ -288,7 +288,6 @@ let mem_read t ~dst_address ~read_address ~memory_address ~memory_size ~size_in_
 type clear =
   { clear : int
   ; clear_value : int
-  ; level : int
   }
 
 let reg t ~clear ~enable ~dst_address ~src_address ~size_in_words =
@@ -314,14 +313,14 @@ let reg t ~clear ~enable ~dst_address ~src_address ~size_in_words =
     in
     if size_in_words = 1 then copy_enabled1 else copy_enabledn
   in
-  let copy_cleared { clear; clear_value; level } =
+  let copy_cleared { clear; clear_value } =
     let copy_cleared1 () =
-      if get64i t clear = level
+      if get64i t clear = 1
       then set64 t dst_address (get64 t clear_value)
       else set64 t dst_address (get64 t src_address)
     in
     let copy_clearedn () =
-      if get64i t clear = level
+      if get64i t clear = 1
       then
         for i = 0 to size_in_words - 1 do
           set64 t (dst_address + i) (get64 t (clear_value + i))
@@ -333,15 +332,15 @@ let reg t ~clear ~enable ~dst_address ~src_address ~size_in_words =
     in
     if size_in_words = 1 then copy_cleared1 else copy_clearedn
   in
-  let copy_cleared_and_enabled enable { clear; clear_value; level } =
+  let copy_cleared_and_enabled enable { clear; clear_value } =
     let copy_cleared_and_enabled1 () =
-      if get64i t clear = level
+      if get64i t clear = 1
       then set64 t dst_address (get64 t clear_value)
       else if get64i t enable = 1
       then set64 t dst_address (get64 t src_address)
     in
     let copy_cleared_and_enabledn () =
-      if get64i t clear = level
+      if get64i t clear = 1
       then
         for i = 0 to size_in_words - 1 do
           set64 t (dst_address + i) (get64 t (clear_value + i))

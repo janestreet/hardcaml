@@ -8,27 +8,47 @@ module Kinded_fifo = Fifo_intf.Kinded_fifo
    respected, even in SDP RAM mode.
 *)
 let ram_wbr_safe
+  scope
   capacity
   ~(write_port : _ Write_port.t)
   ~(read_port : _ Read_port.t)
   ~ram_attributes
   =
   let open Signal in
-  let collision =
-    reg
-      (Reg_spec.create ~clock:write_port.write_clock ())
-      ~enable:read_port.read_enable
-      (write_port.write_enable
-       &: read_port.read_enable
-       &: (write_port.write_address ==: read_port.read_address))
+  let ( -- ) =
+    match scope with
+    | Some scope -> Scope.naming scope
+    | None -> ( -- )
   in
-  mux2
-    collision
-    (reg
-       (Reg_spec.create ~clock:write_port.write_clock ())
-       ~enable:read_port.read_enable
-       write_port.write_data)
-    (ram_rbw capacity ~attributes:ram_attributes ~write_port ~read_port)
+  (* We don't need collision detection when using distributed RAM *)
+  if List.find
+       ram_attributes
+       ~f:(Rtl_attribute.equal Rtl_attribute.Vivado.Ram_style.distributed)
+     |> Option.is_some
+  then
+    ram_wbr capacity ~attributes:ram_attributes ~write_port ~read_port -- "ram_rbw_data"
+  else (
+    let collision =
+      reg
+        (Reg_spec.create ~clock:write_port.write_clock ())
+        ~enable:read_port.read_enable
+        (write_port.write_enable
+         &: read_port.read_enable
+         &: (write_port.write_address ==: read_port.read_address))
+      -- "collision"
+    in
+    let data_before_collision =
+      reg
+        (Reg_spec.create ~clock:write_port.write_clock ())
+        ~enable:read_port.read_enable
+        write_port.write_data
+      -- "data_before_collision"
+    in
+    mux2
+      collision
+      data_before_collision
+      (ram_rbw capacity ~attributes:ram_attributes ~write_port ~read_port
+       -- "ram_rbw_data"))
 ;;
 
 let capacity_and_used_bits showahead ram_capacity =
@@ -46,7 +66,6 @@ let create
   ?(nearly_empty = 1)
   ?nearly_full
   ?(overflow_check = true)
-  ?(reset = Signal.empty)
   ?(underflow_check = true)
   ?(ram_attributes = [ Rtl_attribute.Vivado.Ram_style.block ])
   ?scope
@@ -63,10 +82,6 @@ let create
     | Some scope -> Scope.naming scope
     | None -> ( -- )
   in
-  if Signal.is_empty clear && Signal.is_empty reset
-  then
-    raise_s
-      [%message "[Fifo.create] requires either a synchronous clear or asynchronous reset"];
   (* Check if read_latency is set that its value makes sense. *)
   Option.iter read_latency ~f:(fun read_latency ->
     if showahead && read_latency <> 0
@@ -76,8 +91,8 @@ let create
           "Cannot set showahead = true and read_latency <> 0 for Fifo."
             (read_latency : int)
             (showahead : bool)]);
-  let reg_spec = Reg_spec.create ~clock ~clear ~reset () in
-  let reg ?clear_to ~enable d = reg (Reg_spec.override reg_spec ?clear_to) ~enable d in
+  let reg_spec = Reg_spec.create ~clock ~clear () in
+  let reg ?clear_to ~enable d = reg reg_spec ?clear_to ~enable d in
   let abits = address_bits_for ram_capacity in
   let actual_capacity, used_bits = capacity_and_used_bits showahead ram_capacity in
   (* get nearly full/empty levels *)
@@ -99,25 +114,28 @@ let create
     mux2 enable (mux2 rd (used -:. 1) (used +:. 1)) used
     (* read+write, or none *)
   in
-  used <== reg ~enable (used_next -- "USED_NEXT");
+  used <== reg ~enable (used_next -- "USED_NEXT") -- "USED";
   (* full empty flags *)
-  not_empty <== reg ~enable (used_next <>:. 0);
-  full <== reg ~enable (used_next ==:. actual_capacity);
+  not_empty <== reg ~enable (used_next <>:. 0) -- "not_empty";
+  full <== reg ~enable (used_next ==:. actual_capacity) -- "full";
   (* nearly full/empty flags *)
-  let nearly_empty = reg ~enable ~clear_to:vdd (used_next <=:. nearly_empty) in
-  let nearly_full = reg ~enable (used_next >=:. nearly_full) in
+  let nearly_empty =
+    reg ~enable ~clear_to:vdd (used_next <=:. nearly_empty) -- "nearly_empty"
+  in
+  let nearly_full = reg ~enable (used_next >=:. nearly_full) -- "nearly_full" in
   (* read/write addresses within fifo *)
   let addr_count enable name =
     let a = wire abits in
     let an = mod_counter ~max:(ram_capacity - 1) a in
-    a <== reg ~enable an;
-    a -- name, an -- (name ^ "_NEXT")
+    a
+    <== add_attribute (reg ~enable an -- name) (Rtl_attribute.Vivado.extract_reset false);
+    a, an -- (name ^ "_NEXT")
   in
   let q =
     if showahead
     then (
-      let used_is_one = reg ~enable:(rd ^: wr) (used_next ==:. 1) in
-      let used_gt_one = reg ~enable:(rd ^: wr) (used_next >:. 1) in
+      let used_is_one = reg ~enable:(rd ^: wr) (used_next ==:. 1) -- "used_is_one" in
+      let used_gt_one = reg ~enable:(rd ^: wr) (used_next >:. 1) -- "used_gt_one" in
       let memory =
         let wr = wr &: (used_gt_one |: (used_is_one &: ~:rd)) in
         let rd = rd &: used_gt_one in
@@ -125,14 +143,16 @@ let create
         let ra = mux2 rd ra_n ra -- "RA" in
         let wa, _ = addr_count wr "WRITE_ADDRESS" in
         ram_wbr_safe
+          scope
           ~ram_attributes
           ram_capacity
           ~write_port:
             { write_clock = clock; write_enable = wr; write_address = wa; write_data = d }
           ~read_port:{ read_clock = clock; read_enable = vdd; read_address = ra }
+        -- "memory"
       in
       let bypass_cond = empty &: wr |: (used_is_one &: wr &: rd) in
-      mux2 bypass_cond d memory |> reg ~enable:(bypass_cond |: rd))
+      (mux2 bypass_cond d memory |> reg ~enable:(bypass_cond |: rd)) -- "bypass_cond")
     else (
       let ra, _ = addr_count rd "READ_ADDRESS" in
       let wa, _ = addr_count wr "WRITE_ADDRESS" in
@@ -160,7 +180,6 @@ let create_classic_with_extra_reg
   ?nearly_empty
   ?nearly_full
   ?overflow_check
-  ?reset
   ?underflow_check
   ?ram_attributes
   ?scope
@@ -185,7 +204,6 @@ let create_classic_with_extra_reg
       ?nearly_empty
       ?nearly_full
       ?overflow_check
-      ?reset
       ?underflow_check
       ?ram_attributes
       ?scope
@@ -236,7 +254,6 @@ let create_showahead_from_classic
   ?nearly_empty
   ?nearly_full
   ?overflow_check
-  ?reset
   ?underflow_check
   ?ram_attributes
   ?scope
@@ -249,7 +266,6 @@ let create_showahead_from_classic
       ?nearly_empty
       ?nearly_full
       ?overflow_check
-      ?reset
       ?underflow_check
       ?ram_attributes
       ?scope
@@ -277,7 +293,6 @@ let create_showahead_with_read_latency
   ?nearly_empty
   ?nearly_full
   ?overflow_check
-  ?reset
   ?underflow_check
   ?ram_attributes
   ?scope
@@ -298,7 +313,6 @@ let create_showahead_with_read_latency
       ?nearly_empty
       ?nearly_full
       ?overflow_check
-      ?reset
       ?underflow_check
       ?ram_attributes
       ?scope
@@ -338,7 +352,6 @@ let create_showahead_with_extra_reg
   ?nearly_empty
   ?nearly_full
   ?overflow_check
-  ?reset
   ?underflow_check
   ?ram_attributes
   ?scope
@@ -358,7 +371,6 @@ let create_showahead_with_extra_reg
       ?nearly_empty
       ?nearly_full
       ?overflow_check
-      ?reset
       ?underflow_check
       ?ram_attributes
       ?scope
@@ -424,7 +436,6 @@ module With_interface (Config : Config) = struct
     ?nearly_empty
     ?nearly_full
     ?overflow_check
-    ?reset
     ?underflow_check
     ?ram_attributes
     ?scope
@@ -435,7 +446,6 @@ module With_interface (Config : Config) = struct
       ?nearly_empty
       ?nearly_full
       ?overflow_check
-      ?reset
       ?underflow_check
       ?ram_attributes
       ?scope

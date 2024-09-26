@@ -431,7 +431,6 @@ let%expect_test "structural rtl reg components" =
             ~reset
             ~reset_edge:Falling
             ~clear
-            ~clear_level:Low
             ~clear_value:(ones 8)
             ~enable
             d8)
@@ -469,40 +468,40 @@ let%expect_test "structural rtl reg components" =
       assign q1 = _14;
       assign q2 = _18;
       assign q3 = _21;
-      hardcaml_lib_reg_1_rrh _11
+      hardcaml_lib_reg_1_rr _11
       (
         .clock(clock),
         .reset(_2),
         .reset_value(_2),
         .clear(_2),
         .clear_value(_2),
-        .enable(_2),
+        .enable(_1),
         .d(d1),
         .q(_10)
       );
-      hardcaml_lib_reg_8_rrh _16
+      hardcaml_lib_reg_8_rr _16
       (
         .clock(clock),
         .reset(reset),
         .reset_value(_13),
         .clear(_2),
         .clear_value(_15),
-        .enable(_2),
+        .enable(_1),
         .d(d8),
         .q(_14)
       );
-      hardcaml_lib_reg_1_rrh _19
+      hardcaml_lib_reg_1_rr _19
       (
         .clock(clock),
         .reset(_2),
         .reset_value(_2),
         .clear(clear),
         .clear_value(_2),
-        .enable(_2),
+        .enable(_1),
         .d(d1),
         .q(_18)
       );
-      hardcaml_lib_reg_8_ffl _22
+      hardcaml_lib_reg_8_ff _22
       (
         .clock(clock),
         .reset(reset),
@@ -519,11 +518,11 @@ let%expect_test "structural rtl reg components" =
   |> Set.iter ~f:(fun c -> Structural_rtl_component.rtl_circuit c |> Rtl.print Verilog);
   [%expect
     {|
-    module hardcaml_lib_reg_1_rrh (
+    module hardcaml_lib_reg_1_rr (
         enable,
-        clear_value,
+        clear_to,
         clear,
-        reset_value,
+        reset_to,
         reset,
         clock,
         d,
@@ -531,9 +530,9 @@ let%expect_test "structural rtl reg components" =
     );
 
         input enable;
-        input clear_value;
+        input clear_to;
         input clear;
-        input reset_value;
+        input reset_to;
         input reset;
         input clock;
         input d;
@@ -542,10 +541,10 @@ let%expect_test "structural rtl reg components" =
         reg _9;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _9 <= reset_value;
+                _9 <= reset_to;
             else
                 if (clear)
-                    _9 <= clear_value;
+                    _9 <= clear_to;
                 else
                     if (enable)
                         _9 <= d;
@@ -553,11 +552,11 @@ let%expect_test "structural rtl reg components" =
         assign q = _9;
 
     endmodule
-    module hardcaml_lib_reg_8_ffl (
+    module hardcaml_lib_reg_8_ff (
         enable,
-        clear_value,
+        clear_to,
         clear,
-        reset_value,
+        reset_to,
         reset,
         clock,
         d,
@@ -565,9 +564,9 @@ let%expect_test "structural rtl reg components" =
     );
 
         input enable;
-        input [7:0] clear_value;
+        input [7:0] clear_to;
         input clear;
-        input [7:0] reset_value;
+        input [7:0] reset_to;
         input reset;
         input clock;
         input [7:0] d;
@@ -576,10 +575,10 @@ let%expect_test "structural rtl reg components" =
         reg [7:0] _9;
         always @(negedge clock or negedge reset) begin
             if (reset == 0)
-                _9 <= reset_value;
+                _9 <= reset_to;
             else
-                if (clear == 0)
-                    _9 <= clear_value;
+                if (clear)
+                    _9 <= clear_to;
                 else
                     if (enable)
                         _9 <= d;
@@ -587,11 +586,11 @@ let%expect_test "structural rtl reg components" =
         assign q = _9;
 
     endmodule
-    module hardcaml_lib_reg_8_rrh (
+    module hardcaml_lib_reg_8_rr (
         enable,
-        clear_value,
+        clear_to,
         clear,
-        reset_value,
+        reset_to,
         reset,
         clock,
         d,
@@ -599,9 +598,9 @@ let%expect_test "structural rtl reg components" =
     );
 
         input enable;
-        input [7:0] clear_value;
+        input [7:0] clear_to;
         input clear;
-        input [7:0] reset_value;
+        input [7:0] reset_to;
         input reset;
         input clock;
         input [7:0] d;
@@ -610,10 +609,10 @@ let%expect_test "structural rtl reg components" =
         reg [7:0] _9;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _9 <= reset_value;
+                _9 <= reset_to;
             else
                 if (clear)
-                    _9 <= clear_value;
+                    _9 <= clear_to;
                 else
                     if (enable)
                         _9 <= d;

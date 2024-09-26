@@ -76,18 +76,21 @@ end
 module type Regs = sig
   type t
 
-  val reg : Reg_spec.t -> ?enable:t -> t -> t
-  val reg_fb : ?enable:t -> Reg_spec.t -> width:int -> f:(t -> t) -> t
+  type 'a with_register_spec =
+    ?enable:t
+    -> ?initialize_to:t
+    -> ?reset_to:t
+    -> ?clear:t
+    -> ?clear_to:t
+    -> Reg_spec.t
+    -> 'a
+
+  val reg : (t -> t) with_register_spec
+  val reg_fb : (width:int -> f:(t -> t) -> t) with_register_spec
 
   (** Pipeline a signal [n] times with the given register specification. If set, a list of
       RTL attributes will also be applied to each register created. *)
-  val pipeline
-    :  ?attributes:Rtl_attribute.t list
-    -> Reg_spec.t
-    -> n:int
-    -> ?enable:t
-    -> t
-    -> t
+  val pipeline : ?attributes:Rtl_attribute.t list -> (n:int -> t -> t) with_register_spec
 
   (** [Staged.unstage (prev spec ?enable d)] returns a function [prev n] which provides
       [d] registered [n] times (ie the value of [d] [n] cycles in the past). [n=0] means
@@ -95,7 +98,7 @@ module type Regs = sig
 
       The internal registers are shared between calls. When called multiple times with a
       maximum value of [n] exactly [n] registers are created. *)
-  val prev : Reg_spec.t -> ?enable:t -> t -> (int -> t) Staged.t
+  val prev : (t -> (int -> t) Staged.t) with_register_spec
 end
 
 module type Memories = sig
@@ -104,10 +107,15 @@ module type Memories = sig
   val multiport_memory
     :  ?name:string
     -> ?attributes:Rtl_attribute.t list
+    -> ?initialize_to:Bits.t array
     -> int
     -> write_ports:t Write_port.t array
     -> read_addresses:t array
     -> t array
+
+  (** A multi-read port asynchronous ROM built from a memory primitive. This can be used
+      to map ROMs into RAM resources by registering the output. *)
+  val rom : read_addresses:t array -> Bits.t array -> t array
 
   val memory : int -> write_port:t Write_port.t -> read_address:t -> t
 

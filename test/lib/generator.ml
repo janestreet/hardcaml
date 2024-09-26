@@ -5,7 +5,7 @@ open Quickcheck
 open Quickcheck.Let_syntax
 
 let clock = input "clock" 1
-let reset_sig = input "reset" 1
+let reset_sig = Some (input "reset" 1)
 
 let gen_bits_string width =
   let%map w = Generator.list_with_length width Generator.bool in
@@ -78,28 +78,25 @@ and gen_register width depth inputs =
   let%bind enable = gen_signal 1 (depth - 1) inputs in
   let%bind want_clear = Generator.bool in
   let%bind clear =
-    if want_clear then gen_signal 1 (depth - 1) inputs else return Signal.empty
+    if want_clear then gen_signal_opt 1 (depth - 1) inputs else return None
   in
-  let%bind clear_value =
-    if want_clear then gen_signal width (depth - 1) inputs else return Signal.empty
+  let%bind clear_to =
+    if want_clear then gen_signal_opt width (depth - 1) inputs else return None
   in
   (* cyclesim only supports global reset signal *)
-  let%bind reset_value = gen_const width in
+  let%bind reset_to = gen_const width in
   let reg_spec =
-    { Reg_spec.reg_clock = clock
-    ; reg_clock_edge = Rising
-    ; reg_reset = reset_sig
-    ; reg_reset_edge = Rising
-    ; reg_reset_value = reset_value
-    ; reg_clear = clear
-    ; reg_clear_level = High
-    ; reg_clear_value = clear_value
-    ; reg_enable = enable
-    }
+    Reg_spec.create
+      ~clock
+      ~clock_edge:Rising
+      ?reset:reset_sig
+      ~reset_edge:Rising
+      ?clear
+      ()
   in
   (* reg_fb *)
   let d = wire width in
-  let q = reg reg_spec ~enable d in
+  let q = reg reg_spec ~reset_to ?clear_to ~enable d in
   let%map input = gen_signal width (depth - 1) (q :: inputs) in
   d <== input;
   q
@@ -147,6 +144,9 @@ and gen_signal width depth inputs =
         ]
     in
     if%map Generator.bool then ~:result else result)
+
+and gen_signal_opt width depth inputs =
+  Generator.map (gen_signal width depth inputs) ~f:(fun s -> Some s)
 ;;
 
 let gen ~width ~depth ~inputs = gen_signal width depth inputs

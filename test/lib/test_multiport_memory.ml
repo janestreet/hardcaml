@@ -17,7 +17,7 @@ let%expect_test "exceptions" =
       ~read_addresses:[| Signal.of_int ~width:3 0 |]);
   [%expect
     {|
-    ("[Signal.multiport_memory] size does not match what can be addressed by write port"
+    ("[Signal.multiport_memory] size does not match what can be addressed"
      (size          16)
      (address_width 3))
     |}];
@@ -28,7 +28,7 @@ let%expect_test "exceptions" =
       ~read_addresses:[| Signal.of_int ~width:3 0 |]);
   [%expect
     {|
-    ("[Signal.multiport_memory] size does not match what can be addressed by write port"
+    ("[Signal.multiport_memory] size does not match what can be addressed"
      (size          16)
      (address_width 5))
     |}];
@@ -39,9 +39,10 @@ let%expect_test "exceptions" =
       ~read_addresses:[| Signal.of_int ~width:3 0 |]);
   [%expect
     {|
-    ("[Signal.multiport_memory] size does not match what can be addressed by read port"
-     (size          16)
-     (address_width 3))
+    ("[Signal.multiport_memory] width of read address is inconsistent"
+     (port               0)
+     (read_address_width 3)
+     (expected           4))
     |}];
   require_does_raise (fun () ->
     Signal.multiport_memory
@@ -50,9 +51,10 @@ let%expect_test "exceptions" =
       ~read_addresses:[| Signal.of_int ~width:5 0 |]);
   [%expect
     {|
-    ("[Signal.multiport_memory] size does not match what can be addressed by read port"
-     (size          16)
-     (address_width 5))
+    ("[Signal.multiport_memory] width of read address is inconsistent"
+     (port               0)
+     (read_address_width 5)
+     (expected           4))
     |}];
   require_does_raise (fun () ->
     Signal.multiport_memory
@@ -367,17 +369,15 @@ let%expect_test "dual port Verilog" =
         output [14:0] q0;
         output [14:0] q1;
 
-        wire [14:0] _20;
         wire [14:0] _18;
-        reg [14:0] _21;
+        reg [14:0] _19;
         reg [14:0] foo[0:31];
-        wire [14:0] _22;
-        reg [14:0] _25;
-        assign _20 = 15'b000000000000000;
+        wire [14:0] _20;
+        reg [14:0] _21;
         assign _18 = foo[read_address2];
         always @(posedge read_clock2) begin
             if (read_enable2)
-                _21 <= _18;
+                _19 <= _18;
         end
         always @(posedge write_clock1) begin
             if (write_enable1)
@@ -387,13 +387,13 @@ let%expect_test "dual port Verilog" =
             if (write_enable2)
                 foo[write_address2] <= write_data2;
         end
-        assign _22 = foo[read_address1];
+        assign _20 = foo[read_address1];
         always @(posedge read_clock1) begin
             if (read_enable1)
-                _25 <= _22;
+                _21 <= _20;
         end
-        assign q0 = _25;
-        assign q1 = _21;
+        assign q0 = _21;
+        assign q1 = _19;
 
     endmodule
     |}]
@@ -443,22 +443,20 @@ let%expect_test "dual port VHDL" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal hc_20 : std_logic_vector(14 downto 0);
         signal hc_18 : std_logic_vector(14 downto 0);
-        signal hc_21 : std_logic_vector(14 downto 0);
+        signal hc_19 : std_logic_vector(14 downto 0);
         type foo_type is array (0 to 31) of std_logic_vector(14 downto 0);
         signal foo : foo_type;
-        signal hc_22 : std_logic_vector(14 downto 0);
-        signal hc_25 : std_logic_vector(14 downto 0);
+        signal hc_20 : std_logic_vector(14 downto 0);
+        signal hc_21 : std_logic_vector(14 downto 0);
 
     begin
 
-        hc_20 <= "000000000000000";
         hc_18 <= foo(to_integer(hc_uns(read_address2)));
         process (read_clock2) begin
             if rising_edge(read_clock2) then
                 if read_enable2 = '1' then
-                    hc_21 <= hc_18;
+                    hc_19 <= hc_18;
                 end if;
             end if;
         end process;
@@ -476,16 +474,16 @@ let%expect_test "dual port VHDL" =
                 end if;
             end if;
         end process;
-        hc_22 <= foo(to_integer(hc_uns(read_address1)));
+        hc_20 <= foo(to_integer(hc_uns(read_address1)));
         process (read_clock1) begin
             if rising_edge(read_clock1) then
                 if read_enable1 = '1' then
-                    hc_25 <= hc_22;
+                    hc_21 <= hc_20;
                 end if;
             end if;
         end process;
-        q0 <= hc_25;
-        q1 <= hc_21;
+        q0 <= hc_21;
+        q1 <= hc_19;
 
     end architecture;
     |}]
@@ -782,5 +780,347 @@ let%expect_test "simulation - demonstrate collision modes" =
     │q1           ││ 0000                                      │
     │             ││────────────────────────                   │
     └─────────────┘└───────────────────────────────────────────┘
+    |}]
+;;
+
+let%expect_test "memory initialization" =
+  let test address_width data_width =
+    let memory_size = 1 lsl address_width in
+    let read_data =
+      Signal.multiport_memory
+        memory_size
+        ~write_ports:[| write_port address_width data_width |]
+        ~read_addresses:[| Signal.input "read_address" address_width |]
+        ~initialize_to:
+          (Array.init memory_size ~f:(fun i -> Bits.of_int ~width:data_width i))
+    in
+    let circuit =
+      Circuit.create_exn
+        ~name:"initialized_memory"
+        (List.mapi (Array.to_list read_data) ~f:(fun i q ->
+           Signal.output ("q" ^ Int.to_string i) q))
+    in
+    Rtl.print Verilog circuit;
+    Rtl.print Vhdl circuit
+  in
+  test 2 8;
+  [%expect
+    {|
+    module initialized_memory (
+        read_address,
+        q0
+    );
+
+        input [1:0] read_address;
+        output [7:0] q0;
+
+        wire [7:0] _5;
+        wire [1:0] _4;
+        wire gnd;
+        reg [7:0] _6[0:3];
+        wire [7:0] _7;
+        assign _5 = 8'b00000000;
+        assign _4 = 2'b00;
+        assign gnd = 1'b0;
+        always @(posedge gnd) begin
+            if (gnd)
+                _6[_4] <= _5;
+        end
+        initial begin
+            _6[0] <= 8'b00000000;
+            _6[1] <= 8'b00000001;
+            _6[2] <= 8'b00000010;
+            _6[3] <= 8'b00000011;
+        end
+        assign _7 = _6[read_address];
+        assign q0 = _7;
+
+    endmodule
+    library ieee;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_std.all;
+
+    entity initialized_memory is
+        port (
+            read_address : in std_logic_vector(1 downto 0);
+            q0 : out std_logic_vector(7 downto 0)
+        );
+    end entity;
+
+    architecture rtl of initialized_memory is
+
+        -- conversion functions
+        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
+        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
+        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
+        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
+        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
+        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
+        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
+        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
+        signal hc_5 : std_logic_vector(7 downto 0);
+        signal hc_4 : std_logic_vector(1 downto 0);
+        signal gnd : std_logic;
+        type hc_6_type is array (0 to 3) of std_logic_vector(7 downto 0);
+        signal hc_6 : hc_6_type;
+        signal hc_7 : std_logic_vector(7 downto 0);
+
+    begin
+
+        hc_5 <= "00000000";
+        hc_4 <= "00";
+        gnd <= '0';
+        process (gnd) begin
+            if rising_edge(gnd) then
+                if gnd = '1' then
+                    hc_6(to_integer(hc_uns(hc_4))) <= hc_5;
+                end if;
+            end if;
+        end process;
+        process begin
+            hc_6(0) <= "00000000";
+            hc_6(1) <= "00000001";
+            hc_6(2) <= "00000010";
+            hc_6(3) <= "00000011";
+            wait;
+        end process;
+        hc_7 <= hc_6(to_integer(hc_uns(read_address)));
+        q0 <= hc_7;
+
+    end architecture;
+    |}];
+  test 3 1;
+  [%expect
+    {|
+    module initialized_memory (
+        read_address,
+        q0
+    );
+
+        input [2:0] read_address;
+        output q0;
+
+        wire _5;
+        wire [2:0] _4;
+        wire gnd;
+        reg [0:0] _6[0:7];
+        wire _7;
+        assign _5 = 1'b0;
+        assign _4 = 3'b000;
+        assign gnd = 1'b0;
+        always @(posedge gnd) begin
+            if (gnd)
+                _6[_4] <= _5;
+        end
+        initial begin
+            _6[0] <= 1'b0;
+            _6[1] <= 1'b1;
+            _6[2] <= 1'b0;
+            _6[3] <= 1'b1;
+            _6[4] <= 1'b0;
+            _6[5] <= 1'b1;
+            _6[6] <= 1'b0;
+            _6[7] <= 1'b1;
+        end
+        assign _7 = _6[read_address];
+        assign q0 = _7;
+
+    endmodule
+    library ieee;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_std.all;
+
+    entity initialized_memory is
+        port (
+            read_address : in std_logic_vector(2 downto 0);
+            q0 : out std_logic
+        );
+    end entity;
+
+    architecture rtl of initialized_memory is
+
+        -- conversion functions
+        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
+        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
+        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
+        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
+        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
+        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
+        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
+        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
+        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
+        signal hc_5 : std_logic;
+        signal hc_4 : std_logic_vector(2 downto 0);
+        signal gnd : std_logic;
+        type hc_6_type is array (0 to 7) of std_logic;
+        signal hc_6 : hc_6_type;
+        signal hc_7 : std_logic;
+
+    begin
+
+        hc_5 <= '0';
+        hc_4 <= "000";
+        gnd <= '0';
+        process (gnd) begin
+            if rising_edge(gnd) then
+                if gnd = '1' then
+                    hc_6(to_integer(hc_uns(hc_4))) <= hc_5;
+                end if;
+            end if;
+        end process;
+        process begin
+            hc_6(0) <= '0';
+            hc_6(1) <= '1';
+            hc_6(2) <= '0';
+            hc_6(3) <= '1';
+            hc_6(4) <= '0';
+            hc_6(5) <= '1';
+            hc_6(6) <= '0';
+            hc_6(7) <= '1';
+            wait;
+        end process;
+        hc_7 <= hc_6(to_integer(hc_uns(read_address)));
+        q0 <= hc_7;
+
+    end architecture;
+    |}]
+;;
+
+let%expect_test "initialized memory" =
+  let address_width = 3 in
+  let data_width = 8 in
+  let memory_size = 1 lsl address_width in
+  let read_address = Signal.input "read_address" address_width in
+  let read_data =
+    Signal.multiport_memory
+      memory_size
+      ~write_ports:
+        [| Write_port.(
+             map2
+               port_names
+               { write_clock = 1
+               ; write_data = data_width
+               ; write_enable = 1
+               ; write_address = address_width
+               }
+               ~f:Signal.input)
+        |]
+      ~read_addresses:[| read_address; Signal.( +:. ) read_address 1 |]
+      ~initialize_to:
+        (Array.init memory_size ~f:(fun i -> Bits.of_int ~width:data_width (i + 10)))
+  in
+  let circuit =
+    Circuit.create_exn
+      ~name:"rom"
+      (List.mapi (Array.to_list read_data) ~f:(fun i q ->
+         Signal.output ("q" ^ Int.to_string i) q))
+  in
+  let sim = Cyclesim.create circuit in
+  let waves, sim = Waveform.create sim in
+  let read_address = Cyclesim.in_port sim "read_address" in
+  for i = 0 to memory_size - 1 do
+    read_address := Bits.of_int ~width:address_width i;
+    Cyclesim.cycle sim
+  done;
+  read_address := Bits.of_int ~width:address_width 4;
+  Cyclesim.in_port sim "write_address" := Bits.of_int ~width:address_width 4;
+  Cyclesim.in_port sim "write_enable" := Bits.vdd;
+  Cyclesim.in_port sim "write_data" := Bits.of_int ~width:data_width 255;
+  Cyclesim.cycle sim;
+  Cyclesim.in_port sim "write_address" := Bits.of_int ~width:address_width 5;
+  Cyclesim.in_port sim "write_enable" := Bits.vdd;
+  Cyclesim.in_port sim "write_data" := Bits.of_int ~width:data_width 254;
+  Cyclesim.cycle sim;
+  Cyclesim.in_port sim "write_enable" := Bits.gnd;
+  Cyclesim.cycle sim;
+  Cyclesim.cycle sim;
+  Waveform.print ~display_height:22 ~display_width:88 ~wave_width:1 waves;
+  [%expect
+    {|
+    ┌Signals───────────┐┌Waves─────────────────────────────────────────────────────────────┐
+    │                  ││────┬───┬───┬───┬───┬───┬───┬───┬───────────────                  │
+    │read_address      ││ 0  │1  │2  │3  │4  │5  │6  │7  │4                                │
+    │                  ││────┴───┴───┴───┴───┴───┴───┴───┴───────────────                  │
+    │                  ││────────────────────────────────┬───┬───────────                  │
+    │write_address     ││ 0                              │4  │5                            │
+    │                  ││────────────────────────────────┴───┴───────────                  │
+    │write_clock       ││                                                                  │
+    │                  ││────────────────────────────────────────────────                  │
+    │                  ││────────────────────────────────┬───┬───────────                  │
+    │write_data        ││ 00                             │FF │FE                           │
+    │                  ││────────────────────────────────┴───┴───────────                  │
+    │write_enable      ││                                ┌───────┐                         │
+    │                  ││────────────────────────────────┘       └───────                  │
+    │                  ││────┬───┬───┬───┬───┬───┬───┬───┬───┬───────────                  │
+    │q0                ││ 0A │0B │0C │0D │0E │0F │10 │11 │0E │FF                           │
+    │                  ││────┴───┴───┴───┴───┴───┴───┴───┴───┴───────────                  │
+    │                  ││────┬───┬───┬───┬───┬───┬───┬───┬───────┬───────                  │
+    │q1                ││ 0B │0C │0D │0E │0F │10 │11 │0A │0F     │FE                       │
+    │                  ││────┴───┴───┴───┴───┴───┴───┴───┴───────┴───────                  │
+    │                  ││                                                                  │
+    └──────────────────┘└──────────────────────────────────────────────────────────────────┘
+    |}]
+;;
+
+let%expect_test "rom" =
+  let test address_width data_width =
+    let memory_size = 1 lsl address_width in
+    let read_address = Signal.input "read_address" address_width in
+    let read_data =
+      Signal.rom
+        ~read_addresses:[| read_address; Signal.( +:. ) read_address 1 |]
+        (Array.init memory_size ~f:(fun i -> Bits.of_int ~width:data_width i))
+    in
+    let circuit =
+      Circuit.create_exn
+        ~name:"rom"
+        (List.mapi (Array.to_list read_data) ~f:(fun i q ->
+           Signal.output ("q" ^ Int.to_string i) q))
+    in
+    let sim = Cyclesim.create circuit in
+    let waves, sim = Waveform.create sim in
+    let read_address = Cyclesim.in_port sim "read_address" in
+    for i = 0 to memory_size - 1 do
+      read_address := Bits.of_int ~width:address_width i;
+      Cyclesim.cycle sim
+    done;
+    Waveform.print ~display_height:12 ~display_width:88 ~wave_width:1 waves
+  in
+  test 2 4;
+  [%expect
+    {|
+    ┌Signals───────────┐┌Waves─────────────────────────────────────────────────────────────┐
+    │                  ││────┬───┬───┬───                                                  │
+    │read_address      ││ 0  │1  │2  │3                                                    │
+    │                  ││────┴───┴───┴───                                                  │
+    │                  ││────┬───┬───┬───                                                  │
+    │q0                ││ 0  │1  │2  │3                                                    │
+    │                  ││────┴───┴───┴───                                                  │
+    │                  ││────┬───┬───┬───                                                  │
+    │q1                ││ 1  │2  │3  │0                                                    │
+    │                  ││────┴───┴───┴───                                                  │
+    │                  ││                                                                  │
+    └──────────────────┘└──────────────────────────────────────────────────────────────────┘
+    |}];
+  test 4 8;
+  [%expect
+    {|
+    ┌Signals───────────┐┌Waves─────────────────────────────────────────────────────────────┐
+    │                  ││────┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───  │
+    │read_address      ││ 0  │1  │2  │3  │4  │5  │6  │7  │8  │9  │A  │B  │C  │D  │E  │F    │
+    │                  ││────┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───  │
+    │                  ││────┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───  │
+    │q0                ││ 00 │01 │02 │03 │04 │05 │06 │07 │08 │09 │0A │0B │0C │0D │0E │0F   │
+    │                  ││────┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───  │
+    │                  ││────┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───  │
+    │q1                ││ 01 │02 │03 │04 │05 │06 │07 │08 │09 │0A │0B │0C │0D │0E │0F │00   │
+    │                  ││────┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───  │
+    │                  ││                                                                  │
+    └──────────────────┘└──────────────────────────────────────────────────────────────────┘
     |}]
 ;;

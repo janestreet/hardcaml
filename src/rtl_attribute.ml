@@ -8,15 +8,26 @@ module Value = struct
   [@@deriving sexp_of, compare, equal, hash]
 end
 
+module Applies_to = struct
+  type t =
+    | Non_wires
+    | Regs
+    | Memories
+    | Instantiations
+  [@@deriving sexp_of, compare, equal, hash]
+end
+
 type t =
   { name : string
   ; value : Value.t option
+  ; applies_to : Applies_to.t list
   }
 [@@deriving sexp_of, compare, equal, hash]
 
-let create ?value name = { name; value }
+let create ?(applies_to = []) ?value name = { name; value; applies_to }
 let name t = t.name
 let value t = t.value
+let applies_to t = t.applies_to
 
 module Vivado = struct
   (* see ug901 vivado synthesis guide chapter 2. *)
@@ -31,14 +42,22 @@ module Vivado = struct
     | false -> String "no"
   ;;
 
-  let async_reg b = create "ASYNC_REG" ~value:(true_or_false_string b)
+  let async_reg b =
+    create "ASYNC_REG" ~applies_to:[ Regs ] ~value:(true_or_false_string b)
+  ;;
+
   let dont_touch b = create "dont_touch" ~value:(true_or_false_string b)
-  let keep_hierarchy b = create "keep_hierarchy" ~value:(yes_or_no_string b)
+
+  let keep_hierarchy b =
+    create "keep_hierarchy" ~applies_to:[ Instantiations ] ~value:(yes_or_no_string b)
+  ;;
+
   let use_dsp b = create "USE_DSP" ~value:(yes_or_no_string b)
 
   let fsm_encoding enc =
     create
       "fsm_encoding"
+      ~applies_to:[ Regs ]
       ~value:
         (String
            (match enc with
@@ -64,19 +83,56 @@ module Vivado = struct
             | `None -> "none"))
   ;;
 
+  let max_fanout n = create "max_fanout" ~value:(Value.Int n)
+
+  let extract_enable b =
+    create "extract_enable" ~applies_to:[ Regs ] ~value:(true_or_false_string b)
+  ;;
+
+  let extract_reset b =
+    create "extract_reset" ~applies_to:[ Regs ] ~value:(true_or_false_string b)
+  ;;
+
   module Ram_style = struct
-    let block = create "RAM_STYLE" ~value:(String "block")
-    let distributed = create "RAM_STYLE" ~value:(String "distributed")
-    let registers = create "RAM_STYLE" ~value:(String "registers")
-    let ultra = create "RAM_STYLE" ~value:(String "ultra")
+    let block = create "RAM_STYLE" ~applies_to:[ Memories ] ~value:(String "block")
+
+    let distributed =
+      create "RAM_STYLE" ~applies_to:[ Memories ] ~value:(String "distributed")
+    ;;
+
+    let registers =
+      create "RAM_STYLE" ~applies_to:[ Memories ] ~value:(String "registers")
+    ;;
+
+    let ultra = create "RAM_STYLE" ~applies_to:[ Memories ] ~value:(String "ultra")
   end
 
   module Srl_style = struct
-    let register = create "SRL_STYLE" ~value:(String "register")
-    let srl = create "SRL_STYLE" ~value:(String "srl")
-    let srl_reg = create "SRL_STYLE" ~value:(String "srl_reg")
-    let reg_srl = create "SRL_STYLE" ~value:(String "reg_srl")
-    let reg_srl_reg = create "SRL_STYLE" ~value:(String "reg_srl_reg")
-    let block = create "SRL_STYLE" ~value:(String "block")
+    let register =
+      create "SRL_STYLE" ~applies_to:[ Regs; Instantiations ] ~value:(String "register")
+    ;;
+
+    let srl =
+      create "SRL_STYLE" ~applies_to:[ Regs; Instantiations ] ~value:(String "srl")
+    ;;
+
+    let srl_reg =
+      create "SRL_STYLE" ~applies_to:[ Regs; Instantiations ] ~value:(String "srl_reg")
+    ;;
+
+    let reg_srl =
+      create "SRL_STYLE" ~applies_to:[ Regs; Instantiations ] ~value:(String "reg_srl")
+    ;;
+
+    let reg_srl_reg =
+      create
+        "SRL_STYLE"
+        ~applies_to:[ Regs; Instantiations ]
+        ~value:(String "reg_srl_reg")
+    ;;
+
+    let block =
+      create "SRL_STYLE" ~applies_to:[ Regs; Instantiations ] ~value:(String "block")
+    ;;
   end
 end

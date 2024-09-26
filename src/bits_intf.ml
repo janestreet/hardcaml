@@ -49,6 +49,9 @@ module type Bits = sig
       (** A [Bits.Mutable.t] can be accessed as an array of 64 bit words. *)
       val num_words : t -> int
 
+      (** Set to random value. *)
+      val randomize : random_state:Splittable_random.t -> t -> unit
+
       val unsafe_get_int64 : t -> int -> int64
       val unsafe_set_int64 : t -> int -> int64 -> unit
       val get_int64 : t -> int -> int64

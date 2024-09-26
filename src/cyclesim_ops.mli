@@ -137,7 +137,6 @@ val mem_read
 type clear =
   { clear : int
   ; clear_value : int
-  ; level : int
   }
 
 val reg
