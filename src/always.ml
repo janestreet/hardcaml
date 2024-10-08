@@ -73,6 +73,7 @@ type 'a cases = 'a case list [@@deriving sexp_of]
 
 let if_ sel on_true on_false = If (sel, on_true, on_false)
 let elif c t f = [ if_ c t f ]
+let else_ = Fn.id
 let when_ sel on_true = if_ sel on_true []
 let unless sel on_false = if_ sel [] on_false
 let switch sel cases = Switch (sel, cases)

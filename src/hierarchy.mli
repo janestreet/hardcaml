@@ -78,4 +78,24 @@ module In_scope (I : Interface.S) (O : Interface.S) : sig
     -> name:string
     -> create
     -> Circuit.With_interface(I)(O).create
+
+  (** Wrapper for [hierarchical] which automatically determines the module name based on
+      the calling file name.
+
+      If used multiple times in the same file, each module will have the same name.
+      However, hardcaml will mangle those names to produce a legal circuit.
+
+      Note - this is based an internal Jane Street compiler feature which automatically
+      provides the [here] argument. When used with the public compiler [here] must be
+      explicitly given. *)
+  val hierarchical_here
+    :  ?config:Circuit.Config.t
+    -> ?instance:string
+    -> ?attributes:Rtl_attribute.t list
+    -> ?input_attributes:Rtl_attribute.t list I.t
+    -> ?output_attributes:Rtl_attribute.t list O.t
+    -> scope:Scope.t
+    -> ?here:Stdlib.Lexing.position
+    -> create
+    -> Circuit.With_interface(I)(O).create
 end

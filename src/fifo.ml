@@ -110,11 +110,17 @@ let create
   let enable = rd ^: wr in
   (* fill level of fifo *)
   let used = wire used_bits in
+  let used_plus_1 = (* for retiming *) wire used_bits in
+  let used_minus_1 = wire used_bits in
   let used_next =
-    mux2 enable (mux2 rd (used -:. 1) (used +:. 1)) used
+    mux2 enable (mux2 rd used_minus_1 used_plus_1) used
     (* read+write, or none *)
   in
   used <== reg ~enable (used_next -- "USED_NEXT") -- "USED";
+  used_plus_1
+  <== reg ~enable ~clear_to:(one (width used)) (used_next +:. 1) -- "USED_PLUS_1";
+  used_minus_1
+  <== reg ~enable ~clear_to:(ones (width used)) (used_next -:. 1) -- "USED_MINUS_1";
   (* full empty flags *)
   not_empty <== reg ~enable (used_next <>:. 0) -- "not_empty";
   full <== reg ~enable (used_next ==:. actual_capacity) -- "full";

@@ -121,6 +121,9 @@ val if_ : Signal.t -> t list -> t list -> t
 (** else if branch *)
 val elif : Signal.t -> t list -> t list -> t list
 
+(** else branch (for readability) *)
+val else_ : t list -> t list
+
 (** if sel then [...] else [] *)
 val when_ : Signal.t -> t list -> t
 

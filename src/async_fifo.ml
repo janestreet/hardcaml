@@ -166,7 +166,9 @@ struct
       let var =
         Always.Variable.reg (Reg_spec.create ~clock ~reset ()) ~enable:vdd ~width
       in
-      ignore (var.value -- name : Signal.t);
+      ignore
+        (Signal.add_attribute var.value (Rtl_attribute.Vivado.dont_touch true) -- name
+         : Signal.t);
       var
     in
     let waddr_rd =

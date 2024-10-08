@@ -156,10 +156,9 @@ let transform_sequential_signal canonical signal =
       ; write_ports = Array.map write_ports ~f:rewrite_write_port
       ; initialize_to
       }
-  | Inst { signal_id; extra_uid; instantiation } ->
+  | Inst { signal_id; instantiation } ->
     Inst
       { signal_id = rewrite_signal_id signal_id
-      ; extra_uid
       ; instantiation = rewrite_instantiation instantiation
       }
   | _ ->

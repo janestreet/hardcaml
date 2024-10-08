@@ -4,6 +4,17 @@ module Out_channel = Stdio.Out_channel
 
 let vcdcycle = 10
 
+let char_allowed c =
+  (* Names in VCD files are not allowed to have whitespace because they indicate the end
+     of a token. Other disallowed characters were determined emperically based on the
+     behavior seen in GTKWave *)
+  let disallowed_chars = [ '\\'; '|'; ':'; '!'; '\''; ' ' ] in
+  let is_allowed c = List.for_all disallowed_chars ~f:(fun x -> Char.O.(c <> x)) in
+  Char.is_print c && is_allowed c
+;;
+
+let sanitize_name name = String.map ~f:(fun c -> if char_allowed c then c else '_') name
+
 module Timescale = struct
   type t =
     | Fs of int
@@ -63,7 +74,7 @@ module Var = struct
   let define chan { typ; name; id; width } =
     Out_channel.output_string
       chan
-      [%string "$var %{typ#Type} %{width#Int} %{id} %{name} $end\n"]
+      [%string "$var %{typ#Type} %{width#Int} %{id} %{sanitize_name name} $end\n"]
   ;;
 
   let write_string chan { typ = _; name = _; id; width } bits =
@@ -139,7 +150,9 @@ module Scope = struct
   ;;
 
   let rec write chan { name; typ; vars; subscopes } =
-    Out_channel.output_string chan [%string "$scope %{typ#Type} %{name} $end\n"];
+    Out_channel.output_string
+      chan
+      [%string "$scope %{typ#Type} %{sanitize_name name} $end\n"];
     List.iter vars ~f:(Var.define chan);
     List.iter subscopes ~f:(write chan);
     Out_channel.output_string chan [%string "$upscope $end\n"]

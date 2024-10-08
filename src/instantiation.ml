@@ -57,7 +57,6 @@ let create
     let signal =
       Signal.Type.Inst
         { signal_id = Signal.Type.make_id width
-        ; extra_uid = Signal.Type.new_id ()
         ; instantiation =
             { inst_name = name
             ; inst_instance =

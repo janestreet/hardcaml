@@ -18,15 +18,12 @@ let%expect_test "[sexp_of_t]" =
        (add_phantom_inputs true)
        (modify_outputs     <opaque>)
        (rtl_compatibility  Vivado)))
-     (signal_by_uid  ())
      (inputs         ())
      (outputs        ())
      (phantom_inputs ())
      (signal_graph (
        (outputs ())
        (upto    ())))
-     (fan_out        ())
-     (fan_in         ())
      (assertions     ())
      (instantiations ()))
     |}]
@@ -45,17 +42,6 @@ let%expect_test "[sexp_of_t] with an output" =
        (add_phantom_inputs true)
        (modify_outputs     <opaque>)
        (rtl_compatibility  Vivado)))
-     (signal_by_uid (
-       (1 (
-         wire
-         (names (output))
-         (width   1)
-         (data_in 0b1)))
-       (2 (
-         const
-         (names (vdd))
-         (width 1)
-         (value 0b1)))))
      (inputs ())
      (outputs ((
        wire
@@ -70,8 +56,6 @@ let%expect_test "[sexp_of_t] with an output" =
          (width   1)
          (data_in 0b1))))
        (upto ())))
-     (fan_out ((2 (1))))
-     (fan_in ((1 (2)) (2 ())))
      (assertions     ())
      (instantiations ()))
     |}]
@@ -92,13 +76,6 @@ let%expect_test "[sexp_of_t] with an input" =
        (add_phantom_inputs true)
        (modify_outputs     <opaque>)
        (rtl_compatibility  Vivado)))
-     (signal_by_uid (
-       (1 (wire (names (input)) (width 1)))
-       (2 (
-         wire
-         (names (output))
-         (width   1)
-         (data_in input)))))
      (inputs ((wire (names (input)) (width 1))))
      (outputs ((
        wire
@@ -113,8 +90,6 @@ let%expect_test "[sexp_of_t] with an input" =
          (width   1)
          (data_in input))))
        (upto ())))
-     (fan_out ((1 (2))))
-     (fan_in ((1 ()) (2 (1))))
      (assertions     ())
      (instantiations ()))
     |}]
@@ -135,14 +110,6 @@ let%expect_test "[sexp_of_t] with an operator" =
        (add_phantom_inputs true)
        (modify_outputs     <opaque>)
        (rtl_compatibility  Vivado)))
-     (signal_by_uid (
-       (1 (wire (names (input)) (width 1)))
-       (2 (
-         wire
-         (names (output))
-         (width   1)
-         (data_in not)))
-       (3 (not (width 1) (arguments (input))))))
      (inputs ((wire (names (input)) (width 1))))
      (outputs ((
        wire
@@ -157,13 +124,6 @@ let%expect_test "[sexp_of_t] with an operator" =
          (width   1)
          (data_in not))))
        (upto ())))
-     (fan_out (
-       (1 (3))
-       (3 (2))))
-     (fan_in (
-       (1 ())
-       (2 (3))
-       (3 (1))))
      (assertions     ())
      (instantiations ()))
     |}]
@@ -270,13 +230,6 @@ let%expect_test "phantom inputs" =
        (add_phantom_inputs true)
        (modify_outputs     <opaque>)
        (rtl_compatibility  Vivado)))
-     (signal_by_uid (
-       (1 (wire (names (a)) (width 1)))
-       (2 (
-         wire
-         (names (b))
-         (width   1)
-         (data_in a)))))
      (inputs ((wire (names (a)) (width 1))))
      (outputs ((
        wire
@@ -291,8 +244,6 @@ let%expect_test "phantom inputs" =
          (width   1)
          (data_in a))))
        (upto ())))
-     (fan_out ((1 (2))))
-     (fan_in ((1 ()) (2 (1))))
      (assertions     ())
      (instantiations ()))
     |}];
@@ -309,13 +260,6 @@ let%expect_test "phantom inputs" =
        (add_phantom_inputs true)
        (modify_outputs     <opaque>)
        (rtl_compatibility  Vivado)))
-     (signal_by_uid (
-       (1 (wire (names (a)) (width 1)))
-       (2 (
-         wire
-         (names (b))
-         (width   1)
-         (data_in a)))))
      (inputs ((wire (names (a)) (width 1))))
      (outputs ((
        wire
@@ -330,8 +274,6 @@ let%expect_test "phantom inputs" =
          (width   1)
          (data_in a))))
        (upto ())))
-     (fan_out ((1 (2))))
-     (fan_in ((1 ()) (2 (1))))
      (assertions     ())
      (instantiations ()))
     |}];

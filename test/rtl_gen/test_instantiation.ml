@@ -58,56 +58,56 @@ let%expect_test "instantiation, with 0 or more parameters." =
         output zoo;
         output [1:0] moo;
 
-        wire [1:0] _16;
-        wire [1:0] _12;
-        wire [1:0] _9;
         wire [1:0] _13;
-        wire [1:0] _17;
-        wire [2:0] _15;
-        wire _21;
-        wire [2:0] _11;
-        wire _19;
+        wire [1:0] _10;
+        wire [1:0] _8;
+        wire [1:0] _11;
+        wire [1:0] _14;
+        wire [2:0] _12;
+        wire _18;
+        wire [2:0] _9;
+        wire _16;
         wire _3;
         wire _5;
-        wire [2:0] _8;
-        wire _18;
-        wire _20;
-        wire _22;
-        assign _16 = _15[2:1];
-        assign _12 = _11[2:1];
-        assign _9 = _8[2:1];
-        assign _13 = _9 | _12;
-        assign _17 = _13 | _16;
+        wire [2:0] _7;
+        wire _15;
+        wire _17;
+        wire _19;
+        assign _13 = _12[2:1];
+        assign _10 = _9[2:1];
+        assign _8 = _7[2:1];
+        assign _11 = _8 | _10;
+        assign _14 = _11 | _13;
         foo
             #( .par(3),
                .far("baloo") )
             the_foo
             ( .foo(_5),
               .bar(_3),
-              .moo(_15[2:1]),
-              .zoo(_15[0:0]) );
-        assign _21 = _15[0:0];
+              .moo(_12[2:1]),
+              .zoo(_12[0:0]) );
+        assign _18 = _12[0:0];
         foo
             #( .par(3) )
             the_foo_0
             ( .foo(_5),
               .bar(_3),
-              .moo(_11[2:1]),
-              .zoo(_11[0:0]) );
-        assign _19 = _11[0:0];
+              .moo(_9[2:1]),
+              .zoo(_9[0:0]) );
+        assign _16 = _9[0:0];
         assign _3 = bar;
         assign _5 = foo;
         foo
             the_foo_1
             ( .foo(_5),
               .bar(_3),
-              .moo(_8[2:1]),
-              .zoo(_8[0:0]) );
-        assign _18 = _8[0:0];
-        assign _20 = _18 | _19;
-        assign _22 = _20 | _21;
-        assign zoo = _22;
-        assign moo = _17;
+              .moo(_7[2:1]),
+              .zoo(_7[0:0]) );
+        assign _15 = _7[0:0];
+        assign _17 = _15 | _16;
+        assign _19 = _17 | _18;
+        assign zoo = _19;
+        assign moo = _14;
 
     endmodule
     ("GHDL failed with" (error_code (Error (Exit_non_zero 1))))
@@ -138,56 +138,56 @@ let%expect_test "instantiation, with 0 or more parameters." =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal hc_16 : std_logic_vector(1 downto 0);
-        signal hc_12 : std_logic_vector(1 downto 0);
-        signal hc_9 : std_logic_vector(1 downto 0);
         signal hc_13 : std_logic_vector(1 downto 0);
-        signal hc_17 : std_logic_vector(1 downto 0);
-        signal hc_15 : std_logic_vector(2 downto 0);
-        signal hc_21 : std_logic;
-        signal hc_11 : std_logic_vector(2 downto 0);
-        signal hc_19 : std_logic;
+        signal hc_10 : std_logic_vector(1 downto 0);
+        signal hc_8 : std_logic_vector(1 downto 0);
+        signal hc_11 : std_logic_vector(1 downto 0);
+        signal hc_14 : std_logic_vector(1 downto 0);
+        signal hc_12 : std_logic_vector(2 downto 0);
+        signal hc_18 : std_logic;
+        signal hc_9 : std_logic_vector(2 downto 0);
+        signal hc_16 : std_logic;
         signal hc_3 : std_logic;
         signal hc_5 : std_logic;
-        signal hc_8 : std_logic_vector(2 downto 0);
-        signal hc_18 : std_logic;
-        signal hc_20 : std_logic;
-        signal hc_22 : std_logic;
+        signal hc_7 : std_logic_vector(2 downto 0);
+        signal hc_15 : std_logic;
+        signal hc_17 : std_logic;
+        signal hc_19 : std_logic;
 
     begin
 
-        hc_16 <= hc_15(2 downto 1);
-        hc_12 <= hc_11(2 downto 1);
-        hc_9 <= hc_8(2 downto 1);
-        hc_13 <= hc_slv(hc_uns(hc_9) or hc_uns(hc_12));
-        hc_17 <= hc_slv(hc_uns(hc_13) or hc_uns(hc_16));
+        hc_13 <= hc_12(2 downto 1);
+        hc_10 <= hc_9(2 downto 1);
+        hc_8 <= hc_7(2 downto 1);
+        hc_11 <= hc_slv(hc_uns(hc_8) or hc_uns(hc_10));
+        hc_14 <= hc_slv(hc_uns(hc_11) or hc_uns(hc_13));
         the_foo: entity work.foo (rtl)
             generic map ( par => 3,
                           far => "baloo" )
             port map ( foo => hc_5,
                        bar => hc_3,
-                       moo => hc_15(2 downto 1),
-                       zoo => hc_15(0) );
-        hc_21 <= hc_sl(hc_15(0 downto 0));
+                       moo => hc_12(2 downto 1),
+                       zoo => hc_12(0) );
+        hc_18 <= hc_sl(hc_12(0 downto 0));
         the_foo_0: entity work.foo (rtl)
             generic map ( par => 3 )
             port map ( foo => hc_5,
                        bar => hc_3,
-                       moo => hc_11(2 downto 1),
-                       zoo => hc_11(0) );
-        hc_19 <= hc_sl(hc_11(0 downto 0));
+                       moo => hc_9(2 downto 1),
+                       zoo => hc_9(0) );
+        hc_16 <= hc_sl(hc_9(0 downto 0));
         hc_3 <= bar;
         hc_5 <= foo;
         the_foo_1: entity work.foo (rtl)
             port map ( foo => hc_5,
                        bar => hc_3,
-                       moo => hc_8(2 downto 1),
-                       zoo => hc_8(0) );
-        hc_18 <= hc_sl(hc_8(0 downto 0));
-        hc_20 <= hc_sl(hc_uns(hc_18) or hc_uns(hc_19));
-        hc_22 <= hc_sl(hc_uns(hc_20) or hc_uns(hc_21));
-        zoo <= hc_22;
-        moo <= hc_17;
+                       moo => hc_7(2 downto 1),
+                       zoo => hc_7(0) );
+        hc_15 <= hc_sl(hc_7(0 downto 0));
+        hc_17 <= hc_sl(hc_uns(hc_15) or hc_uns(hc_16));
+        hc_19 <= hc_sl(hc_uns(hc_17) or hc_uns(hc_18));
+        zoo <= hc_19;
+        moo <= hc_14;
 
     end architecture;
     |}]
@@ -228,7 +228,7 @@ let%expect_test "instantiation output corner case" =
 
         wire _2;
         wire _4;
-        wire _8;
+        wire _7;
         wire _5;
         assign _2 = bar;
         assign _4 = foo;
@@ -236,8 +236,8 @@ let%expect_test "instantiation output corner case" =
             the_foo
             ( .foo(_4),
               .bar(_2),
-              .zoo(_8) );
-        assign _5 = _8;
+              .zoo(_7) );
+        assign _5 = _7;
         assign zoo = _5;
 
     endmodule
@@ -270,7 +270,7 @@ let%expect_test "instantiation output corner case" =
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_2 : std_logic;
         signal hc_4 : std_logic;
-        signal hc_8 : std_logic;
+        signal hc_7 : std_logic;
         signal hc_5 : std_logic;
 
     begin
@@ -280,8 +280,8 @@ let%expect_test "instantiation output corner case" =
         the_foo: entity work.foo (rtl)
             port map ( foo => hc_4,
                        bar => hc_2,
-                       zoo => hc_8 );
-        hc_5 <= hc_8;
+                       zoo => hc_7 );
+        hc_5 <= hc_7;
         zoo <= hc_5;
 
     end architecture;
@@ -346,7 +346,7 @@ let%expect_test "all parameter types" =
 
         wire _2;
         wire _4;
-        wire _8;
+        wire _7;
         wire _5;
         assign _2 = bar;
         assign _4 = foo;
@@ -366,8 +366,8 @@ let%expect_test "all parameter types" =
             the_foo
             ( .foo(_4),
               .bar(_2),
-              .zoo(_8) );
-        assign _5 = _8;
+              .zoo(_7) );
+        assign _5 = _7;
         assign zoo = _5;
 
     endmodule
@@ -400,7 +400,7 @@ let%expect_test "all parameter types" =
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_2 : std_logic;
         signal hc_4 : std_logic;
-        signal hc_8 : std_logic;
+        signal hc_7 : std_logic;
         signal hc_5 : std_logic;
 
     begin
@@ -422,8 +422,8 @@ let%expect_test "all parameter types" =
                           j => "foo" )
             port map ( foo => hc_4,
                        bar => hc_2,
-                       zoo => hc_8 );
-        hc_5 <= hc_8;
+                       zoo => hc_7 );
+        hc_5 <= hc_7;
         zoo <= hc_5;
 
     end architecture;
@@ -552,7 +552,7 @@ let%expect_test "vivado compatibility mode" =
 
         wire _2;
         wire _4;
-        wire _8;
+        wire _7;
         wire _5;
         assign _2 = bar;
         assign _4 = foo;
@@ -564,8 +564,8 @@ let%expect_test "vivado compatibility mode" =
             the_foo
             ( .foo(_4),
               .bar(_2),
-              .zoo(_8) );
-        assign _5 = _8;
+              .zoo(_7) );
+        assign _5 = _7;
         assign zoo = _5;
 
     endmodule
@@ -598,7 +598,7 @@ let%expect_test "vivado compatibility mode" =
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_2 : std_logic;
         signal hc_4 : std_logic;
-        signal hc_8 : std_logic;
+        signal hc_7 : std_logic;
         signal hc_5 : std_logic;
 
     begin
@@ -612,8 +612,8 @@ let%expect_test "vivado compatibility mode" =
                           d => '1' )
             port map ( foo => hc_4,
                        bar => hc_2,
-                       zoo => hc_8 );
-        hc_5 <= hc_8;
+                       zoo => hc_7 );
+        hc_5 <= hc_7;
         zoo <= hc_5;
 
     end architecture;

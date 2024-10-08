@@ -145,4 +145,37 @@ module In_scope (I : Interface.S) (O : Interface.S) = struct
         (create_fn scope)
         inputs)
   ;;
+
+  (* Convert a filename to a reasonable module name for use in the hierarchy *)
+  let default_module_name filename =
+    let name = Stdlib.Filename.basename filename |> Stdlib.Filename.chop_extension in
+    let valid_char c = Char.is_alphanum c || Char.equal c '_' || Char.equal c '$' in
+    String.map name ~f:(fun c -> if valid_char c then c else '_')
+  ;;
+
+  let hierarchical_here
+    ?config
+    ?instance
+    ?attributes
+    ?input_attributes
+    ?output_attributes
+    ~(scope : Scope.t)
+    ?(here = Stdlib.Lexing.dummy_pos)
+    create_fn
+    inputs
+    =
+    if phys_equal here Lexing.dummy_pos
+    then raise_s [%message "Must provide ~here:[%here] when using [hierarchical_here]"];
+    let name = default_module_name here.pos_fname in
+    hierarchical
+      ?config
+      ?instance
+      ?attributes
+      ?input_attributes
+      ?output_attributes
+      ~scope
+      ~name
+      create_fn
+      inputs
+  ;;
 end

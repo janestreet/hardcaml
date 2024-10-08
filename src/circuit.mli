@@ -75,8 +75,6 @@ val is_input : t -> Signal.t -> bool
 (** is the signal an output of the circuit *)
 val is_output : t -> Signal.t -> bool
 
-val find_signal_exn : t -> Signal.Uid.t -> Signal.t
-
 (** For internal use.  Add phantom input ports to the circuit when writing RTL.  This
     can be necessary to ensure [Interface] based input specifications match those
     discovered when traversing the hardware design from its outputs.  It is especially
@@ -84,24 +82,10 @@ val find_signal_exn : t -> Signal.Uid.t -> Signal.t
 val set_phantom_inputs : t -> (string * int) list -> t
 
 val phantom_inputs : t -> (string * int) list
-
-(** Map of [uid]s to [Signal.t]s. *)
-module Signal_map : sig
-  type t = Signal.t Signal.Type.Uid_map.t [@@deriving sexp_of]
-end
-
 val assertions : t -> Signal.t Map.M(String).t
 
-(** Get map of [uid]s to [Signal.t]s. *)
-val signal_map : t -> Signal_map.t
-
-(** Compute and return a [Fan_out_map.t].  The computation is lazy and only performed the
-    first time [fan_out_map] is called. *)
-val fan_out_map : t -> Signal.Type.Uid_set.t Signal.Type.Uid_map.t
-
-(** Compute and return a [Fan_in_map.t].  The computation is lazy and only performed the
-    first time [fan_in_map] is called. *)
-val fan_in_map : t -> Signal.Type.Uid_set.t Signal.Type.Uid_map.t
+(** Construct a map of [uid]s to [Signal.t]s. *)
+val signal_map : t -> Signal.t Signal.Type.Uid_map.t
 
 (** compare 2 circuits to see if they are the same *)
 val structural_compare : ?check_names:bool -> t -> t -> bool

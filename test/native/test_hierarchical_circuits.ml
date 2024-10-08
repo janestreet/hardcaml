@@ -34,23 +34,23 @@ let%expect_test "To_file" =
         input a;
         output b;
 
-        wire _6;
+        wire _5;
         wire _1;
-        wire _8;
+        wire _6;
         wire _3;
-        wire _9;
+        wire _7;
         inner
             the_inner
             ( .a(a),
-              .b(_6) );
-        assign _1 = _6;
+              .b(_5) );
+        assign _1 = _5;
         inner
             the_inner_0
             ( .a(a),
-              .b(_8) );
-        assign _3 = _8;
-        assign _9 = _3 | _1;
-        assign b = _9;
+              .b(_6) );
+        assign _3 = _6;
+        assign _7 = _3 | _1;
+        assign b = _7;
 
     endmodule
     module outer (
@@ -61,13 +61,13 @@ let%expect_test "To_file" =
         input a;
         output b;
 
-        wire _5;
+        wire _4;
         wire _2;
         middle
             the_middle
             ( .a(a),
-              .b(_5) );
-        assign _2 = _5;
+              .b(_4) );
+        assign _2 = _4;
         assign b = _2;
 
     endmodule
@@ -144,24 +144,24 @@ let%expect_test "In_directory" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal hc_6 : std_logic;
+        signal hc_5 : std_logic;
         signal hc_1 : std_logic;
-        signal hc_8 : std_logic;
+        signal hc_6 : std_logic;
         signal hc_3 : std_logic;
-        signal hc_9 : std_logic;
+        signal hc_7 : std_logic;
 
     begin
 
         the_inner: entity work.inner (rtl)
             port map ( a => a,
-                       b => hc_6 );
-        hc_1 <= hc_6;
+                       b => hc_5 );
+        hc_1 <= hc_5;
         the_inner_0: entity work.inner (rtl)
             port map ( a => a,
-                       b => hc_8 );
-        hc_3 <= hc_8;
-        hc_9 <= hc_sl(hc_uns(hc_3) or hc_uns(hc_1));
-        b <= hc_9;
+                       b => hc_6 );
+        hc_3 <= hc_6;
+        hc_7 <= hc_sl(hc_uns(hc_3) or hc_uns(hc_1));
+        b <= hc_7;
 
     end architecture;
     library ieee;
@@ -189,15 +189,15 @@ let%expect_test "In_directory" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal hc_5 : std_logic;
+        signal hc_4 : std_logic;
         signal hc_2 : std_logic;
 
     begin
 
         the_middle: entity work.middle (rtl)
             port map ( a => a,
-                       b => hc_5 );
-        hc_2 <= hc_5;
+                       b => hc_4 );
+        hc_2 <= hc_4;
         b <= hc_2;
 
     end architecture;

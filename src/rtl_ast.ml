@@ -622,7 +622,7 @@ let create_statement
   | Reg { register; d; _ } -> always_of_reg var_map register ~q:signal ~d
   | Const { constant; _ } ->
     Assignment (Const { lhs = (find "Const.lhs" signal).write; constant })
-  | Inst { signal_id = _; extra_uid = _; instantiation } ->
+  | Inst { signal_id = _; instantiation } ->
     let input_ports =
       List.map instantiation.inst_inputs ~f:(fun (port_name, signal) ->
         { port_name; connection = (find ("Inst.input_port: " ^ port_name) signal).read })

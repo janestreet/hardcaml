@@ -73,16 +73,10 @@ end
 type t =
   { name : string
   ; config : Config.t
-  ; signal_by_uid : Signal_map.t
   ; inputs : Signal.t list
   ; outputs : Signal.t list
   ; phantom_inputs : (string * int) list
   ; signal_graph : Signal_graph.t
-      (* [fan_in] and [fan_out] are lazily computed.  One might worry that this would interact
-     poorly with signals, which have some mutable components (e.g. wires).  But those have
-     already been set by the time a circuit is created, so a circuit is not mutable. *)
-  ; fan_out : Signal.Type.Uid_set.t Map.M(Signal.Uid).t Lazy.t
-  ; fan_in : Signal.Type.Uid_set.t Map.M(Signal.Uid).t Lazy.t
   ; assertions : Signal.t Map.M(String).t
   ; instantiations : Instantiation_sexp.t list
   }
@@ -178,7 +172,7 @@ let create_exn ?(config = Config.default) ~name outputs =
   let outputs = outputs @ output_assertions in
   let signal_graph = Signal_graph.create outputs in
   (* check that all outputs are assigned wires with 1 name *)
-  ignore (ok_exn (Signal_graph.outputs ~validate:true signal_graph) : Signal.t list);
+  ok_exn (Signal_graph.validate_outputs signal_graph);
   (* uid normalization *)
   let signal_graph =
     if config.normalize_uids
@@ -186,7 +180,7 @@ let create_exn ?(config = Config.default) ~name outputs =
     else signal_graph
   in
   (* get new output wires *)
-  let outputs = Signal_graph.outputs signal_graph |> ok_exn in
+  let outputs = Signal_graph.outputs signal_graph in
   (* get inputs checking that they are valid *)
   let inputs = ok_exn (Signal_graph.inputs signal_graph) in
   (* update the assertions map to the new normalized signals and find all instantiations. *)
@@ -219,13 +213,10 @@ let create_exn ?(config = Config.default) ~name outputs =
   (* construct the circuit *)
   { name
   ; config
-  ; signal_by_uid = Signal_map.create signal_graph
   ; inputs
   ; outputs
   ; phantom_inputs = []
   ; signal_graph
-  ; fan_out = lazy (Signal_graph.fan_out_map signal_graph)
-  ; fan_in = lazy (Signal_graph.fan_in_map signal_graph)
   ; assertions
   ; instantiations
   }
@@ -276,10 +267,7 @@ let with_name t ~name = { t with name }
 let uid_equal a b = Signal.Uid.equal (Signal.uid a) (Signal.uid b)
 let is_input t signal = List.mem t.inputs signal ~equal:uid_equal
 let is_output t signal = List.mem t.outputs signal ~equal:uid_equal
-let find_signal_exn t uid = Map.find_exn t.signal_by_uid uid
-let fan_out_map t = Lazy.force t.fan_out
-let fan_in_map t = Lazy.force t.fan_in
-let signal_map c = c.signal_by_uid
+let signal_map t = Signal_map.create t.signal_graph
 let assertions t = t.assertions
 let config t = t.config
 

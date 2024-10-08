@@ -78,3 +78,144 @@ let%expect_test "instantiation input is empty" =
           (context "Inst.input_port: a"))))))
     |}]
 ;;
+
+let test_multiple_circuits top_names =
+  let module A = struct
+    type 'a t = { a : 'a } [@@deriving hardcaml]
+  end
+  in
+  let module B = struct
+    type 'a t = { b : 'a } [@@deriving hardcaml]
+  end
+  in
+  let module Inner = struct
+    module I = A
+    module O = B
+
+    let create _scope (i : _ I.t) = { O.b = ~:(i.a) }
+
+    let hierarchy scope i =
+      let module Hier = Hierarchy.In_scope (I) (O) in
+      Hier.hierarchical ~name:"inner" ~scope create i
+    ;;
+  end
+  in
+  let module Top = struct
+    module I = A
+    module O = B
+
+    let create scope i = Inner.hierarchy scope i
+  end
+  in
+  let module Circuit = Circuit.With_interface (Top.I) (Top.O) in
+  let scope = Scope.create () in
+  let circuits =
+    List.map top_names ~f:(fun name -> Circuit.create_exn ~name (Top.create scope))
+  in
+  Rtl.print_list ~database:(Scope.circuit_database scope) Verilog circuits
+;;
+
+let%expect_test "multiple circuits - inner component is shared" =
+  test_multiple_circuits [ "top1"; "top2" ];
+  [%expect
+    {|
+    module inner (
+        a,
+        b
+    );
+
+        input a;
+        output b;
+
+        wire _2;
+        wire _4;
+        assign _2 = a;
+        assign _4 = ~ _2;
+        assign b = _4;
+
+    endmodule
+    module top1 (
+        a,
+        b
+    );
+
+        input a;
+        output b;
+
+        wire _2;
+        wire _5;
+        wire _3;
+        assign _2 = a;
+        inner
+            inner
+            ( .a(_2),
+              .b(_5) );
+        assign _3 = _5;
+        assign b = _3;
+
+    endmodule
+    module top2 (
+        a,
+        b
+    );
+
+        input a;
+        output b;
+
+        wire _2;
+        wire _5;
+        wire _3;
+        assign _2 = a;
+        inner
+            inner_0
+            ( .a(_2),
+              .b(_5) );
+        assign _3 = _5;
+        assign b = _3;
+
+    endmodule
+    |}]
+;;
+
+let%expect_test "same name in multiple top level circuits" =
+  require_does_raise (fun () -> test_multiple_circuits [ "top"; "top" ]);
+  [%expect
+    {|
+    module inner (
+        a,
+        b
+    );
+
+        input a;
+        output b;
+
+        wire _2;
+        wire _4;
+        assign _2 = a;
+        assign _4 = ~ _2;
+        assign b = _4;
+
+    endmodule
+    module top (
+        a,
+        b
+    );
+
+        input a;
+        output b;
+
+        wire _2;
+        wire _5;
+        wire _3;
+        assign _2 = a;
+        inner
+            inner
+            ( .a(_2),
+              .b(_5) );
+        assign _3 = _5;
+        assign b = _3;
+
+    endmodule
+    ("Top level circuit name has already been used" (name top))
+    |}]
+;;

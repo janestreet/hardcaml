@@ -18,9 +18,11 @@ val create : ?upto:Signal.t list -> Signal.t list -> t
     names) return an error. *)
 val inputs : t -> Signal.t list Or_error.t
 
-(** Return the outputs of the signal graph.  If [validate] is [true], then the outputs
-    are checked for compatibility with circuit outputs. *)
-val outputs : ?validate:bool (** default is [false] *) -> t -> Signal.t list Or_error.t
+(** Checks the outputs of the signal graph for compatibility with circuit outputs. *)
+val validate_outputs : t -> unit Or_error.t
+
+(** Return the outputs of the signal graph. *)
+val outputs : t -> Signal.t list
 
 (** Visit all signals in the graph, starting at the outputs, in a depth-first manner.
     Each signal is visited only once.  [f_before] is called before recursing on each

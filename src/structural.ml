@@ -946,7 +946,7 @@ module With_interface (I : Interface.S) (O : Interface.S) (T : Interface.S) = st
       f i o t)
   ;;
 
-  let inst ?instance_name ?attributes ?g name i o t =
+  let validate i o t =
     let check_port_width name expected_width s =
       if width s <> expected_width
       then
@@ -959,7 +959,11 @@ module With_interface (I : Interface.S) (O : Interface.S) (T : Interface.S) = st
     in
     I.iter3 I.port_names I.port_widths i ~f:check_port_width;
     O.iter3 O.port_names O.port_widths o ~f:check_port_width;
-    T.iter3 T.port_names T.port_widths t ~f:check_port_width;
+    T.iter3 T.port_names T.port_widths t ~f:check_port_width
+  ;;
+
+  let inst ?instance_name ?attributes ?g name i o t =
+    validate i o t;
     inst
       ?instance_name
       ?attributes

@@ -209,7 +209,6 @@ module type Type = sig
         }
     | Inst of
         { signal_id : signal_id
-        ; extra_uid : Uid.t
         ; instantiation : instantiation
         }
 

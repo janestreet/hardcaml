@@ -156,6 +156,10 @@ module type Structural = sig
       -> (signal I.t -> signal O.t -> signal T.t -> unit)
       -> circuit
 
+    (** Checks the port widths of the signals in the interface. Raises if they mismatch.
+        *)
+    val validate : signal I.t -> signal O.t -> signal T.t -> unit
+
     val inst
       :  ?instance_name:string
       -> ?attributes:Rtl_attribute.t list

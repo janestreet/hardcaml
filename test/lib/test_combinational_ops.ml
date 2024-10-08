@@ -148,19 +148,19 @@ let%expect_test "internal representation" =
         output [7:0] c;
         output [7:0] d;
 
+        wire [7:0] _6;
+        wire [15:0] _5;
         wire [7:0] _7;
-        wire [15:0] _6;
-        wire [7:0] _8;
-        assign _7 = _6[15:8];
+        assign _6 = _5[15:8];
         add_sub
             the_add_sub
             ( .i0(a),
               .i1(b),
-              .o1(_6[15:8]),
-              .o0(_6[7:0]) );
-        assign _8 = _6[7:0];
-        assign c = _8;
-        assign d = _7;
+              .o1(_5[15:8]),
+              .o0(_5[7:0]) );
+        assign _7 = _5[7:0];
+        assign c = _7;
+        assign d = _6;
 
     endmodule
     |}]
@@ -183,19 +183,19 @@ let%expect_test "internal representation (mutable)" =
         output [7:0] c;
         output [7:0] d;
 
+        wire [7:0] _6;
+        wire [15:0] _5;
         wire [7:0] _7;
-        wire [15:0] _6;
-        wire [7:0] _8;
-        assign _7 = _6[15:8];
+        assign _6 = _5[15:8];
         add_sub_mutable
             the_add_sub_mutable
             ( .i0(a),
               .i1(b),
-              .o1(_6[15:8]),
-              .o0(_6[7:0]) );
-        assign _8 = _6[7:0];
-        assign c = _8;
-        assign d = _7;
+              .o1(_5[15:8]),
+              .o0(_5[7:0]) );
+        assign _7 = _5[7:0];
+        assign c = _7;
+        assign d = _6;
 
     endmodule
     |}]

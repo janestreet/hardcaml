@@ -140,7 +140,7 @@ let%expect_test "Instantiation blackbox" =
         wire _4;
         wire _6;
         wire _8;
-        wire [31:0] _12;
+        wire [31:0] _11;
         wire [31:0] _9;
         assign _2 = d;
         assign _4 = enable;
@@ -152,8 +152,8 @@ let%expect_test "Instantiation blackbox" =
               .clr(_6),
               .enable(_4),
               .d(_2),
-              .q(_12[31:0]) );
-        assign _9 = _12;
+              .q(_11[31:0]) );
+        assign _9 = _11;
         assign q = _9;
 
     endmodule
@@ -200,7 +200,7 @@ let%expect_test "Instantiation blackbox" =
         wire _4;
         wire _6;
         wire _8;
-        wire [31:0] _12;
+        wire [31:0] _11;
         wire [31:0] _9;
         assign _2 = d;
         assign _4 = enable;
@@ -212,8 +212,8 @@ let%expect_test "Instantiation blackbox" =
               .clr(_6),
               .enable(_4),
               .d(_2),
-              .q(_12[31:0]) );
-        assign _9 = _12;
+              .q(_11[31:0]) );
+        assign _9 = _11;
         assign q = _9;
 
     endmodule

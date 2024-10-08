@@ -177,15 +177,15 @@ let%expect_test "verilog with normalization" =
         wire _12;
         reg [1:0] _13[0:3];
         wire [1:0] _14;
-        wire [2:0] _20;
-        wire [2:0] _18;
-        wire [8:0] _16;
-        wire [2:0] _17;
         wire [2:0] _19;
-        wire [2:0] _21;
-        wire [1:0] _23;
+        wire [2:0] _17;
+        wire [8:0] _15;
+        wire [2:0] _16;
+        wire [2:0] _18;
+        wire [2:0] _20;
         wire [1:0] _22;
-        reg [1:0] _24;
+        wire [1:0] _21;
+        reg [1:0] _23;
         assign _1 = a;
         assign _12 = a[1:1];
         always @(posedge clock) begin
@@ -193,29 +193,29 @@ let%expect_test "verilog with normalization" =
                 _13[b] <= a;
         end
         assign _14 = _13[a];
-        assign _20 = _16[8:6];
-        assign _18 = _16[5:3];
+        assign _19 = _15[8:6];
+        assign _17 = _15[5:3];
         blah
             the_blah
             ( .a(a),
               .b(b),
-              .e(_16[8:6]),
-              .d(_16[5:3]),
-              .c(_16[2:0]) );
-        assign _17 = _16[2:0];
-        assign _19 = _17 | _18;
-        assign _21 = _19 | _20;
-        assign _23 = 2'b00;
-        assign _22 = a + b;
+              .e(_15[8:6]),
+              .d(_15[5:3]),
+              .c(_15[2:0]) );
+        assign _16 = _15[2:0];
+        assign _18 = _16 | _17;
+        assign _20 = _18 | _19;
+        assign _22 = 2'b00;
+        assign _21 = a + b;
         always @(posedge clock) begin
             if (clear)
-                _24 <= _23;
+                _23 <= _22;
             else
-                _24 <= _22;
+                _23 <= _21;
         end
-        assign c = _24;
+        assign c = _23;
         assign d = a;
-        assign e = _21;
+        assign e = _20;
         assign f = _14;
         assign g = _14;
         assign h = _1;
