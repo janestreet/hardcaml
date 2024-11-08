@@ -55,71 +55,71 @@ let%expect_test "Instantiation blackbox" =
         input [15:0] d;
         output [31:0] q;
 
-        wire [15:0] _29;
-        wire [31:0] _30;
-        wire [15:0] _27;
-        wire [31:0] _28;
-        wire [31:0] _31;
-        wire [15:0] _24;
-        wire [31:0] _25;
-        wire [15:0] _22;
+        wire [15:0] _25;
+        wire [31:0] _26;
+        wire [15:0] _23;
+        wire [31:0] _24;
+        wire [31:0] _27;
         wire [15:0] _20;
+        wire [31:0] _21;
+        wire [15:0] _18;
+        wire [15:0] _16;
         wire _2;
         wire _4;
         wire _6;
         wire [15:0] _8;
-        reg [15:0] _12;
+        reg [15:0] _11;
+        reg [15:0] _13;
         reg [15:0] _15;
-        reg [15:0] _18;
-        reg [15:0] _21;
-        wire [31:0] _23;
-        wire [31:0] _26;
-        wire [31:0] _32;
-        assign _29 = 16'b1001000110011010;
-        assign _30 = $signed(_12) * $signed(_29);
-        assign _27 = 16'b0000010001101110;
-        assign _28 = $signed(_15) * $signed(_27);
-        assign _31 = _28 + _30;
-        assign _24 = 16'b1011100100000110;
-        assign _25 = $signed(_18) * $signed(_24);
-        assign _22 = 16'b0101011010100001;
-        assign _20 = 16'b0000000000000000;
+        reg [15:0] _17;
+        wire [31:0] _19;
+        wire [31:0] _22;
+        wire [31:0] _28;
+        assign _25 = 16'b1001000110011010;
+        assign _26 = $signed(_11) * $signed(_25);
+        assign _23 = 16'b0000010001101110;
+        assign _24 = $signed(_13) * $signed(_23);
+        assign _27 = _24 + _26;
+        assign _20 = 16'b1011100100000110;
+        assign _21 = $signed(_15) * $signed(_20);
+        assign _18 = 16'b0101011010100001;
+        assign _16 = 16'b0000000000000000;
         assign _2 = enable;
         assign _4 = clr;
         assign _6 = clk;
         assign _8 = d;
         always @(posedge _6) begin
             if (_4)
-                _12 <= _20;
+                _11 <= _16;
             else
                 if (_2)
-                    _12 <= _8;
+                    _11 <= _8;
         end
         always @(posedge _6) begin
             if (_4)
-                _15 <= _20;
+                _13 <= _16;
             else
                 if (_2)
-                    _15 <= _12;
+                    _13 <= _11;
         end
         always @(posedge _6) begin
             if (_4)
-                _18 <= _20;
+                _15 <= _16;
             else
                 if (_2)
-                    _18 <= _15;
+                    _15 <= _13;
         end
         always @(posedge _6) begin
             if (_4)
-                _21 <= _20;
+                _17 <= _16;
             else
                 if (_2)
-                    _21 <= _18;
+                    _17 <= _15;
         end
-        assign _23 = $signed(_21) * $signed(_22);
-        assign _26 = _23 + _25;
-        assign _32 = _26 + _31;
-        assign q = _32;
+        assign _19 = $signed(_17) * $signed(_18);
+        assign _22 = _19 + _21;
+        assign _28 = _22 + _27;
+        assign q = _28;
 
     endmodule
     module fir_filter_top (
@@ -140,7 +140,7 @@ let%expect_test "Instantiation blackbox" =
         wire _4;
         wire _6;
         wire _8;
-        wire [31:0] _12;
+        wire [31:0] _11;
         wire [31:0] _9;
         assign _2 = d;
         assign _4 = enable;
@@ -152,8 +152,8 @@ let%expect_test "Instantiation blackbox" =
               .clr(_6),
               .enable(_4),
               .d(_2),
-              .q(_12[31:0]) );
-        assign _9 = _12;
+              .q(_11[31:0]) );
+        assign _9 = _11;
         assign q = _9;
 
     endmodule
@@ -200,7 +200,7 @@ let%expect_test "Instantiation blackbox" =
         wire _4;
         wire _6;
         wire _8;
-        wire [31:0] _12;
+        wire [31:0] _11;
         wire [31:0] _9;
         assign _2 = d;
         assign _4 = enable;
@@ -212,8 +212,8 @@ let%expect_test "Instantiation blackbox" =
               .clr(_6),
               .enable(_4),
               .d(_2),
-              .q(_12[31:0]) );
-        assign _9 = _12;
+              .q(_11[31:0]) );
+        assign _9 = _11;
         assign q = _9;
 
     endmodule

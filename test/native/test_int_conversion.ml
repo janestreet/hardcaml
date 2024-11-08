@@ -1,7 +1,6 @@
 open! Base
 open Expect_test_helpers_base
 open Hardcaml.Bits
-module Z = Zarith.Z
 
 module Make (X : sig
     module Int : Int.S
@@ -10,7 +9,7 @@ module Make (X : sig
     val to_signed_int : t -> Int.t
     val of_unsigned_int : width:int -> Int.t -> t
     val of_signed_int : width:int -> Int.t -> t
-    val z_of_int : Int.t -> Z.t
+    val bigint_of_int : Int.t -> Bigint.t
     val of_base_int : int -> Int.t
   end) =
 struct
@@ -51,7 +50,9 @@ struct
     (* @ max_value *)
     let of_z (offset : Int.t) =
       try
-        let z = of_z ~width:128 Z.(z_of_int Int.max_value + z_of_int offset) in
+        let z =
+          of_bigint ~width:128 Bigint.(bigint_of_int Int.max_value + bigint_of_int offset)
+        in
         let i = to_unsigned_int z in
         if Int.( <> ) Int.(max_value + offset) i
         then raise_s [%message "Internal conversion error"];
@@ -229,7 +230,9 @@ struct
     (* @ min and max value *)
     let of_z edge_value (offset : Int.t) =
       try
-        let z = of_z ~width:128 Z.(z_of_int edge_value + z_of_int offset) in
+        let z =
+          of_bigint ~width:128 Bigint.(bigint_of_int edge_value + bigint_of_int offset)
+        in
         let i = to_signed_int z in
         if Int.( <> ) Int.(edge_value + offset) i
         then raise_s [%message "Internal conversion error"];
@@ -428,7 +431,7 @@ module _ = Make (struct
     let to_signed_int = to_signed_int
     let of_unsigned_int = of_unsigned_int
     let of_signed_int = of_signed_int
-    let z_of_int = Z.of_int
+    let bigint_of_int = Bigint.of_int
     let of_base_int = Int.of_int_exn
   end)
 
@@ -439,7 +442,7 @@ module _ = Make (struct
     let to_signed_int = to_signed_int32
     let of_unsigned_int = of_unsigned_int32
     let of_signed_int = of_signed_int32
-    let z_of_int = Z.of_int32
+    let bigint_of_int = Bigint.of_int32
     let of_base_int = Int32.of_int_exn
   end)
 
@@ -450,6 +453,6 @@ module _ = Make (struct
     let to_signed_int = to_signed_int64
     let of_unsigned_int = of_unsigned_int64
     let of_signed_int = of_signed_int64
-    let z_of_int = Z.of_int64
+    let bigint_of_int = Bigint.of_int64
     let of_base_int = Int64.of_int_exn
   end)

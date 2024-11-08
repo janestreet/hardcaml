@@ -65,20 +65,21 @@ module Trace = struct
 
   let op1 bits ~f = List.init (1 lsl bits) ~f:(fun y -> f (of_int ~width:bits y))
 
-  let binary_op_tests name ( +: ) ( +:. ) =
-    let ( +: ), ( +:. ) = fn2 ( +: ), fn2 ( +:. ) in
+  let binary_op_tests name ( +: ) ( +:. ) ( ++. ) =
+    let ( +: ), ( +:. ), ( ++. ) = fn2 ( +: ), fn2 ( +:. ), fn2 ( ++. ) in
     let sexp_of_op2 f s = sexp_of_op2 name f s in
     [%message
       name
         ~all_1_bit:(op2 1 ~f:( +: ) : signal op2 list)
         ~all_2_bits:(op2 2 ~f:( +: ) : signal op2 list)
         ~misc:
-          ([ of_int ~width:8 22 +: of_int ~width:8 33
-           ; of_int ~width:123 22345 +: of_int ~width:123 (-22345)
+          ([ of_unsigned_int ~width:8 22 +: of_unsigned_int ~width:8 33
+           ; of_unsigned_int ~width:123 22345 +: of_signed_int ~width:123 (-22345)
            ]
            : signal op2 list)
         ~int_on_right:
-          ([ of_int ~width:7 27 +:. 12; of_int ~width:7 27 +:. -12 ] : int op2 list)]
+          ([ of_unsigned_int ~width:7 27 +:. 12; of_signed_int ~width:7 27 ++. -12 ]
+           : int op2 list)]
   ;;
 
   let binary_op_tests_no_rhs_int name ( +: ) =

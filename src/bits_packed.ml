@@ -17,6 +17,17 @@ let mask t ~dst_address ~width_in_bits =
   set64 t dst_address (Int64.( land ) (get64 t dst_address) mask)
 ;;
 
+let equal t ~address_a ~address_b ~size_in_words =
+  let rec eq i =
+    if i = size_in_words
+    then true
+    else if Int64.( = ) (get64 t (address_a + i)) (get64 t (address_b + i))
+    then eq (i + 1)
+    else false
+  in
+  eq 0
+;;
+
 type op2_width =
   t
   -> dst_address:int
@@ -363,5 +374,41 @@ let mux t ~dst_address ~select_address ~(cases : int array) ~size_in_words =
   let case_address = Array.unsafe_get cases select in
   for i = 0 to size_in_words - 1 do
     set64 t (dst_address + i) (get64 t (case_address + i))
+  done
+;;
+
+module Case = struct
+  type t =
+    { match_with_address : int
+    ; value_address : int
+    }
+end
+
+let cases
+  t
+  ~dst_address
+  ~select_address
+  ~select_size_in_words
+  ~default_address
+  ~(cases : Case.t array)
+  ~value_size_in_words
+  =
+  let num_cases = Array.length cases in
+  let rec f i =
+    if i = num_cases
+    then default_address
+    else (
+      let { Case.match_with_address; value_address } = cases.(i) in
+      if equal
+           t
+           ~address_a:select_address
+           ~address_b:match_with_address
+           ~size_in_words:select_size_in_words
+      then value_address
+      else f (i + 1))
+  in
+  let src_address = f 0 in
+  for i = 0 to value_size_in_words - 1 do
+    set64 t (dst_address + i) (get64 t (src_address + i))
   done
 ;;

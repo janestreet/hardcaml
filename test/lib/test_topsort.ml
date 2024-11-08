@@ -37,7 +37,7 @@ let%expect_test "signed resize" =
   let b = Signal.sresize a ~width:8 in
   let result = topsort [ b ] in
   print_s [%sexp (result : topsort)];
-  [%expect {| (Ok (empty a select cat cat cat)) |}]
+  [%expect {| (Ok (a select cat cat cat)) |}]
 ;;
 
 let%expect_test "a + a" =
@@ -45,7 +45,7 @@ let%expect_test "a + a" =
   let b = Signal.(a +: a) in
   let result = topsort [ b ] in
   print_s [%sexp (result : topsort)];
-  [%expect {| (Ok (empty a add)) |}]
+  [%expect {| (Ok (a add)) |}]
 ;;
 
 (* Simplest possible circuit. *)
@@ -54,7 +54,7 @@ let%expect_test "input -> output" =
   let b = Signal.output "b" a in
   let result = topsort [ b ] in
   print_s [%sexp (result : topsort)];
-  [%expect {| (Ok (empty a b)) |}]
+  [%expect {| (Ok (a b)) |}]
 ;;
 
 let reg_spec = Reg_spec.create () ~clock ~clear
@@ -81,7 +81,7 @@ let%expect_test "reg loop" =
   in
   let result = topsort [ b ] in
   print_s [%sexp (result : topsort)];
-  [%expect {| (Ok (register 0b1 add wire empty clock 0b0 clear 0b0 0b1)) |}]
+  [%expect {| (Ok (register 0b1 add wire clock clear 0b0)) |}]
 ;;
 
 let%expect_test "mem loop" =
@@ -96,7 +96,7 @@ let%expect_test "mem loop" =
   Signal.(w <== q);
   let result = topsort [ q ] in
   print_s [%sexp (result : topsort)];
-  [%expect {| (Ok (0b1 memory_read_port multiport_memory empty clock wire)) |}]
+  [%expect {| (Ok (0b1 memory_read_port multiport_memory clock wire)) |}]
 ;;
 
 (* This a combinational loop.  The read address is not synchronously read. *)

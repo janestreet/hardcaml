@@ -69,12 +69,7 @@ let%expect_test "large constant" =
 
 let%expect_test "unassigned wire" =
   print_signal (wire 1);
-  [%expect
-    {|
-    (wire
-      (width   1)
-      (data_in empty))
-    |}]
+  [%expect {| (wire (width 1)) |}]
 ;;
 
 let%expect_test "assigned wire" =
@@ -91,13 +86,7 @@ let%expect_test "assigned wire" =
 
 let%expect_test "multiple names" =
   print_signal (wire 1 -- "foo" -- "bar");
-  [%expect
-    {|
-    (wire
-      (names (bar foo))
-      (width   1)
-      (data_in empty))
-    |}]
+  [%expect {| (wire (names (bar foo)) (width 1)) |}]
 ;;
 
 let%expect_test "multiple names in arg" =
@@ -150,7 +139,7 @@ let%expect_test "printing at leaves" =
     ; wireof (mux2 vdd a b)
     ; wireof a.:(1)
     ; wireof (concat_msb [ a; b ])
-    ; wireof (reg (Reg_spec.create () ~clock) ~enable:empty a)
+    ; wireof (reg (Reg_spec.create () ~clock) a)
     ; wireof
         (memory
            4
@@ -245,20 +234,19 @@ let%expect_test "select" =
 ;;
 
 let%expect_test "reg r_none" =
-  print_signal (reg (Reg_spec.create () ~clock) ~enable:empty (input "a" 1));
+  print_signal (reg (Reg_spec.create () ~clock) (input "a" 1));
   [%expect
     {|
     (register
       (width 1)
       ((clock      clock)
-       (clock_edge Rising)
-       (enable     0b1))
+       (clock_edge Rising))
       (data_in a))
     |}]
 ;;
 
 let%expect_test "reg r_async" =
-  print_signal (reg (Reg_spec.create () ~clock ~reset) ~enable:empty (input "a" 1));
+  print_signal (reg (Reg_spec.create () ~clock ~reset) (input "a" 1));
   [%expect
     {|
     (register
@@ -267,8 +255,7 @@ let%expect_test "reg r_async" =
        (clock_edge Rising)
        (reset      reset)
        (reset_edge Rising)
-       (reset_to   0b0)
-       (enable     0b1))
+       (reset_to   0b0))
       (data_in a))
     |}]
 ;;
@@ -277,7 +264,6 @@ let%expect_test "reg r_sync" =
   print_signal
     (reg
        (Reg_spec.override (Reg_spec.create () ~clock ~clear) ~clock_edge:Falling)
-       ~enable:empty
        (input "a" 1));
   [%expect
     {|
@@ -286,14 +272,13 @@ let%expect_test "reg r_sync" =
       ((clock      clock)
        (clock_edge Falling)
        (clear      clear)
-       (clear_to   0b0)
-       (enable     0b1))
+       (clear_to   0b0))
       (data_in a))
     |}]
 ;;
 
 let%expect_test "reg r_full" =
-  print_signal (reg (Reg_spec.create () ~clock ~clear ~reset) ~enable:empty (input "a" 1));
+  print_signal (reg (Reg_spec.create () ~clock ~clear ~reset) (input "a" 1));
   [%expect
     {|
     (register
@@ -304,8 +289,7 @@ let%expect_test "reg r_full" =
        (reset_edge Rising)
        (reset_to   0b0)
        (clear      clear)
-       (clear_to   0b0)
-       (enable     0b1))
+       (clear_to   0b0))
       (data_in a))
     |}]
 ;;
@@ -340,14 +324,8 @@ let%expect_test "test depth" =
         lt
         (width 1)
         (arguments (
-          (wire
-            (names (b))
-            (width   1)
-            (data_in empty))
-          (wire
-            (names (a))
-            (width   1)
-            (data_in empty))))))))
+          (wire (names (b)) (width 1))
+          (wire (names (a)) (width 1))))))))
     |}]
 ;;
 

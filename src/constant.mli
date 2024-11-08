@@ -32,10 +32,10 @@ val to_int64 : t -> int64
 val to_int64_array : t -> int64 array
 
 (** Convert to an arbitrary precision integer. *)
-val to_z : signedness:Signedness.t -> t -> Zarith.Z.t
+val to_bigint : signedness:Signedness.t -> t -> Bigint.t
 
 (** Convert to a hex encoded string. *)
-val to_hex_string : signedness:Signedness.t -> t -> string
+val to_hex_string : ?capitalize:bool -> signedness:Signedness.t -> t -> string
 
 (** Convert a string containing ['1'] and ['0'] characters to a constant. Width is
     inferred from the strings length. *)
@@ -57,7 +57,7 @@ val of_int64 : width:int -> int64 -> t
 val of_int64_array : width:int -> int64 array -> t
 
 (** Convert from an arbitrary precision integer. *)
-val of_z : width:int -> Zarith.Z.t -> t
+val of_bigint : width:int -> Bigint.t -> t
 
 (** Create from a hex encoded string. *)
 val of_hex_string : signedness:Signedness.t -> width:int -> string -> t

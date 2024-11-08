@@ -3,18 +3,6 @@
 
 open Base
 
-val hierarchical
-  :  (module Interface.S_Of_signal with type Of_signal.t = 'i)
-  -> (module Interface.S_Of_signal with type Of_signal.t = 'o)
-  -> ?config:Circuit.Config.t
-  -> ?instance:string
-  -> ?attributes:Rtl_attribute.t list
-  -> scope:Scope.t
-  -> name:string
-  -> (Scope.t -> 'i -> 'o)
-  -> 'i
-  -> 'o
-
 (** Fold through every circuit and instantiation in a hierarchical design.
 
     [f] will be passed the corresponding circuit if it exists in the database, and a
@@ -32,9 +20,16 @@ val print : Circuit.t -> Circuit_database.t -> unit
 module With_interface (I : Interface.S) (O : Interface.S) : sig
   (** [create database ~name create_fn inputs] creates a sub-circuit using [create_fn
       inputs] and adds it to [database].  It is then referenced in current circuit by an
-      instantiation. *)
+      instantiation.
+
+      [attributes] are applied to the instantiation of the circuit.
+
+      [input_attributes] and [output_attributes] are applied to the input and output ports
+      of the circuit. *)
   val create
     :  ?attributes:Rtl_attribute.t list
+    -> ?input_attributes:Rtl_attribute.t list I.t
+    -> ?output_attributes:Rtl_attribute.t list O.t
     -> ?config:Circuit.Config.t
     -> ?instance:string
     -> Circuit_database.t
@@ -69,13 +64,38 @@ module In_scope (I : Interface.S) (O : Interface.S) : sig
       The [instance] parameter can be used to specify the instantiation and scope name, if
       provided. Otherwise [name] is used as the scope name, and the instantiation name is
       derived automatically. [name]s are mangled so they form unique hierarchical paths to
-      each instantiatiated design. *)
+      each instantiatiated design.
+
+      [input_attributes] and [output_attributes] are applied if a sub-circuit is created
+      and not if the circuit is flattened. *)
   val hierarchical
     :  ?config:Circuit.Config.t
     -> ?instance:string
     -> ?attributes:Rtl_attribute.t list
+    -> ?input_attributes:Rtl_attribute.t list I.t
+    -> ?output_attributes:Rtl_attribute.t list O.t
     -> scope:Scope.t
     -> name:string
+    -> create
+    -> Circuit.With_interface(I)(O).create
+
+  (** Wrapper for [hierarchical] which automatically determines the module name based on
+      the calling file name.
+
+      If used multiple times in the same file, each module will have the same name.
+      However, hardcaml will mangle those names to produce a legal circuit.
+
+      Note - this is based an internal Jane Street compiler feature which automatically
+      provides the [here] argument. When used with the public compiler [here] must be
+      explicitly given. *)
+  val hierarchical_here
+    :  ?config:Circuit.Config.t
+    -> ?instance:string
+    -> ?attributes:Rtl_attribute.t list
+    -> ?input_attributes:Rtl_attribute.t list I.t
+    -> ?output_attributes:Rtl_attribute.t list O.t
+    -> scope:Scope.t
+    -> here:[%call_pos]
     -> create
     -> Circuit.With_interface(I)(O).create
 end

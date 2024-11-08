@@ -73,6 +73,7 @@ type 'a cases = 'a case list [@@deriving sexp_of]
 
 let if_ sel on_true on_false = If (sel, on_true, on_false)
 let elif c t f = [ if_ c t f ]
+let else_ = Fn.id
 let when_ sel on_true = if_ sel on_true []
 let unless sel on_false = if_ sel [] on_false
 let switch sel cases = Switch (sel, cases)
@@ -93,6 +94,7 @@ let ( <-- ) (a : Variable.t) b =
 
 let ( <--. ) (a : Variable.t) b = a <-- Signal.of_int ~width:(Signal.width a.value) b
 let incr ?(by = 1) (a : Variable.t) = a <-- Signal.(a.value +:. by)
+let decr ?(by = 1) (a : Variable.t) = a <-- Signal.(a.value -:. by)
 let list_of_set s = Set.fold s ~init:[] ~f:(fun l e -> e :: l)
 
 let rec find_targets set statements =
@@ -139,21 +141,25 @@ let rec compile_mux statements ~default =
         Signal.mux s [ f; t ]
       | Assign (_, d) -> d
       | Switch (sel, cases) ->
-        (* This implementation encodes the matches in a linear fashion, which could lead
-           to long timing paths.  By analysing the [mtch] values for the whole switch
-           statement we could choose a more optimal solution.  Considerations.
-
-           - Are all [mtch] values constants?
-           - Are there linear runs of values? ie 0,1,2,3,4,5,6,7
-           - Is the set of values very sparse?
-           - Should we add an implementation hint?
-           - http://www.sunburst-design.com/papers/CummingsSNUG2005Israel_SystemVerilog_UniquePriority.pdf *)
-        let rec build = function
+        (* Encode the matches as a linear chain of mux's. Can be used when the matches are
+           not constants. *)
+        let rec build_generic = function
           | [] -> default
           | (mtch, case) :: t ->
-            Signal.mux (sel ==: mtch) [ build t; compile_mux case ~default ]
+            Signal.mux (sel ==: mtch) [ build_generic t; compile_mux case ~default ]
         in
-        build cases
+        (* Encode the matches using [cases]. *)
+        let build_constant_cases cases =
+          Signal.cases
+            ~default
+            sel
+            (List.map cases ~f:(fun (match_with, always) ->
+               match_with, compile_mux always ~default))
+        in
+        let constant_cases =
+          List.for_all cases ~f:(fun (match_with, _) -> Signal.Type.is_const match_with)
+        in
+        if constant_cases then build_constant_cases cases else build_generic cases
     in
     compile_mux statements ~default
 ;;
@@ -190,9 +196,28 @@ module State_machine = struct
     type t [@@deriving compare, enumerate, sexp_of]
   end
 
+  let apply_statemachine_attributes attributes ~state =
+    let attributes =
+      Option.value
+        ~default:
+          [ (* We choose a pretty aggressive default which is to code ALL statemachines as
+               one-hot by default. The experiments we performed showed better performance
+               and smaller area (more registers but fewer CLBs overall) for both very
+               small and very large statemachines. Which is not to say this is the final
+               word on the best possible design choice - users may still want to
+               selectively configure certain statemachines to a different encoding. *)
+            Rtl_attribute.Vivado.fsm_encoding `one_hot
+          ]
+        attributes
+    in
+    List.iter attributes ~f:(fun attr ->
+      ignore (Signal.add_attribute state attr : Signal.t))
+  ;;
+
   let create
     ?(encoding = Encoding.Binary)
     ?(auto_wave_format = true)
+    ?attributes
     ?(enable = Signal.vdd)
     (type a)
     (module State : State with type t = a)
@@ -230,6 +255,7 @@ module State_machine = struct
           ~enable
           ~width:nstates
     in
+    apply_statemachine_attributes attributes ~state:var.value;
     let find_state name state =
       match List.Assoc.find states state ~equal:[%compare.equal: State.t] with
       | Some x -> x
@@ -294,16 +320,12 @@ module State_machine = struct
     if auto_wave_format
     then (
       let wave_format =
-        let rec find_state i bits =
+        let rec state_map i =
           if i = nstates
-          then "-"
-          else if Bits.equal (state_bits i) bits
-          then State.name_by_index.(i)
-          else find_state (i + 1) bits
+          then []
+          else (state_bits i, State.name_by_index.(i)) :: state_map (i + 1)
         in
-        match encoding with
-        | Binary -> Wave_format.Index (Array.to_list State.name_by_index)
-        | Gray | Onehot -> Wave_format.Custom (find_state 0)
+        Wave_format.Map (state_map 0)
       in
       ignore (Signal.(var.value --$ wave_format) : Signal.t));
     { current; is; set_next; switch }

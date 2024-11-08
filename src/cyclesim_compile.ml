@@ -99,7 +99,7 @@ module Nodes_and_addresses = struct
   let add_wire t wire =
     let rec find_driver (signal : Signal.t) =
       match signal with
-      | Wire { driver; _ } when not (Signal.is_empty !driver) -> find_driver !driver
+      | Wire { driver = Some driver; _ } -> find_driver driver
       | _ -> signal
     in
     { t with wires = { wire; driver = find_driver wire } :: t.wires }
@@ -204,8 +204,7 @@ let allocate_addresses (schedule : Signal.t list) =
         acc
         { signal; address = acc.mems.size }
         mem_size_in_words
-    | Wire { driver; _ } when not (Signal.is_empty !driver) ->
-      Nodes_and_addresses.add_wire acc signal
+    | Wire { driver = Some _; _ } -> Nodes_and_addresses.add_wire acc signal
     | _ ->
       Nodes_and_addresses.add_comb
         acc
@@ -229,18 +228,15 @@ let init_consts (consts : Nodes_and_addresses.Constants.t) =
 let reset_consts (regs : Node.t list) =
   List.filter_map regs ~f:(fun reg ->
     match reg.signal with
-    | Reg { register; _ } ->
-      if not (Signal.is_empty register.spec.reset)
-      then (
-        let reset = register.reset_to in
-        if Signal.Type.is_const reset
+    | Reg { register = { reset; _ }; _ } ->
+      Option.map reset ~f:(fun { reset = _; reset_edge = _; reset_to } ->
+        if Signal.Type.is_const reset_to
         then (
-          let constant = Signal.to_constant reset |> Bits.of_constant in
+          let constant = Signal.to_constant reset_to |> Bits.of_constant in
           let size_in_words = num_words reg.signal in
           let reset = Array.init size_in_words ~f:(Bits.unsafe_get_int64 constant) in
-          Some (reg.address, reset))
+          reg.address, reset)
         else raise_s [%message "Reset values must be constants" (reg : Node.t)])
-      else None
     | _ -> raise_s [%message "[reset_consts] expecting reg"])
   |> Array.of_list
 ;;
@@ -255,6 +251,22 @@ let startup_consts (regs : Node.t list) =
         let reset = Array.init size_in_words ~f:(Bits.unsafe_get_int64 constant) in
         reg.address, reset)
     | _ -> raise_s [%message "[startup_consts] expecting reg"])
+  |> Array.of_list
+;;
+
+let mem_consts (mems : Node.t list) =
+  List.filter_map mems ~f:(fun mem ->
+    match mem.signal with
+    | Multiport_mem { initialize_to; _ } ->
+      Option.map initialize_to ~f:(fun initialize_to ->
+        ( mem.address
+        , List.init (Array.length initialize_to) ~f:(fun address ->
+            let constant = initialize_to.(address) in
+            let size_in_words = num_words mem.signal in
+            let reset = Array.init size_in_words ~f:(Bits.unsafe_get_int64 constant) in
+            reset)
+          |> Array.concat ))
+    | _ -> raise_s [%message "[mem_consts] expecting mem"])
   |> Array.of_list
 ;;
 
@@ -354,6 +366,26 @@ let compile_comb
          ~select_width
          ~cases
          ~size_in_words)
+  | Cases { select; cases; default; _ } ->
+    let select_address = find_address select in
+    let select_size_in_words = num_words select in
+    let default_address = find_address default in
+    let cases =
+      Array.of_list_map cases ~f:(fun (match_with, value) ->
+        { Bits_packed.Case.match_with_address = find_address match_with
+        ; value_address = find_address value
+        })
+    in
+    let value_size_in_words = num_words dst_signal in
+    Some
+      (Cyclesim_ops.cases
+         t
+         ~dst_address
+         ~select_address
+         ~select_size_in_words
+         ~default_address
+         ~cases
+         ~value_size_in_words)
   | Cat { args; _ } ->
     let cat_src =
       List.map args ~f:(fun arg ->
@@ -365,13 +397,10 @@ let compile_comb
   | Select { arg; high; low; _ } ->
     let { Node.address = src_address; signal = _ } = find_exn arg in
     Some (Cyclesim_ops.select t ~dst_address ~src_address ~high ~low)
-  | Wire { driver; _ } ->
-    if not (Signal.is_empty !driver)
-    then
-      raise_s
-        [%message
-          "[compile_comb] driven wires should be removed from the simulator model"];
-    None
+  | Wire { driver = Some _; _ } ->
+    raise_s
+      [%message "[compile_comb] driven wires should be removed from the simulator model"]
+  | Wire { driver = None; _ } -> None
   | Mem_read_port { memory; read_address; _ } ->
     let size_in_words = num_words dst_signal in
     let read_address = find_address read_address in
@@ -444,19 +473,10 @@ let compile_reg_update t (map : Read_map.t) (dst : Node.t) =
     let dst_address = dst.address in
     let src_address = find_address d in
     let clear =
-      if not (Signal.is_empty register.spec.clear)
-      then
-        Some
-          { Cyclesim_ops.clear = find_address register.spec.clear
-          ; clear_value = find_address register.clear_to
-          }
-      else None
+      Option.map register.clear ~f:(fun { clear; clear_to } ->
+        { Cyclesim_ops.clear = find_address clear; clear_value = find_address clear_to })
     in
-    let enable =
-      if not (Signal.is_empty register.enable)
-      then Some (find_address register.enable)
-      else None
-    in
+    let enable = Option.map register.enable ~f:find_address in
     Cyclesim_ops.reg t ~clear ~enable ~dst_address ~src_address ~size_in_words
   | _ -> raise_s [%message "[compile_reg_update] expecting reg"]
 ;;
@@ -713,20 +733,17 @@ let initialize_state
   List.iter
     ~f:(fun reg ->
       if initialize reg.signal
-      then pseudorandomly_initialize_register ~random_state ~runtime reg
-      else ())
+      then pseudorandomly_initialize_register ~random_state ~runtime reg)
     allocation.regs.nodes;
   List.iter
     ~f:(fun reg ->
       if initialize reg.signal
-      then pseudorandomly_initialize_register ~random_state ~runtime reg
-      else ())
+      then pseudorandomly_initialize_register ~random_state ~runtime reg)
     allocation.regs_next.nodes;
   List.iter
     ~f:(fun mem ->
       if initialize mem.signal
-      then pseudorandomly_initialize_memories ~random_state ~runtime mem
-      else ())
+      then pseudorandomly_initialize_memories ~random_state ~runtime mem)
     allocation.mems.nodes
 ;;
 
@@ -759,7 +776,10 @@ let create ?(config = Cyclesim0.Config.default) circuit =
   in
   let startup_consts =
     Array.concat
-      [ startup_consts allocation.regs.nodes; startup_consts allocation.regs_next.nodes ]
+      [ startup_consts allocation.regs.nodes
+      ; startup_consts allocation.regs_next.nodes
+      ; mem_consts allocation.mems.nodes
+      ]
   in
   let offsets, size =
     let add prev size =

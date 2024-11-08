@@ -38,17 +38,21 @@ module Middle = struct
 
   module Inner_inst = Hierarchy.In_scope (Inner.I) (Inner.O)
 
-  let create scope (i : _ I.t) =
+  let create ?(with_hierarchical_here = false) scope (i : _ I.t) =
     let ( -- ) = Scope.naming scope in
     let (o1 : _ Inner.O.t) = Inner_inst.create ~scope ~name:"inner" Inner.create i in
     let (o2 : _ Inner.O.t) =
       let keep_hierarchy = Rtl_attribute.Vivado.keep_hierarchy true in
-      Inner_inst.hierarchical
-        ~attributes:[ keep_hierarchy ]
-        ~scope
-        ~name:"inner"
-        Inner.create
-        i
+      if with_hierarchical_here
+      then
+        Inner_inst.hierarchical_here ~attributes:[ keep_hierarchy ] ~scope Inner.create i
+      else
+        Inner_inst.hierarchical
+          ~attributes:[ keep_hierarchy ]
+          ~scope
+          ~name:"inner"
+          Inner.create
+          i
     in
     { O.o = [| o1; o2 |]; x = Signal.of_int ~width:1 0 -- "x" }
   ;;
@@ -135,18 +139,18 @@ let%expect_test "flattened" =
         output x;
 
         wire the_middle$x;
-        wire inner_0$a;
+        wire inner_1$a;
         wire _5;
         wire _8;
         wire inner$a;
         assign the_middle$x = 1'b0;
-        assign inner_0$a = ~ _8;
+        assign inner_1$a = ~ _8;
         assign _5 = b;
         assign _8 = a;
         assign inner$a = ~ _8;
         assign c0 = inner$a;
         assign d0 = _5;
-        assign c1 = inner_0$a;
+        assign c1 = inner_1$a;
         assign d1 = _5;
         assign x = the_middle$x;
 
@@ -174,18 +178,18 @@ let%expect_test "flattened" =
         output x;
 
         wire outer$the_middle$x;
-        wire outer$the_middle$inner_0$a;
+        wire outer$the_middle$inner_1$a;
         wire _5;
         wire _8;
         wire outer$the_middle$inner$a;
         assign outer$the_middle$x = 1'b0;
-        assign outer$the_middle$inner_0$a = ~ _8;
+        assign outer$the_middle$inner_1$a = ~ _8;
         assign _5 = b;
         assign _8 = a;
         assign outer$the_middle$inner$a = ~ _8;
         assign c0 = outer$the_middle$inner$a;
         assign d0 = _5;
-        assign c1 = outer$the_middle$inner_0$a;
+        assign c1 = outer$the_middle$inner_1$a;
         assign d1 = _5;
         assign x = outer$the_middle$x;
 
@@ -247,29 +251,29 @@ let%expect_test "hierarchical" =
         output x;
 
         wire x_0;
+        wire _12;
+        wire [1:0] _11;
         wire _13;
-        wire [1:0] _12;
-        wire _14;
         wire _5;
         wire _8;
         wire a_0;
         assign x_0 = 1'b0;
-        assign _13 = _12[1:1];
+        assign _12 = _11[1:1];
         (* keep_hierarchy="yes" *)
         inner
-            inner_0
+            inner_1
             ( .a(_8),
               .b(_5),
-              .d(_12[1:1]),
-              .c(_12[0:0]) );
-        assign _14 = _12[0:0];
+              .d(_11[1:1]),
+              .c(_11[0:0]) );
+        assign _13 = _11[0:0];
         assign _5 = b;
         assign _8 = a;
         assign a_0 = ~ _8;
         assign c0 = a_0;
         assign d0 = _5;
-        assign c1 = _14;
-        assign d1 = _13;
+        assign c1 = _13;
+        assign d1 = _12;
         assign x = x_0;
 
     endmodule
@@ -291,35 +295,35 @@ let%expect_test "hierarchical" =
         output d1;
         output x;
 
+        wire _11;
         wire _12;
         wire _13;
         wire _14;
-        wire _15;
         wire _6;
         wire _8;
-        wire [4:0] _11;
-        wire _16;
-        assign _12 = _11[4:4];
-        assign _13 = _11[3:3];
-        assign _14 = _11[2:2];
-        assign _15 = _11[1:1];
+        wire [4:0] _10;
+        wire _15;
+        assign _11 = _10[4:4];
+        assign _12 = _10[3:3];
+        assign _13 = _10[2:2];
+        assign _14 = _10[1:1];
         assign _6 = b;
         assign _8 = a;
         middle
             the_middle
             ( .a(_8),
               .b(_6),
-              .x(_11[4:4]),
-              .d1(_11[3:3]),
-              .c1(_11[2:2]),
-              .d0(_11[1:1]),
-              .c0(_11[0:0]) );
-        assign _16 = _11[0:0];
-        assign c0 = _16;
-        assign d0 = _15;
-        assign c1 = _14;
-        assign d1 = _13;
-        assign x = _12;
+              .x(_10[4:4]),
+              .d1(_10[3:3]),
+              .c1(_10[2:2]),
+              .d0(_10[1:1]),
+              .c0(_10[0:0]) );
+        assign _15 = _10[0:0];
+        assign c0 = _15;
+        assign d0 = _14;
+        assign c1 = _13;
+        assign d1 = _12;
+        assign x = _11;
 
     endmodule
     |}];
@@ -340,11 +344,11 @@ let%expect_test "hierarchical" =
 
         wire _2;
         wire _5;
-        wire inner_0$a;
+        wire inner_1$a;
         assign _2 = b;
         assign _5 = a;
-        assign inner_0$a = ~ _5;
-        assign c = inner_0$a;
+        assign inner_1$a = ~ _5;
+        assign c = inner_1$a;
         assign d = _2;
 
     endmodule
@@ -367,29 +371,29 @@ let%expect_test "hierarchical" =
         output x;
 
         wire the_middle$x;
+        wire _12;
+        wire [1:0] _11;
         wire _13;
-        wire [1:0] _12;
-        wire _14;
         wire _5;
         wire _8;
         wire inner$a;
         assign the_middle$x = 1'b0;
-        assign _13 = _12[1:1];
+        assign _12 = _11[1:1];
         (* keep_hierarchy="yes" *)
         inner
-            inner_0
+            inner_1
             ( .a(_8),
               .b(_5),
-              .d(_12[1:1]),
-              .c(_12[0:0]) );
-        assign _14 = _12[0:0];
+              .d(_11[1:1]),
+              .c(_11[0:0]) );
+        assign _13 = _11[0:0];
         assign _5 = b;
         assign _8 = a;
         assign inner$a = ~ _8;
         assign c0 = inner$a;
         assign d0 = _5;
-        assign c1 = _14;
-        assign d1 = _13;
+        assign c1 = _13;
+        assign d1 = _12;
         assign x = the_middle$x;
 
     endmodule
@@ -411,35 +415,35 @@ let%expect_test "hierarchical" =
         output d1;
         output x;
 
+        wire _11;
         wire _12;
         wire _13;
         wire _14;
-        wire _15;
         wire _6;
         wire _8;
-        wire [4:0] _11;
-        wire _16;
-        assign _12 = _11[4:4];
-        assign _13 = _11[3:3];
-        assign _14 = _11[2:2];
-        assign _15 = _11[1:1];
+        wire [4:0] _10;
+        wire _15;
+        assign _11 = _10[4:4];
+        assign _12 = _10[3:3];
+        assign _13 = _10[2:2];
+        assign _14 = _10[1:1];
         assign _6 = b;
         assign _8 = a;
         middle
             the_middle
             ( .a(_8),
               .b(_6),
-              .x(_11[4:4]),
-              .d1(_11[3:3]),
-              .c1(_11[2:2]),
-              .d0(_11[1:1]),
-              .c0(_11[0:0]) );
-        assign _16 = _11[0:0];
-        assign c0 = _16;
-        assign d0 = _15;
-        assign c1 = _14;
-        assign d1 = _13;
-        assign x = _12;
+              .x(_10[4:4]),
+              .d1(_10[3:3]),
+              .c1(_10[2:2]),
+              .d0(_10[1:1]),
+              .c0(_10[0:0]) );
+        assign _15 = _10[0:0];
+        assign c0 = _15;
+        assign d0 = _14;
+        assign c1 = _13;
+        assign d1 = _12;
+        assign x = _11;
 
     endmodule
     |}];
@@ -460,11 +464,11 @@ let%expect_test "hierarchical" =
 
         wire _2;
         wire _5;
-        wire outer$the_middle$inner_0$a;
+        wire outer$the_middle$inner_1$a;
         assign _2 = b;
         assign _5 = a;
-        assign outer$the_middle$inner_0$a = ~ _5;
-        assign c = outer$the_middle$inner_0$a;
+        assign outer$the_middle$inner_1$a = ~ _5;
+        assign c = outer$the_middle$inner_1$a;
         assign d = _2;
 
     endmodule
@@ -487,29 +491,29 @@ let%expect_test "hierarchical" =
         output x;
 
         wire outer$the_middle$x;
+        wire _12;
+        wire [1:0] _11;
         wire _13;
-        wire [1:0] _12;
-        wire _14;
         wire _5;
         wire _8;
         wire outer$the_middle$inner$a;
         assign outer$the_middle$x = 1'b0;
-        assign _13 = _12[1:1];
+        assign _12 = _11[1:1];
         (* keep_hierarchy="yes" *)
         inner
-            inner_0
+            inner_1
             ( .a(_8),
               .b(_5),
-              .d(_12[1:1]),
-              .c(_12[0:0]) );
-        assign _14 = _12[0:0];
+              .d(_11[1:1]),
+              .c(_11[0:0]) );
+        assign _13 = _11[0:0];
         assign _5 = b;
         assign _8 = a;
         assign outer$the_middle$inner$a = ~ _8;
         assign c0 = outer$the_middle$inner$a;
         assign d0 = _5;
-        assign c1 = _14;
-        assign d1 = _13;
+        assign c1 = _13;
+        assign d1 = _12;
         assign x = outer$the_middle$x;
 
     endmodule
@@ -531,35 +535,35 @@ let%expect_test "hierarchical" =
         output d1;
         output x;
 
+        wire _11;
         wire _12;
         wire _13;
         wire _14;
-        wire _15;
         wire _6;
         wire _8;
-        wire [4:0] _11;
-        wire _16;
-        assign _12 = _11[4:4];
-        assign _13 = _11[3:3];
-        assign _14 = _11[2:2];
-        assign _15 = _11[1:1];
+        wire [4:0] _10;
+        wire _15;
+        assign _11 = _10[4:4];
+        assign _12 = _10[3:3];
+        assign _13 = _10[2:2];
+        assign _14 = _10[1:1];
         assign _6 = b;
         assign _8 = a;
         middle
             the_middle
             ( .a(_8),
               .b(_6),
-              .x(_11[4:4]),
-              .d1(_11[3:3]),
-              .c1(_11[2:2]),
-              .d0(_11[1:1]),
-              .c0(_11[0:0]) );
-        assign _16 = _11[0:0];
-        assign c0 = _16;
-        assign d0 = _15;
-        assign c1 = _14;
-        assign d1 = _13;
-        assign x = _12;
+              .x(_10[4:4]),
+              .d1(_10[3:3]),
+              .c1(_10[2:2]),
+              .d0(_10[1:1]),
+              .c0(_10[0:0]) );
+        assign _15 = _10[0:0];
+        assign c0 = _15;
+        assign d0 = _14;
+        assign c1 = _13;
+        assign d1 = _12;
+        assign x = _11;
 
     endmodule
     |}]
@@ -615,5 +619,55 @@ let%expect_test "floating ports not in interface" =
       (in_circuit_but_not_expected (foo))
       (circuit (
         (name floating_inner) (input_ports (b foo a)) (output_ports (c d)))))
+    |}]
+;;
+
+let%expect_test "[hierarchical_here] uses the file name as the module name" =
+  let module Circuit = Circuit.With_interface (Middle.I) (Middle.O) in
+  let scope = Scope.create ~flatten_design:true ~naming_scheme:Full_path () in
+  Rtl.print
+    ~database:(Scope.circuit_database scope)
+    Verilog
+    (Circuit.create_exn
+       ~name:"circuit"
+       (Middle.create ~with_hierarchical_here:true scope));
+  (* Module name "test_module_hierarchy" comes from this file's name *)
+  [%expect
+    {|
+    module circuit (
+        b,
+        a,
+        c0,
+        d0,
+        c1,
+        d1,
+        x
+    );
+
+        input b;
+        input a;
+        output c0;
+        output d0;
+        output c1;
+        output d1;
+        output x;
+
+        wire x_0;
+        wire test_module_hierarchy$a;
+        wire _5;
+        wire _8;
+        wire inner$a;
+        assign x_0 = 1'b0;
+        assign test_module_hierarchy$a = ~ _8;
+        assign _5 = b;
+        assign _8 = a;
+        assign inner$a = ~ _8;
+        assign c0 = inner$a;
+        assign d0 = _5;
+        assign c1 = test_module_hierarchy$a;
+        assign d1 = _5;
+        assign x = x_0;
+
+    endmodule
     |}]
 ;;

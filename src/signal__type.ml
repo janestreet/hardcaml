@@ -67,12 +67,14 @@ type signal_metadata =
   ; mutable caller_id : Caller_id.t option
   ; mutable wave_format : Wave_format.t
   }
+[@@deriving sexp_of]
 
 type signal_id =
   { s_id : Uid.t
   ; s_width : int
   ; mutable s_metadata : signal_metadata option
   }
+[@@deriving sexp_of]
 
 type t =
   | Empty
@@ -91,6 +93,12 @@ type t =
       ; select : t
       ; cases : t list
       }
+  | Cases of
+      { signal_id : signal_id
+      ; select : t
+      ; cases : (t * t) list
+      ; default : t
+      }
   | Cat of
       { signal_id : signal_id
       ; args : t list
@@ -101,7 +109,7 @@ type t =
       }
   | Wire of
       { signal_id : signal_id
-      ; driver : t ref
+      ; mutable driver : t option
       }
   | Select of
       { signal_id : signal_id
@@ -111,13 +119,14 @@ type t =
       }
   | Reg of
       { signal_id : signal_id
-      ; register : register
+      ; register : t register
       ; d : t
       }
   | Multiport_mem of
       { signal_id : signal_id
       ; size : int
       ; write_ports : t Write_port.t array
+      ; initialize_to : Bits.t array option
       }
   | Mem_read_port of
       { signal_id : signal_id
@@ -126,7 +135,6 @@ type t =
       }
   | Inst of
       { signal_id : signal_id
-      ; extra_uid : Uid.t
       ; instantiation : instantiation
       }
 
@@ -144,17 +152,33 @@ type t =
 and reg_spec =
   { clock : t
   ; clock_edge : Edge.t
-  ; reset : t
+  ; reset : t option
   ; reset_edge : Edge.t
-  ; clear : t
+  ; clear : t option
   }
 
-and register =
-  { spec : reg_spec
-  ; enable : t
-  ; initialize_to : t option
-  ; reset_to : t
-  ; clear_to : t
+and 'a clock_spec =
+  { clock : 'a
+  ; clock_edge : Edge.t
+  }
+
+and 'a reset_spec =
+  { reset : 'a
+  ; reset_edge : Edge.t
+  ; reset_to : 'a
+  }
+
+and 'a clear_spec =
+  { clear : 'a
+  ; clear_to : 'a
+  }
+
+and 'a register =
+  { clock : 'a clock_spec
+  ; reset : 'a reset_spec option
+  ; clear : 'a clear_spec option
+  ; enable : 'a option
+  ; initialize_to : 'a option
   }
 
 and instantiation =
@@ -177,7 +201,10 @@ module Uid_set = struct
 end
 
 module type Printable =
-  Signal__type_intf.Printable with type t := t and type register := register
+  Signal__type_intf.Printable
+  with type t := t
+   and type register := t register
+   and type reg_spec := reg_spec
 
 module type Is_a = Signal__type_intf.Is_a with type t := t and type signal_op := signal_op
 module type Deps = Signal__type_intf.Deps with type t := t
@@ -199,27 +226,31 @@ module Deps = Make_deps (struct
     let fold t ~init ~f =
       match t with
       | Empty | Const _ -> init
-      | Wire { driver; _ } -> f init !driver
+      | Wire { driver; _ } -> Option.value_map driver ~default:init ~f:(f init)
       | Select { arg; _ } -> f init arg
       | Reg
           { register =
-              { spec = { clock; clock_edge = _; reset; reset_edge = _; clear }
-              ; enable
-              ; initialize_to
-              ; clear_to
-              ; reset_to
-              }
+              { clock = { clock; clock_edge = _ }; reset; clear; enable; initialize_to }
           ; d
           ; _
           } ->
         let arg = f init d in
         let arg = f arg clock in
-        let arg = f arg reset in
-        let arg = f arg reset_to in
-        let arg = f arg clear in
-        let arg = f arg clear_to in
+        let arg =
+          Option.value_map
+            ~default:arg
+            reset
+            ~f:(fun { reset; reset_edge = _; reset_to } ->
+              let arg = f arg reset in
+              f arg reset_to)
+        in
+        let arg =
+          Option.value_map ~default:arg clear ~f:(fun { clear; clear_to } ->
+            let arg = f arg clear in
+            f arg clear_to)
+        in
         let arg = Option.value_map ~default:arg initialize_to ~f:(f arg) in
-        let arg = f arg enable in
+        let arg = Option.value_map ~default:arg enable ~f:(f arg) in
         arg
       | Multiport_mem { write_ports; _ } ->
         Array.fold
@@ -247,6 +278,15 @@ module Deps = Make_deps (struct
         let arg = f init select in
         let arg = List.fold ~init:arg cases ~f in
         arg
+      | Cases { select; cases; default; _ } ->
+        let arg = f init select in
+        let arg =
+          List.fold ~init:arg cases ~f:(fun arg (match_with, value) ->
+            let arg = f arg match_with in
+            f arg value)
+        in
+        let arg = f arg default in
+        arg
     ;;
   end)
 
@@ -262,6 +302,7 @@ let signal_id s =
   | Inst { signal_id; _ }
   | Op2 { signal_id; _ }
   | Mux { signal_id; _ }
+  | Cases { signal_id; _ }
   | Cat { signal_id; _ }
   | Not { signal_id; _ } -> Some signal_id
 ;;
@@ -278,6 +319,7 @@ let uid s =
   | Inst { signal_id; _ }
   | Op2 { signal_id; _ }
   | Mux { signal_id; _ }
+  | Cases { signal_id; _ }
   | Cat { signal_id; _ }
   | Not { signal_id; _ } -> signal_id.s_id
 ;;
@@ -317,29 +359,45 @@ let structural_compare
     else (
       let set = Set.add set (uid a) in
       (* check we have the same type of node *)
-      let typ () =
+      let kinds_are_the_same () =
         match a, b with
-        | Empty, Empty -> true
         | Const { constant = a; _ }, Const { constant = b; _ } -> Bits.equal a b
         | Select { high = h0; low = l0; _ }, Select { high = h1; low = l1; _ } ->
           h0 = h1 && l0 = l1
-        | Reg _, Reg _ -> true
         | Multiport_mem { size = mem_size0; _ }, Multiport_mem { size = mem_size1; _ } ->
           mem_size0 = mem_size1
-        | Mem_read_port _, Mem_read_port _ -> true
-        | Wire _, Wire _ -> true
         | Inst { instantiation = i0; _ }, Inst { instantiation = i1; _ } ->
           String.equal i0.inst_name i1.inst_name
           (*i0.inst_instance=i1.inst_instance &&*)
+          (* inst_inputs=??? *)
           && [%equal: Parameter.t list] i0.inst_generics i1.inst_generics
           && [%equal: (string * (int * int)) list] i0.inst_outputs i1.inst_outputs
-        (* inst_inputs=??? *)
         | Op2 { op = o0; _ }, Op2 { op = o1; _ } -> equal_signal_op o0 o1
-        | Not _, Not _ | Mux _, Mux _ | Cat _, Cat _ -> true
-        | _ -> false
+        | Empty, Empty
+        | Reg _, Reg _
+        | Mem_read_port _, Mem_read_port _
+        | Wire _, Wire _
+        | Not _, Not _
+        | Mux _, Mux _
+        | Cases _, Cases _
+        | Cat _, Cat _ -> true
+        | ( ( Empty
+            | Const _
+            | Select _
+            | Op2 _
+            | Multiport_mem _
+            | Inst _
+            | Reg _
+            | Mem_read_port _
+            | Wire _
+            | Not _
+            | Mux _
+            | Cases _
+            | Cat _ )
+          , _ ) -> false
       in
-      let wid () = width a = width b in
-      let names () =
+      let widths_are_the_same () = width a = width b in
+      let names_are_the_same () =
         let names_or_empty = function
           | Empty -> []
           | s -> names s
@@ -348,7 +406,7 @@ let structural_compare
         then [%compare.equal: string list] (names_or_empty a) (names_or_empty b)
         else true
       in
-      let deps () =
+      let deps_are_the_same () =
         if check_deps
         then (
           match
@@ -367,7 +425,23 @@ let structural_compare
           | Unequal_lengths -> set, false)
         else set, false
       in
-      if typ () && wid () && names () then deps () else set, false)
+      let attributes_are_the_same () =
+        let attributes_set a =
+          let%bind.Option signal_id = signal_id a in
+          let%map.Option metadata = signal_id.s_metadata in
+          let attributes = metadata.attributes in
+          Set.of_list (module Rtl_attribute) attributes
+        in
+        let a = attributes_set a in
+        let b = attributes_set b in
+        [%equal: Set.M(Rtl_attribute).t option] a b
+      in
+      if kinds_are_the_same ()
+         && widths_are_the_same ()
+         && attributes_are_the_same ()
+         && names_are_the_same ()
+      then deps_are_the_same ()
+      else set, false)
   in
   structural_compare initial_deps a b
 ;;
@@ -409,6 +483,11 @@ let is_cat = function
 
 let is_mux = function
   | Mux _ -> true
+  | _ -> false
+;;
+
+let is_cases = function
+  | Cases _ -> true
   | _ -> false
 ;;
 
@@ -462,29 +541,44 @@ let rec sexp_of_instantiation_recursive ?show_uids ~depth inst =
       ~inputs:(inst.inst_inputs : (string * next) list)
       ~outputs:(inst.inst_outputs : (string * output_width) list)]
 
-and sexp_of_register_recursive ?show_uids ~depth reg =
+and sexp_of_register_recursive ?show_uids ~depth (reg : t register) =
   let sexp_of_next s = sexp_of_signal_recursive ?show_uids ~depth:(depth - 1) s in
-  let sexp_of_opt g s =
-    match g with
-    | Empty -> None
-    | _ -> Some (sexp_of_next s)
-  in
-  let sexp_of_edge g s =
-    match g with
-    | Empty -> None
-    | _ -> Some (Edge.sexp_of_t s)
-  in
+  let sexp_of_opt s ~f = Option.map s ~f:(fun s -> sexp_of_next (f s)) in
   [%message
     ""
-      ~clock:(sexp_of_next reg.spec.clock : Sexp.t)
-      ~clock_edge:(reg.spec.clock_edge : Edge.t)
-      ~reset:(sexp_of_opt reg.spec.reset reg.spec.reset : (Sexp.t option[@sexp.option]))
+      ~clock:(sexp_of_next reg.clock.clock : Sexp.t)
+      ~clock_edge:(reg.clock.clock_edge : Edge.t)
+      ~initialize_to:
+        (sexp_of_opt reg.initialize_to ~f:Fn.id : (Sexp.t option[@sexp.option]))
+      ~reset:
+        (sexp_of_opt reg.reset ~f:(fun { reset; _ } -> reset)
+         : (Sexp.t option[@sexp.option]))
       ~reset_edge:
-        (sexp_of_edge reg.spec.reset reg.spec.reset_edge : (Sexp.t option[@sexp.option]))
-      ~reset_to:(sexp_of_opt reg.spec.reset reg.reset_to : (Sexp.t option[@sexp.option]))
-      ~clear:(sexp_of_opt reg.spec.clear reg.spec.clear : (Sexp.t option[@sexp.option]))
-      ~clear_to:(sexp_of_opt reg.spec.clear reg.clear_to : (Sexp.t option[@sexp.option]))
-      ~enable:(sexp_of_opt reg.enable reg.enable : (Sexp.t option[@sexp.option]))]
+        (Option.map reg.reset ~f:(fun { reset_edge; _ } -> reset_edge)
+         : (Edge.t option[@sexp.option]))
+      ~reset_to:
+        (sexp_of_opt reg.reset ~f:(fun { reset_to; _ } -> reset_to)
+         : (Sexp.t option[@sexp.option]))
+      ~clear:
+        (sexp_of_opt reg.clear ~f:(fun { clear; _ } -> clear)
+         : (Sexp.t option[@sexp.option]))
+      ~clear_to:
+        (sexp_of_opt reg.clear ~f:(fun { clear_to; _ } -> clear_to)
+         : (Sexp.t option[@sexp.option]))
+      ~enable:(sexp_of_opt reg.enable ~f:Fn.id : (Sexp.t option[@sexp.option]))]
+
+and sexp_of_reg_spec_recursive ?show_uids ~depth spec =
+  let sexp_of_next s = sexp_of_signal_recursive ?show_uids ~depth:(depth - 1) s in
+  let sexp_of_opt s = Option.map s ~f:(fun s -> sexp_of_next s) in
+  let sexp_of_edge g s = Option.map g ~f:(fun _ -> Edge.sexp_of_t s) in
+  [%message
+    ""
+      ~clock:(sexp_of_next spec.clock : Sexp.t)
+      ~clock_edge:(spec.clock_edge : Edge.t)
+      ~reset:(sexp_of_opt spec.reset : (Sexp.t option[@sexp.option]))
+      ~reset_edge:
+        (sexp_of_edge spec.reset spec.reset_edge : (Sexp.t option[@sexp.option]))
+      ~clear:(sexp_of_opt spec.clear : (Sexp.t option[@sexp.option]))]
 
 and sexp_of_memory_recursive
   ?show_uids
@@ -526,6 +620,7 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
     | Const _ -> "const"
     | Op2 { op; _ } -> string_of_op op
     | Mux _ -> "mux"
+    | Cases _ -> "cases"
     | Not _ -> "not"
     | Cat _ -> "cat"
     | Wire _ -> "wire"
@@ -565,6 +660,8 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
       ?arguments
       ?select
       ?data
+      ?cases
+      ?default
       ?range
       ?instantiation
       ?register
@@ -583,7 +680,9 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
           (value : (string option[@sexp.option]))
           (range : ((int * int) option[@sexp.option]))
           (select : (next option[@sexp.option]))
+          (cases : ((next * next) list option[@sexp.option]))
           (data : (next list option[@sexp.option]))
+          (default : (next option[@sexp.option]))
           ~_:(instantiation : (instantiation option[@sexp.option]))
           ~_:(register : (register option[@sexp.option]))
           ~_:(memory : (memory option[@sexp.option]))
@@ -596,10 +695,11 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
     | Empty -> create "empty"
     | Const { constant; _ } -> create tag ~value:(display_const constant)
     | Mux { select; cases; _ } -> create tag ~select ~data:cases
+    | Cases { select; cases; default; _ } -> create tag ~select ~cases ~default
     | Cat { args; _ } -> create tag ~arguments:args
     | Not { arg; _ } -> create tag ~arguments:[ arg ]
     | Op2 { arg_a; arg_b; _ } -> create tag ~arguments:[ arg_a; arg_b ]
-    | Wire { driver; _ } -> create tag ~data_in:!driver
+    | Wire { driver; _ } -> create tag ?data_in:driver
     | Select { arg; high; low; _ } -> create tag ~data_in:arg ~range:(high, low)
     | Inst { instantiation; _ } -> create tag ~instantiation
     | Reg { register; d; _ } -> create tag ~register ~data_in:d
@@ -611,6 +711,7 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
 
 let sexp_of_t s = sexp_of_signal_recursive ~show_uids:false ~depth:1 s
 let sexp_of_register register = sexp_of_register_recursive register ~depth:1
+let sexp_of_reg_spec register = sexp_of_reg_spec_recursive register ~depth:1
 
 let to_string signal =
   let names s =
@@ -640,7 +741,12 @@ let to_string signal =
   | Not _ -> "Op[" ^ sid signal ^ "] = " ^ "not"
   | Cat _ -> "Op[" ^ sid signal ^ "] = " ^ "cat"
   | Mux _ -> "Op[" ^ sid signal ^ "] = " ^ "mux"
-  | Wire { driver; _ } -> "Wire[" ^ sid signal ^ "] -> " ^ Uid.to_string (uid !driver)
+  | Cases _ -> "Op[" ^ sid signal ^ "] = " ^ "cases"
+  | Wire { driver; _ } ->
+    "Wire["
+    ^ sid signal
+    ^ "] -> "
+    ^ Option.value_map driver ~default:"()" ~f:(fun driver -> Uid.to_string (uid driver))
   | Select { high; low; _ } ->
     "Select[" ^ sid signal ^ "] " ^ Int.to_string high ^ ".." ^ Int.to_string low
   | Reg _ -> "Reg[" ^ sid signal ^ "]"
@@ -659,7 +765,7 @@ let const_value =
 ;;
 
 let wire_driver = function
-  | Wire { driver; _ } when not (is_empty !driver) -> Some !driver
+  | Wire { driver; _ } -> driver
   | _ -> None
 ;;
 
@@ -667,9 +773,10 @@ let has_name t = not (List.is_empty (names t))
 let `New new_id, `Reset reset_id = Uid.generator ()
 let default_wave_format = Wave_format.Bit_or Binary
 
-let make_id w =
+let make_id width =
+  if width <= 0 then raise_s [%message "Width of signals must be >= 0" (width : int)];
   { s_id = new_id ()
-  ; s_width = w
+  ; s_width = width
   ; s_metadata =
       Option.map (Caller_id.get () ~skip:[]) ~f:(fun caller_id ->
         { names = []
@@ -709,8 +816,33 @@ let change_metadata t ~f =
     f metadata)
 ;;
 
+let check_attribute_applies_to t = function
+  | Rtl_attribute.Applies_to.Non_wires when not (is_wire t) -> true
+  | Regs when is_reg t -> true
+  | Memories when is_mem t -> true
+  | Instantiations when is_inst t -> true
+  | Non_wires | Regs | Memories | Instantiations -> false
+;;
+
+let check_attribute t attr =
+  let applies_to = Rtl_attribute.applies_to attr in
+  match applies_to with
+  | [] -> ()
+  | applies_to ->
+    if List.fold applies_to ~init:false ~f:(fun acc app ->
+         acc || check_attribute_applies_to t app)
+    then ()
+    else
+      raise_s
+        [%message
+          "Rtl_attribute is applied to wrong type of signal"
+            (t : t)
+            (attr : Rtl_attribute.t)]
+;;
+
 let add_attribute t attr =
   change_metadata t ~f:(fun metadata ->
+    check_attribute t attr;
     metadata.attributes <- attr :: metadata.attributes)
 ;;
 
@@ -719,7 +851,9 @@ let get_attributes t =
 ;;
 
 let set_attributes t attributes =
-  change_metadata t ~f:(fun metadata -> metadata.attributes <- attributes)
+  change_metadata t ~f:(fun metadata ->
+    List.iter attributes ~f:(check_attribute t);
+    metadata.attributes <- attributes)
 ;;
 
 let set_comment t comment =
@@ -751,4 +885,228 @@ let get_wave_format t =
   match get_metadata t with
   | Some metadata -> metadata.wave_format
   | None -> default_wave_format
+;;
+
+let is_vdd = function
+  | Const { constant; _ } when Bits.equal constant Bits.vdd -> true
+  | _ -> false
+;;
+
+let is_gnd = function
+  | Const { constant; _ } when Bits.equal constant Bits.gnd -> true
+  | _ -> false
+;;
+
+let of_bits constant = Const { signal_id = make_id (Bits.width constant); constant }
+
+let has_initializer = function
+  | Reg { register = { initialize_to = Some _; _ }; _ } -> true
+  | Multiport_mem { initialize_to = Some _; _ } -> true
+  | _ -> false
+;;
+
+module Register = struct
+  type 'a t = 'a register
+
+  let map { clock = { clock; clock_edge }; reset; clear; initialize_to; enable } ~f =
+    let clock = f clock in
+    let reset =
+      Option.map reset ~f:(fun { reset; reset_edge; reset_to } ->
+        let reset = f reset in
+        let reset_to = f reset_to in
+        { reset; reset_edge; reset_to })
+    in
+    let clear =
+      Option.map clear ~f:(fun { clear; clear_to } ->
+        let clear = f clear in
+        let clear_to = f clear_to in
+        { clear; clear_to })
+    in
+    let initialize_to = Option.map initialize_to ~f in
+    let enable = Option.map enable ~f in
+    { clock = { clock; clock_edge }; reset; clear; initialize_to; enable }
+  ;;
+
+  (* error checking *)
+  let assert_width signal w msg =
+    if width signal <> w
+    then
+      raise_s
+        [%message
+          msg ~info:"signal has unexpected width" ~expected_width:(w : int) (signal : t)]
+  ;;
+
+  let assert_width_or_none signal w msg =
+    match signal with
+    | None -> ()
+    | Some signal ->
+      if width signal <> w
+      then
+        raise_s
+          [%message
+            msg
+              ~info:"signal should have expected width or be empty"
+              ~expected_width:(w : int)
+              (signal : t)]
+  ;;
+
+  let zero w = of_bits (Bits.zero w)
+
+  let of_reg_spec (spec : reg_spec) ~enable ~initialize_to ~reset_to ~clear_to ~clear d =
+    if width d = 0 then raise_s [%message "Zero width registers are not allowed"];
+    assert_width spec.clock 1 "clock is invalid";
+    assert_width_or_none spec.reset 1 "reset is invalid";
+    let reset =
+      Option.map spec.reset ~f:(fun reset ->
+        (* If there is a reset, ensure there is a reset_to of the correct width (default
+           to zero) *)
+        let reset_to =
+          match reset_to with
+          | None -> zero (width d)
+          | Some reset_to ->
+            assert_width reset_to (width d) "reset_to is invalid";
+            (* if not (is_const reset_to)
+             * then raise_s [%message "Register reset_to is not constant" (reset_to : t)]; *)
+            reset_to
+        in
+        { reset; reset_edge = spec.reset_edge; reset_to })
+    in
+    (* override the clear if required. *)
+    let clear =
+      match clear with
+      | Some clear -> Some clear
+      | None -> spec.clear
+    in
+    assert_width_or_none clear 1 "clear signal is invalid";
+    let clear =
+      (* If there is a clear, ensure there is a clear_to of the correct width (default to
+       zero) *)
+      Option.map clear ~f:(fun clear ->
+        let clear_to =
+          match clear_to with
+          | None -> zero (width d)
+          | Some clear_to ->
+            assert_width clear_to (width d) "clear_to is invalid";
+            clear_to
+        in
+        { clear; clear_to })
+    in
+    let enable =
+      match enable with
+      | None -> None
+      | Some enable ->
+        assert_width enable 1 "enable is invalid";
+        if is_vdd enable then None else Some enable
+    in
+    Option.iter initialize_to ~f:(fun initialize_to ->
+      assert_width initialize_to (width d) "initial value is invalid";
+      if not (is_const initialize_to)
+      then raise_s [%message "Register initializer is not constant" (initialize_to : t)]);
+    { clock = { clock = spec.clock; clock_edge = spec.clock_edge }
+    ; reset
+    ; clear
+    ; initialize_to
+    ; enable
+    }
+  ;;
+end
+
+let map_signal_id t ~f =
+  match t with
+  | Empty -> Empty
+  | Const { signal_id; constant } -> Const { signal_id = f signal_id; constant }
+  | Op2 { signal_id; op; arg_a; arg_b } ->
+    Op2 { signal_id = f signal_id; op; arg_a; arg_b }
+  | Mux { signal_id; select; cases } -> Mux { signal_id = f signal_id; select; cases }
+  | Cases { signal_id; select; cases; default } ->
+    Cases { signal_id = f signal_id; select; cases; default }
+  | Cat { signal_id; args } -> Cat { signal_id = f signal_id; args }
+  | Not { signal_id; arg } -> Not { signal_id = f signal_id; arg }
+  | Select { signal_id; arg; high; low } ->
+    Select { signal_id = f signal_id; arg; high; low }
+  | Reg { signal_id; register; d } -> Reg { signal_id = f signal_id; register; d }
+  | Multiport_mem { signal_id; size; write_ports; initialize_to } ->
+    Multiport_mem { signal_id = f signal_id; size; write_ports; initialize_to }
+  | Mem_read_port { signal_id; memory; read_address } ->
+    Mem_read_port { signal_id = f signal_id; memory; read_address }
+  | Inst { signal_id; instantiation } -> Inst { signal_id = f signal_id; instantiation }
+  | Wire { signal_id; driver } -> Wire { signal_id = f signal_id; driver }
+;;
+
+let map_dependant t ~f =
+  match t with
+  | Empty -> Empty
+  | Const { constant; signal_id } -> Const { signal_id; constant : Bits.t }
+  | Op2 { signal_id; op; arg_a; arg_b } ->
+    let arg_a = f arg_a in
+    let arg_b = f arg_b in
+    Op2 { signal_id; op : signal_op; arg_a; arg_b }
+  | Mux { signal_id; select; cases } ->
+    let select = f select in
+    let cases = List.map cases ~f in
+    Mux { signal_id; select; cases }
+  | Cases { signal_id; select; cases; default } ->
+    let select = f select in
+    let cases = List.map cases ~f:(fun (match_value, data) -> f match_value, f data) in
+    let default = f default in
+    Cases { signal_id; select; cases; default }
+  | Cat { signal_id; args } ->
+    let args = List.map args ~f in
+    Cat { signal_id; args }
+  | Not { signal_id; arg } ->
+    let arg = f arg in
+    Not { signal_id; arg }
+  | Select { signal_id; arg; high; low } ->
+    let arg = f arg in
+    Select { signal_id; arg; high : int; low : int }
+  | Reg { signal_id; register; d } ->
+    let d = f d in
+    let register = Register.map register ~f in
+    Reg { signal_id; register; d }
+  | Multiport_mem { signal_id; size; write_ports; initialize_to } ->
+    let rewrite_write_port
+      ({ Write_port.write_clock; write_address; write_data; write_enable } :
+        _ Write_port.t)
+      =
+      let write_clock = f write_clock in
+      let write_address = f write_address in
+      let write_data = f write_data in
+      let write_enable = f write_enable in
+      { Write_port.write_clock; write_address; write_enable; write_data }
+    in
+    let write_ports = Array.map write_ports ~f:rewrite_write_port in
+    Multiport_mem
+      { signal_id; size : int; write_ports; initialize_to : Bits.t array option }
+  | Mem_read_port { signal_id; memory; read_address } ->
+    let read_address = f read_address in
+    let memory = f memory in
+    Mem_read_port { signal_id; memory; read_address }
+  | Inst
+      { signal_id
+      ; instantiation =
+          { inst_name
+          ; inst_instance
+          ; inst_generics
+          ; inst_inputs
+          ; inst_outputs
+          ; inst_lib
+          ; inst_arch
+          }
+      } ->
+    let inst_inputs = List.map inst_inputs ~f:(fun (name, signal) -> name, f signal) in
+    Inst
+      { signal_id
+      ; instantiation =
+          { inst_name : string
+          ; inst_instance : string
+          ; inst_generics : Parameter.t list
+          ; inst_inputs
+          ; inst_outputs : (string * (int * int)) list
+          ; inst_lib : string
+          ; inst_arch : string
+          }
+      }
+  | Wire { signal_id; driver } ->
+    let driver = Option.map driver ~f in
+    Wire { signal_id; driver }
 ;;

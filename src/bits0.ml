@@ -2,6 +2,12 @@
 
 open Base
 
+let bits_per_word = 64
+let log_bits_per_word = 6
+let shift_bits_to_bytes = 3
+let shift_bytes_to_words = 3
+let shift_bytes_to_words32 = 2
+
 module T = struct
   open Bin_prot.Std
 
@@ -13,16 +19,13 @@ module T = struct
     [@@deriving sexp]
   end
 
-  type t = bytes [@@deriving compare, bin_io]
+  type t = bytes [@@deriving bin_io]
 
   let width t = Int64.to_int_trunc (Bytes.unsafe_get_int64 t 0)
   let offset_for_data = 8
 
   let sexp_of_t (t : t) =
-    For_sexp.sexp_of_t
-      { width = Int64.to_int_trunc (Bytes.unsafe_get_int64 t 0)
-      ; data = Bytes.subo ~pos:offset_for_data t
-      }
+    For_sexp.sexp_of_t { width = width t; data = Bytes.subo ~pos:offset_for_data t }
   ;;
 
   let t_of_sexp sexp =
@@ -32,20 +35,37 @@ module T = struct
     Bytes.blito ~src:for_sexp.data ~dst:t ~dst_pos:offset_for_data ();
     t
   ;;
+
+  let words_of_width width = (width + bits_per_word - 1) lsr log_bits_per_word
+  let words t = words_of_width (width t)
+
+  let unsafe_get_int64 (t : t) i =
+    Bytes.unsafe_get_int64 t ((i lsl shift_bytes_to_words) + offset_for_data)
+  ;;
+
+  let compare a b =
+    let width_compare = Int.compare (width a) (width b) in
+    if width_compare <> 0
+    then width_compare
+    else (
+      let rec backwards i =
+        if i < 0
+        then 0
+        else (
+          let word_compare =
+            Stdlib.Int64.unsigned_compare (unsafe_get_int64 a i) (unsafe_get_int64 b i)
+          in
+          if word_compare <> 0 then word_compare else backwards (i - 1))
+      in
+      backwards (words a - 1))
+  ;;
 end
 
 include T
 module Comparable = Comparable.Make (T)
 
-let bits_per_word = 64
-let log_bits_per_word = 6
-let shift_bits_to_bytes = 3
-let shift_bytes_to_words = 3
-let shift_bytes_to_words32 = 2
 let width_mask = 0b11_1111
-let words_of_width width = (width + bits_per_word - 1) lsr log_bits_per_word
 let bytes_of_width width = words_of_width width lsl shift_bytes_to_words
-let words t = words_of_width (width t)
 let number_of_data_bytes t = Bytes.length t - offset_for_data
 
 let create width =
@@ -56,10 +76,6 @@ let create width =
 
 let empty = create 0
 let unsafe_get_byte (t : t) i = Bytes.unsafe_get t (offset_for_data + i)
-
-let unsafe_get_int64 (t : t) i =
-  Bytes.unsafe_get_int64 t ((i lsl shift_bytes_to_words) + offset_for_data)
-;;
 
 let unsafe_set_int64 (t : t) i x =
   Bytes.unsafe_set_int64 t ((i lsl shift_bytes_to_words) + offset_for_data) x

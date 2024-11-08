@@ -204,7 +204,7 @@ module type S = sig
   (** [const x] sets each port to [x] *)
   val const : 'a -> 'a t
 
-  type tag
+  type tag [@@deriving equal]
 
   val tags : tag t
 
@@ -296,6 +296,9 @@ module type S = sig
 
     (** Assign a interface containing variables in an always block. *)
     val assign : Always.Variable.t t -> Signal.t t -> Always.t
+
+    (** Shorthand for [assign]. *)
+    val ( <-- ) : Always.Variable.t t -> Signal.t t -> Always.t
 
     (** Creates a interface container with register variables. *)
     val reg

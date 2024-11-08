@@ -1,0 +1,7 @@
+(library
+ (name hardcaml_multi_clock_domain_examples)
+ (libraries core hardcaml_event_driven_sim.kernel hardcaml
+   hardcaml_event_driven_sim hardcaml_waveterm.cyclesim
+   hardcaml_waveterm.kernel)
+ (preprocess
+  (pps ppx_jane ppx_hardcaml)))

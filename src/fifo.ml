@@ -66,7 +66,6 @@ let create
   ?(nearly_empty = 1)
   ?nearly_full
   ?(overflow_check = true)
-  ?(reset = Signal.empty)
   ?(underflow_check = true)
   ?(ram_attributes = [ Rtl_attribute.Vivado.Ram_style.block ])
   ?scope
@@ -83,10 +82,6 @@ let create
     | Some scope -> Scope.naming scope
     | None -> ( -- )
   in
-  if Signal.is_empty clear && Signal.is_empty reset
-  then
-    raise_s
-      [%message "[Fifo.create] requires either a synchronous clear or asynchronous reset"];
   (* Check if read_latency is set that its value makes sense. *)
   Option.iter read_latency ~f:(fun read_latency ->
     if showahead && read_latency <> 0
@@ -96,7 +91,7 @@ let create
           "Cannot set showahead = true and read_latency <> 0 for Fifo."
             (read_latency : int)
             (showahead : bool)]);
-  let reg_spec = Reg_spec.create ~clock ~clear ~reset () in
+  let reg_spec = Reg_spec.create ~clock ~clear () in
   let reg ?clear_to ~enable d = reg reg_spec ?clear_to ~enable d in
   let abits = address_bits_for ram_capacity in
   let actual_capacity, used_bits = capacity_and_used_bits showahead ram_capacity in
@@ -115,11 +110,17 @@ let create
   let enable = rd ^: wr in
   (* fill level of fifo *)
   let used = wire used_bits in
+  let used_plus_1 = (* for retiming *) wire used_bits in
+  let used_minus_1 = wire used_bits in
   let used_next =
-    mux2 enable (mux2 rd (used -:. 1) (used +:. 1)) used
+    mux2 enable (mux2 rd used_minus_1 used_plus_1) used
     (* read+write, or none *)
   in
   used <== reg ~enable (used_next -- "USED_NEXT") -- "USED";
+  used_plus_1
+  <== reg ~enable ~clear_to:(one (width used)) (used_next +:. 1) -- "USED_PLUS_1";
+  used_minus_1
+  <== reg ~enable ~clear_to:(ones (width used)) (used_next -:. 1) -- "USED_MINUS_1";
   (* full empty flags *)
   not_empty <== reg ~enable (used_next <>:. 0) -- "not_empty";
   full <== reg ~enable (used_next ==:. actual_capacity) -- "full";
@@ -185,7 +186,6 @@ let create_classic_with_extra_reg
   ?nearly_empty
   ?nearly_full
   ?overflow_check
-  ?reset
   ?underflow_check
   ?ram_attributes
   ?scope
@@ -210,7 +210,6 @@ let create_classic_with_extra_reg
       ?nearly_empty
       ?nearly_full
       ?overflow_check
-      ?reset
       ?underflow_check
       ?ram_attributes
       ?scope
@@ -261,7 +260,6 @@ let create_showahead_from_classic
   ?nearly_empty
   ?nearly_full
   ?overflow_check
-  ?reset
   ?underflow_check
   ?ram_attributes
   ?scope
@@ -274,7 +272,6 @@ let create_showahead_from_classic
       ?nearly_empty
       ?nearly_full
       ?overflow_check
-      ?reset
       ?underflow_check
       ?ram_attributes
       ?scope
@@ -302,7 +299,6 @@ let create_showahead_with_read_latency
   ?nearly_empty
   ?nearly_full
   ?overflow_check
-  ?reset
   ?underflow_check
   ?ram_attributes
   ?scope
@@ -323,7 +319,6 @@ let create_showahead_with_read_latency
       ?nearly_empty
       ?nearly_full
       ?overflow_check
-      ?reset
       ?underflow_check
       ?ram_attributes
       ?scope
@@ -363,7 +358,6 @@ let create_showahead_with_extra_reg
   ?nearly_empty
   ?nearly_full
   ?overflow_check
-  ?reset
   ?underflow_check
   ?ram_attributes
   ?scope
@@ -383,7 +377,6 @@ let create_showahead_with_extra_reg
       ?nearly_empty
       ?nearly_full
       ?overflow_check
-      ?reset
       ?underflow_check
       ?ram_attributes
       ?scope
@@ -449,7 +442,6 @@ module With_interface (Config : Config) = struct
     ?nearly_empty
     ?nearly_full
     ?overflow_check
-    ?reset
     ?underflow_check
     ?ram_attributes
     ?scope
@@ -460,7 +452,6 @@ module With_interface (Config : Config) = struct
       ?nearly_empty
       ?nearly_full
       ?overflow_check
-      ?reset
       ?underflow_check
       ?ram_attributes
       ?scope

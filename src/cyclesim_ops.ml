@@ -212,6 +212,26 @@ let mux t ~dst_address ~select_address ~select_width ~cases ~size_in_words =
     mux_large)
 ;;
 
+let cases
+  t
+  ~dst_address
+  ~select_address
+  ~select_size_in_words
+  ~default_address
+  ~(cases : Bits_packed.Case.t array)
+  ~value_size_in_words
+  ()
+  =
+  Bits_packed.cases
+    t
+    ~dst_address
+    ~select_address
+    ~select_size_in_words
+    ~default_address
+    ~cases
+    ~value_size_in_words
+;;
+
 let cat t ~dst_address (cat_src : Bits_packed.Cat_src.t list) ~width_in_bits =
   let cat_small =
     let cat_src = Array.of_list cat_src in

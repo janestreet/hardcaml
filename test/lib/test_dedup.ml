@@ -59,13 +59,10 @@ let%expect_test "register" =
     {|
     Wire[id:4 bits:4 names:out deps:6] -> 6
     Op[id:6 bits:4 names: deps:3,5] = add
-    Wire[id:3 bits:4 names: deps:9] -> 9
-    Reg[id:9 bits:4 names: deps:2,1,0,7,0,7,8]
+    Wire[id:3 bits:4 names: deps:7] -> 7
+    Reg[id:7 bits:4 names: deps:2,1]
     Wire[id:2 bits:4 names: deps:6] -> 6
-    Wire[id:1 bits:1 names:clock deps:0] -> 0
-    Empty
-    Const[id:7 bits:4 names: deps:] = 0000
-    Const[id:8 bits:1 names: deps:] = 1
+    Wire[id:1 bits:1 names:clock deps:] -> ()
     Const[id:5 bits:4 names: deps:] = 1111
     |}]
 ;;
@@ -115,8 +112,7 @@ let%expect_test "memory" =
     Mem_read_port[id:8 bits:4 names: deps:4,7]
     Const[id:4 bits:4 names: deps:] = 1011
     Multiport_mem[id:7 bits:4 names:memory1 deps:1,5,5,6]
-    Wire[id:1 bits:1 names:clock deps:0] -> 0
-    Empty
+    Wire[id:1 bits:1 names:clock deps:] -> ()
     Const[id:5 bits:4 names: deps:] = 1100
     Const[id:6 bits:1 names: deps:] = 1
     Const[id:10 bits:4 names: deps:] = 1111

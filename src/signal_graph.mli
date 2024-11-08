@@ -18,9 +18,11 @@ val create : ?upto:Signal.t list -> Signal.t list -> t
     names) return an error. *)
 val inputs : t -> Signal.t list Or_error.t
 
-(** Return the outputs of the signal graph.  If [validate] is [true], then the outputs
-    are checked for compatibility with circuit outputs. *)
-val outputs : ?validate:bool (** default is [false] *) -> t -> Signal.t list Or_error.t
+(** Checks the outputs of the signal graph for compatibility with circuit outputs. *)
+val validate_outputs : t -> unit Or_error.t
+
+(** Return the outputs of the signal graph. *)
+val outputs : t -> Signal.t list
 
 (** Visit all signals in the graph, starting at the outputs, in a depth-first manner.
     Each signal is visited only once.  [f_before] is called before recursing on each
@@ -39,13 +41,18 @@ val depth_first_search
 
 (** Fold across all signals in the graph, starting at the outputs.  Each signal is visited
     only once. *)
-val fold : t -> init:'a -> f:('a -> Signal.t -> 'a) -> 'a
+val fold
+  :  ?deps:(module Signal.Type.Deps)
+  -> t
+  -> init:'a
+  -> f:('a -> Signal.t -> 'a)
+  -> 'a
 
 (** Return a list of all signals in the graph for whom [f signal] returns true. *)
-val filter : t -> f:(Signal.t -> bool) -> Signal.t list
+val filter : ?deps:(module Signal.Type.Deps) -> t -> f:(Signal.t -> bool) -> Signal.t list
 
 (** Iterate over all signals in the graph. *)
-val iter : t -> f:(Signal.t -> unit) -> unit
+val iter : ?deps:(module Signal.Type.Deps) -> t -> f:(Signal.t -> unit) -> unit
 
 (** Retuns an error if the graph has a combinational loop, that is, a path from a signal
     back to itself that doesn't pass though a register, memory or instantiation. *)
@@ -71,6 +78,10 @@ val topological_sort
   -> (Signal.t list, Signal.t list) Result.t
 
 val topological_sort_exn : deps:(module Signal.Type.Deps) -> t -> Signal.t list
+
+(** For rtl generation the case matches are written explicitly and do not need to be
+    tracked.*)
+module Deps_without_case_matches : Signal.Type.Deps
 
 (** Signal dependencies used for simulation scheduling. Breaks loops through sequential
     elements like registers and memories. *)

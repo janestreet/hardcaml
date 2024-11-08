@@ -18,15 +18,12 @@ let%expect_test "[sexp_of_t]" =
        (add_phantom_inputs true)
        (modify_outputs     <opaque>)
        (rtl_compatibility  Vivado)))
-     (signal_by_uid  ())
      (inputs         ())
      (outputs        ())
      (phantom_inputs ())
      (signal_graph (
        (outputs ())
        (upto    ())))
-     (fan_out        ())
-     (fan_in         ())
      (assertions     ())
      (instantiations ()))
     |}]
@@ -45,17 +42,6 @@ let%expect_test "[sexp_of_t] with an output" =
        (add_phantom_inputs true)
        (modify_outputs     <opaque>)
        (rtl_compatibility  Vivado)))
-     (signal_by_uid (
-       (1 (
-         wire
-         (names (output))
-         (width   1)
-         (data_in 0b1)))
-       (2 (
-         const
-         (names (vdd))
-         (width 1)
-         (value 0b1)))))
      (inputs ())
      (outputs ((
        wire
@@ -70,8 +56,6 @@ let%expect_test "[sexp_of_t] with an output" =
          (width   1)
          (data_in 0b1))))
        (upto ())))
-     (fan_out ((2 (1))))
-     (fan_in ((1 (2)) (2 ())))
      (assertions     ())
      (instantiations ()))
     |}]
@@ -92,23 +76,7 @@ let%expect_test "[sexp_of_t] with an input" =
        (add_phantom_inputs true)
        (modify_outputs     <opaque>)
        (rtl_compatibility  Vivado)))
-     (signal_by_uid (
-       (0 empty)
-       (1 (
-         wire
-         (names (input))
-         (width   1)
-         (data_in empty)))
-       (2 (
-         wire
-         (names (output))
-         (width   1)
-         (data_in input)))))
-     (inputs ((
-       wire
-       (names (input))
-       (width   1)
-       (data_in empty))))
+     (inputs ((wire (names (input)) (width 1))))
      (outputs ((
        wire
        (names (output))
@@ -122,13 +90,6 @@ let%expect_test "[sexp_of_t] with an input" =
          (width   1)
          (data_in input))))
        (upto ())))
-     (fan_out (
-       (0 (1))
-       (1 (2))))
-     (fan_in (
-       (0 ())
-       (1 (0))
-       (2 (1))))
      (assertions     ())
      (instantiations ()))
     |}]
@@ -149,24 +110,7 @@ let%expect_test "[sexp_of_t] with an operator" =
        (add_phantom_inputs true)
        (modify_outputs     <opaque>)
        (rtl_compatibility  Vivado)))
-     (signal_by_uid (
-       (0 empty)
-       (1 (
-         wire
-         (names (input))
-         (width   1)
-         (data_in empty)))
-       (2 (
-         wire
-         (names (output))
-         (width   1)
-         (data_in not)))
-       (3 (not (width 1) (arguments (input))))))
-     (inputs ((
-       wire
-       (names (input))
-       (width   1)
-       (data_in empty))))
+     (inputs ((wire (names (input)) (width 1))))
      (outputs ((
        wire
        (names (output))
@@ -180,15 +124,6 @@ let%expect_test "[sexp_of_t] with an operator" =
          (width   1)
          (data_in not))))
        (upto ())))
-     (fan_out (
-       (0 (1))
-       (1 (3))
-       (3 (2))))
-     (fan_in (
-       (0 ())
-       (1 (0))
-       (2 (3))
-       (3 (1))))
      (assertions     ())
      (instantiations ()))
     |}]
@@ -196,14 +131,7 @@ let%expect_test "[sexp_of_t] with an operator" =
 
 let%expect_test "Output signal not driven" =
   require_does_raise (fun () -> Circuit.create_exn ~name:"test" [ wire 1 ]);
-  [%expect
-    {|
-    ("circuit output signal is not driven" (
-      output_signal (
-        wire
-        (width   1)
-        (data_in empty))))
-    |}]
+  [%expect {| ("circuit output signal is not driven" (output_signal (wire (width 1)))) |}]
 ;;
 
 let%expect_test "Output signal with no name" =
@@ -273,10 +201,7 @@ let%expect_test "input with no name" =
   [%expect
     {|
     ("circuit input signal must have a port name (unassigned wire?)"
-     (input_signal (
-       wire
-       (width   1)
-       (data_in empty))))
+     (input_signal (wire (width 1))))
     |}]
 ;;
 
@@ -286,11 +211,7 @@ let%expect_test "input with multiple names" =
   [%expect
     {|
     ("circuit input signal should only have one port name"
-     (input_signal (
-       wire
-       (names (b a))
-       (width   1)
-       (data_in empty))))
+     (input_signal (wire (names (b a)) (width 1))))
     |}]
 ;;
 
@@ -309,23 +230,7 @@ let%expect_test "phantom inputs" =
        (add_phantom_inputs true)
        (modify_outputs     <opaque>)
        (rtl_compatibility  Vivado)))
-     (signal_by_uid (
-       (0 empty)
-       (1 (
-         wire
-         (names (a))
-         (width   1)
-         (data_in empty)))
-       (2 (
-         wire
-         (names (b))
-         (width   1)
-         (data_in a)))))
-     (inputs ((
-       wire
-       (names (a))
-       (width   1)
-       (data_in empty))))
+     (inputs ((wire (names (a)) (width 1))))
      (outputs ((
        wire
        (names (b))
@@ -339,13 +244,6 @@ let%expect_test "phantom inputs" =
          (width   1)
          (data_in a))))
        (upto ())))
-     (fan_out (
-       (0 (1))
-       (1 (2))))
-     (fan_in (
-       (0 ())
-       (1 (0))
-       (2 (1))))
      (assertions     ())
      (instantiations ()))
     |}];
@@ -362,23 +260,7 @@ let%expect_test "phantom inputs" =
        (add_phantom_inputs true)
        (modify_outputs     <opaque>)
        (rtl_compatibility  Vivado)))
-     (signal_by_uid (
-       (0 empty)
-       (1 (
-         wire
-         (names (a))
-         (width   1)
-         (data_in empty)))
-       (2 (
-         wire
-         (names (b))
-         (width   1)
-         (data_in a)))))
-     (inputs ((
-       wire
-       (names (a))
-       (width   1)
-       (data_in empty))))
+     (inputs ((wire (names (a)) (width 1))))
      (outputs ((
        wire
        (names (b))
@@ -392,13 +274,6 @@ let%expect_test "phantom inputs" =
          (width   1)
          (data_in a))))
        (upto ())))
-     (fan_out (
-       (0 (1))
-       (1 (2))))
-     (fan_in (
-       (0 ())
-       (1 (0))
-       (2 (1))))
      (assertions     ())
      (instantiations ()))
     |}];
@@ -486,8 +361,7 @@ let%expect_test "verify_clock_pins" =
        register
        (width 1)
        ((clock      clock)
-        (clock_edge Rising)
-        (enable     0b1))
+        (clock_edge Rising))
        (data_in foo)))))
     |}];
   let circuit_with_wired_clock =
@@ -513,8 +387,7 @@ let%expect_test "verify_clock_pins" =
        register
        (width 1)
        ((clock      clock_wire)
-        (clock_edge Rising)
-        (enable     0b1))
+        (clock_edge Rising))
        (data_in foo)))))
     |}];
   let circuit_with_multiport_memory =
@@ -567,8 +440,7 @@ let%expect_test "verify_clock_pins" =
        register
        (width 8)
        ((clock      clock3)
-        (clock_edge Rising)
-        (enable     0b1))
+        (clock_edge Rising))
        (data_in memory_read_port)))))
     |}]
 ;;

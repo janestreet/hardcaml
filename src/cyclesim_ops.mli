@@ -96,6 +96,16 @@ val mux
   -> size_in_words:int
   -> (unit -> unit)
 
+val cases
+  :  Bytes.t
+  -> dst_address:int
+  -> select_address:int
+  -> select_size_in_words:int
+  -> default_address:int
+  -> cases:Bits_packed.Case.t array
+  -> value_size_in_words:int
+  -> (unit -> unit)
+
 val cat
   :  Bytes.t
   -> dst_address:int

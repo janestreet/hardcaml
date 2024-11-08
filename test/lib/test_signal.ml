@@ -17,35 +17,17 @@ let%expect_test "name of empty" =
 
 let%expect_test "non-const signal" =
   require_does_raise (fun () -> Signal.Type.const_value (wire 1));
-  [%expect
-    {|
-    ("cannot get the value of a non-constant signal"
-     (wire
-       (width   1)
-       (data_in empty)))
-    |}]
+  [%expect {| ("cannot get the value of a non-constant signal" (wire (width 1))) |}]
 ;;
 
 let%expect_test "non-const to_int" =
   require_does_raise (fun () -> to_int (wire 1));
-  [%expect
-    {|
-    ("cannot use [to_constant] on non-constant signal"
-     (wire
-       (width   1)
-       (data_in empty)))
-    |}]
+  [%expect {| ("cannot use [to_constant] on non-constant signal" (wire (width 1))) |}]
 ;;
 
 let%expect_test "non-const to_bstr" =
   require_does_raise (fun () -> to_bstr (wire 1));
-  [%expect
-    {|
-    ("cannot use [to_constant] on non-constant signal"
-     (wire
-       (width   1)
-       (data_in empty)))
-    |}]
+  [%expect {| ("cannot use [to_constant] on non-constant signal" (wire (width 1))) |}]
 ;;
 
 let%expect_test "set name of empty" =
@@ -82,8 +64,11 @@ let%expect_test "wire width mismatch" =
     ("attempt to assign expression to wire of different width"
      (wire_width       29)
      (expression_width 17)
-     (wire       (wire  (width 29) (data_in empty)))
-     (expression (const (width 17) (value   0x00003))))
+     (wire (wire (width 29)))
+     (expression (
+       const
+       (width 17)
+       (value 0x00003))))
     |}]
 ;;
 
@@ -143,11 +128,7 @@ let%expect_test "invalid clock" =
     ("clock is invalid"
       (info           "signal has unexpected width")
       (expected_width 1)
-      (signal (
-        wire
-        (names (not_a_clock))
-        (width   2)
-        (data_in empty))))
+      (signal (wire (names (not_a_clock)) (width 2))))
     |}]
 ;;
 
@@ -158,26 +139,18 @@ let%expect_test "invalid reset" =
     ("reset is invalid"
       (info "signal should have expected width or be empty")
       (expected_width 1)
-      (signal (
-        wire
-        (names (not_a_reset))
-        (width   2)
-        (data_in empty))))
+      (signal (wire (names (not_a_reset)) (width 2))))
     |}]
 ;;
 
 let%expect_test "invalid reset_value" =
-  reg_error [%here] ~reset_to:(input "not_a_reset_value" 2);
+  reg_error [%here] ~reset:vdd ~reset_to:(input "not_a_reset_value" 2);
   [%expect
     {|
-    ("reset value is invalid"
-      (info "signal should have expected width or be empty")
+    ("reset_to is invalid"
+      (info           "signal has unexpected width")
       (expected_width 8)
-      (signal (
-        wire
-        (names (not_a_reset_value))
-        (width   2)
-        (data_in empty))))
+      (signal (wire (names (not_a_reset_value)) (width 2))))
     |}]
 ;;
 
@@ -188,26 +161,18 @@ let%expect_test "invalid clear" =
     ("clear signal is invalid"
       (info "signal should have expected width or be empty")
       (expected_width 1)
-      (signal (
-        wire
-        (names (not_a_clear))
-        (width   2)
-        (data_in empty))))
+      (signal (wire (names (not_a_clear)) (width 2))))
     |}]
 ;;
 
 let%expect_test "invalid clear_value" =
-  reg_error [%here] ~clear_to:(input "not_a_clear_value" 2);
+  reg_error [%here] ~clear:vdd ~clear_to:(input "not_a_clear_value" 2);
   [%expect
     {|
-    ("clear value is invalid"
-      (info "signal should have expected width or be empty")
+    ("clear_to is invalid"
+      (info           "signal has unexpected width")
       (expected_width 8)
-      (signal (
-        wire
-        (names (not_a_clear_value))
-        (width   2)
-        (data_in empty))))
+      (signal (wire (names (not_a_clear_value)) (width 2))))
     |}]
 ;;
 
@@ -216,13 +181,9 @@ let%expect_test "invalid enable" =
   [%expect
     {|
     ("enable is invalid"
-      (info "signal should have expected width or be empty")
+      (info           "signal has unexpected width")
       (expected_width 1)
-      (signal (
-        wire
-        (names (not_an_enable))
-        (width   2)
-        (data_in empty))))
+      (signal (wire (names (not_an_enable)) (width 2))))
     |}]
 ;;
 

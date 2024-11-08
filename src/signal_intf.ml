@@ -107,10 +107,15 @@ module type Memories = sig
   val multiport_memory
     :  ?name:string
     -> ?attributes:Rtl_attribute.t list
+    -> ?initialize_to:Bits.t array
     -> int
     -> write_ports:t Write_port.t array
     -> read_addresses:t array
     -> t array
+
+  (** A multi-read port asynchronous ROM built from a memory primitive. This can be used
+      to map ROMs into RAM resources by registering the output. *)
+  val rom : read_addresses:t array -> Bits.t array -> t array
 
   val memory : int -> write_port:t Write_port.t -> read_address:t -> t
 

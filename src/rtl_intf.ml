@@ -35,19 +35,40 @@ module type Rtl = sig
       or to a directory with one file for each for the top level circuit and any
       instantiated circuits contained in the database. *)
   val output
-    :  ?output_mode:Output_mode.t (** default is [To_file (Circuit.name circuit)]. *)
+    :  ?output_mode:Output_mode.t (** default is [To_file (Circuit.name circuit)] *)
     -> ?database:Circuit_database.t (** default is an empty database  *)
-    -> ?blackbox:Blackbox.t (** Default is [None] *)
+    -> ?blackbox:Blackbox.t (** default is [None] *)
     -> Language.t
     -> Circuit.t
+    -> unit
+
+  (** Write a list of toplevel circuits. If [database] is provided then the circuits
+      should have been built with the same [scope] and the generated RTL will properly
+      share components across all given circuits.
+
+      Names of top level circuits are not mangled, so must be unique. *)
+  val output_list
+    :  ?output_mode:Output_mode.t (** default is [To_file (Circuit.name circuit)] *)
+    -> ?database:Circuit_database.t (** default is an empty database  *)
+    -> ?blackbox:Blackbox.t (** default is [None] *)
+    -> Language.t
+    -> Circuit.t list
     -> unit
 
   (** [print] is [output ~output_mode:(To_channel stdout)] *)
   val print
     :  ?database:Circuit_database.t
-    -> ?blackbox:Blackbox.t (** Default is [None] *)
+    -> ?blackbox:Blackbox.t (** default is [None] *)
     -> Language.t
     -> Circuit.t
+    -> unit
+
+  (** Print a list of circuits. *)
+  val print_list
+    :  ?database:Circuit_database.t
+    -> ?blackbox:Blackbox.t (** default is [None] *)
+    -> Language.t
+    -> Circuit.t list
     -> unit
 
   module Digest : sig
@@ -66,10 +87,12 @@ module type Rtl = sig
   end
 
   module Expert : sig
-    val output_with_name_map
-      :  ?output_mode:Output_mode.t (** default is [To_file (Circuit.name circuit)]. *)
+    val output
+      :  ?circuits_already_output:Hash_set.M(String).t
+           (** set of circuits already output *)
+      -> ?output_mode:Output_mode.t (** default is [To_file (Circuit.name circuit)] *)
       -> ?database:Circuit_database.t (** default is an empty database  *)
-      -> ?blackbox:Blackbox.t (** Default is [None] *)
+      -> ?blackbox:Blackbox.t (** default is [None] *)
       -> Language.t
       -> Circuit.t
       -> Signals_name_map.t

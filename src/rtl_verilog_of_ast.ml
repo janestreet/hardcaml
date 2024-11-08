@@ -84,6 +84,12 @@ let get_comment comment =
   Option.map comment ~f:(fun c -> [%string "/* %{c} */"]) |> Option.value ~default:""
 ;;
 
+let verilog_constant bits =
+  let width = Bits.width bits in
+  let value = Bits.to_bstr bits in
+  [%string "%{width#Int}'b%{value}"]
+;;
+
 let declaration buffer (decl : Rtl_ast.declaration) =
   let add_string = Buffer.add_string buffer in
   let write_attr (var : Rtl_ast.var) = write_attributes buffer var.attributes in
@@ -94,9 +100,7 @@ let declaration buffer (decl : Rtl_ast.declaration) =
     let comment = get_comment var.comment in
     let initialize_to =
       Option.value_map ~default:"" decl.initialize_to ~f:(fun initialize_to ->
-        let width = Bits.width initialize_to in
-        let value = Bits.to_bstr initialize_to in
-        [%string " = %{width#Int}'b%{value}"])
+        [%string " = %{verilog_constant initialize_to}"])
     in
     (* we write attributes on the aliases as well - which is one choice. *)
     if write_attrs then write_attr var;
@@ -120,7 +124,7 @@ let declarations buffer (ast : Rtl_ast.t) =
   List.iter ast.declarations ~f:(declaration buffer)
 ;;
 
-let rec write_always indent buffer (t : Rtl_ast.always) =
+let rec write_always_statements indent buffer (t : Rtl_ast.always) =
   let add_string = Buffer.add_string buffer in
   let block indent ts ~f =
     match ts with
@@ -139,30 +143,42 @@ let rec write_always indent buffer (t : Rtl_ast.always) =
   in
   match t with
   | If { condition = Clock _; on_true; on_false = [] } ->
-    List.iter on_true ~f:(write_always indent buffer)
+    List.iter on_true ~f:(write_always_statements indent buffer)
   | If { condition; on_true; on_false = [] } ->
     add_string [%string "%{indent}if (%{cond condition})\n"];
     block indent on_true ~f:(fun indent ->
-      List.iter on_true ~f:(write_always indent buffer))
+      List.iter on_true ~f:(write_always_statements indent buffer))
   | If { condition; on_true; on_false } ->
     add_string [%string "%{indent}if (%{cond condition})\n"];
     block indent on_true ~f:(fun indent ->
-      List.iter on_true ~f:(write_always indent buffer));
+      List.iter on_true ~f:(write_always_statements indent buffer));
     add_string [%string "%{indent}else\n"];
     block indent on_false ~f:(fun indent ->
-      List.iter on_false ~f:(write_always indent buffer))
+      List.iter on_false ~f:(write_always_statements indent buffer))
   | Assignment { lhs; rhs } ->
     add_string [%string "%{indent}%{lhs.name} <= %{rhs.name};\n"]
   | Memory_assignment { lhs; index; rhs } ->
     add_string [%string "%{indent}%{lhs.name}[%{index.name}] <= %{rhs.name};\n"]
+  | Constant_memory_assignment { lhs; index; value } ->
+    add_string
+      [%string "%{indent}%{lhs.name}[%{index#Int}] <= %{verilog_constant value};\n"]
   | Case { select; cases } ->
     add_string [%string "%{indent}case (%{select.name})\n"];
-    let num_cases = List.length cases in
-    List.iteri cases ~f:(fun index case ->
-      if index = num_cases - 1
-      then add_string [%string "%{indent}default:\n"]
-      else add_string [%string "%{indent}%{index#Int}:\n"];
-      block indent case ~f:(fun indent -> List.iter case ~f:(write_always indent buffer)));
+    List.iter cases ~f:(fun case ->
+      let statements =
+        match case with
+        | { match_with = Int index; statements } ->
+          add_string [%string "%{indent}%{index#Int}:\n"];
+          statements
+        | { match_with = Const bits; statements } ->
+          add_string [%string "%{indent}%{verilog_constant bits}:\n"];
+          statements
+        | { match_with = Default; statements } ->
+          add_string [%string "%{indent}default:\n"];
+          statements
+      in
+      block indent statements ~f:(fun indent ->
+        List.iter statements ~f:(write_always_statements indent buffer)));
     add_string [%string "%{indent}endcase\n"]
 ;;
 
@@ -182,7 +198,14 @@ let write_always buffer (sensitivity_list : Rtl_ast.sensitivity_list) always =
       [%string "(%{edges})"]
   in
   add_string [%string "%{tab}always @%{sensitivity_list} begin\n"];
-  write_always tab2 buffer always;
+  write_always_statements tab2 buffer always;
+  add_string [%string "%{tab}end\n"]
+;;
+
+let write_initial buffer always =
+  let add_string = Buffer.add_string buffer in
+  add_string [%string "%{tab}initial begin\n"];
+  Array.iter always ~f:(fun always -> write_always_statements tab2 buffer always);
   add_string [%string "%{tab}end\n"]
 ;;
 
@@ -274,9 +297,7 @@ let rec statement buffer (stat : Rtl_ast.statement) =
     add_string
       [%string "%{tab}assign %{lhs.name} = %{arg.name}[%{high#Int}:%{low#Int}];\n"]
   | Assignment (Const { lhs; constant }) ->
-    add_string
-      [%string
-        "%{tab}assign %{lhs.name} = %{Bits.width constant#Int}'b%{Bits.to_bstr constant};\n"]
+    add_string [%string "%{tab}assign %{lhs.name} = %{verilog_constant constant};\n"]
   | Assignment (Mux { lhs; select; cases = [ on_false; on_true ] }) ->
     add_string
       [%string
@@ -287,8 +308,11 @@ let rec statement buffer (stat : Rtl_ast.statement) =
     then statement buffer (to_assignment ())
     else statement buffer (to_always ())
   | Always { sensitivity_list; always } -> write_always buffer sensitivity_list always
+  | Initial { always } -> write_initial buffer always
   | Instantiation instantiation -> write_instantiation buffer instantiation
-  | Multiport_mem { always } -> Array.iter always ~f:(statement buffer)
+  | Multiport_mem { always; initial } ->
+    Array.iter always ~f:(statement buffer);
+    Option.iter initial ~f:(statement buffer)
   | Mem_read_port { lhs; memory; address } ->
     add_string [%string "%{tab}assign %{lhs.name} = %{memory.name}[%{address.name}];\n"]
 ;;

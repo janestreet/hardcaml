@@ -13,16 +13,17 @@ open! Bits
 include Test_bits_intf
 
 let%expect_test "[compare]" =
-  List.iter
-    [ "0", "0"; "0", "1"; "1", "0"; "0", "00"; "00", "01"; "11", "01" ]
-    ~f:(fun (s1, s2) ->
+  let compare_and_print cases =
+    List.iter cases ~f:(fun (s1, s2) ->
       print_s
         [%message
           "compare"
             ~_:(s1 : string)
             ~_:(s2 : string)
             "="
-            ~_:(compare (of_bit_string s1) (of_bit_string s2) : int)]);
+            ~_:(compare (of_bit_string s1) (of_bit_string s2) : int)])
+  in
+  compare_and_print [ "0", "0"; "0", "1"; "1", "0"; "0", "00"; "00", "01"; "11", "01" ];
   [%expect
     {|
     (compare 0 0 = 0)
@@ -31,7 +32,46 @@ let%expect_test "[compare]" =
     (compare 0 00 = -1)
     (compare 00 01 = -1)
     (compare 11 01 = 1)
-    |}]
+    |}];
+  (* different widths *)
+  compare_and_print [ "11", "000"; "001", "10" ];
+  [%expect
+    {|
+    (compare 11 000 = -1)
+    (compare 001 10 = 1)
+    |}];
+  (* Random value comparisons at same width *)
+  let bits_compare a b =
+    (* reference comparison implementation when a and b are the same widths. *)
+    if to_bool (a ==: b) then 0 else if to_bool (a <: b) then -1 else 1
+  in
+  for _ = 1 to 10_000 do
+    let width = 1 + Random.int 200 in
+    let a = Bits.random ~width in
+    let b = Bits.random ~width in
+    let expected = bits_compare a b in
+    let got = Bits.compare a b in
+    if expected <> got
+    then
+      raise_s
+        [%message
+          "unsigned comparison mismatch" (a : t) (b : t) (expected : int) (got : int)]
+  done;
+  (* differently sized equal values *)
+  for _ = 1 to 100 do
+    let width = 1 + Random.int 200 in
+    let a = Bits.random ~width in
+    let got = Bits.compare a a in
+    if got <> 0 then raise_s [%message "unsigned comparison mismatch" (a : t)]
+  done
+;;
+
+let%expect_test "Bits are compared by size first, and then value" =
+  let x_str = "10000001" in
+  let x = Bits.of_string x_str in
+  let y = Bits.of_string ("0" ^ x_str) in
+  print_s [%message (Bits.compare x y : int)];
+  [%expect {| ("Bits.compare x y" -1) |}]
 ;;
 
 let%expect_test "set of [Bits.t]s" =

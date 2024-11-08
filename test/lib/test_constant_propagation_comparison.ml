@@ -3,7 +3,7 @@ open Signal
 open Test_constant_propagation.Trace
 
 let%expect_test "less than" =
-  print_s @@ binary_op_tests "<:" ( <: ) ( <:. );
+  print_s @@ binary_op_tests "<:" ( <: ) ( <:. ) ( <+. );
   [%expect
     {|
     (<:
@@ -38,12 +38,12 @@ let%expect_test "less than" =
          1'b1)))
       (int_on_right (
         (7'b0011011 <: 12  = 1'b0)
-        (7'b0011011 <: -12 = 1'b1))))
+        (7'b0011011 <: -12 = 1'b0))))
     |}]
 ;;
 
 let%expect_test "greater than" =
-  print_s @@ binary_op_tests ">:" ( >: ) ( >:. );
+  print_s @@ binary_op_tests ">:" ( >: ) ( >:. ) ( >+. );
   [%expect
     {|
     (>:
@@ -78,12 +78,12 @@ let%expect_test "greater than" =
          1'b0)))
       (int_on_right (
         (7'b0011011 >: 12  = 1'b1)
-        (7'b0011011 >: -12 = 1'b0))))
+        (7'b0011011 >: -12 = 1'b1))))
     |}]
 ;;
 
 let%expect_test "less than or equal to" =
-  print_s @@ binary_op_tests "<=:" ( <=: ) ( <=:. );
+  print_s @@ binary_op_tests "<=:" ( <=: ) ( <=:. ) ( <=+. );
   [%expect
     {|
     (<=:
@@ -118,12 +118,12 @@ let%expect_test "less than or equal to" =
          1'b1)))
       (int_on_right (
         (7'b0011011 <=: 12  = 1'b0)
-        (7'b0011011 <=: -12 = 1'b1))))
+        (7'b0011011 <=: -12 = 1'b0))))
     |}]
 ;;
 
 let%expect_test "greater than or equal to" =
-  print_s @@ binary_op_tests ">=:" ( >=: ) ( >=:. );
+  print_s @@ binary_op_tests ">=:" ( >=: ) ( >=:. ) ( >=+. );
   [%expect
     {|
     (>=:
@@ -158,14 +158,14 @@ let%expect_test "greater than or equal to" =
          1'b0)))
       (int_on_right (
         (7'b0011011 >=: 12  = 1'b1)
-        (7'b0011011 >=: -12 = 1'b0))))
+        (7'b0011011 >=: -12 = 1'b1))))
     |}]
 ;;
 
 (* equality *)
 
 let%expect_test "equals" =
-  print_s @@ binary_op_tests "==:" ( ==: ) ( ==:. );
+  print_s @@ binary_op_tests "==:" ( ==: ) ( ==:. ) ( ==+. );
   [%expect
     {|
     (==:
@@ -205,7 +205,7 @@ let%expect_test "equals" =
 ;;
 
 let%expect_test "not equals" =
-  print_s @@ binary_op_tests "<>:" ( <>: ) ( <>:. );
+  print_s @@ binary_op_tests "<>:" ( <>: ) ( <>:. ) ( <>+. );
   [%expect
     {|
     (<>:

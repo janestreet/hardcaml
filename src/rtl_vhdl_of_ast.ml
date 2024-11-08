@@ -97,8 +97,24 @@ let declarations buffer (ast : Rtl_ast.t) =
   List.iter ast.declarations ~f:(declaration buffer)
 ;;
 
-let rec write_always indent buffer (t : Rtl_ast.always) =
+let rec case_types_are_integer (cases : Rtl_ast.case list) =
+  match cases with
+  | [] -> raise_s [%message "[Rtl_vhdl_of_ast] Unable to infer case type"]
+  | { match_with = Default; statements = _ } :: cases -> case_types_are_integer cases
+  | { match_with = Int _; statements = _ } :: _ -> true
+  | { match_with = Const _; statements = _ } :: _ -> false
+;;
+
+let rec write_always_statements indent buffer (t : Rtl_ast.always) =
   let add_string = Buffer.add_string buffer in
+  let block indent ts ~f =
+    match ts with
+    | [ _ ] -> f (indent ^ tab)
+    | _ ->
+      add_string [%string "%{indent}begin\n"];
+      f (indent ^ tab);
+      add_string [%string "%{indent}end\n"]
+  in
   let cond (c : Rtl_ast.condition) =
     match c with
     | Level { level = High; var } -> [%string "%{var.name} = '1'"]
@@ -111,13 +127,16 @@ let rec write_always indent buffer (t : Rtl_ast.always) =
   match t with
   | If { condition; on_true; on_false = [] } ->
     add_string [%string "%{indent}if %{cond condition} then\n"];
-    List.iter on_true ~f:(write_always (indent ^ tab) buffer);
+    block indent on_true ~f:(fun indent ->
+      List.iter on_true ~f:(write_always_statements indent buffer));
     add_string [%string "%{indent}end if;\n"]
   | If { condition; on_true; on_false } ->
     add_string [%string "%{indent}if %{cond condition} then\n"];
-    List.iter on_true ~f:(write_always (indent ^ tab) buffer);
+    block indent on_true ~f:(fun indent ->
+      List.iter on_true ~f:(write_always_statements indent buffer));
     add_string [%string "%{indent}else\n"];
-    List.iter on_false ~f:(write_always (indent ^ tab) buffer);
+    block indent on_false ~f:(fun indent ->
+      List.iter on_false ~f:(write_always_statements indent buffer));
     add_string [%string "%{indent}end if;\n"]
   | Assignment { lhs; rhs } ->
     add_string [%string "%{indent}%{lhs.name} <= %{rhs.name};\n"]
@@ -125,14 +144,27 @@ let rec write_always indent buffer (t : Rtl_ast.always) =
     add_string
       [%string
         "%{indent}%{lhs.name}(to_integer(hc_uns(%{index.name}))) <= %{rhs.name};\n"]
+  | Constant_memory_assignment { lhs; index; value } ->
+    add_string [%string "%{indent}%{lhs.name}(%{index#Int}) <= %{vhdl_constant value};\n"]
   | Case { select; cases } ->
-    add_string [%string "%{indent}case to_integer(%{select.name}) is\n"];
-    let num_cases = List.length cases in
-    List.iteri cases ~f:(fun index case ->
-      if index = num_cases - 1
-      then add_string [%string "%{indent}when others =>\n"]
-      else add_string [%string "%{indent}when %{index#Int} =>\n"];
-      List.iter case ~f:(write_always indent buffer));
+    if case_types_are_integer cases
+    then add_string [%string "%{indent}case to_integer(%{select.name}) is\n"]
+    else add_string [%string "%{indent}case %{select.name} is\n"];
+    List.iter cases ~f:(fun case ->
+      let statements =
+        match case with
+        | { match_with = Int index; statements } ->
+          add_string [%string "%{indent}when %{index#Int} =>\n"];
+          statements
+        | { match_with = Const bits; statements } ->
+          add_string [%string "%{indent}when %{vhdl_constant bits} =>\n"];
+          statements
+        | { match_with = Default; statements } ->
+          add_string [%string "%{indent}when others =>\n"];
+          statements
+      in
+      block indent statements ~f:(fun indent ->
+        List.iter statements ~f:(write_always_statements indent buffer)));
     add_string [%string "%{indent}end case;\n"]
 ;;
 
@@ -140,8 +172,7 @@ let write_always buffer (sensitivity_list : Rtl_ast.sensitivity_list) always =
   let add_string = Buffer.add_string buffer in
   let sensitivity_list =
     match sensitivity_list with
-    | Star ->
-      raise_s [%message "[Rtl_vhdl_of_ast] VHDL does not support [Star] sensitivity"]
+    | Star -> "(all)"
     | Edges edges ->
       let edges =
         List.map edges ~f:(fun { edge = _; var } -> var.name) |> String.concat ~sep:", "
@@ -149,7 +180,15 @@ let write_always buffer (sensitivity_list : Rtl_ast.sensitivity_list) always =
       [%string "(%{edges})"]
   in
   add_string [%string "%{tab}process %{sensitivity_list} begin\n"];
-  write_always tab2 buffer always;
+  write_always_statements tab2 buffer always;
+  add_string [%string "%{tab}end process;\n"]
+;;
+
+let write_initial buffer always =
+  let add_string = Buffer.add_string buffer in
+  add_string [%string "%{tab}process begin\n"];
+  Array.iter always ~f:(fun always -> write_always_statements tab2 buffer always);
+  add_string [%string "%{tab2}wait;\n"];
   add_string [%string "%{tab}end process;\n"]
 ;;
 
@@ -271,8 +310,11 @@ let rec statement buffer (stat : Rtl_ast.statement) =
   | Mux { to_assignment; to_always = _; is_mux2 = _ } ->
     statement buffer (to_assignment ())
   | Always { sensitivity_list; always } -> write_always buffer sensitivity_list always
+  | Initial { always } -> write_initial buffer always
   | Instantiation instantiation -> write_instantiation buffer instantiation
-  | Multiport_mem { always } -> Array.iter always ~f:(statement buffer)
+  | Multiport_mem { always; initial } ->
+    Array.iter always ~f:(statement buffer);
+    Option.iter initial ~f:(statement buffer)
   | Mem_read_port { lhs; memory; address } ->
     add_string
       [%string

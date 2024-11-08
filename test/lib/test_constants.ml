@@ -268,7 +268,7 @@ let%expect_test "of_octal" =
 
 let%expect_test "of_decimal_string error" =
   require_does_raise (fun () -> of_decimal_string ~width:10 "a");
-  [%expect {| (Invalid_argument "Z.of_substring_base: invalid digit") |}];
+  [%expect {| (Failure "of_string.Bigint: invalid argument \"a\"") |}];
   require_does_raise (fun () -> of_decimal_string ~width:10 "");
   [%expect {| "[of_decimal_string] got empty string" |}]
 ;;

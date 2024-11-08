@@ -24,9 +24,10 @@ A state machine is constructed with the following function:
 # Always.State_machine.create
 - : ?encoding:Always.State_machine.Encoding.t ->
     ?auto_wave_format:bool ->
+    ?attributes:Hardcaml.Rtl_attribute.t list ->
     ?enable:t ->
     (module Hardcaml.Always.State_machine.State with type t = 'a) ->
-    Type.register -> 'a Always.State_machine.t
+    Hardcaml.Reg_spec.t -> 'a Always.State_machine.t
 = <fun>
 ```
 

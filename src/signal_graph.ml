@@ -39,11 +39,11 @@ let depth_first_search
   List.fold t.outputs ~init ~f:search1
 ;;
 
-let fold t ~init ~f = depth_first_search t ~init ~f_before:f
-let iter t ~f = depth_first_search t ~f_before:(fun _ s -> f s) ~init:()
+let fold ?deps t ~init ~f = depth_first_search ?deps t ~init ~f_before:f
+let iter ?deps t ~f = depth_first_search ?deps t ~f_before:(fun _ s -> f s) ~init:()
 
-let filter t ~f =
-  depth_first_search t ~init:[] ~f_before:(fun arg signal ->
+let filter ?deps t ~f =
+  depth_first_search ?deps t ~init:[] ~f_before:(fun arg signal ->
     if f signal then signal :: arg else arg)
 ;;
 
@@ -52,62 +52,63 @@ let inputs graph =
     depth_first_search graph ~init:[] ~f_before:(fun acc signal ->
       let open Signal in
       match signal with
-      | Wire { driver; _ } ->
-        if not (Signal.is_empty !driver)
-        then acc
-        else (
-          match names signal with
-          | [ _ ] -> signal :: acc
-          | [] ->
-            raise_s
-              [%message
-                "circuit input signal must have a port name (unassigned wire?)"
-                  ~input_signal:(signal : Signal.t)]
-          | _ ->
-            raise_s
-              [%message
-                "circuit input signal should only have one port name"
-                  ~input_signal:(signal : Signal.t)])
+      | Wire { driver = Some _; _ } -> acc
+      | Wire { driver = None; _ } ->
+        (match names signal with
+         | [ _ ] -> signal :: acc
+         | [] ->
+           raise_s
+             [%message
+               "circuit input signal must have a port name (unassigned wire?)"
+                 ~input_signal:(signal : Signal.t)]
+         | _ ->
+           raise_s
+             [%message
+               "circuit input signal should only have one port name"
+                 ~input_signal:(signal : Signal.t)])
       | _ -> acc))
 ;;
 
-let outputs ?(validate = false) (t : t) =
+let validate_outputs (t : t) =
   Or_error.try_with (fun () ->
-    if validate
-    then
-      List.iter t.outputs ~f:(fun (output_signal : Signal.t) ->
-        let open Signal in
-        match output_signal with
-        | Wire _ ->
-          (match Signal.Type.Deps.to_list output_signal with
-           | [] | [ Empty ] ->
-             raise_s
-               [%message "circuit output signal is not driven" (output_signal : Signal.t)]
-           | _ ->
-             (match names output_signal with
-              | [ _ ] -> ()
-              | [] ->
-                raise_s
-                  [%message
-                    "circuit output signal must have a port name"
-                      (output_signal : Signal.t)]
-              | _ ->
-                raise_s
-                  [%message
-                    "circuit output signal should only have one port name"
-                      (output_signal : Signal.t)]))
-        | _ ->
-          raise_s
-            [%message "circuit output signal must be a wire" (output_signal : Signal.t)]);
-    t.outputs)
+    List.iter t.outputs ~f:(fun (output_signal : Signal.t) ->
+      let open Signal in
+      match output_signal with
+      | Wire _ ->
+        (match Signal.Type.Deps.to_list output_signal with
+         | [] | [ Empty ] ->
+           raise_s
+             [%message "circuit output signal is not driven" (output_signal : Signal.t)]
+         | _ ->
+           (match names output_signal with
+            | [ _ ] -> ()
+            | [] ->
+              raise_s
+                [%message
+                  "circuit output signal must have a port name" (output_signal : Signal.t)]
+            | _ ->
+              raise_s
+                [%message
+                  "circuit output signal should only have one port name"
+                    (output_signal : Signal.t)]))
+      | _ ->
+        raise_s
+          [%message "circuit output signal must be a wire" (output_signal : Signal.t)]))
 ;;
 
-(* [normalize_uids] maintains a table mapping signals in the input graph to
-   the corresponding signal in the output graph.  It first creates an entry for
-   each wire in the graph.  It then does a depth-first search following signal
-   dependencies starting from each wire.  This terminates because all loops
-   go through wires. *)
-let normalize_uids t =
+let outputs (t : t) = t.outputs
+
+(* [rewrite] maintains a table mapping signals in the input graph to the corresponding
+   signal in the output graph. It first creates an entry for each wire in the graph. It
+   then does a depth-first search following signal dependencies starting from each wire.
+   This terminates because all loops go through wires.
+
+   [f] is called for every signal in the graph. It will be provided with rewritten
+   incoming edges. [Wire]s are provided before they are attached to their driver.
+
+   [f_upto] is called on all of the upto signals of the signal graph
+*)
+let rewrite t ~f ~f_upto =
   let open Signal in
   let expecting_a_wire signal =
     raise_s [%message "expecting a wire (internal error)" (signal : Signal.t)]
@@ -127,89 +128,36 @@ let normalize_uids t =
           "[Signal_graph.normalize_uids] failed to rewrite signal" (signal : Signal.t)]
     | Some s -> s
   in
-  (* uid generation (note; 1L and up, 0L reserved for empty) *)
-  let fresh_id =
-    let `New new_id, _ = Signal.Uid.generator () in
-    new_id
-  in
-  let rec rewrite_signal_upto_wires signal =
-    match Hashtbl.find new_signal_by_old_uid (uid signal) with
+  let rec rewrite_signal_upto_wires signal ~seen_uids =
+    let uid = uid signal in
+    match Hashtbl.find new_signal_by_old_uid uid with
     | Some x -> x
     | None ->
-      let update_id id = { id with Type.s_id = fresh_id () } in
-      let new_signal =
-        match signal with
-        | Empty -> Type.Empty
-        | Const { signal_id; constant } ->
-          Const { signal_id = update_id signal_id; constant }
-        | Op2 { signal_id; op; arg_a; arg_b } ->
-          let arg_a = rewrite_signal_upto_wires arg_a in
-          let arg_b = rewrite_signal_upto_wires arg_b in
-          Op2 { signal_id = update_id signal_id; op; arg_a; arg_b }
-        | Mux { signal_id; select; cases } ->
-          let select = rewrite_signal_upto_wires select in
-          let cases = List.map cases ~f:rewrite_signal_upto_wires in
-          Mux { signal_id = update_id signal_id; select; cases }
-        | Cat { signal_id; args } ->
-          let args = List.map args ~f:rewrite_signal_upto_wires in
-          Cat { signal_id = update_id signal_id; args }
-        | Not { signal_id; arg } ->
-          let arg = rewrite_signal_upto_wires arg in
-          Not { signal_id = update_id signal_id; arg }
-        | Select { signal_id; arg; high; low } ->
-          let arg = rewrite_signal_upto_wires arg in
-          Select { signal_id = update_id signal_id; arg; high; low }
-        | Reg { signal_id; register; d } ->
-          let d = rewrite_signal_upto_wires d in
-          let register =
-            let clock = rewrite_signal_upto_wires register.spec.clock in
-            let clock_edge = register.spec.clock_edge in
-            let reset = rewrite_signal_upto_wires register.spec.reset in
-            let reset_edge = register.spec.reset_edge in
-            let initialize_to =
-              Option.map register.initialize_to ~f:(fun initialize_to ->
-                rewrite_signal_upto_wires initialize_to)
-            in
-            let reset_to = rewrite_signal_upto_wires register.reset_to in
-            let clear = rewrite_signal_upto_wires register.spec.clear in
-            let clear_to = rewrite_signal_upto_wires register.clear_to in
-            let enable = rewrite_signal_upto_wires register.enable in
-            { Type.spec = { clock; clock_edge; reset; reset_edge; clear }
-            ; initialize_to
-            ; reset_to
-            ; clear_to
-            ; enable
-            }
-          in
-          Reg { signal_id = update_id signal_id; register; d }
-        | Multiport_mem { signal_id; size; write_ports } ->
-          let rewrite_write_port (write_port : _ Write_port.t) =
-            let write_clock = rewrite_signal_upto_wires write_port.write_clock in
-            let write_address = rewrite_signal_upto_wires write_port.write_address in
-            let write_data = rewrite_signal_upto_wires write_port.write_data in
-            let write_enable = rewrite_signal_upto_wires write_port.write_enable in
-            { Write_port.write_clock; write_address; write_enable; write_data }
-          in
-          let write_ports = Array.map write_ports ~f:rewrite_write_port in
-          Multiport_mem { signal_id = update_id signal_id; size; write_ports }
-        | Mem_read_port { signal_id; memory; read_address } ->
-          let read_address = rewrite_signal_upto_wires read_address in
-          let memory = rewrite_signal_upto_wires memory in
-          Mem_read_port { signal_id = update_id signal_id; memory; read_address }
-        | Inst { signal_id; instantiation; _ } ->
-          let inputs =
-            List.map instantiation.inst_inputs ~f:(fun (name, input) ->
-              name, rewrite_signal_upto_wires input)
-          in
-          Inst
-            { signal_id = update_id signal_id
-            ; extra_uid = fresh_id ()
-            ; instantiation = { instantiation with inst_inputs = inputs }
-            }
-        | Wire _ -> not_expecting_a_wire signal
-      in
-      add_mapping ~old_signal:signal ~new_signal;
-      new_signal
+      (match Set.mem seen_uids uid with
+       | true ->
+         raise_s
+           [%message
+             "Encountered a loop when rewriting signals"
+               (seen_uids : Set.M(Signal.Uid).t)
+               (uid : Signal.Uid.t)]
+       | false ->
+         let new_signal =
+           match Hash_set.mem t.upto (Signal.uid signal) with
+           | true -> f_upto signal
+           | false ->
+             (match signal with
+              | Wire _ -> not_expecting_a_wire signal
+              | _ ->
+                f
+                  (Signal.Type.map_dependant
+                     signal
+                     ~f:(rewrite_signal_upto_wires ~seen_uids:(Set.add seen_uids uid))))
+         in
+         add_mapping ~old_signal:signal ~new_signal;
+         new_signal)
+  in
+  let rewrite_signal_upto_wires =
+    rewrite_signal_upto_wires ~seen_uids:(Set.empty (module Signal.Uid))
   in
   (* find wires *)
   let old_wires = filter t ~f:Type.is_wire in
@@ -219,27 +167,47 @@ let normalize_uids t =
       ~old_signal:old_wire
       ~new_signal:
         (match old_wire with
-         | Wire { signal_id; _ } ->
-           Wire
-             { signal_id = { signal_id with s_id = fresh_id () }
-             ; driver = ref Signal.empty
-             }
+         | Wire { signal_id; _ } -> f (Wire { signal_id; driver = None })
          | _ -> expecting_a_wire old_wire));
   (* rewrite from every wire *)
   List.iter old_wires ~f:(function
-    | Wire { driver; _ } -> ignore (rewrite_signal_upto_wires !driver : Signal.t)
+    | Wire { driver; _ } ->
+      Option.iter driver ~f:(fun driver ->
+        ignore (rewrite_signal_upto_wires driver : Signal.t))
     | signal -> expecting_a_wire signal);
   (* re-attach wires *)
   List.iter old_wires ~f:(fun old_wire ->
     match old_wire with
     | Wire { driver; _ } ->
-      if not (Signal.is_empty !driver)
-      then (
-        let new_driver = new_signal !driver in
+      Option.iter driver ~f:(fun driver ->
+        let new_driver = new_signal driver in
         let new_wire = new_signal old_wire in
         Signal.(new_wire <== new_driver))
     | signal -> expecting_a_wire signal);
-  { t with outputs = List.map t.outputs ~f:new_signal }
+  let upto =
+    t.upto
+    |> Hash_set.to_list
+    |> List.map ~f:(fun old_uid ->
+      match Hashtbl.find new_signal_by_old_uid old_uid with
+      | Some new_upto -> uid new_upto
+      | None -> old_uid)
+    |> Hash_set.of_list (module Signal.Uid)
+  in
+  { outputs = List.map t.outputs ~f:new_signal; upto }
+;;
+
+let normalize_uids t =
+  (* uid generation (note; 1L and up, 0L reserved for empty) *)
+  let fresh_id =
+    let `New new_id, _ = Signal.Uid.generator () in
+    new_id
+  in
+  let rewrite_uid ~fresh_id signal =
+    let open Signal in
+    let update_id id = { id with Type.s_id = fresh_id () } in
+    Signal.Type.map_signal_id signal ~f:update_id
+  in
+  rewrite t ~f:(rewrite_uid ~fresh_id) ~f_upto:Fn.id
 ;;
 
 let fan_out_map t =
@@ -284,8 +252,41 @@ module Deps_for_simulation_scheduling = Signal.Type.Make_deps (struct
       | Mem_read_port { read_address; _ } -> f init read_address
       | Reg _ -> init
       | Multiport_mem _ -> init
-      | Empty | Const _ | Op2 _ | Mux _ | Cat _ | Not _ | Wire _ | Select _ | Inst _ ->
-        Signal.Type.Deps.fold t ~init ~f
+      | Empty
+      | Const _
+      | Op2 _
+      | Mux _
+      | Cases _
+      | Cat _
+      | Not _
+      | Wire _
+      | Select _
+      | Inst _ -> Signal.Type.Deps.fold t ~init ~f
+    ;;
+  end)
+
+module Deps_without_case_matches = Signal.Type.Make_deps (struct
+    let fold (t : Signal.t) ~init ~f =
+      match t with
+      | Cases { select; cases; default; _ } ->
+        let arg = f init select in
+        let arg =
+          List.fold ~init:arg cases ~f:(fun arg (_match_with, value) -> f arg value)
+        in
+        let arg = f arg default in
+        arg
+      | Empty
+      | Mem_read_port _
+      | Reg _
+      | Multiport_mem _
+      | Const _
+      | Op2 _
+      | Mux _
+      | Cat _
+      | Not _
+      | Wire _
+      | Select _
+      | Inst _ -> Signal.Type.Deps.fold t ~init ~f
     ;;
   end)
 
@@ -296,7 +297,7 @@ module Deps_for_loop_checking = Signal.Type.Make_deps (struct
       | Reg _ -> init
       | Multiport_mem _ -> init
       | Inst _ -> init
-      | Empty | Const _ | Op2 _ | Mux _ | Cat _ | Not _ | Wire _ | Select _ ->
+      | Empty | Const _ | Op2 _ | Mux _ | Cases _ | Cat _ | Not _ | Wire _ | Select _ ->
         Signal.Type.Deps.fold t ~init ~f
     ;;
   end)

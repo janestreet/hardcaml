@@ -3,7 +3,7 @@ open Signal
 open Test_constant_propagation.Trace
 
 let%expect_test "add" =
-  print_s @@ binary_op_tests "+:" ( +: ) ( +:. );
+  print_s @@ binary_op_tests "+:" ( +: ) ( +:. ) ( ++. );
   [%expect
     {|
     (+:
@@ -60,10 +60,7 @@ let%expect_test "[+:] with one constant" =
            (const
              (width 1)
              (value 0b1))
-           (wire
-             (names (x))
-             (width   1)
-             (data_in empty))))))))
+           (wire (names (x)) (width 1))))))))
     (x
      +:
      1'b1
@@ -73,10 +70,7 @@ let%expect_test "[+:] with one constant" =
          add
          (width 1)
          (arguments (
-           (wire
-             (names (x))
-             (width   1)
-             (data_in empty))
+           (wire (names (x)) (width 1))
            (const
              (width 1)
              (value 0b1))))))))
@@ -94,10 +88,7 @@ let%expect_test "[+:] with one constant" =
            (const
              (width 2)
              (value 0b01))
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))))))))
+           (wire (names (x)) (width 2))))))))
     (x
      +:
      2'b01
@@ -107,10 +98,7 @@ let%expect_test "[+:] with one constant" =
          add
          (width 2)
          (arguments (
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))
+           (wire (names (x)) (width 2))
            (const
              (width 2)
              (value 0b01))))))))
@@ -126,10 +114,7 @@ let%expect_test "[+:] with one constant" =
            (const
              (width 2)
              (value 0b10))
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))))))))
+           (wire (names (x)) (width 2))))))))
     (x
      +:
      2'b10
@@ -139,10 +124,7 @@ let%expect_test "[+:] with one constant" =
          add
          (width 2)
          (arguments (
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))
+           (wire (names (x)) (width 2))
            (const
              (width 2)
              (value 0b10))))))))
@@ -158,10 +140,7 @@ let%expect_test "[+:] with one constant" =
            (const
              (width 2)
              (value 0b11))
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))))))))
+           (wire (names (x)) (width 2))))))))
     (x
      +:
      2'b11
@@ -171,10 +150,7 @@ let%expect_test "[+:] with one constant" =
          add
          (width 2)
          (arguments (
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))
+           (wire (names (x)) (width 2))
            (const
              (width 2)
              (value 0b11))))))))
@@ -182,7 +158,7 @@ let%expect_test "[+:] with one constant" =
 ;;
 
 let%expect_test "sub" =
-  print_s @@ binary_op_tests "-:" ( -: ) ( -:. );
+  print_s @@ binary_op_tests "-:" ( -: ) ( -:. ) ( -+. );
   [%expect
     {|
     (-:
@@ -237,10 +213,7 @@ let%expect_test "[-:] with one constant" =
            (const
              (width 1)
              (value 0b0))
-           (wire
-             (names (x))
-             (width   1)
-             (data_in empty))))))))
+           (wire (names (x)) (width 1))))))))
     (x -: 1'b0 = x)
     (1'b1
      -:
@@ -254,10 +227,7 @@ let%expect_test "[-:] with one constant" =
            (const
              (width 1)
              (value 0b1))
-           (wire
-             (names (x))
-             (width   1)
-             (data_in empty))))))))
+           (wire (names (x)) (width 1))))))))
     (x
      -:
      1'b1
@@ -267,10 +237,7 @@ let%expect_test "[-:] with one constant" =
          sub
          (width 1)
          (arguments (
-           (wire
-             (names (x))
-             (width   1)
-             (data_in empty))
+           (wire (names (x)) (width 1))
            (const
              (width 1)
              (value 0b1))))))))
@@ -286,10 +253,7 @@ let%expect_test "[-:] with one constant" =
            (const
              (width 2)
              (value 0b00))
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))))))))
+           (wire (names (x)) (width 2))))))))
     (x -: 2'b00 = x)
     (2'b01
      -:
@@ -303,10 +267,7 @@ let%expect_test "[-:] with one constant" =
            (const
              (width 2)
              (value 0b01))
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))))))))
+           (wire (names (x)) (width 2))))))))
     (x
      -:
      2'b01
@@ -316,10 +277,7 @@ let%expect_test "[-:] with one constant" =
          sub
          (width 2)
          (arguments (
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))
+           (wire (names (x)) (width 2))
            (const
              (width 2)
              (value 0b01))))))))
@@ -335,10 +293,7 @@ let%expect_test "[-:] with one constant" =
            (const
              (width 2)
              (value 0b10))
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))))))))
+           (wire (names (x)) (width 2))))))))
     (x
      -:
      2'b10
@@ -348,10 +303,7 @@ let%expect_test "[-:] with one constant" =
          sub
          (width 2)
          (arguments (
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))
+           (wire (names (x)) (width 2))
            (const
              (width 2)
              (value 0b10))))))))
@@ -367,10 +319,7 @@ let%expect_test "[-:] with one constant" =
            (const
              (width 2)
              (value 0b11))
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))))))))
+           (wire (names (x)) (width 2))))))))
     (x
      -:
      2'b11
@@ -380,10 +329,7 @@ let%expect_test "[-:] with one constant" =
          sub
          (width 2)
          (arguments (
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))
+           (wire (names (x)) (width 2))
            (const
              (width 2)
              (value 0b11))))))))
@@ -481,10 +427,7 @@ let%expect_test "multiplication with one constant" =
            (const
              (width 1)
              (value 0b0))
-           (wire
-             (names (x))
-             (width   1)
-             (data_in empty))))))))
+           (wire (names (x)) (width 1))))))))
     (x
      *:
      1'b1
@@ -497,10 +440,7 @@ let%expect_test "multiplication with one constant" =
            (const
              (width 1)
              (value 0b0))
-           (wire
-             (names (x))
-             (width   1)
-             (data_in empty))))))))
+           (wire (names (x)) (width 1))))))))
     (2'b00 *: x = 4'b0000)
     (x *: 2'b00 = 4'b0000)
     (2'b01
@@ -515,10 +455,7 @@ let%expect_test "multiplication with one constant" =
            (const
              (width 2)
              (value 0b00))
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))))))))
+           (wire (names (x)) (width 2))))))))
     (x
      *:
      2'b01
@@ -531,10 +468,7 @@ let%expect_test "multiplication with one constant" =
            (const
              (width 2)
              (value 0b00))
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))))))))
+           (wire (names (x)) (width 2))))))))
     (2'b10
      *:
      x
@@ -551,10 +485,7 @@ let%expect_test "multiplication with one constant" =
            (cat
              (width 3)
              (arguments (
-               (wire
-                 (names (x))
-                 (width   2)
-                 (data_in empty))
+               (wire (names (x)) (width 2))
                (const
                  (width 1)
                  (value 0b0)))))))))))
@@ -574,10 +505,7 @@ let%expect_test "multiplication with one constant" =
            (cat
              (width 3)
              (arguments (
-               (wire
-                 (names (x))
-                 (width   2)
-                 (data_in empty))
+               (wire (names (x)) (width 2))
                (const
                  (width 1)
                  (value 0b0)))))))))))
@@ -593,10 +521,7 @@ let%expect_test "multiplication with one constant" =
            (const
              (width 2)
              (value 0b11))
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))))))))
+           (wire (names (x)) (width 2))))))))
     (x
      *:
      2'b11
@@ -606,10 +531,7 @@ let%expect_test "multiplication with one constant" =
          mulu
          (width 4)
          (arguments (
-           (wire
-             (names (x))
-             (width   2)
-             (data_in empty))
+           (wire (names (x)) (width 2))
            (const
              (width 2)
              (value 0b11))))))))

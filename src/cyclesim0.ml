@@ -132,8 +132,8 @@ module Config = struct
       }
     ;;
 
-    let randomize_regs = Signal.Type.is_reg
-    let randomize_memories = Signal.Type.is_mem
+    let randomize_regs s = Signal.Type.is_reg s && not (Signal.Type.has_initializer s)
+    let randomize_memories s = Signal.Type.is_mem s && not (Signal.Type.has_initializer s)
     let randomize_all s = randomize_regs s || randomize_memories s
   end
 

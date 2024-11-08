@@ -216,23 +216,11 @@ let%expect_test "[wires]" =
   print_s [%sexp (I.Of_signal.wires () : Signal.t I.t)];
   [%expect
     {|
-    ((x (wire (width 4) (data_in empty)))
-     (y (wire (width 8) (data_in empty))))
+    ((x (wire (width 4)))
+     (y (wire (width 8))))
     |}];
   print_s [%sexp (I.Of_signal.wires ~named:true () : Signal.t I.t)];
-  [%expect
-    {|
-    ((x (
-       wire
-       (names (x))
-       (width   4)
-       (data_in empty)))
-     (y (
-       wire
-       (names (y))
-       (width   8)
-       (data_in empty))))
-    |}];
+  [%expect {| ((x (wire (names (x)) (width 4))) (y (wire (names (y)) (width 8)))) |}];
   let from = { I.x = Signal.vdd; y = Signal.gnd } in
   print_s [%sexp (I.Of_signal.wires ~from () : Signal.t I.t)];
   [%expect
@@ -448,19 +436,7 @@ let%expect_test "apply_names" =
   let of_always = I.Of_always.wire Signal.zero in
   I.Of_always.apply_names ~prefix:"?" ~suffix:"!" of_always;
   print_s [%sexp (of_always : Always.Variable.t I.t)];
-  [%expect
-    {|
-    ((x (
-       wire
-       (names (?x!))
-       (width   4)
-       (data_in empty)))
-     (y (
-       wire
-       (names (?y!))
-       (width   8)
-       (data_in empty))))
-    |}]
+  [%expect {| ((x (wire (names (?x!)) (width 4))) (y (wire (names (?y!)) (width 8)))) |}]
 ;;
 
 let%expect_test "assert_widths" =

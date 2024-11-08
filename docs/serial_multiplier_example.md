@@ -111,7 +111,7 @@ at each iteration.
     sum_w <== sum;
     sum, running_sum_bit_out
 val running_sum_reg :
-  Type.register -> Type.t -> Type.t -> Type.t -> Type.t * Type.t = <fun>
+  Reg_spec.t -> Type.t -> Type.t -> Type.t -> Type.t * Type.t = <fun>
 ```
 
 We also need to store the computed bits in a register.
@@ -119,7 +119,7 @@ We also need to store the computed bits in a register.
 ```ocaml
 # let computed_bits spec width bit =
    reg_fb spec ~width ~f:(fun d -> bit @: msbs d)
-val computed_bits : Type.register -> int -> Type.t -> Type.t = <fun>
+val computed_bits : Reg_spec.t -> int -> Type.t -> Type.t = <fun>
 ```
 
 The final implementation just needs to put these functions together.
@@ -228,7 +228,7 @@ val result : Bits.t = 01111
 │               ││────────┬───────┬───────┬───────                   │
 │running_sum_nex││ 3      │1      │3      │4                         │
 │               ││────────┴───────┴───────┴───────                   │
-│vdd            ││────────────────────────────────                   │
+│               ││                                                   │
 │               ││                                                   │
 │               ││                                                   │
 └───────────────┘└───────────────────────────────────────────────────┘

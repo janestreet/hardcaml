@@ -84,7 +84,7 @@ module Base = struct
     | _ -> false
   ;;
 
-  let of_bits constant = Const { signal_id = make_id (Bits.width constant); constant }
+  let of_bits = Type.of_bits
   let of_constant data = of_bits (Bits.of_constant data)
 
   let to_constant signal =
@@ -134,6 +134,16 @@ module Base = struct
     | first_case :: _ -> Mux { signal_id = make_id (width first_case); select; cases }
     | [] -> raise_s [%message "Mux with no cases"]
   ;;
+
+  let cases ~default select cases =
+    List.iter cases ~f:(fun (match_value, _) ->
+      if not (is_const match_value)
+      then raise_s [%message "[cases] the match value must be a constant."]);
+    match cases with
+    | (_, first_case) :: _ ->
+      Cases { signal_id = make_id (width first_case); select; cases; default }
+    | [] -> raise_s [%message "[cases] no cases specified"]
+  ;;
 end
 
 module Comb_make = Comb.Make
@@ -141,14 +151,13 @@ module Unoptimized = Comb.Make (Base)
 
 let ( <== ) a b =
   match a with
-  | Wire { driver; _ } ->
-    if not (is_empty !driver)
-    then
-      raise_s
-        [%message
-          "attempt to assign wire multiple times"
-            ~already_assigned_wire:(a : t)
-            ~expression:(b : t)];
+  | Wire { driver = Some _; _ } ->
+    raise_s
+      [%message
+        "attempt to assign wire multiple times"
+          ~already_assigned_wire:(a : t)
+          ~expression:(b : t)]
+  | Wire ({ driver = None; _ } as w) ->
     if width a <> width b
     then
       raise_s
@@ -158,23 +167,17 @@ let ( <== ) a b =
             ~expression_width:(width b : int)
             ~wire:(a : t)
             ~expression:(b : t)];
-    driver := b
+    w.driver <- Some b
   | _ ->
     raise_s
       [%message
         "attempt to assign non-wire" ~assignment_target:(a : t) ~expression:(b : t)]
 ;;
 
-let[@cold] raise_wire_width_0 wire =
-  (* print the wire as well - this is potentially helpful if [caller_id]s are enabled.  *)
-  raise_s [%message "width of wire was specified as 0" (wire : t)]
-;;
-
 let assign = ( <== )
 
 let wire w =
-  let wire = Wire { signal_id = make_id w; driver = ref Empty } in
-  if w = 0 then raise_wire_width_0 wire;
+  let wire = Wire { signal_id = make_id w; driver = None } in
   wire
 ;;
 
@@ -358,39 +361,12 @@ module Const_prop = struct
   module Comb = struct
     include Comb_make (Base)
 
-    let is_vdd = function
-      | Const { constant; _ } when Bits.equal constant Bits.vdd -> true
-      | _ -> false
-    ;;
-
-    let is_gnd = function
-      | Const { constant; _ } when Bits.equal constant Bits.gnd -> true
-      | _ -> false
-    ;;
+    let is_vdd = Type.is_vdd
+    let is_gnd = Type.is_gnd
   end
 end
 
 include (Const_prop.Comb : module type of Const_prop.Comb with type t := t)
-
-(* error checking *)
-let assert_width signal w msg =
-  if width signal <> w
-  then
-    raise_s
-      [%message
-        msg ~info:"signal has unexpected width" ~expected_width:(w : int) (signal : t)]
-;;
-
-let assert_width_or_empty signal w msg =
-  if (not (is_empty signal)) && width signal <> w
-  then
-    raise_s
-      [%message
-        msg
-          ~info:"signal should have expected width or be empty"
-          ~expected_width:(w : int)
-          (signal : t)]
-;;
 
 type 'a with_register_spec =
   ?enable:t
@@ -401,44 +377,18 @@ type 'a with_register_spec =
   -> Reg_spec.t
   -> 'a
 
-let form_register (spec : reg_spec) ~enable ~initialize_to ~reset_to ~clear_to ~clear d =
-  let zero_or_empty w = if w = 0 then empty else zero w in
-  if width d = 0 then raise_s [%message "Zero width registers are not allowed"];
-  assert_width spec.clock 1 "clock is invalid";
-  assert_width_or_empty spec.reset 1 "reset is invalid";
-  Option.iter initialize_to ~f:(fun initialize_to ->
-    assert_width initialize_to (width d) "initial value is invalid";
-    if not (is_const initialize_to)
-    then raise_s [%message "Register initializer is not constant" (initialize_to : t)]);
-  assert_width_or_empty reset_to (width d) "reset value is invalid";
-  assert_width_or_empty spec.clear 1 "clear signal is invalid";
-  assert_width_or_empty clear_to (width d) "clear value is invalid";
-  assert_width_or_empty enable 1 "enable is invalid";
-  { spec =
-      { spec with
-        clear =
-          (match clear with
-           | None -> spec.clear
-           | Some clear -> clear)
-      }
-  ; initialize_to
-  ; reset_to = (if is_empty reset_to then zero_or_empty (width d) else reset_to)
-  ; clear_to = (if is_empty clear_to then zero_or_empty (width d) else clear_to)
-  ; enable = (if is_empty enable then vdd else enable)
-  }
-;;
-
-let reg
-  ?(enable = vdd)
-  ?initialize_to
-  ?(reset_to = empty)
-  ?clear
-  ?(clear_to = empty)
-  spec
-  d
-  =
+let reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
   (* if width d = 0 then raise_s [%message "[Signal.reg] width of data input is 0"]; *)
-  let spec = form_register spec ~enable ~initialize_to ~reset_to ~clear_to ~clear d in
+  let spec =
+    Type.Register.of_reg_spec
+      (Reg_spec.Expert.to_signal_type_reg_spec spec)
+      ~enable
+      ~initialize_to
+      ~reset_to
+      ~clear_to
+      ~clear
+      d
+  in
   Reg { signal_id = make_id (width d); register = spec; d }
 ;;
 
@@ -500,10 +450,14 @@ let prev ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
   Staged.stage f
 ;;
 
-let multiport_memory
+let multiport_memory_prim
   ?name
   ?(attributes = [])
+  ?initialize_to
   size
+  ~remove_unused_write_ports
+  ~data_width
+  ~address_width
   ~(write_ports : _ Write_port.t array)
   ~read_addresses
   =
@@ -512,91 +466,90 @@ let multiport_memory
   then
     raise_s
       [%message "[Signal.multiport_memory] size must be greater than 0" (size : int)];
-  let write_expected =
-    if Array.is_empty write_ports
-    then raise_s [%message "[Signal.multiport_memory] requires at least one write port"]
-    else (
-      let expected = write_ports.(0) in
-      (* cannot address all elements of the memory *)
-      if address_bits_for size <> width expected.write_address
+  (* Check the number of initializer values and their widths are correct. *)
+  Option.iter initialize_to ~f:(fun initialize_to ->
+    let initializer_array_size = Array.length initialize_to in
+    if initializer_array_size <> size
+    then
+      raise_s
+        [%message
+          "[Signal.multiport_memory] size of initializer array differs from memory size"
+            (initializer_array_size : int)
+            (size : int)];
+    Array.iter initialize_to ~f:(fun initialize_to ->
+      let initializer_width = Bits.width initialize_to in
+      if initializer_width <> data_width
       then
         raise_s
           [%message
-            "[Signal.multiport_memory] size does not match what can be addressed by \
-             write port"
-              (size : int)
-              ~address_width:(width expected.write_address : int)];
-      Array.iteri write_ports ~f:(fun port write_port ->
-        (* clocks must be 1 bit *)
-        if width write_port.write_clock <> 1
-        then
-          raise_s
-            [%message
-              "[Signal.multiport_memory] width of clock must be 1"
-                (port : int)
-                ~write_enable_width:(width write_port.write_enable : int)];
-        (* all write enables must be 1 bit *)
-        if width write_port.write_enable <> 1
-        then
-          raise_s
-            [%message
-              "[Signal.multiport_memory] width of write enable must be 1"
-                (port : int)
-                ~write_enable_width:(width write_port.write_enable : int)];
-        (* all write addresses must be the same width *)
-        if width write_port.write_address <> width expected.write_address
-        then
-          raise_s
-            [%message
-              "[Signal.multiport_memory] width of write address is inconsistent"
-                (port : int)
-                ~write_address_width:(width write_port.write_address : int)
-                ~expected:(width expected.write_address : int)];
-        if width write_port.write_data <> width expected.write_data
-        then
-          raise_s
-            [%message
-              "[Signal.multiport_memory] width of write data is inconsistent"
-                (port : int)
-                ~write_data_width:(width write_port.write_data : int)
-                ~expected:(width expected.write_data : int)]);
-      expected)
-  in
-  let read_expected =
-    if Array.is_empty read_addresses
-    then raise_s [%message "[Signal.multiport_memory] requires at least one read port"]
-    else (
-      let expected = read_addresses.(0) in
-      if address_bits_for size <> width expected
-      then
-        raise_s
-          [%message
-            "[Signal.multiport_memory] size does not match what can be addressed by read \
-             port"
-              (size : int)
-              ~address_width:(width expected : int)];
-      Array.iteri read_addresses ~f:(fun port read_address ->
-        if width read_address <> width expected
-        then
-          raise_s
-            [%message
-              "[Signal.multiport_memory] width of read address is inconsistent"
-                (port : int)
-                ~read_address_width:(width read_address : int)
-                ~expected:(width expected : int)]);
-      expected)
-  in
-  if width write_expected.write_address <> width read_expected
+            "[Signal.multiport_memory] width of initializer is different to write port \
+             width"
+              (initializer_width : int)
+              (data_width : int)]));
+  (* cannot address all elements of the memory *)
+  if address_bits_for size <> address_width
   then
     raise_s
       [%message
-        "[Signal.multiport_memory] width of read and write addresses differ"
-          ~write_address_width:(width write_expected.write_address : int)
-          ~read_address_width:(width read_expected : int)];
-  let data_width = width write_expected.write_data in
+        "[Signal.multiport_memory] size does not match what can be addressed"
+          (size : int)
+          (address_width : int)];
+  Array.iteri write_ports ~f:(fun port write_port ->
+    (* clocks must be 1 bit *)
+    if width write_port.write_clock <> 1
+    then
+      raise_s
+        [%message
+          "[Signal.multiport_memory] width of clock must be 1"
+            (port : int)
+            ~write_enable_width:(width write_port.write_enable : int)];
+    (* all write enables must be 1 bit *)
+    if width write_port.write_enable <> 1
+    then
+      raise_s
+        [%message
+          "[Signal.multiport_memory] width of write enable must be 1"
+            (port : int)
+            ~write_enable_width:(width write_port.write_enable : int)];
+    (* all write addresses must be the same width *)
+    if width write_port.write_address <> address_width
+    then
+      raise_s
+        [%message
+          "[Signal.multiport_memory] width of write address is inconsistent"
+            (port : int)
+            ~write_address_width:(width write_port.write_address : int)
+            ~expected:(address_width : int)];
+    if width write_port.write_data <> data_width
+    then
+      raise_s
+        [%message
+          "[Signal.multiport_memory] width of write data is inconsistent"
+            (port : int)
+            ~write_data_width:(width write_port.write_data : int)
+            ~expected:(data_width : int)]);
+  Array.iteri read_addresses ~f:(fun port read_address ->
+    if width read_address <> address_width
+    then
+      raise_s
+        [%message
+          "[Signal.multiport_memory] width of read address is inconsistent"
+            (port : int)
+            ~read_address_width:(width read_address : int)
+            ~expected:(address_width : int)]);
+  let write_ports =
+    if remove_unused_write_ports
+    then Array.filter write_ports ~f:(fun { write_enable; _ } -> is_gnd write_enable)
+    else write_ports
+  in
   let memory =
     add_attributes
-      (Multiport_mem { signal_id = make_id data_width; size; write_ports })
+      (Multiport_mem
+         { signal_id = make_id data_width
+         ; size
+         ; write_ports
+         ; initialize_to = Option.map initialize_to ~f:Array.copy
+         })
       attributes
   in
   Option.iter name ~f:(fun name -> ignore (memory -- name : t));
@@ -604,9 +557,48 @@ let multiport_memory
     Mem_read_port { signal_id = make_id data_width; memory; read_address })
 ;;
 
+let multiport_memory
+  ?name
+  ?attributes
+  ?initialize_to
+  size
+  ~(write_ports : _ Write_port.t array)
+  ~read_addresses
+  =
+  if Array.is_empty write_ports
+  then raise_s [%message "[Signal.multiport_memory] requires at least one write port"];
+  if Array.is_empty read_addresses
+  then raise_s [%message "[Signal.multiport_memory] requires at least one read port"];
+  multiport_memory_prim
+    ?name
+    ?attributes
+    ?initialize_to
+    size
+    ~remove_unused_write_ports:false
+    ~data_width:(width write_ports.(0).write_data)
+    ~address_width:(width write_ports.(0).write_address)
+    ~write_ports
+    ~read_addresses
+;;
+
 let memory size ~write_port ~read_address =
   (multiport_memory size ~write_ports:[| write_port |] ~read_addresses:[| read_address |]).(
   0)
+;;
+
+let rom ~read_addresses initialize_to =
+  if Array.length read_addresses = 0
+  then raise_s [%message "Rom must have 1 or more read addresses"];
+  if Array.length initialize_to = 0
+  then raise_s [%message "Rom must have 1 or more initialization values"];
+  multiport_memory_prim
+    ~initialize_to
+    (Array.length initialize_to)
+    ~remove_unused_write_ports:true
+    ~data_width:(Bits.width initialize_to.(0))
+    ~address_width:(Int.ceil_log2 (Array.length initialize_to))
+    ~write_ports:[||]
+    ~read_addresses
 ;;
 
 let ram_rbw ?name ?attributes ~write_port ~(read_port : _ Read_port.t) size =

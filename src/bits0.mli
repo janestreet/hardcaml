@@ -13,7 +13,11 @@
 *)
 open Base
 
-type t = private Bytes.t [@@deriving compare, sexp, bin_io]
+type t = private Bytes.t [@@deriving sexp, bin_io]
+
+(** Comparison of two [Bits.t]. First the widths are compared and if they are same the
+    unsigned numerical value is compared. *)
+val compare : t -> t -> int
 
 module Comparable : Comparable.S with type t := t
 

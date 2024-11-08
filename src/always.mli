@@ -121,6 +121,9 @@ val if_ : Signal.t -> t list -> t list -> t
 (** else if branch *)
 val elif : Signal.t -> t list -> t list -> t list
 
+(** else branch (for readability) *)
+val else_ : t list -> t list
+
 (** if sel then [...] else [] *)
 val when_ : Signal.t -> t list -> t
 
@@ -141,6 +144,9 @@ val ( <--. ) : Variable.t -> int -> t
 
 (** increment (defaults to 1) *)
 val incr : ?by:int -> Variable.t -> t
+
+(** decrement (defaults to 1) *)
+val decr : ?by:int -> Variable.t -> t
 
 module State_machine : sig
   type 'a t =
@@ -179,6 +185,9 @@ module State_machine : sig
   val create
     :  ?encoding:Encoding.t (** default is [Binary] *)
     -> ?auto_wave_format:bool (** default is [true] *)
+    -> ?attributes:Rtl_attribute.t list
+         (** attributes to apply to the state register. Default is one_hot encoding up to
+             32 states, sequential otherwise. *)
     -> ?enable:Signal.t
     -> (module State with type t = 'a)
     -> Reg_spec.t

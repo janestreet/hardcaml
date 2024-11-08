@@ -1,7 +1,8 @@
 (library
  (name hardcaml_test)
- (libraries core expect_test_helpers_core.expect_test_helpers_base hardcaml
+ (libraries bignum.bigint core
+   expect_test_helpers_core.expect_test_helpers_base hardcaml
    hardcaml_waveterm.cyclesim hardcaml_waveterm.kernel re splittable_random
-   stdio zarith)
+   stdio)
  (preprocess
   (pps ppx_hardcaml ppx_jane)))

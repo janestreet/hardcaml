@@ -605,6 +605,12 @@ module Mutable = struct
         c
       ;;
 
+      let rec cases ~default select = function
+        | [] -> default
+        | (match_with, value) :: rest ->
+          if equal select match_with then value else cases ~default select rest
+      ;;
+
       let to_string = to_string
 
       let sexp_of_t (s : t) =

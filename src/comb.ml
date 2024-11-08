@@ -3,6 +3,15 @@
 open Base
 include Comb_intf
 
+module Gen_cases_from_mux (Comb : Comb_intf.Gen_cases_from_mux) = struct
+  open Comb
+
+  let cases ~default select cases =
+    List.fold_right ~init:default cases ~f:(fun (match_with, value) acc ->
+      mux (select ==: match_with) [ acc; value ])
+  ;;
+end
+
 module Make_primitives (Gates : Gates) = struct
   include Gates
 
@@ -116,6 +125,13 @@ module Make_primitives (Gates : Gates) = struct
     in
     build (bits_lsb s) d
   ;;
+
+  include Gen_cases_from_mux (struct
+      type nonrec t = t
+
+      let mux = mux
+      let ( ==: ) = ( ==: )
+    end)
 end
 
 type nonrec ('a, 'b) with_valid2 = ('a, 'b) with_valid2 =
@@ -289,7 +305,7 @@ module Make (Prims : Primitives) = struct
     of_constant (Constant.of_octal_string ~signedness ~width v)
   ;;
 
-  let of_z ~width v = of_constant (Constant.of_z ~width v)
+  let of_bigint ~width v = of_constant (Constant.of_bigint ~width v)
 
   let of_bit_list b =
     if List.length b = 0
@@ -502,7 +518,32 @@ module Make (Prims : Primitives) = struct
   ;;
 
   let assert_width_one t msg = if not (width t = 1) then raise_width_not_one msg
-  let op_int_right op a b = op a (of_int ~width:(width a) b)
+
+  let op_int_right_unsigned op_name op left right =
+    match Or_error.try_with (fun () -> of_unsigned_int ~width:(width left) right) with
+    | Ok right -> op left right
+    | Error conversion_error ->
+      raise_s
+        [%message
+          "Failed to perform unsigned integer conversion on dotted operator"
+            (op_name : string)
+            (conversion_error : Error.t)]
+  ;;
+
+  let op_int_right_signed op_name op left right =
+    match Or_error.try_with (fun () -> of_signed_int ~width:(width left) right) with
+    | Ok right -> op left right
+    | Error conversion_error ->
+      raise_s
+        [%message
+          "Failed to perform signed integer conversion on dotted operator"
+            (op_name : string)
+            (conversion_error : Error.t)]
+  ;;
+
+  let op_int_right op_name op_unsigned op_signed =
+    op_int_right_unsigned op_name op_unsigned, op_int_right_signed op_name op_signed
+  ;;
 
   let[@cold] raise_mux_too_many_inputs inputs_provided maximum_expected =
     raise_s
@@ -538,6 +579,15 @@ module Make (Prims : Primitives) = struct
 
   let mux_init sel n ~f = mux sel (List.init n ~f)
 
+  let cases ~default select cases =
+    if List.length cases = 0 then raise_s [%message "[cases] no cases specified]"];
+    assert_widths_same "cases" (default :: List.map cases ~f:snd);
+    List.iter cases ~f:(fun (match_width, _) ->
+      if width match_width <> width select
+      then raise_s [%message "[cases] match width is not equal to select width"]);
+    Prims.cases ~default select cases
+  ;;
+
   (* logical *)
   let ( &: ) a b =
     assert_operator_widths_same "&:" a b;
@@ -555,9 +605,9 @@ module Make (Prims : Primitives) = struct
   ;;
 
   let ( ~: ) = Prims.( ~: )
-  let ( &:. ) a b = op_int_right ( &: ) a b
-  let ( |:. ) a b = op_int_right ( |: ) a b
-  let ( ^:. ) a b = op_int_right ( ^: ) a b
+  let ( &:. ), ( &+. ) = op_int_right "and" ( &: ) ( &: )
+  let ( |:. ), ( |+. ) = op_int_right "or" ( |: ) ( |: )
+  let ( ^:. ), ( ^+. ) = op_int_right "xor" ( ^: ) ( ^: )
 
   (* arithmetic *)
   let ( +: ) a b =
@@ -570,8 +620,8 @@ module Make (Prims : Primitives) = struct
     Prims.( -: ) a b
   ;;
 
-  let ( +:. ) a b = op_int_right ( +: ) a b
-  let ( -:. ) a b = op_int_right ( -: ) a b
+  let ( +:. ), ( ++. ) = op_int_right "add" ( +: ) ( +: )
+  let ( -:. ), ( -+. ) = op_int_right "sub" ( -: ) ( -: )
   let negate a = zero (width a) -: a
   let ( *: ) = Prims.( *: )
   let ( *+ ) = Prims.( *+ )
@@ -617,16 +667,12 @@ module Make (Prims : Primitives) = struct
     if width a = 1 then ~:(a <+ b) else f a >=: f b
   ;;
 
-  let ( ==:. ) a b = op_int_right ( ==: ) a b
-  let ( <>:. ) a b = op_int_right ( <>: ) a b
-  let ( <:. ) a b = op_int_right ( <: ) a b
-  let ( >:. ) a b = op_int_right ( >: ) a b
-  let ( <=:. ) a b = op_int_right ( <=: ) a b
-  let ( >=:. ) a b = op_int_right ( >=: ) a b
-  let ( <+. ) a b = op_int_right ( <+ ) a b
-  let ( >+. ) a b = op_int_right ( >+ ) a b
-  let ( <=+. ) a b = op_int_right ( <=+ ) a b
-  let ( >=+. ) a b = op_int_right ( >=+ ) a b
+  let ( ==:. ), ( ==+. ) = op_int_right "equals" ( ==: ) ( ==: )
+  let ( <>:. ), ( <>+. ) = op_int_right "not equals" ( <>: ) ( <>: )
+  let ( <:. ), ( <+. ) = op_int_right "less than" ( <: ) ( <+ )
+  let ( >:. ), ( >+. ) = op_int_right "greater than" ( >: ) ( >+ )
+  let ( <=:. ), ( <=+. ) = op_int_right "less than or equal" ( <=: ) ( <=+ )
+  let ( >=:. ), ( >=+. ) = op_int_right "greater than or equal" ( >=: ) ( >=+ )
 
   (* propositional logic implication *)
   let ( -->: ) a b = ~:a |: b
@@ -639,7 +685,7 @@ module Make (Prims : Primitives) = struct
   let bits_msb s = bits_lsb s |> List.rev
   let to_array b = Array.of_list (bits_lsb b)
   let of_array l = concat_lsb (Array.to_list l)
-  let to_z b = to_constant b |> Constant.to_z
+  let to_bigint b = to_constant b |> Constant.to_bigint
   let of_bool b = if b then vdd else gnd
 
   (* {[
@@ -1105,6 +1151,8 @@ module Make (Prims : Primitives) = struct
       f b (msbs b))
   ;;
 
+  let gray_increment g ~by = binary_to_gray (gray_to_binary g +:. by)
+
   let[@cold] raise_of_decimal_string_empty_string () =
     raise_s
       [%message.omit_nil
@@ -1116,7 +1164,7 @@ module Make (Prims : Primitives) = struct
   let of_decimal_string ~width v =
     if String.is_empty v
     then raise_of_decimal_string_empty_string ()
-    else of_z ~width (Zarith.Z.of_string v)
+    else of_bigint ~width (Bigint.of_string v)
   ;;
 
   let[@cold] raise_of_verilog_format_missing_tick s =
@@ -1229,7 +1277,7 @@ module Make (Prims : Primitives) = struct
     if width t > num_bits
     then (
       let top = drop_bottom t ~width:(num_bits - 1) in
-      if to_bool (top ==:. -1) || to_bool (top ==:. 0)
+      if to_bool (top ==+. -1) || to_bool (top ==:. 0)
       then to_signed ~num_bits ~to_int_type_trunc (sresize t ~width:num_bits)
       else raise_s [%message "Failed to convert value to signed integer type"])
     else to_int_type_trunc (sresize t ~width:num_bits)
@@ -1477,4 +1525,8 @@ module Make (Prims : Primitives) = struct
 
   module Uop = Unsigned
   module Sop = Signed
+end
+
+module Expert = struct
+  module Gen_cases_from_mux = Gen_cases_from_mux
 end

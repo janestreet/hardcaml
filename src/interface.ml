@@ -109,7 +109,7 @@ type ('a, 'b) with_valid2 = ('a, 'b) Comb_intf.with_valid2
 module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   include X
 
-  type tag = int
+  type tag = int [@@deriving equal]
 
   let port_names = map port_names_and_widths ~f:fst
   let port_widths = map port_names_and_widths ~f:snd
@@ -436,6 +436,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
 
   module Of_always = struct
     let assign dst src = map2 dst src ~f:Always.( <-- ) |> to_list |> Always.proc
+    let ( <-- ) = assign
     let value t = map t ~f:(fun a -> a.Always.Variable.value)
 
     let reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec =

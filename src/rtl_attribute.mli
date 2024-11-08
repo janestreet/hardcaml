@@ -1,9 +1,13 @@
+open Base
+
 (** RTL attribute specification.  Only relevant to downstream tooling. *)
 
 (** Specification of attributes which may be attached to various objects within a RTL
     design. Such attributes are used to provide implementation hints to down stream CAD
     tools and do not affect any functionality within Hardcaml. *)
-type t [@@deriving sexp_of, compare, equal, hash]
+type t [@@deriving compare, equal, hash, sexp_of]
+
+include Comparator.S with type t := t
 
 (** Attribute value types. *)
 module Value : sig
@@ -11,17 +15,30 @@ module Value : sig
     | Int of int
     | String of string
     | Bool of bool
-  [@@deriving equal, sexp_of]
+  [@@deriving compare, equal, sexp_of]
 end
 
-(** Create a new attribute. *)
-val create : ?value:Value.t -> string -> t
+module Applies_to : sig
+  type t =
+    | Non_wires
+    | Regs
+    | Memories
+    | Instantiations
+  [@@deriving compare, equal, sexp_of]
+end
+
+(** Create a new attribute. [applies_to], if specified, constrains what type of signal the
+    attribute may be applied to. *)
+val create : ?applies_to:Applies_to.t list -> ?value:Value.t -> string -> t
 
 (** Returns the attribute name *)
 val name : t -> string
 
 (** Returns the attribute value, if any. *)
 val value : t -> Value.t option
+
+(** Signal types that the attribute may be attached to. *)
+val applies_to : t -> Applies_to.t list
 
 (** A collection of common Xilinx Vivado attributes. *)
 module Vivado : sig

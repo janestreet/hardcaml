@@ -111,7 +111,18 @@ type condition =
       }
 [@@deriving sexp_of]
 
-type always =
+type match_with =
+  | Const of Bits.t
+  | Int of int
+  | Default
+[@@deriving sexp_of]
+
+type case =
+  { match_with : match_with
+  ; statements : always list
+  }
+
+and always =
   | If of
       { condition : condition
       ; on_true : always list
@@ -126,9 +137,14 @@ type always =
       ; index : var
       ; rhs : var
       }
+  | Constant_memory_assignment of
+      { lhs : var
+      ; index : int
+      ; value : Bits.t
+      }
   | Case of
       { select : var
-      ; cases : always list list
+      ; cases : case list
       }
 [@@deriving sexp_of]
 
@@ -174,12 +190,16 @@ type statement =
       { sensitivity_list : sensitivity_list
       ; always : always
       }
+  | Initial of { always : always array }
   | Mux of
       { to_assignment : unit -> statement
       ; to_always : unit -> statement
       ; is_mux2 : bool
       }
-  | Multiport_mem of { always : statement array }
+  | Multiport_mem of
+      { always : statement array
+      ; initial : statement option
+      }
   | Mem_read_port of
       { lhs : var
       ; memory : var

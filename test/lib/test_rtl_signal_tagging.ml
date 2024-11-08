@@ -36,18 +36,25 @@ module Test_component = struct
     let reg_spec = Reg_spec.create ~clock:i.clk () in
     let a = reg reg_spec ~enable:vdd i.a -- "hello" in
     let a = add_attribute a (Rtl_attribute.Vivado.dont_touch true) in
-    let b = add_attribute i.b (Rtl_attribute.Vivado.mark_debug true) in
-    let c = add_attribute (a +: b) (Rtl_attribute.Vivado.mark_debug true) in
+    let b = i.b in
+    let c = a +: b in
     { O.c }
   ;;
 end
 
-let%expect_test "Signal attributes on top of signals in Verilog for circuitsconstructed \
+let%expect_test "Signal attributes on top of signals in Verilog for circuits constructed \
                  using Circuit.With_interface"
   =
   let open Test_component in
   let module Circuit = Circuit.With_interface (I) (O) in
-  Rtl.print Verilog (Circuit.create_exn ~name:"module_foo" create);
+  Rtl.print
+    Verilog
+    (Circuit.create_exn
+       ~input_attributes:
+         { (I.const []) with b = [ Rtl_attribute.Vivado.mark_debug true ] }
+       ~output_attributes:{ O.c = [ Rtl_attribute.Vivado.mark_debug true ] }
+       ~name:"module_foo"
+       create);
   [%expect
     {|
     module module_foo (
@@ -67,23 +74,19 @@ let%expect_test "Signal attributes on top of signals in Verilog for circuitscons
         output [3:0] c;
 
         wire [3:0] _2;
-        wire vdd;
-        wire [3:0] _9;
         wire _4;
         wire [3:0] _6;
         (* dont_touch="TRUE" *)
         reg [3:0] hello;
-        wire [3:0] _12;
+        wire [3:0] _9;
         assign _2 = b;
-        assign vdd = 1'b1;
-        assign _9 = 4'b0000;
         assign _4 = clk;
         assign _6 = a;
         always @(posedge _4) begin
             hello <= _6;
         end
-        assign _12 = hello + _2;
-        assign c = _12;
+        assign _9 = hello + _2;
+        assign c = _9;
 
     endmodule
     |}]
@@ -203,32 +206,28 @@ let%expect_test "Test Rtl attributes on the pipeline construct" =
 
         input clk;
         input [3:0] a;
-        (* SRL_STYLE="register" *)
         output [3:0] b;
 
-        wire [3:0] _14;
-        wire vdd;
         wire _2;
         wire [3:0] _4;
         (* SRL_STYLE="register" *)
-        reg [3:0] _9;
+        reg [3:0] _6;
         (* SRL_STYLE="register" *)
-        reg [3:0] _12;
-        reg [3:0] _15;
-        assign _14 = 4'b0000;
-        assign vdd = 1'b1;
+        reg [3:0] _7;
+        (* SRL_STYLE="register" *)
+        reg [3:0] _8;
         assign _2 = clk;
         assign _4 = a;
         always @(posedge _2) begin
-            _9 <= _4;
+            _6 <= _4;
         end
         always @(posedge _2) begin
-            _12 <= _9;
+            _7 <= _6;
         end
         always @(posedge _2) begin
-            _15 <= _12;
+            _8 <= _7;
         end
-        assign b = _15;
+        assign b = _8;
 
     endmodule
     |}]

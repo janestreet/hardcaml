@@ -22,6 +22,7 @@ module Trace : sig
     :  string
     -> (Signal.t -> Signal.t -> Signal.t)
     -> (Signal.t -> int -> Signal.t)
+    -> (Signal.t -> int -> Signal.t)
     -> Sexp.t
 
   val binary_op_tests_no_rhs_int : string -> (Signal.t -> Signal.t -> Signal.t) -> Sexp.t

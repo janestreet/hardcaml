@@ -12,6 +12,7 @@ build: [
 depends: [
   "ocaml" {>= "5.1.0"}
   "base"
+  "bignum"
   "bin_prot"
   "core"
   "core_kernel"
@@ -21,8 +22,7 @@ depends: [
   "splittable_random"
   "stdio"
   "dune"              {>= "3.11.0"}
-  "ppxlib"            {>= "0.28.0"}
-  "zarith"            {>= "1.11"}
+  "ppxlib"            {= "0.33.0+jst"}
 ]
 available: arch != "arm32" & arch != "x86_32"
 synopsis: "RTL Hardware Design in OCaml"

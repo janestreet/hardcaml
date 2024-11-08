@@ -137,7 +137,8 @@ module Blackbox = struct
   [@@deriving sexp_of]
 end
 
-let output_with_name_map
+let output'
+  ?circuits_already_output
   ?output_mode
   ?database
   ?(blackbox = Blackbox.None)
@@ -162,7 +163,11 @@ let output_with_name_map
             (exn : exn)]
   in
   let database = Option.value database ~default:(Circuit_database.create ()) in
-  let circuits_already_output = Hash_set.create (module String) in
+  let circuits_already_output =
+    match circuits_already_output with
+    | None -> Hash_set.create (module String)
+    | Some circuits_already_output -> circuits_already_output
+  in
   let name_map = ref (Map.empty (module Signals_name_map.Uid_with_index)) in
   let add_to_name_map m =
     name_map := Map.merge_skewed !name_map m ~combine:(fun ~key:_ v1 _v2 -> v1)
@@ -198,13 +203,39 @@ let output_with_name_map
 ;;
 
 let output ?output_mode ?database ?blackbox language circuit =
-  ignore
-    (output_with_name_map ?output_mode ?database ?blackbox language circuit
-     : Signals_name_map.t)
+  ignore (output' ?output_mode ?database ?blackbox language circuit : Signals_name_map.t)
+;;
+
+let output_list ?output_mode ?database ?blackbox language circuits =
+  let circuits_already_output = Hash_set.create (module String) in
+  let top_level_circuit_names = Hash_set.create (module String) in
+  let rec f = function
+    | [] -> ()
+    | circuit :: circuits ->
+      let name = Circuit.name circuit in
+      if Hash_set.mem top_level_circuit_names name
+      then
+        raise_s [%message "Top level circuit name has already been used" (name : string)];
+      Hash_set.add top_level_circuit_names name;
+      let _ : Signals_name_map.t =
+        output' ~circuits_already_output ?output_mode ?database ?blackbox language circuit
+      in
+      f circuits
+  in
+  f circuits
 ;;
 
 let print ?database ?blackbox language circuit =
   output ~output_mode:(To_channel Out_channel.stdout) ?database ?blackbox language circuit
+;;
+
+let print_list ?database ?blackbox language circuits =
+  output_list
+    ~output_mode:(To_channel Out_channel.stdout)
+    ?database
+    ?blackbox
+    language
+    circuits
 ;;
 
 module Digest = struct
@@ -223,5 +254,5 @@ module Digest = struct
 end
 
 module Expert = struct
-  let output_with_name_map = output_with_name_map
+  let output = output'
 end

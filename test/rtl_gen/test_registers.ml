@@ -27,15 +27,11 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        wire vdd;
-        wire _5;
-        reg _7;
-        assign vdd = 1'b1;
-        assign _5 = 1'b0;
+        reg _4;
         always @(posedge clock) begin
-            _7 <= d;
+            _4 <= d;
         end
-        assign q = _7;
+        assign q = _4;
 
     endmodule
     library ieee;
@@ -64,20 +60,16 @@ let%expect_test "clock" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal vdd : std_logic;
-        signal hc_5 : std_logic;
-        signal hc_7 : std_logic;
+        signal hc_4 : std_logic;
 
     begin
 
-        vdd <= '1';
-        hc_5 <= '0';
         process (clock) begin
             if rising_edge(clock) then
-                hc_7 <= d;
+                hc_4 <= d;
             end if;
         end process;
-        q <= hc_7;
+        q <= hc_4;
 
     end architecture;
     |}];
@@ -94,15 +86,11 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        wire vdd;
-        wire _5;
-        reg _7;
-        assign vdd = 1'b1;
-        assign _5 = 1'b0;
+        reg _4;
         always @(posedge clock) begin
-            _7 <= d;
+            _4 <= d;
         end
-        assign q = _7;
+        assign q = _4;
 
     endmodule
     library ieee;
@@ -131,20 +119,16 @@ let%expect_test "clock" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal vdd : std_logic;
-        signal hc_5 : std_logic;
-        signal hc_7 : std_logic;
+        signal hc_4 : std_logic;
 
     begin
 
-        vdd <= '1';
-        hc_5 <= '0';
         process (clock) begin
             if rising_edge(clock) then
-                hc_7 <= d;
+                hc_4 <= d;
             end if;
         end process;
-        q <= hc_7;
+        q <= hc_4;
 
     end architecture;
     |}];
@@ -163,14 +147,12 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        wire _6;
-        reg _7;
-        assign _6 = 1'b0;
+        reg _5;
         always @(posedge clock) begin
             if (enable)
-                _7 <= d;
+                _5 <= d;
         end
-        assign q = _7;
+        assign q = _5;
 
     endmodule
     library ieee;
@@ -200,20 +182,18 @@ let%expect_test "clock" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal hc_6 : std_logic;
-        signal hc_7 : std_logic;
+        signal hc_5 : std_logic;
 
     begin
 
-        hc_6 <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if enable = '1' then
-                    hc_7 <= d;
+                    hc_5 <= d;
                 end if;
             end if;
         end process;
-        q <= hc_7;
+        q <= hc_5;
 
     end architecture;
     |}];
@@ -233,14 +213,12 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        wire _6;
-        reg _7;
-        assign _6 = 1'b0;
+        reg _5;
         always @(negedge clock) begin
             if (enable)
-                _7 <= d;
+                _5 <= d;
         end
-        assign q = _7;
+        assign q = _5;
 
     endmodule
     library ieee;
@@ -270,20 +248,18 @@ let%expect_test "clock" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal hc_6 : std_logic;
-        signal hc_7 : std_logic;
+        signal hc_5 : std_logic;
 
     begin
 
-        hc_6 <= '0';
         process (clock) begin
             if falling_edge(clock) then
                 if enable = '1' then
-                    hc_7 <= d;
+                    hc_5 <= d;
                 end if;
             end if;
         end process;
-        q <= hc_7;
+        q <= hc_5;
 
     end architecture;
     |}];
@@ -302,17 +278,13 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        wire vdd;
         wire _4;
-        wire _6;
-        reg _8 = 1'b1;
-        assign vdd = 1'b1;
+        reg _5 = 1'b1;
         assign _4 = 1'b1;
-        assign _6 = 1'b0;
         always @(negedge clock) begin
-            _8 <= d;
+            _5 <= d;
         end
-        assign q = _8;
+        assign q = _5;
 
     endmodule
     library ieee;
@@ -341,30 +313,39 @@ let%expect_test "clock" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal vdd : std_logic;
         signal hc_4 : std_logic;
-        signal hc_6 : std_logic;
-        signal hc_8 : std_logic := '1';
+        signal hc_5 : std_logic := '1';
 
     begin
 
-        vdd <= '1';
         hc_4 <= '1';
-        hc_6 <= '0';
         process (clock) begin
             if falling_edge(clock) then
-                hc_8 <= d;
+                hc_5 <= d;
             end if;
         end process;
-        q <= hc_8;
+        q <= hc_5;
 
     end architecture;
     |}]
 ;;
 
+let%expect_test "empty enable raises" =
+  Expect_test_helpers_core.require_does_raise (fun () ->
+    let spec = Reg_spec.create ~clock ~reset () in
+    of_spec spec ~enable:Signal.empty);
+  [%expect
+    {|
+    ("enable is invalid"
+      (info           "signal has unexpected width")
+      (expected_width 1)
+      (signal         empty))
+    |}]
+;;
+
 let%expect_test "clock + reset" =
   let spec = Reg_spec.create ~clock ~reset () in
-  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec);
   [%expect
     {|
     module my_register (
@@ -379,18 +360,16 @@ let%expect_test "clock + reset" =
         input d;
         output q;
 
-        wire vdd;
-        wire _6;
-        reg _8;
-        assign vdd = 1'b1;
-        assign _6 = 1'b0;
+        wire _5;
+        reg _6;
+        assign _5 = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _8 <= _6;
+                _6 <= _5;
             else
-                _8 <= d;
+                _6 <= d;
         end
-        assign q = _8;
+        assign q = _6;
 
     endmodule
     library ieee;
@@ -420,24 +399,22 @@ let%expect_test "clock + reset" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal vdd : std_logic;
+        signal hc_5 : std_logic;
         signal hc_6 : std_logic;
-        signal hc_8 : std_logic;
 
     begin
 
-        vdd <= '1';
-        hc_6 <= '0';
+        hc_5 <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_8 <= hc_6;
+                hc_6 <= hc_5;
             else
                 if rising_edge(clock) then
-                    hc_8 <= d;
+                    hc_6 <= d;
                 end if;
             end if;
         end process;
-        q <= hc_8;
+        q <= hc_6;
 
     end architecture;
     |}];
@@ -456,18 +433,16 @@ let%expect_test "clock + reset" =
         input d;
         output q;
 
-        wire vdd;
-        wire _6;
-        reg _8;
-        assign vdd = 1'b1;
-        assign _6 = 1'b0;
+        wire _5;
+        reg _6;
+        assign _5 = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _8 <= _6;
+                _6 <= _5;
             else
-                _8 <= d;
+                _6 <= d;
         end
-        assign q = _8;
+        assign q = _6;
 
     endmodule
     library ieee;
@@ -497,24 +472,22 @@ let%expect_test "clock + reset" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal vdd : std_logic;
+        signal hc_5 : std_logic;
         signal hc_6 : std_logic;
-        signal hc_8 : std_logic;
 
     begin
 
-        vdd <= '1';
-        hc_6 <= '0';
+        hc_5 <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_8 <= hc_6;
+                hc_6 <= hc_5;
             else
                 if rising_edge(clock) then
-                    hc_8 <= d;
+                    hc_6 <= d;
                 end if;
             end if;
         end process;
-        q <= hc_8;
+        q <= hc_6;
 
     end architecture;
     |}];
@@ -535,17 +508,17 @@ let%expect_test "clock + reset" =
         input d;
         output q;
 
-        wire _7;
-        reg _8;
-        assign _7 = 1'b0;
+        wire _6;
+        reg _7;
+        assign _6 = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _8 <= _7;
+                _7 <= _6;
             else
                 if (enable)
-                    _8 <= d;
+                    _7 <= d;
         end
-        assign q = _8;
+        assign q = _7;
 
     endmodule
     library ieee;
@@ -576,24 +549,24 @@ let%expect_test "clock + reset" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
+        signal hc_6 : std_logic;
         signal hc_7 : std_logic;
-        signal hc_8 : std_logic;
 
     begin
 
-        hc_7 <= '0';
+        hc_6 <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_8 <= hc_7;
+                hc_7 <= hc_6;
             else
                 if rising_edge(clock) then
                     if enable = '1' then
-                        hc_8 <= d;
+                        hc_7 <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= hc_8;
+        q <= hc_7;
 
     end architecture;
     |}];
@@ -615,17 +588,17 @@ let%expect_test "clock + reset" =
         input d;
         output q;
 
-        wire _7;
-        reg _8;
-        assign _7 = 1'b0;
+        wire _6;
+        reg _7;
+        assign _6 = 1'b0;
         always @(posedge clock or negedge reset) begin
             if (reset == 0)
-                _8 <= _7;
+                _7 <= _6;
             else
                 if (enable)
-                    _8 <= d;
+                    _7 <= d;
         end
-        assign q = _8;
+        assign q = _7;
 
     endmodule
     library ieee;
@@ -656,24 +629,24 @@ let%expect_test "clock + reset" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
+        signal hc_6 : std_logic;
         signal hc_7 : std_logic;
-        signal hc_8 : std_logic;
 
     begin
 
-        hc_7 <= '0';
+        hc_6 <= '0';
         process (clock, reset) begin
             if falling_edge(reset) then
-                hc_8 <= hc_7;
+                hc_7 <= hc_6;
             else
                 if rising_edge(clock) then
                     if enable = '1' then
-                        hc_8 <= d;
+                        hc_7 <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= hc_8;
+        q <= hc_7;
 
     end architecture;
     |}]
@@ -681,7 +654,7 @@ let%expect_test "clock + reset" =
 
 let%expect_test "clock + clear" =
   let spec = Reg_spec.create ~clock ~clear () in
-  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec);
   [%expect
     {|
     module my_register (
@@ -696,18 +669,16 @@ let%expect_test "clock + clear" =
         input d;
         output q;
 
-        wire vdd;
-        wire _6;
-        reg _8;
-        assign vdd = 1'b1;
-        assign _6 = 1'b0;
+        wire _5;
+        reg _6;
+        assign _5 = 1'b0;
         always @(posedge clock) begin
             if (clear)
-                _8 <= _6;
+                _6 <= _5;
             else
-                _8 <= d;
+                _6 <= d;
         end
-        assign q = _8;
+        assign q = _6;
 
     endmodule
     library ieee;
@@ -737,24 +708,22 @@ let%expect_test "clock + clear" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal vdd : std_logic;
+        signal hc_5 : std_logic;
         signal hc_6 : std_logic;
-        signal hc_8 : std_logic;
 
     begin
 
-        vdd <= '1';
-        hc_6 <= '0';
+        hc_5 <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if clear = '1' then
-                    hc_8 <= hc_6;
+                    hc_6 <= hc_5;
                 else
-                    hc_8 <= d;
+                    hc_6 <= d;
                 end if;
             end if;
         end process;
-        q <= hc_8;
+        q <= hc_6;
 
     end architecture;
     |}];
@@ -773,18 +742,16 @@ let%expect_test "clock + clear" =
         input d;
         output q;
 
-        wire vdd;
-        wire _6;
-        reg _8;
-        assign vdd = 1'b1;
-        assign _6 = 1'b0;
+        wire _5;
+        reg _6;
+        assign _5 = 1'b0;
         always @(posedge clock) begin
             if (clear)
-                _8 <= _6;
+                _6 <= _5;
             else
-                _8 <= d;
+                _6 <= d;
         end
-        assign q = _8;
+        assign q = _6;
 
     endmodule
     library ieee;
@@ -814,24 +781,22 @@ let%expect_test "clock + clear" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal vdd : std_logic;
+        signal hc_5 : std_logic;
         signal hc_6 : std_logic;
-        signal hc_8 : std_logic;
 
     begin
 
-        vdd <= '1';
-        hc_6 <= '0';
+        hc_5 <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if clear = '1' then
-                    hc_8 <= hc_6;
+                    hc_6 <= hc_5;
                 else
-                    hc_8 <= d;
+                    hc_6 <= d;
                 end if;
             end if;
         end process;
-        q <= hc_8;
+        q <= hc_6;
 
     end architecture;
     |}];
@@ -852,17 +817,17 @@ let%expect_test "clock + clear" =
         input d;
         output q;
 
-        wire _7;
-        reg _8;
-        assign _7 = 1'b0;
+        wire _6;
+        reg _7;
+        assign _6 = 1'b0;
         always @(posedge clock) begin
             if (clear)
-                _8 <= _7;
+                _7 <= _6;
             else
                 if (enable)
-                    _8 <= d;
+                    _7 <= d;
         end
-        assign q = _8;
+        assign q = _7;
 
     endmodule
     library ieee;
@@ -893,24 +858,24 @@ let%expect_test "clock + clear" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
+        signal hc_6 : std_logic;
         signal hc_7 : std_logic;
-        signal hc_8 : std_logic;
 
     begin
 
-        hc_7 <= '0';
+        hc_6 <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if clear = '1' then
-                    hc_8 <= hc_7;
+                    hc_7 <= hc_6;
                 else
                     if enable = '1' then
-                        hc_8 <= d;
+                        hc_7 <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= hc_8;
+        q <= hc_7;
 
     end architecture;
     |}]
@@ -918,7 +883,7 @@ let%expect_test "clock + clear" =
 
 let%expect_test "clock + reset + clear" =
   let spec = Reg_spec.create ~clock ~reset ~clear () in
-  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable:Signal.empty);
+  Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec);
   [%expect
     {|
     module my_register (
@@ -935,21 +900,19 @@ let%expect_test "clock + reset + clear" =
         input d;
         output q;
 
-        wire vdd;
         wire _7;
-        reg _9;
-        assign vdd = 1'b1;
+        reg _8;
         assign _7 = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _9 <= _7;
+                _8 <= _7;
             else
                 if (clear)
-                    _9 <= _7;
+                    _8 <= _7;
                 else
-                    _9 <= d;
+                    _8 <= d;
         end
-        assign q = _9;
+        assign q = _8;
 
     endmodule
     library ieee;
@@ -980,28 +943,26 @@ let%expect_test "clock + reset + clear" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal vdd : std_logic;
         signal hc_7 : std_logic;
-        signal hc_9 : std_logic;
+        signal hc_8 : std_logic;
 
     begin
 
-        vdd <= '1';
         hc_7 <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_9 <= hc_7;
+                hc_8 <= hc_7;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
-                        hc_9 <= hc_7;
+                        hc_8 <= hc_7;
                     else
-                        hc_9 <= d;
+                        hc_8 <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= hc_9;
+        q <= hc_8;
 
     end architecture;
     |}];
@@ -1022,21 +983,19 @@ let%expect_test "clock + reset + clear" =
         input d;
         output q;
 
-        wire vdd;
         wire _7;
-        reg _9;
-        assign vdd = 1'b1;
+        reg _8;
         assign _7 = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _9 <= _7;
+                _8 <= _7;
             else
                 if (clear)
-                    _9 <= _7;
+                    _8 <= _7;
                 else
-                    _9 <= d;
+                    _8 <= d;
         end
-        assign q = _9;
+        assign q = _8;
 
     endmodule
     library ieee;
@@ -1067,28 +1026,26 @@ let%expect_test "clock + reset + clear" =
         function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
         function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
         function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        signal vdd : std_logic;
         signal hc_7 : std_logic;
-        signal hc_9 : std_logic;
+        signal hc_8 : std_logic;
 
     begin
 
-        vdd <= '1';
         hc_7 <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_9 <= hc_7;
+                hc_8 <= hc_7;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
-                        hc_9 <= hc_7;
+                        hc_8 <= hc_7;
                     else
-                        hc_9 <= d;
+                        hc_8 <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= hc_9;
+        q <= hc_8;
 
     end architecture;
     |}];

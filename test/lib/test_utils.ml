@@ -35,15 +35,14 @@ let%expect_test "{to,of}_z resepects sign" =
     let width = 1 + Random.int max_bit_width in
     let bits = Bits.random ~width in
     let is_signed = Bits.msb bits |> Bits.to_bool in
-    let z = Bits.to_z ~signedness:Signed bits in
-    let bits' = Bits.of_z ~width z in
+    let z = Bits.to_bigint ~signedness:Signed bits in
+    let bits' = Bits.of_bigint ~width z in
     let failed msg =
-      let sexp_of_z z = Zarith.Z.to_string z |> [%sexp_of: string] in
+      let sexp_of_z z = Bigint.to_string z |> [%sexp_of: string] in
       raise_s [%message msg (bits : Bits.t) (bits' : Bits.t) (z : z)]
     in
     if not (Bits.equal bits bits') then failed "bit vector roundtrip via Z failed";
-    if is_signed && Zarith.Z.(compare z zero >= 0)
-    then failed "[Z] value was expected to be negative"
+    if is_signed && Bigint.(z >= zero) then failed "[Z] value was expected to be negative"
   in
   for _ = 1 to num_tests do
     test_z_roundtrip_signed ()
@@ -104,11 +103,13 @@ let%expect_test "roundtrips" =
   in
   let z =
     ( max_bit_width
-    , fun width x -> x |> Constant.to_z ~signedness:Unsigned |> Constant.of_z ~width )
+    , fun width x ->
+        x |> Constant.to_bigint ~signedness:Unsigned |> Constant.of_bigint ~width )
   in
   let z_signed =
     ( max_bit_width
-    , fun width x -> x |> Constant.to_z ~signedness:Signed |> Constant.of_z ~width )
+    , fun width x ->
+        x |> Constant.to_bigint ~signedness:Signed |> Constant.of_bigint ~width )
   in
   let int64_array =
     ( max_bit_width

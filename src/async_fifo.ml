@@ -1,45 +1,10 @@
 open Base
 open Signal
 
-let gray_inc_mux_arg bits =
-  List.init (1 lsl bits) ~f:(fun i ->
-    let i = Bits.of_int ~width:bits i in
-    Bits.(binary_to_gray i, binary_to_gray (i +:. 1)))
-;;
-
-let%expect_test "binary_to_gray" =
-  let to_str x = Bits.to_string x in
-  List.iter (gray_inc_mux_arg 4) ~f:(fun (i, b) ->
-    Stdio.printf "%s -> %s\n" (to_str i) (to_str b));
-  [%expect
-    {|
-    0000 -> 0001
-    0001 -> 0011
-    0011 -> 0010
-    0010 -> 0110
-    0110 -> 0111
-    0111 -> 0101
-    0101 -> 0100
-    0100 -> 1100
-    1100 -> 1101
-    1101 -> 1111
-    1111 -> 1110
-    1110 -> 1010
-    1010 -> 1011
-    1011 -> 1001
-    1001 -> 1000
-    1000 -> 0000
-    |}]
-;;
-
-let gray_inc bits =
-  let gray_inc_mux_arg =
-    gray_inc_mux_arg bits
-    |> List.sort ~compare:(fun (a, _) (b, _) -> Bits.compare a b)
-    |> List.map ~f:snd
-    |> List.map ~f:(fun x -> Signal.of_constant (Bits.to_constant x))
-  in
-  fun x -> mux x gray_inc_mux_arg
+let gray_inc_mux_inputs (type a) (module Comb : Comb.S with type t = a) width ~by : a list
+  =
+  List.init (1 lsl width) ~f:(fun i ->
+    Comb.of_unsigned_int ~width i |> Comb.gray_increment ~by)
 ;;
 
 module type S = sig
@@ -54,7 +19,7 @@ module Make (M : sig
 struct
   let address_width = M.log2_depth
   let fifo_capacity = 1 lsl address_width
-  let gray_inc = gray_inc address_width
+  let gray_inc ~by x = mux x (gray_inc_mux_inputs (module Signal) address_width ~by)
 
   module I = struct
     type 'a t =
@@ -166,7 +131,9 @@ struct
       let var =
         Always.Variable.reg (Reg_spec.create ~clock ~reset ()) ~enable:vdd ~width
       in
-      ignore (var.value -- name : Signal.t);
+      ignore
+        (Signal.add_attribute var.value (Rtl_attribute.Vivado.dont_touch true) -- name
+         : Signal.t);
       var
     in
     let waddr_rd =
@@ -232,13 +199,17 @@ struct
         ~width:address_width
         ~name:"raddr_wd"
     in
-    let full = gray_inc waddr_wd.value ==: raddr_wd.value in
+    let full = gray_inc ~by:1 waddr_wd.value ==: raddr_wd.value in
     let vld = waddr_rd.value <>: raddr_rd.value in
     let almost_empty =
-      waddr_rd.value
-      ==: raddr_rd.value
-      |: (waddr_rd.value ==: gray_inc raddr_rd.value)
-      |: (waddr_rd.value ==: gray_inc (gray_inc raddr_rd.value))
+      let current = waddr_rd.value ==: raddr_rd.value in
+      let one_ahead = waddr_rd.value ==: gray_inc ~by:1 raddr_rd.value in
+      let two_ahead_if_possible =
+        if address_width = 1
+        then gnd (* fifo not large enough to look this far ahead *)
+        else waddr_rd.value ==: gray_inc ~by:2 raddr_rd.value
+      in
+      current |: one_ahead |: two_ahead_if_possible
     in
     let ram =
       Async_distributed_ram.create
@@ -246,7 +217,7 @@ struct
         ~clock_write:i.clock_write
     in
     let raddr_rd_next =
-      mux2 (i.read_enable &: vld) (gray_inc raddr_rd.value) raddr_rd.value
+      mux2 (i.read_enable &: vld) (gray_inc ~by:1 raddr_rd.value) raddr_rd.value
     in
     Always.(
       compile
@@ -270,7 +241,7 @@ struct
           when_
             (i.write_enable &: ~:full)
             [ Async_distributed_ram.write ram ~address:waddr_wd.value ~data:i.data_in
-            ; waddr_wd <-- gray_inc waddr_wd.value
+            ; waddr_wd <-- gray_inc ~by:1 waddr_wd.value
             ]
         ; (* @(posedge clk_read) *)
           data_out <-- Async_distributed_ram.read ram ~address:raddr_rd_next
@@ -337,4 +308,8 @@ struct
     let module H = Hierarchy.In_scope (I) (O) in
     H.hierarchical ~name ~scope (create_with_delay ?delay) i
   ;;
+end
+
+module For_testing = struct
+  let gray_inc_mux_inputs = gray_inc_mux_inputs
 end

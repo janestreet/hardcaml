@@ -73,16 +73,10 @@ end
 type t =
   { name : string
   ; config : Config.t
-  ; signal_by_uid : Signal_map.t
   ; inputs : Signal.t list
   ; outputs : Signal.t list
   ; phantom_inputs : (string * int) list
   ; signal_graph : Signal_graph.t
-      (* [fan_in] and [fan_out] are lazily computed.  One might worry that this would interact
-     poorly with signals, which have some mutable components (e.g. wires).  But those have
-     already been set by the time a circuit is created, so a circuit is not mutable. *)
-  ; fan_out : Signal.Type.Uid_set.t Map.M(Signal.Uid).t Lazy.t
-  ; fan_in : Signal.Type.Uid_set.t Map.M(Signal.Uid).t Lazy.t
   ; assertions : Signal.t Map.M(String).t
   ; instantiations : Instantiation_sexp.t list
   }
@@ -178,7 +172,7 @@ let create_exn ?(config = Config.default) ~name outputs =
   let outputs = outputs @ output_assertions in
   let signal_graph = Signal_graph.create outputs in
   (* check that all outputs are assigned wires with 1 name *)
-  ignore (ok_exn (Signal_graph.outputs ~validate:true signal_graph) : Signal.t list);
+  ok_exn (Signal_graph.validate_outputs signal_graph);
   (* uid normalization *)
   let signal_graph =
     if config.normalize_uids
@@ -186,7 +180,7 @@ let create_exn ?(config = Config.default) ~name outputs =
     else signal_graph
   in
   (* get new output wires *)
-  let outputs = Signal_graph.outputs signal_graph |> ok_exn in
+  let outputs = Signal_graph.outputs signal_graph in
   (* get inputs checking that they are valid *)
   let inputs = ok_exn (Signal_graph.inputs signal_graph) in
   (* update the assertions map to the new normalized signals and find all instantiations. *)
@@ -219,13 +213,10 @@ let create_exn ?(config = Config.default) ~name outputs =
   (* construct the circuit *)
   { name
   ; config
-  ; signal_by_uid = Signal_map.create signal_graph
   ; inputs
   ; outputs
   ; phantom_inputs = []
   ; signal_graph
-  ; fan_out = lazy (Signal_graph.fan_out_map signal_graph)
-  ; fan_in = lazy (Signal_graph.fan_in_map signal_graph)
   ; assertions
   ; instantiations
   }
@@ -276,10 +267,7 @@ let with_name t ~name = { t with name }
 let uid_equal a b = Signal.Uid.equal (Signal.uid a) (Signal.uid b)
 let is_input t signal = List.mem t.inputs signal ~equal:uid_equal
 let is_output t signal = List.mem t.outputs signal ~equal:uid_equal
-let find_signal_exn t uid = Map.find_exn t.signal_by_uid uid
-let fan_out_map t = Lazy.force t.fan_out
-let fan_in_map t = Lazy.force t.fan_in
-let signal_map c = c.signal_by_uid
+let signal_map t = Signal_map.create t.signal_graph
 let assertions t = t.assertions
 let config t = t.config
 
@@ -326,8 +314,8 @@ let structural_compare ?check_names c0 c1 =
 
 let instantiations t = t.instantiations
 
-module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = struct
-  type create = I.Of_signal.t -> O.Of_signal.t
+module With_interface (I : Interface.S) (O : Interface.S) = struct
+  type create = Interface.Create_fn(I)(O).t
 
   let check_io_port_sets_match circuit =
     let actual_ports ports =
@@ -406,18 +394,20 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
     check_widths_match circuit
   ;;
 
-  let move_port_attributes from_ to_ =
-    Signal.Type.set_attributes to_ (Signal.Type.get_attributes from_);
-    Signal.Type.set_attributes from_ []
-  ;;
-
   let check_alist_of_one_direction name direction alist =
     ignore
       (check_ports_in_one_direction name direction (List.map ~f:snd alist)
        : Set.M(String).t)
   ;;
 
-  let create_exn ?(config = Config.default) ~name logic =
+  let create_exn
+    ?(config = Config.default)
+    ?input_attributes
+    ?output_attributes
+    ~name
+    create_fn
+    =
+    (* Create inputs and apply attributes. *)
     let circuit_inputs =
       let ports =
         List.map I.Names_and_widths.port_names_and_widths ~f:(fun (n, b) ->
@@ -426,8 +416,13 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
       check_alist_of_one_direction name "Input" ports;
       I.Unsafe_assoc_by_port_name.of_alist ports
     in
+    Option.iter input_attributes ~f:(fun input_attributes ->
+      I.iter2 circuit_inputs input_attributes ~f:Signal.Type.set_attributes);
+    (* Create wires on the inputs - [create_fn] may want to set names and such on them. *)
     let inputs = I.map circuit_inputs ~f:Signal.wireof in
-    let outputs = logic inputs in
+    (* Create the design. *)
+    let outputs = create_fn inputs in
+    (* Construct outputs and apply attributes. *)
     let circuit_outputs =
       let ports =
         List.map2_exn O.Names_and_widths.port_names (O.to_list outputs) ~f:(fun n s ->
@@ -436,16 +431,21 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
       check_alist_of_one_direction name "Output" ports;
       O.Unsafe_assoc_by_port_name.of_alist ports
     in
-    I.iter2 inputs circuit_inputs ~f:move_port_attributes;
-    O.iter2 outputs circuit_outputs ~f:move_port_attributes;
+    Option.iter output_attributes ~f:(fun output_attributes ->
+      O.iter2 circuit_outputs output_attributes ~f:Signal.Type.set_attributes);
+    (* Create the circuit. *)
     let circuit =
       create_exn ~config ~name (config.modify_outputs (O.to_list circuit_outputs))
     in
+    (* Bodge - create phantom inputs which are inputs which may not be used in the
+       implementation (perhaps due to some configuration option) but exist in the
+       interface. *)
     let circuit =
       if config.add_phantom_inputs
       then set_phantom_inputs circuit I.Names_and_widths.port_names_and_widths
       else circuit
     in
+    (* Perform port checks. *)
     (match config.port_checks with
      | Relaxed -> ()
      | Port_sets -> check_io_port_sets_match circuit
@@ -453,12 +453,3 @@ module With_interface (I : Interface.S_Of_signal) (O : Interface.S_Of_signal) = 
     circuit
   ;;
 end
-
-let create_with_interface
-  (type i o)
-  (module I : Interface.S_Of_signal with type Of_signal.t = i)
-  (module O : Interface.S_Of_signal with type Of_signal.t = o)
-  =
-  let module C = With_interface (I) (O) in
-  C.create_exn
-;;
