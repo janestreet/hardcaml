@@ -1,28 +1,43 @@
 open Base
 
 module Value = struct
-  type t =
-    | Int of int
-    | String of string
-    | Bool of bool
-  [@@deriving sexp_of, compare, equal, hash]
+  module T = struct
+    type t =
+      | Int of int
+      | String of string
+      | Bool of bool
+    [@@deriving sexp_of, compare, equal, hash]
+  end
+
+  include T
+  include Comparator.Make (T)
 end
 
 module Applies_to = struct
+  module T = struct
+    type t =
+      | Non_wires
+      | Regs
+      | Memories
+      | Instantiations
+    [@@deriving sexp_of, compare, equal, hash]
+  end
+
+  include T
+  include Comparator.Make (T)
+end
+
+module T = struct
   type t =
-    | Non_wires
-    | Regs
-    | Memories
-    | Instantiations
+    { name : string
+    ; value : Value.t option
+    ; applies_to : Applies_to.t list
+    }
   [@@deriving sexp_of, compare, equal, hash]
 end
 
-type t =
-  { name : string
-  ; value : Value.t option
-  ; applies_to : Applies_to.t list
-  }
-[@@deriving sexp_of, compare, equal, hash]
+include T
+include Comparator.Make (T)
 
 let create ?(applies_to = []) ?value name = { name; value; applies_to }
 let name t = t.name

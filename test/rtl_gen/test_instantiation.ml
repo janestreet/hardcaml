@@ -89,7 +89,7 @@ let%expect_test "instantiation, with 0 or more parameters." =
         assign _18 = _12[0:0];
         foo
             #( .par(3) )
-            the_foo_0
+            the_foo_1
             ( .foo(_5),
               .bar(_3),
               .moo(_9[2:1]),
@@ -98,7 +98,7 @@ let%expect_test "instantiation, with 0 or more parameters." =
         assign _3 = bar;
         assign _5 = foo;
         foo
-            the_foo_1
+            the_foo_2
             ( .foo(_5),
               .bar(_3),
               .moo(_7[2:1]),
@@ -169,7 +169,7 @@ let%expect_test "instantiation, with 0 or more parameters." =
                        moo => hc_12(2 downto 1),
                        zoo => hc_12(0) );
         hc_18 <= hc_sl(hc_12(0 downto 0));
-        the_foo_0: entity work.foo (rtl)
+        the_foo_1: entity work.foo (rtl)
             generic map ( par => 3 )
             port map ( foo => hc_5,
                        bar => hc_3,
@@ -178,7 +178,7 @@ let%expect_test "instantiation, with 0 or more parameters." =
         hc_16 <= hc_sl(hc_9(0 downto 0));
         hc_3 <= bar;
         hc_5 <= foo;
-        the_foo_1: entity work.foo (rtl)
+        the_foo_2: entity work.foo (rtl)
             port map ( foo => hc_5,
                        bar => hc_3,
                        moo => hc_7(2 downto 1),

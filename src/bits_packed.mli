@@ -69,3 +69,20 @@ val mux
   -> cases:int array
   -> size_in_words:int
   -> unit
+
+module Case : sig
+  type t =
+    { match_with_address : int
+    ; value_address : int
+    }
+end
+
+val cases
+  :  t
+  -> dst_address:int
+  -> select_address:int
+  -> select_size_in_words:int
+  -> default_address:int
+  -> cases:Case.t array
+  -> value_size_in_words:int
+  -> unit

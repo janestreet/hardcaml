@@ -366,6 +366,26 @@ let compile_comb
          ~select_width
          ~cases
          ~size_in_words)
+  | Cases { select; cases; default; _ } ->
+    let select_address = find_address select in
+    let select_size_in_words = num_words select in
+    let default_address = find_address default in
+    let cases =
+      Array.of_list_map cases ~f:(fun (match_with, value) ->
+        { Bits_packed.Case.match_with_address = find_address match_with
+        ; value_address = find_address value
+        })
+    in
+    let value_size_in_words = num_words dst_signal in
+    Some
+      (Cyclesim_ops.cases
+         t
+         ~dst_address
+         ~select_address
+         ~select_size_in_words
+         ~default_address
+         ~cases
+         ~value_size_in_words)
   | Cat { args; _ } ->
     let cat_src =
       List.map args ~f:(fun arg ->

@@ -139,18 +139,18 @@ let%expect_test "flattened" =
         output x;
 
         wire the_middle$x;
-        wire inner_0$a;
+        wire inner_1$a;
         wire _5;
         wire _8;
         wire inner$a;
         assign the_middle$x = 1'b0;
-        assign inner_0$a = ~ _8;
+        assign inner_1$a = ~ _8;
         assign _5 = b;
         assign _8 = a;
         assign inner$a = ~ _8;
         assign c0 = inner$a;
         assign d0 = _5;
-        assign c1 = inner_0$a;
+        assign c1 = inner_1$a;
         assign d1 = _5;
         assign x = the_middle$x;
 
@@ -178,18 +178,18 @@ let%expect_test "flattened" =
         output x;
 
         wire outer$the_middle$x;
-        wire outer$the_middle$inner_0$a;
+        wire outer$the_middle$inner_1$a;
         wire _5;
         wire _8;
         wire outer$the_middle$inner$a;
         assign outer$the_middle$x = 1'b0;
-        assign outer$the_middle$inner_0$a = ~ _8;
+        assign outer$the_middle$inner_1$a = ~ _8;
         assign _5 = b;
         assign _8 = a;
         assign outer$the_middle$inner$a = ~ _8;
         assign c0 = outer$the_middle$inner$a;
         assign d0 = _5;
-        assign c1 = outer$the_middle$inner_0$a;
+        assign c1 = outer$the_middle$inner_1$a;
         assign d1 = _5;
         assign x = outer$the_middle$x;
 
@@ -261,7 +261,7 @@ let%expect_test "hierarchical" =
         assign _12 = _11[1:1];
         (* keep_hierarchy="yes" *)
         inner
-            inner_0
+            inner_1
             ( .a(_8),
               .b(_5),
               .d(_11[1:1]),
@@ -344,11 +344,11 @@ let%expect_test "hierarchical" =
 
         wire _2;
         wire _5;
-        wire inner_0$a;
+        wire inner_1$a;
         assign _2 = b;
         assign _5 = a;
-        assign inner_0$a = ~ _5;
-        assign c = inner_0$a;
+        assign inner_1$a = ~ _5;
+        assign c = inner_1$a;
         assign d = _2;
 
     endmodule
@@ -381,7 +381,7 @@ let%expect_test "hierarchical" =
         assign _12 = _11[1:1];
         (* keep_hierarchy="yes" *)
         inner
-            inner_0
+            inner_1
             ( .a(_8),
               .b(_5),
               .d(_11[1:1]),
@@ -464,11 +464,11 @@ let%expect_test "hierarchical" =
 
         wire _2;
         wire _5;
-        wire outer$the_middle$inner_0$a;
+        wire outer$the_middle$inner_1$a;
         assign _2 = b;
         assign _5 = a;
-        assign outer$the_middle$inner_0$a = ~ _5;
-        assign c = outer$the_middle$inner_0$a;
+        assign outer$the_middle$inner_1$a = ~ _5;
+        assign c = outer$the_middle$inner_1$a;
         assign d = _2;
 
     endmodule
@@ -501,7 +501,7 @@ let%expect_test "hierarchical" =
         assign _12 = _11[1:1];
         (* keep_hierarchy="yes" *)
         inner
-            inner_0
+            inner_1
             ( .a(_8),
               .b(_5),
               .d(_11[1:1]),

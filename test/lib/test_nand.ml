@@ -192,152 +192,152 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
               .c(_53) );
         assign _1 = _53;
         nand
-            the_nand_0
+            the_nand_1
             ( .a(_6),
               .b(_52),
               .c(_54) );
         assign _2 = _54;
         nand
-            the_nand_1
+            the_nand_2
             ( .a(_55),
               .b(_4),
               .c(_56) );
         assign _3 = _56;
         nand
-            the_nand_2
+            the_nand_3
             ( .a(_57),
               .b(_55),
               .c(_58) );
         assign _4 = _58;
         nand
-            the_nand_3
+            the_nand_4
             ( .a(_57),
               .b(_4),
               .c(_59) );
         assign _5 = _59;
         nand
-            the_nand_4
+            the_nand_5
             ( .a(_5),
               .b(_3),
               .c(_60) );
         assign _6 = _60;
         nand
-            the_nand_5
+            the_nand_6
             ( .a(_6),
               .b(_2),
               .c(_61) );
         assign _7 = _61;
         nand
-            the_nand_6
+            the_nand_7
             ( .a(_7),
               .b(_1),
               .c(_62) );
         assign _8 = _62;
         nand
-            the_nand_7
+            the_nand_8
             ( .a(_32),
               .b(_10),
               .c(_63) );
         assign _9 = _63;
         nand
-            the_nand_8
+            the_nand_9
             ( .a(_14),
               .b(_32),
               .c(_64) );
         assign _10 = _64;
         nand
-            the_nand_9
+            the_nand_10
             ( .a(_65),
               .b(_12),
               .c(_66) );
         assign _11 = _66;
         nand
-            the_nand_10
+            the_nand_11
             ( .a(_67),
               .b(_65),
               .c(_68) );
         assign _12 = _68;
         nand
-            the_nand_11
+            the_nand_12
             ( .a(_67),
               .b(_12),
               .c(_69) );
         assign _13 = _69;
         nand
-            the_nand_12
+            the_nand_13
             ( .a(_13),
               .b(_11),
               .c(_70) );
         assign _14 = _70;
         nand
-            the_nand_13
+            the_nand_14
             ( .a(_14),
               .b(_10),
               .c(_71) );
         assign _15 = _71;
         nand
-            the_nand_14
+            the_nand_15
             ( .a(_15),
               .b(_9),
               .c(_72) );
         assign _16 = _72;
         nand
-            the_nand_15
+            the_nand_16
             ( .a(_41),
               .b(_42),
               .c(_73) );
         assign _17 = _73;
         nand
-            the_nand_16
+            the_nand_17
             ( .a(_32),
               .b(_67),
               .c(_74) );
         assign _18 = _74;
         nand
-            the_nand_17
+            the_nand_18
             ( .a(_18),
               .b(_18),
               .c(_75) );
         assign _19 = _75;
         nand
-            the_nand_18
+            the_nand_19
             ( .a(_19),
               .b(_19),
               .c(_76) );
         assign _20 = _76;
         nand
-            the_nand_19
+            the_nand_20
             ( .a(_52),
               .b(_57),
               .c(_77) );
         assign _21 = _77;
         nand
-            the_nand_20
+            the_nand_21
             ( .a(_21),
               .b(_21),
               .c(_78) );
         assign _22 = _78;
         nand
-            the_nand_21
+            the_nand_22
             ( .a(_22),
               .b(_22),
               .c(_79) );
         assign _23 = _79;
         assign _52 = 1'b0;
         nand
-            the_nand_22
+            the_nand_23
             ( .a(_55),
               .b(_52),
               .c(_80) );
         assign _24 = _80;
         nand
-            the_nand_23
+            the_nand_24
             ( .a(_24),
               .b(_24),
               .c(_81) );
         assign _25 = _81;
         nand
-            the_nand_24
+            the_nand_25
             ( .a(_25),
               .b(_25),
               .c(_82) );
@@ -345,55 +345,55 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
         assign _55 = b[0:0];
         assign _57 = a[0:0];
         nand
-            the_nand_25
+            the_nand_26
             ( .a(_57),
               .b(_55),
               .c(_83) );
         assign _27 = _83;
         nand
-            the_nand_26
+            the_nand_27
             ( .a(_27),
               .b(_27),
               .c(_84) );
         assign _28 = _84;
         nand
-            the_nand_27
+            the_nand_28
             ( .a(_28),
               .b(_28),
               .c(_85) );
         assign _29 = _85;
         nand
-            the_nand_28
+            the_nand_29
             ( .a(_29),
               .b(_26),
               .c(_86) );
         assign _30 = _86;
         nand
-            the_nand_29
+            the_nand_30
             ( .a(_30),
               .b(_30),
               .c(_87) );
         assign _31 = _87;
         nand
-            the_nand_30
+            the_nand_31
             ( .a(_31),
               .b(_23),
               .c(_88) );
         assign _32 = _88;
         nand
-            the_nand_31
+            the_nand_32
             ( .a(_65),
               .b(_32),
               .c(_89) );
         assign _33 = _89;
         nand
-            the_nand_32
+            the_nand_33
             ( .a(_33),
               .b(_33),
               .c(_90) );
         assign _34 = _90;
         nand
-            the_nand_33
+            the_nand_34
             ( .a(_34),
               .b(_34),
               .c(_91) );
@@ -401,81 +401,81 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
         assign _65 = b[1:1];
         assign _67 = a[1:1];
         nand
-            the_nand_34
+            the_nand_35
             ( .a(_67),
               .b(_65),
               .c(_92) );
         assign _36 = _92;
         nand
-            the_nand_35
+            the_nand_36
             ( .a(_36),
               .b(_36),
               .c(_93) );
         assign _37 = _93;
         nand
-            the_nand_36
+            the_nand_37
             ( .a(_37),
               .b(_37),
               .c(_94) );
         assign _38 = _94;
         nand
-            the_nand_37
+            the_nand_38
             ( .a(_38),
               .b(_35),
               .c(_95) );
         assign _39 = _95;
         nand
-            the_nand_38
+            the_nand_39
             ( .a(_39),
               .b(_39),
               .c(_96) );
         assign _40 = _96;
         nand
-            the_nand_39
+            the_nand_40
             ( .a(_40),
               .b(_20),
               .c(_97) );
         assign _41 = _97;
         nand
-            the_nand_40
+            the_nand_41
             ( .a(_48),
               .b(_41),
               .c(_98) );
         assign _42 = _98;
         nand
-            the_nand_41
+            the_nand_42
             ( .a(_99),
               .b(_45),
               .c(_100) );
         assign _43 = _100;
         assign _99 = b[2:2];
         nand
-            the_nand_42
+            the_nand_43
             ( .a(_101),
               .b(_99),
               .c(_102) );
         assign _45 = _102;
         assign _101 = a[2:2];
         nand
-            the_nand_43
+            the_nand_44
             ( .a(_101),
               .b(_45),
               .c(_103) );
         assign _47 = _103;
         nand
-            the_nand_44
+            the_nand_45
             ( .a(_47),
               .b(_43),
               .c(_104) );
         assign _48 = _104;
         nand
-            the_nand_45
+            the_nand_46
             ( .a(_48),
               .b(_42),
               .c(_105) );
         assign _49 = _105;
         nand
-            the_nand_46
+            the_nand_47
             ( .a(_49),
               .b(_17),
               .c(_106) );
@@ -693,7 +693,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _52 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_0
+            the_LUT2_1
             ( .I(_55),
               .O(_56) );
         assign _2 = _56;
@@ -701,7 +701,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _4 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_1
+            the_LUT2_2
             ( .I(_58),
               .O(_59) );
         assign _3 = _59;
@@ -709,7 +709,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _57 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_2
+            the_LUT2_3
             ( .I(_61),
               .O(_62) );
         assign _4 = _62;
@@ -717,7 +717,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _4 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_3
+            the_LUT2_4
             ( .I(_63),
               .O(_64) );
         assign _5 = _64;
@@ -725,7 +725,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _3 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_4
+            the_LUT2_5
             ( .I(_65),
               .O(_66) );
         assign _6 = _66;
@@ -733,7 +733,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _2 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_5
+            the_LUT2_6
             ( .I(_67),
               .O(_68) );
         assign _7 = _68;
@@ -741,7 +741,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _1 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_6
+            the_LUT2_7
             ( .I(_69),
               .O(_70) );
         assign _8 = _70;
@@ -749,7 +749,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _10 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_7
+            the_LUT2_8
             ( .I(_71),
               .O(_72) );
         assign _9 = _72;
@@ -757,7 +757,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _32 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_8
+            the_LUT2_9
             ( .I(_73),
               .O(_74) );
         assign _10 = _74;
@@ -765,7 +765,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _12 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_9
+            the_LUT2_10
             ( .I(_76),
               .O(_77) );
         assign _11 = _77;
@@ -773,7 +773,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _75 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_10
+            the_LUT2_11
             ( .I(_79),
               .O(_80) );
         assign _12 = _80;
@@ -781,7 +781,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _12 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_11
+            the_LUT2_12
             ( .I(_81),
               .O(_82) );
         assign _13 = _82;
@@ -789,7 +789,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _11 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_12
+            the_LUT2_13
             ( .I(_83),
               .O(_84) );
         assign _14 = _84;
@@ -797,7 +797,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _10 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_13
+            the_LUT2_14
             ( .I(_85),
               .O(_86) );
         assign _15 = _86;
@@ -805,7 +805,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _9 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_14
+            the_LUT2_15
             ( .I(_87),
               .O(_88) );
         assign _16 = _88;
@@ -813,7 +813,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _42 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_15
+            the_LUT2_16
             ( .I(_89),
               .O(_90) );
         assign _17 = _90;
@@ -821,7 +821,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _78 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_16
+            the_LUT2_17
             ( .I(_91),
               .O(_92) );
         assign _18 = _92;
@@ -829,7 +829,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _18 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_17
+            the_LUT2_18
             ( .I(_93),
               .O(_94) );
         assign _19 = _94;
@@ -837,7 +837,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _19 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_18
+            the_LUT2_19
             ( .I(_95),
               .O(_96) );
         assign _20 = _96;
@@ -845,7 +845,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _60 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_19
+            the_LUT2_20
             ( .I(_97),
               .O(_98) );
         assign _21 = _98;
@@ -853,7 +853,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                        _21 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_20
+            the_LUT2_21
             ( .I(_99),
               .O(_100) );
         assign _22 = _100;
@@ -861,7 +861,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _22 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_21
+            the_LUT2_22
             ( .I(_101),
               .O(_102) );
         assign _23 = _102;
@@ -870,7 +870,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _52 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_22
+            the_LUT2_23
             ( .I(_103),
               .O(_104) );
         assign _24 = _104;
@@ -878,7 +878,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _24 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_23
+            the_LUT2_24
             ( .I(_105),
               .O(_106) );
         assign _25 = _106;
@@ -886,7 +886,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _25 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_24
+            the_LUT2_25
             ( .I(_107),
               .O(_108) );
         assign _26 = _108;
@@ -896,7 +896,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _57 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_25
+            the_LUT2_26
             ( .I(_109),
               .O(_110) );
         assign _27 = _110;
@@ -904,7 +904,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _27 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_26
+            the_LUT2_27
             ( .I(_111),
               .O(_112) );
         assign _28 = _112;
@@ -912,7 +912,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _28 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_27
+            the_LUT2_28
             ( .I(_113),
               .O(_114) );
         assign _29 = _114;
@@ -920,7 +920,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _26 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_28
+            the_LUT2_29
             ( .I(_115),
               .O(_116) );
         assign _30 = _116;
@@ -928,7 +928,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _30 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_29
+            the_LUT2_30
             ( .I(_117),
               .O(_118) );
         assign _31 = _118;
@@ -936,7 +936,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _23 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_30
+            the_LUT2_31
             ( .I(_119),
               .O(_120) );
         assign _32 = _120;
@@ -944,7 +944,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _32 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_31
+            the_LUT2_32
             ( .I(_121),
               .O(_122) );
         assign _33 = _122;
@@ -952,7 +952,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _33 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_32
+            the_LUT2_33
             ( .I(_123),
               .O(_124) );
         assign _34 = _124;
@@ -960,7 +960,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _34 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_33
+            the_LUT2_34
             ( .I(_125),
               .O(_126) );
         assign _35 = _126;
@@ -970,7 +970,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _75 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_34
+            the_LUT2_35
             ( .I(_127),
               .O(_128) );
         assign _36 = _128;
@@ -978,7 +978,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _36 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_35
+            the_LUT2_36
             ( .I(_129),
               .O(_130) );
         assign _37 = _130;
@@ -986,7 +986,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _37 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_36
+            the_LUT2_37
             ( .I(_131),
               .O(_132) );
         assign _38 = _132;
@@ -994,7 +994,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _35 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_37
+            the_LUT2_38
             ( .I(_133),
               .O(_134) );
         assign _39 = _134;
@@ -1002,7 +1002,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _39 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_38
+            the_LUT2_39
             ( .I(_135),
               .O(_136) );
         assign _40 = _136;
@@ -1010,7 +1010,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _20 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_39
+            the_LUT2_40
             ( .I(_137),
               .O(_138) );
         assign _41 = _138;
@@ -1018,7 +1018,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _41 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_40
+            the_LUT2_41
             ( .I(_139),
               .O(_140) );
         assign _42 = _140;
@@ -1026,7 +1026,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _45 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_41
+            the_LUT2_42
             ( .I(_142),
               .O(_143) );
         assign _43 = _143;
@@ -1035,7 +1035,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _141 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_42
+            the_LUT2_43
             ( .I(_145),
               .O(_146) );
         assign _45 = _146;
@@ -1044,7 +1044,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _45 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_43
+            the_LUT2_44
             ( .I(_147),
               .O(_148) );
         assign _47 = _148;
@@ -1052,7 +1052,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _43 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_44
+            the_LUT2_45
             ( .I(_149),
               .O(_150) );
         assign _48 = _150;
@@ -1060,7 +1060,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _42 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_45
+            the_LUT2_46
             ( .I(_151),
               .O(_152) );
         assign _49 = _152;
@@ -1068,7 +1068,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
                         _17 };
         LUT2
             #( .INIT("1110") )
-            the_LUT2_46
+            the_LUT2_47
             ( .I(_153),
               .O(_154) );
         assign _50 = _154;

@@ -67,12 +67,14 @@ type signal_metadata =
   ; mutable caller_id : Caller_id.t option
   ; mutable wave_format : Wave_format.t
   }
+[@@deriving sexp_of]
 
 type signal_id =
   { s_id : Uid.t
   ; s_width : int
   ; mutable s_metadata : signal_metadata option
   }
+[@@deriving sexp_of]
 
 type t =
   | Empty
@@ -90,6 +92,12 @@ type t =
       { signal_id : signal_id
       ; select : t
       ; cases : t list
+      }
+  | Cases of
+      { signal_id : signal_id
+      ; select : t
+      ; cases : (t * t) list
+      ; default : t
       }
   | Cat of
       { signal_id : signal_id
@@ -270,6 +278,15 @@ module Deps = Make_deps (struct
         let arg = f init select in
         let arg = List.fold ~init:arg cases ~f in
         arg
+      | Cases { select; cases; default; _ } ->
+        let arg = f init select in
+        let arg =
+          List.fold ~init:arg cases ~f:(fun arg (match_with, value) ->
+            let arg = f arg match_with in
+            f arg value)
+        in
+        let arg = f arg default in
+        arg
     ;;
   end)
 
@@ -285,6 +302,7 @@ let signal_id s =
   | Inst { signal_id; _ }
   | Op2 { signal_id; _ }
   | Mux { signal_id; _ }
+  | Cases { signal_id; _ }
   | Cat { signal_id; _ }
   | Not { signal_id; _ } -> Some signal_id
 ;;
@@ -301,6 +319,7 @@ let uid s =
   | Inst { signal_id; _ }
   | Op2 { signal_id; _ }
   | Mux { signal_id; _ }
+  | Cases { signal_id; _ }
   | Cat { signal_id; _ }
   | Not { signal_id; _ } -> signal_id.s_id
 ;;
@@ -340,29 +359,45 @@ let structural_compare
     else (
       let set = Set.add set (uid a) in
       (* check we have the same type of node *)
-      let typ () =
+      let kinds_are_the_same () =
         match a, b with
-        | Empty, Empty -> true
         | Const { constant = a; _ }, Const { constant = b; _ } -> Bits.equal a b
         | Select { high = h0; low = l0; _ }, Select { high = h1; low = l1; _ } ->
           h0 = h1 && l0 = l1
-        | Reg _, Reg _ -> true
         | Multiport_mem { size = mem_size0; _ }, Multiport_mem { size = mem_size1; _ } ->
           mem_size0 = mem_size1
-        | Mem_read_port _, Mem_read_port _ -> true
-        | Wire _, Wire _ -> true
         | Inst { instantiation = i0; _ }, Inst { instantiation = i1; _ } ->
           String.equal i0.inst_name i1.inst_name
           (*i0.inst_instance=i1.inst_instance &&*)
+          (* inst_inputs=??? *)
           && [%equal: Parameter.t list] i0.inst_generics i1.inst_generics
           && [%equal: (string * (int * int)) list] i0.inst_outputs i1.inst_outputs
-        (* inst_inputs=??? *)
         | Op2 { op = o0; _ }, Op2 { op = o1; _ } -> equal_signal_op o0 o1
-        | Not _, Not _ | Mux _, Mux _ | Cat _, Cat _ -> true
-        | _ -> false
+        | Empty, Empty
+        | Reg _, Reg _
+        | Mem_read_port _, Mem_read_port _
+        | Wire _, Wire _
+        | Not _, Not _
+        | Mux _, Mux _
+        | Cases _, Cases _
+        | Cat _, Cat _ -> true
+        | ( ( Empty
+            | Const _
+            | Select _
+            | Op2 _
+            | Multiport_mem _
+            | Inst _
+            | Reg _
+            | Mem_read_port _
+            | Wire _
+            | Not _
+            | Mux _
+            | Cases _
+            | Cat _ )
+          , _ ) -> false
       in
-      let wid () = width a = width b in
-      let names () =
+      let widths_are_the_same () = width a = width b in
+      let names_are_the_same () =
         let names_or_empty = function
           | Empty -> []
           | s -> names s
@@ -371,7 +406,7 @@ let structural_compare
         then [%compare.equal: string list] (names_or_empty a) (names_or_empty b)
         else true
       in
-      let deps () =
+      let deps_are_the_same () =
         if check_deps
         then (
           match
@@ -390,7 +425,23 @@ let structural_compare
           | Unequal_lengths -> set, false)
         else set, false
       in
-      if typ () && wid () && names () then deps () else set, false)
+      let attributes_are_the_same () =
+        let attributes_set a =
+          let%bind.Option signal_id = signal_id a in
+          let%map.Option metadata = signal_id.s_metadata in
+          let attributes = metadata.attributes in
+          Set.of_list (module Rtl_attribute) attributes
+        in
+        let a = attributes_set a in
+        let b = attributes_set b in
+        [%equal: Set.M(Rtl_attribute).t option] a b
+      in
+      if kinds_are_the_same ()
+         && widths_are_the_same ()
+         && attributes_are_the_same ()
+         && names_are_the_same ()
+      then deps_are_the_same ()
+      else set, false)
   in
   structural_compare initial_deps a b
 ;;
@@ -432,6 +483,11 @@ let is_cat = function
 
 let is_mux = function
   | Mux _ -> true
+  | _ -> false
+;;
+
+let is_cases = function
+  | Cases _ -> true
   | _ -> false
 ;;
 
@@ -564,6 +620,7 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
     | Const _ -> "const"
     | Op2 { op; _ } -> string_of_op op
     | Mux _ -> "mux"
+    | Cases _ -> "cases"
     | Not _ -> "not"
     | Cat _ -> "cat"
     | Wire _ -> "wire"
@@ -603,6 +660,8 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
       ?arguments
       ?select
       ?data
+      ?cases
+      ?default
       ?range
       ?instantiation
       ?register
@@ -621,7 +680,9 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
           (value : (string option[@sexp.option]))
           (range : ((int * int) option[@sexp.option]))
           (select : (next option[@sexp.option]))
+          (cases : ((next * next) list option[@sexp.option]))
           (data : (next list option[@sexp.option]))
+          (default : (next option[@sexp.option]))
           ~_:(instantiation : (instantiation option[@sexp.option]))
           ~_:(register : (register option[@sexp.option]))
           ~_:(memory : (memory option[@sexp.option]))
@@ -634,6 +695,7 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
     | Empty -> create "empty"
     | Const { constant; _ } -> create tag ~value:(display_const constant)
     | Mux { select; cases; _ } -> create tag ~select ~data:cases
+    | Cases { select; cases; default; _ } -> create tag ~select ~cases ~default
     | Cat { args; _ } -> create tag ~arguments:args
     | Not { arg; _ } -> create tag ~arguments:[ arg ]
     | Op2 { arg_a; arg_b; _ } -> create tag ~arguments:[ arg_a; arg_b ]
@@ -679,6 +741,7 @@ let to_string signal =
   | Not _ -> "Op[" ^ sid signal ^ "] = " ^ "not"
   | Cat _ -> "Op[" ^ sid signal ^ "] = " ^ "cat"
   | Mux _ -> "Op[" ^ sid signal ^ "] = " ^ "mux"
+  | Cases _ -> "Op[" ^ sid signal ^ "] = " ^ "cases"
   | Wire { driver; _ } ->
     "Wire["
     ^ sid signal
@@ -947,3 +1010,103 @@ module Register = struct
     }
   ;;
 end
+
+let map_signal_id t ~f =
+  match t with
+  | Empty -> Empty
+  | Const { signal_id; constant } -> Const { signal_id = f signal_id; constant }
+  | Op2 { signal_id; op; arg_a; arg_b } ->
+    Op2 { signal_id = f signal_id; op; arg_a; arg_b }
+  | Mux { signal_id; select; cases } -> Mux { signal_id = f signal_id; select; cases }
+  | Cases { signal_id; select; cases; default } ->
+    Cases { signal_id = f signal_id; select; cases; default }
+  | Cat { signal_id; args } -> Cat { signal_id = f signal_id; args }
+  | Not { signal_id; arg } -> Not { signal_id = f signal_id; arg }
+  | Select { signal_id; arg; high; low } ->
+    Select { signal_id = f signal_id; arg; high; low }
+  | Reg { signal_id; register; d } -> Reg { signal_id = f signal_id; register; d }
+  | Multiport_mem { signal_id; size; write_ports; initialize_to } ->
+    Multiport_mem { signal_id = f signal_id; size; write_ports; initialize_to }
+  | Mem_read_port { signal_id; memory; read_address } ->
+    Mem_read_port { signal_id = f signal_id; memory; read_address }
+  | Inst { signal_id; instantiation } -> Inst { signal_id = f signal_id; instantiation }
+  | Wire { signal_id; driver } -> Wire { signal_id = f signal_id; driver }
+;;
+
+let map_dependant t ~f =
+  match t with
+  | Empty -> Empty
+  | Const { constant; signal_id } -> Const { signal_id; constant : Bits.t }
+  | Op2 { signal_id; op; arg_a; arg_b } ->
+    let arg_a = f arg_a in
+    let arg_b = f arg_b in
+    Op2 { signal_id; op : signal_op; arg_a; arg_b }
+  | Mux { signal_id; select; cases } ->
+    let select = f select in
+    let cases = List.map cases ~f in
+    Mux { signal_id; select; cases }
+  | Cases { signal_id; select; cases; default } ->
+    let select = f select in
+    let cases = List.map cases ~f:(fun (match_value, data) -> f match_value, f data) in
+    let default = f default in
+    Cases { signal_id; select; cases; default }
+  | Cat { signal_id; args } ->
+    let args = List.map args ~f in
+    Cat { signal_id; args }
+  | Not { signal_id; arg } ->
+    let arg = f arg in
+    Not { signal_id; arg }
+  | Select { signal_id; arg; high; low } ->
+    let arg = f arg in
+    Select { signal_id; arg; high : int; low : int }
+  | Reg { signal_id; register; d } ->
+    let d = f d in
+    let register = Register.map register ~f in
+    Reg { signal_id; register; d }
+  | Multiport_mem { signal_id; size; write_ports; initialize_to } ->
+    let rewrite_write_port
+      ({ Write_port.write_clock; write_address; write_data; write_enable } :
+        _ Write_port.t)
+      =
+      let write_clock = f write_clock in
+      let write_address = f write_address in
+      let write_data = f write_data in
+      let write_enable = f write_enable in
+      { Write_port.write_clock; write_address; write_enable; write_data }
+    in
+    let write_ports = Array.map write_ports ~f:rewrite_write_port in
+    Multiport_mem
+      { signal_id; size : int; write_ports; initialize_to : Bits.t array option }
+  | Mem_read_port { signal_id; memory; read_address } ->
+    let read_address = f read_address in
+    let memory = f memory in
+    Mem_read_port { signal_id; memory; read_address }
+  | Inst
+      { signal_id
+      ; instantiation =
+          { inst_name
+          ; inst_instance
+          ; inst_generics
+          ; inst_inputs
+          ; inst_outputs
+          ; inst_lib
+          ; inst_arch
+          }
+      } ->
+    let inst_inputs = List.map inst_inputs ~f:(fun (name, signal) -> name, f signal) in
+    Inst
+      { signal_id
+      ; instantiation =
+          { inst_name : string
+          ; inst_instance : string
+          ; inst_generics : Parameter.t list
+          ; inst_inputs
+          ; inst_outputs : (string * (int * int)) list
+          ; inst_lib : string
+          ; inst_arch : string
+          }
+      }
+  | Wire { signal_id; driver } ->
+    let driver = Option.map driver ~f in
+    Wire { signal_id; driver }
+;;

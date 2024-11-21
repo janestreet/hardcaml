@@ -77,6 +77,9 @@ module type Is_a = sig
   (** is the signal a multiplexer? *)
   val is_mux : t -> bool
 
+  (** is the signal a cases selection? *)
+  val is_cases : t -> bool
+
   (** is the signal a not> *)
   val is_not : t -> bool
 end
@@ -147,6 +150,7 @@ module type Type = sig
     ; mutable caller_id : Caller_id.t option
     ; mutable wave_format : Wave_format.t
     }
+  [@@deriving sexp_of]
 
   (** internal structure for tracking signals *)
   type signal_id =
@@ -154,6 +158,7 @@ module type Type = sig
     ; s_width : int
     ; mutable s_metadata : signal_metadata option
     }
+  [@@deriving sexp_of]
 
   (** main signal data type *)
   type t =
@@ -172,6 +177,12 @@ module type Type = sig
         { signal_id : signal_id
         ; select : t
         ; cases : t list
+        }
+    | Cases of
+        { signal_id : signal_id
+        ; select : t
+        ; cases : (t * t) list
+        ; default : t
         }
     | Cat of
         { signal_id : signal_id
@@ -387,4 +398,12 @@ module type Signal__type = sig
   val set_names : t -> string list -> unit
   val set_wave_format : t -> Wave_format.t -> unit
   val get_wave_format : t -> Wave_format.t
+
+  (** This function creates a copy of the signal with [f] applied to the signal's signal
+      id (if applicable) *)
+  val map_signal_id : t -> f:(signal_id -> signal_id) -> t
+
+  (** This function creates a copy of the signal with [f] applied to each of the signal's
+      dependants *)
+  val map_dependant : t -> f:(t -> t) -> t
 end

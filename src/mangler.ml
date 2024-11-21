@@ -32,7 +32,7 @@ let find_index t = Hashtbl.find t.table
 let rec mangle t name =
   match find_index t name with
   | None ->
-    Hashtbl.add_exn t.table ~key:name ~data:0;
+    Hashtbl.add_exn t.table ~key:name ~data:1;
     name
   | Some i ->
     Hashtbl.set t.table ~key:name ~data:(i + 1);

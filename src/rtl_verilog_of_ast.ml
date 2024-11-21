@@ -164,13 +164,21 @@ let rec write_always_statements indent buffer (t : Rtl_ast.always) =
       [%string "%{indent}%{lhs.name}[%{index#Int}] <= %{verilog_constant value};\n"]
   | Case { select; cases } ->
     add_string [%string "%{indent}case (%{select.name})\n"];
-    let num_cases = List.length cases in
-    List.iteri cases ~f:(fun index case ->
-      if index = num_cases - 1
-      then add_string [%string "%{indent}default:\n"]
-      else add_string [%string "%{indent}%{index#Int}:\n"];
-      block indent case ~f:(fun indent ->
-        List.iter case ~f:(write_always_statements indent buffer)));
+    List.iter cases ~f:(fun case ->
+      let statements =
+        match case with
+        | { match_with = Int index; statements } ->
+          add_string [%string "%{indent}%{index#Int}:\n"];
+          statements
+        | { match_with = Const bits; statements } ->
+          add_string [%string "%{indent}%{verilog_constant bits}:\n"];
+          statements
+        | { match_with = Default; statements } ->
+          add_string [%string "%{indent}default:\n"];
+          statements
+      in
+      block indent statements ~f:(fun indent ->
+        List.iter statements ~f:(write_always_statements indent buffer)));
     add_string [%string "%{indent}endcase\n"]
 ;;
 

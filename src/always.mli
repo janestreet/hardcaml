@@ -185,6 +185,9 @@ module State_machine : sig
   val create
     :  ?encoding:Encoding.t (** default is [Binary] *)
     -> ?auto_wave_format:bool (** default is [true] *)
+    -> ?attributes:Rtl_attribute.t list
+         (** attributes to apply to the state register. Default is one_hot encoding up to
+             32 states, sequential otherwise. *)
     -> ?enable:Signal.t
     -> (module State with type t = 'a)
     -> Reg_spec.t

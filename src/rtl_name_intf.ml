@@ -1,10 +1,7 @@
 open Base
 
 module type Language = sig
-  val is_valid_first_char : char -> bool
-  val is_valid_other_char : char -> bool
-  val replace_with : char
-  val prefix : string
+  val legalize : string -> string
   val case_sensitive : bool
   val reserved_words : string list
 end
@@ -18,7 +15,7 @@ module type Rtl_name = sig
   type t
 
   val create : (module Language) -> t
-  val legalize : t -> string -> string
+  val lang : t -> (module Language)
   val add_port_name : t -> Signal.t -> string -> unit
   val add_phantom_port_name : t -> string -> unit
   val mangle_name : t -> string -> string

@@ -134,6 +134,16 @@ module Base = struct
     | first_case :: _ -> Mux { signal_id = make_id (width first_case); select; cases }
     | [] -> raise_s [%message "Mux with no cases"]
   ;;
+
+  let cases ~default select cases =
+    List.iter cases ~f:(fun (match_value, _) ->
+      if not (is_const match_value)
+      then raise_s [%message "[cases] the match value must be a constant."]);
+    match cases with
+    | (_, first_case) :: _ ->
+      Cases { signal_id = make_id (width first_case); select; cases; default }
+    | [] -> raise_s [%message "[cases] no cases specified"]
+  ;;
 end
 
 module Comb_make = Comb.Make

@@ -123,6 +123,9 @@ module type Primitives = sig
 
   (** less than *)
   val ( <: ) : t -> t -> t
+
+  (** match against explicit case values. *)
+  val cases : default:t -> t -> (t * t) list -> t
 end
 
 (** Full combinational API *)
@@ -212,7 +215,7 @@ module type S = sig
     -> t
 
   (** Convert an arbitrarily wide integer value to a constant. *)
-  val of_z : width:int -> Zarith.Z.t -> t
+  val of_bigint : width:int -> Bigint.t -> t
 
   (** convert verilog style or binary string to constant *)
   val of_string : string -> t
@@ -341,6 +344,14 @@ module type S = sig
   val mux2 : t -> t -> t -> t
 
   val mux_init : t -> int -> f:(int -> t) -> t
+
+  (** [cases ~default select [(match0, value0); (match0, value0)...]] compares [select]
+      with [matchN] and outputs [valueN]. If nothing matches [default] is output. This
+      construct maps to a case statement.
+
+      The [matchN] values must be constants.
+  *)
+  val cases : default:t -> t -> (t * t) list -> t
 
   (** logical and *)
   val ( &: ) : t -> t -> t
@@ -500,7 +511,7 @@ module type S = sig
   val to_bstr : t -> string
 
   (** Convert bits to a Zarith.t *)
-  val to_z : t -> signedness:Signedness.t -> Zarith.Z.t
+  val to_bigint : t -> signedness:Signedness.t -> Bigint.t
 
   (** convert signal to a list of bits with msb at head of list *)
   val bits_msb : t -> t list
@@ -682,6 +693,10 @@ module type S = sig
   (** convert gray code to binary *)
   val gray_to_binary : t -> t
 
+  (** Increment a gray code value. The implementation converts to binary, increments the
+      binary value, then converts back to gray code. *)
+  val gray_increment : t -> by:int -> t
+
   (** create random constant vector of given width *)
   val random : width:int -> t
 
@@ -724,6 +739,13 @@ module type S = sig
   module Sop : Typed_math with type v := t
 end
 
+module type Gen_cases_from_mux = sig
+  type t
+
+  val mux : t -> t list -> t
+  val ( ==: ) : t -> t -> t
+end
+
 module type Comb = sig
   module type Gates = Gates
   module type Primitives = Primitives
@@ -742,4 +764,13 @@ module type Comb = sig
 
   (** Generates the full combinational API *)
   module Make (Primitives : Primitives) : S with type t = Primitives.t
+
+  module Expert : sig
+    (** Generate the implementation of [cases] based on equality and muxs. *)
+    module Gen_cases_from_mux (Comb : Gen_cases_from_mux) : sig
+      open Comb
+
+      val cases : default:t -> t -> (t * t) list -> t
+    end
+  end
 end

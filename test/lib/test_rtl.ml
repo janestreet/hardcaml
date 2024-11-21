@@ -167,7 +167,7 @@ let%expect_test "multiple circuits - inner component is shared" =
         wire _3;
         assign _2 = a;
         inner
-            inner_0
+            inner_1
             ( .a(_2),
               .b(_5) );
         assign _3 = _5;

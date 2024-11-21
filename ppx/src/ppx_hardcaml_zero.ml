@@ -154,6 +154,12 @@ let expand_array_init_str ~loc vname mapid mid label_declaration =
       [%e mapid] [%e pexp_ident ~loc mid] ~f:(fun (_n, _b) -> [%e vname], _b))]
 ;;
 
+let is_ptyp_var_with_name typ name =
+  match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ.ptyp_desc with
+  | Ptyp_var (v, _) when String.equal v name -> true
+  | _ -> false
+;;
+
 (*
    * Expand t label
 *)
@@ -166,14 +172,16 @@ let expand_port_names_and_widths_label_array
   prefix
   suffix
   mangle
-  = function
+  typ
+  =
+  match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ with
   (* 'a *)
-  | Ptyp_var v when String.equal v var ->
+  | Ptyp_var (v, _) when String.equal v var ->
     let rtlident = mk_rtlident ~loc name prefix suffix in
     expand_array_init ~loc rtlident label_declaration
   (* 'a Module.t *)
-  | Ptyp_constr ({ txt = Ldot (mname, _); loc }, [ { ptyp_desc = Ptyp_var v; _ } ])
-    when String.equal v var ->
+  | Ptyp_constr ({ txt = Ldot (mname, _); loc }, [ v ]) when is_ptyp_var_with_name v var
+    ->
     let mid = { txt = Ldot (mname, "port_names_and_widths"); loc } in
     let mangled =
       [%expr
@@ -226,15 +234,15 @@ let expand_port_names_and_widths_expresion
   and rtlprefix = get_rtlprefix ~loc opts label_declaration
   and rtlsuffix = get_rtlsuffix ~loc opts label_declaration
   and rtlmangle = get_rtlmangle ~loc opts label_declaration in
-  match ptyp_desc with
+  match Ppxlib_jane.Shim.Core_type_desc.of_parsetree ptyp_desc with
   (* 'a *)
-  | Ptyp_var v when String.equal v var ->
+  | Ptyp_var (v, _) when String.equal v var ->
     let nbits = get_bits ~loc label_declaration
     and rtlident = mk_rtlident ~loc rtlname rtlprefix rtlsuffix in
     pexp_tuple ~loc [ rtlident; nbits ]
   (* 'a Module.t *)
-  | Ptyp_constr ({ txt = Ldot (mname, _); loc }, [ { ptyp_desc = Ptyp_var v; _ } ])
-    when String.equal v var ->
+  | Ptyp_constr ({ txt = Ldot (mname, _); loc }, [ v ]) when is_ptyp_var_with_name v var
+    ->
     let mid = { txt = Ldot (mname, "port_names_and_widths"); loc } in
     let mangled = mangle_name ~loc rtlname rtlmangle in
     let rtlident = mk_rtlident ~loc mangled rtlprefix rtlsuffix in
@@ -360,13 +368,13 @@ module Iter_or_map = struct
   ;;
 end
 
-let expand_map_label_list iter_or_map var loc ident = function
+let expand_map_label_list iter_or_map var loc ident typ =
+  match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ with
   (* 'a *)
-  | Ptyp_var v when String.equal v var ->
+  | Ptyp_var (v, _) when String.equal v var ->
     [%expr [%e Iter_or_map.list_map iter_or_map loc] [%e ident] ~f]
   (* 'a Module.t *)
-  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
-    when String.equal v var ->
+  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]) when is_ptyp_var_with_name v var ->
     let mapid =
       pexp_ident ~loc (Located.mk ~loc (Ldot (mname, Iter_or_map.name iter_or_map)))
     in
@@ -380,13 +388,13 @@ let expand_map_label_list iter_or_map var loc ident = function
       deriver
 ;;
 
-let expand_map_label_array iter_or_map var loc ident = function
+let expand_map_label_array iter_or_map var loc ident typ =
+  match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ with
   (* 'a *)
-  | Ptyp_var v when String.equal v var ->
+  | Ptyp_var (v, _) when String.equal v var ->
     [%expr [%e Iter_or_map.array_map iter_or_map loc] [%e ident] ~f]
   (* 'a Module.t *)
-  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
-    when String.equal v var ->
+  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]) when is_ptyp_var_with_name v var ->
     let mapid =
       pexp_ident ~loc (Located.mk ~loc (Ldot (mname, Iter_or_map.name iter_or_map)))
     in
@@ -412,12 +420,11 @@ module Record_field = struct
 end
 
 let expand_map_label_expression (iter_or_map : Iter_or_map.t) var loc ptyp_desc ident =
-  match ptyp_desc with
+  match Ppxlib_jane.Shim.Core_type_desc.of_parsetree ptyp_desc with
   (* 'a *)
-  | Ptyp_var v when String.equal v var -> [%expr f [%e ident]]
+  | Ptyp_var (v, _) when String.equal v var -> [%expr f [%e ident]]
   (* 'a Module.t *)
-  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
-    when String.equal v var ->
+  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]) when is_ptyp_var_with_name v var ->
     let mapid =
       pexp_ident ~loc (Located.mk ~loc (Ldot (mname, Iter_or_map.name iter_or_map)))
     in
@@ -459,13 +466,13 @@ let expand_map_label iter_or_map var ({ pld_name = { txt; loc }; _ } as label_de
    * Expand map2 label
 *)
 
-let expand_map2_label_list iter_or_map var loc ident0 ident1 = function
+let expand_map2_label_list iter_or_map var loc ident0 ident1 typ =
+  match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ with
   (* 'a *)
-  | Ptyp_var v when String.equal v var ->
+  | Ptyp_var (v, _) when String.equal v var ->
     [%expr [%e Iter_or_map.list_map2_exn iter_or_map loc] [%e ident0] [%e ident1] ~f]
   (* 'a Module.t *)
-  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
-    when String.equal v var ->
+  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]) when is_ptyp_var_with_name v var ->
     let mapid =
       pexp_ident ~loc (Located.mk ~loc (Ldot (mname, Iter_or_map.name2 iter_or_map)))
     in
@@ -482,9 +489,10 @@ let expand_map2_label_list iter_or_map var loc ident0 ident1 = function
       deriver
 ;;
 
-let expand_map2_label_array iter_or_map var loc ident0 ident1 = function
+let expand_map2_label_array iter_or_map var loc ident0 ident1 typ =
+  match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ with
   (* 'a *)
-  | Ptyp_var v when String.equal v var ->
+  | Ptyp_var (v, _) when String.equal v var ->
     [%expr
       [%e Iter_or_map.array_init iter_or_map loc]
         (Array.length [%e ident0])
@@ -493,8 +501,7 @@ let expand_map2_label_array iter_or_map var loc ident0 ident1 = function
             (Ppx_hardcaml_runtime.Array.get [%e ident0] _i)
             (Ppx_hardcaml_runtime.Array.get [%e ident1] _i))]
   (* 'a Module.t *)
-  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
-    when String.equal v var ->
+  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]) when is_ptyp_var_with_name v var ->
     let mapid =
       pexp_ident ~loc (Located.mk ~loc (Ldot (mname, Iter_or_map.name2 iter_or_map)))
     in
@@ -522,12 +529,11 @@ let expand_map2_label_expression
   ident0
   ident1
   =
-  match ptyp_desc with
+  match Ppxlib_jane.Shim.Core_type_desc.of_parsetree ptyp_desc with
   (* 'a *)
-  | Ptyp_var v when String.equal v var -> [%expr f [%e ident0] [%e ident1]]
+  | Ptyp_var (v, _) when String.equal v var -> [%expr f [%e ident0] [%e ident1]]
   (* 'a Module.t *)
-  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
-    when String.equal v var ->
+  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]) when is_ptyp_var_with_name v var ->
     let mapid =
       pexp_ident ~loc (Located.mk ~loc (Ldot (mname, Iter_or_map.name2 iter_or_map)))
     in
@@ -574,12 +580,12 @@ let expand_map2_label
    * Expand to_list label
 *)
 
-let expand_to_list_label_list var loc ident = function
+let expand_to_list_label_list var loc ident typ =
+  match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ with
   (* 'a *)
-  | Ptyp_var v when String.equal v var -> ident
+  | Ptyp_var (v, _) when String.equal v var -> ident
   (* 'a Module.t *)
-  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
-    when String.equal v var ->
+  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]) when is_ptyp_var_with_name v var ->
     let to_list_id = pexp_ident ~loc (Located.mk ~loc (Ldot (mname, "to_list"))) in
     [%expr
       Ppx_hardcaml_runtime.List.concat
@@ -601,15 +607,14 @@ let expand_to_list_label_array var loc ident desc =
 ;;
 
 let expand_to_list_label_expression var loc ptyp_desc ident =
-  match ptyp_desc with
+  match Ppxlib_jane.Shim.Core_type_desc.of_parsetree ptyp_desc with
   (* 'a *)
-  | Ptyp_var v when String.equal v var -> [%expr [ [%e ident] ]]
+  | Ptyp_var (v, _) when String.equal v var -> [%expr [ [%e ident] ]]
   (* 'a *)
-  | Ptyp_constr ({ txt = Lident "option"; _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
-    when String.equal v var -> [%expr Base.Option.to_list [%e ident]]
+  | Ptyp_constr ({ txt = Lident "option"; _ }, [ v ]) when is_ptyp_var_with_name v var ->
+    [%expr Base.Option.to_list [%e ident]]
   (* 'a Module.t *)
-  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
-    when String.equal v var ->
+  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]) when is_ptyp_var_with_name v var ->
     pexp_apply
       ~loc
       (pexp_ident ~loc (Located.mk ~loc (Ldot (mname, "to_list"))))
@@ -688,38 +693,28 @@ let expand_ast_label
       [%expr Some { kind = [%e kind]; length = [%e length] }]
     in
     let type_, sequence =
-      match ptyp_desc with
+      match Ppxlib_jane.Shim.Core_type_desc.of_parsetree ptyp_desc with
       (* 'a *)
-      | Ptyp_var v when String.equal v var -> signal (), [%expr None]
+      | Ptyp_var (v, _) when String.equal v var -> signal (), [%expr None]
       (* 'a Module.t *)
-      | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
-        when String.equal v var -> module_ mname, [%expr None]
+      | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]) when is_ptyp_var_with_name v var
+        -> module_ mname, [%expr None]
       (* 'a list *)
-      | Ptyp_constr ({ txt = Lident "list"; _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
-        when String.equal v var -> signal (), sequence [%expr List]
+      | Ptyp_constr ({ txt = Lident "list"; _ }, [ v ]) when is_ptyp_var_with_name v var
+        -> signal (), sequence [%expr List]
       (* 'a Module.t list *)
       | Ptyp_constr
           ( { txt = Lident "list"; _ }
-          , [ { ptyp_desc =
-                  Ptyp_constr
-                    ({ txt = Ldot (mname, _); _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
-              ; _
-              }
-            ] )
-        when String.equal v var -> module_ mname, sequence [%expr List]
+          , [ { ptyp_desc = Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]); _ } ] )
+        when is_ptyp_var_with_name v var -> module_ mname, sequence [%expr List]
       (* 'a array *)
-      | Ptyp_constr ({ txt = Lident "array"; _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
-        when String.equal v var -> signal (), sequence [%expr Array]
+      | Ptyp_constr ({ txt = Lident "array"; _ }, [ v ]) when is_ptyp_var_with_name v var
+        -> signal (), sequence [%expr Array]
       (* 'a Module.t array *)
       | Ptyp_constr
           ( { txt = Lident "array"; _ }
-          , [ { ptyp_desc =
-                  Ptyp_constr
-                    ({ txt = Ldot (mname, _); _ }, [ { ptyp_desc = Ptyp_var v; _ } ])
-              ; _
-              }
-            ] )
-        when String.equal v var -> module_ mname, sequence [%expr Array]
+          , [ { ptyp_desc = Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]); _ } ] )
+        when is_ptyp_var_with_name v var -> module_ mname, sequence [%expr Array]
       (* Default *)
       | _ ->
         raise_errorf
@@ -775,8 +770,16 @@ let record_fields (iter_or_map : Iter_or_map.t) ~loc fields =
 ;;
 
 let str_of_type ~options ({ ptype_loc = loc; _ } as type_decl) =
-  match type_decl.ptype_kind, type_decl.ptype_params with
-  | Ptype_record labels, [ ({ ptyp_desc = Ptyp_var var; _ }, _) ] ->
+  let only_param =
+    match type_decl.ptype_params with
+    | [ (param, _) ] -> Some param.ptyp_desc
+    | _ -> None
+  in
+  match
+    ( type_decl.ptype_kind
+    , Option.map only_param ~f:Ppxlib_jane.Shim.Core_type_desc.of_parsetree )
+  with
+  | Ptype_record labels, Some (Ptyp_var (var, _)) ->
     let str_port_names_and_widths_labels =
       List.map labels ~f:(expand_port_names_and_widths_label options var)
     in

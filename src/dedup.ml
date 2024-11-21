@@ -13,6 +13,7 @@ module Structure_kind = struct
     | Const of Bits.t
     | Op of Signal.Type.signal_op
     | Mux
+    | Cases
     | Cat
     | Not
     | Wire of string list
@@ -30,6 +31,7 @@ let structure_kind (signal : Signal.t) =
   | Const { constant; _ } -> Structure_kind.Const constant
   | Op2 { op; _ } -> Structure_kind.Op op
   | Mux _ -> Structure_kind.Mux
+  | Cases _ -> Structure_kind.Cases
   | Cat _ -> Structure_kind.Cat
   | Not _ -> Structure_kind.Not
   | Wire _ -> Structure_kind.Wire (Signal.names signal)
@@ -60,6 +62,16 @@ let map_children signal ~f =
     let select = f select in
     let cases = List.map cases ~f in
     Mux { signal_id = { signal_id with s_id = Signal.Type.new_id () }; select; cases }
+  | Cases { signal_id; select; cases; default } ->
+    let select = f select in
+    let cases = List.map cases ~f:(fun (match_with, data) -> match_with, f data) in
+    let default = f default in
+    Cases
+      { signal_id = { signal_id with s_id = Signal.Type.new_id () }
+      ; select
+      ; cases
+      ; default
+      }
   | Cat { signal_id; args } ->
     let args = List.map args ~f in
     Cat { signal_id = { signal_id with s_id = Signal.Type.new_id () }; args }

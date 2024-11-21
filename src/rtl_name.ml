@@ -1,10 +1,7 @@
 open Base
 
 module type Language = sig
-  val is_valid_first_char : char -> bool
-  val is_valid_other_char : char -> bool
-  val replace_with : char
-  val prefix : string
+  val legalize : string -> string
   val case_sensitive : bool
   val reserved_words : string list
 end
@@ -14,12 +11,21 @@ module Verilog = struct
   let is_valid_other_char c = Char.is_alphanum c || Char.equal c '_' || Char.equal c '$'
   let replace_with = '_'
   let prefix = "_"
+
+  let rec legalize string =
+    if String.is_empty string
+    then raise_s [%message "[Rtl_name.legalize] string is empty"];
+    if is_valid_first_char string.[0]
+    then String.map string ~f:(fun c -> if is_valid_other_char c then c else replace_with)
+    else legalize (prefix ^ string)
+  ;;
+
   let case_sensitive = true
   let reserved_words = Reserved_words.verilog
 end
 
 module Vhdl = struct
-  (* Here are the actual rules.  This is not properly enforced here - in particular 3 and 4.
+  (* Here are the (bonkers) rules.
 
      1 identifiers can contain only upper or lower case letters a-z, numerals 0-9, and underscore
      2 the first character must be a letter
@@ -29,10 +35,30 @@ module Vhdl = struct
   *)
 
   let is_valid_first_char c = Char.is_alpha c
+  let is_valid_last_char c = Char.is_alphanum c
   let is_valid_other_char c = Char.is_alphanum c || Char.equal c '_'
   let replace_with = '_'
   let prefix = "hc_"
+  let suffix = "_hc"
+  let double_underscores = String.Search_pattern.create "__"
   let case_sensitive = false
+
+  let rec remove_double_underscores in_ =
+    let out = String.Search_pattern.replace_all double_underscores ~in_ ~with_:"_" in
+    if String.equal in_ out then out else remove_double_underscores out
+  ;;
+
+  let rec legalize string =
+    if String.is_empty string
+    then raise_s [%message "[Rtl_name.legalize] string is empty"];
+    if not (is_valid_first_char string.[0])
+    then legalize (prefix ^ string)
+    else if not (is_valid_last_char string.[String.length string - 1])
+    then legalize (string ^ suffix)
+    else
+      String.map string ~f:(fun c -> if is_valid_other_char c then c else replace_with)
+      |> remove_double_underscores
+  ;;
 
   let reserved_words =
     Reserved_words.vhdl
@@ -45,6 +71,7 @@ type t =
   ; instantiation_mangler : Mangler.t
   ; lang : (module Language)
   }
+[@@deriving fields ~getters]
 
 let create (module Lang : Language) =
   let mangler = Mangler.create ~case_sensitive:Lang.case_sensitive in
@@ -53,27 +80,16 @@ let create (module Lang : Language) =
   { mangler; instantiation_mangler; lang = (module Lang) }
 ;;
 
-let rec legalize
-  ({ mangler = _; instantiation_mangler = _; lang = (module Lang) } as t)
-  string
+let add_port_name { mangler; instantiation_mangler = _; lang = (module Lang) } signal name
   =
-  if String.is_empty string then raise_s [%message "[Rtl_name] string is empty"];
-  if Lang.is_valid_first_char string.[0]
-  then
-    String.map string ~f:(fun c ->
-      if Lang.is_valid_other_char c then c else Lang.replace_with)
-  else legalize t (Lang.prefix ^ string)
-;;
-
-let add_port_name ({ mangler; instantiation_mangler = _; lang = _ } as t) signal name =
-  let legal_name = legalize t name in
+  let legal_name = Lang.legalize name in
   if not (String.equal legal_name name)
   then
     raise_s
       [%message
         "[Rtl_name.add_port_name] illegal port name"
           (name : string)
-          ~legal_name:(legalize t name : string)
+          ~legal_name
           ~note:"Hardcaml will not change ports names."
           ~port:(signal : Signal.t)];
   match Mangler.add_identifier mangler name with
@@ -86,8 +102,11 @@ let add_port_name ({ mangler; instantiation_mangler = _; lang = _ } as t) signal
   | `Ok -> ()
 ;;
 
-let add_phantom_port_name t name =
-  let legal_name = legalize t name in
+let add_phantom_port_name
+  { mangler; instantiation_mangler = _; lang = (module Lang) }
+  name
+  =
+  let legal_name = Lang.legalize name in
   if not (String.equal legal_name name)
   then
     raise_s
@@ -97,7 +116,7 @@ let add_phantom_port_name t name =
           ~legal_name
           ~note:"Hardcaml will not change ports names."]
   else (
-    match Mangler.add_identifier t.mangler name with
+    match Mangler.add_identifier mangler name with
     | `Duplicate ->
       raise_s
         [%message
@@ -107,45 +126,45 @@ let add_phantom_port_name t name =
     | `Ok -> ())
 ;;
 
-let mangle_name t name =
-  let legal_name = legalize t name in
-  Mangler.mangle t.mangler legal_name
+let mangle_name { mangler; instantiation_mangler = _; lang = (module Lang) } name =
+  let legal_name = Lang.legalize name in
+  Mangler.mangle mangler legal_name
 ;;
 
-let derived_name (module Lang : Language) signal =
-  Lang.prefix ^ Signal.Uid.to_string (Signal.uid signal)
-;;
+let derived_name signal = "_" ^ Signal.Uid.to_string (Signal.uid signal)
 
-let mangle_signal_names
-  ({ mangler = _; instantiation_mangler = _; lang = (module Lang) } as t)
-  signal
-  =
+let mangle_signal_names t signal =
   match Signal.names signal with
-  | [] -> [ mangle_name t (derived_name (module Lang) signal) ]
+  | [] -> [ mangle_name t (derived_name signal) ]
   | names -> List.map names ~f:(mangle_name t)
 ;;
 
-let mangle_instantiation_name t signal =
+let mangle_instantiation_name
+  { mangler; instantiation_mangler = _; lang = (module Lang) }
+  signal
+  =
   match signal with
   | Signal.Type.Inst { instantiation; _ } ->
-    let legal_name = legalize t instantiation.inst_instance in
-    Mangler.mangle t.mangler legal_name
+    let legal_name = Lang.legalize instantiation.inst_instance in
+    Mangler.mangle mangler legal_name
   | _ ->
     raise_s
       [%message
         "[Rtl_name.mangle_instantiation_name] requires an Inst signal" (signal : Signal.t)]
 ;;
 
-let mangle_multiport_mem_name t signal =
+let mangle_multiport_mem_name
+  ({ mangler = _; instantiation_mangler = _; lang = (module Lang) } as t)
+  signal
+  =
   match signal with
   | Signal.Type.Multiport_mem _ ->
     (match Signal.names signal with
      | [] ->
        (* memory nodes themselves do not have names (only the q_out) *)
-       ( mangle_name t (derived_name t.lang signal)
-       , mangle_name t (derived_name t.lang signal ^ "_type") )
+       mangle_name t (derived_name signal), mangle_name t (derived_name signal ^ "_type")
      | name :: _ ->
-       let name = legalize t name in
+       let name = Lang.legalize name in
        mangle_name t name, mangle_name t (name ^ "_type"))
   | _ ->
     raise_s

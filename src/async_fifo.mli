@@ -65,3 +65,11 @@ module Make (M : S) : sig
     -> Signal.t I.t
     -> Signal.t O.t
 end
+
+module For_testing : sig
+  val gray_inc_mux_inputs
+    :  (module Comb_intf.S with type t = 'a)
+    -> int
+    -> by:int
+    -> 'a list
+end

@@ -303,6 +303,10 @@ let rec create ?database circuit =
         { utilization with
           multiplexers = Multiplexers.add ?u:utilization.multiplexers signal
         }
+      | Cases _ ->
+        { utilization with
+          multiplexers = Multiplexers.add ?u:utilization.multiplexers signal
+        }
       | Cat _ ->
         { utilization with
           concatenation = Total_bits.add ?u:utilization.concatenation signal

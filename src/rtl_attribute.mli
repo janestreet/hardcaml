@@ -1,9 +1,13 @@
+open Base
+
 (** RTL attribute specification.  Only relevant to downstream tooling. *)
 
 (** Specification of attributes which may be attached to various objects within a RTL
     design. Such attributes are used to provide implementation hints to down stream CAD
     tools and do not affect any functionality within Hardcaml. *)
-type t [@@deriving sexp_of, compare, equal, hash]
+type t [@@deriving compare, equal, hash, sexp_of]
+
+include Comparator.S with type t := t
 
 (** Attribute value types. *)
 module Value : sig
@@ -11,7 +15,7 @@ module Value : sig
     | Int of int
     | String of string
     | Bool of bool
-  [@@deriving equal, sexp_of]
+  [@@deriving compare, equal, sexp_of]
 end
 
 module Applies_to : sig
@@ -20,7 +24,7 @@ module Applies_to : sig
     | Regs
     | Memories
     | Instantiations
-  [@@deriving sexp_of, equal]
+  [@@deriving compare, equal, sexp_of]
 end
 
 (** Create a new attribute. [applies_to], if specified, constrains what type of signal the

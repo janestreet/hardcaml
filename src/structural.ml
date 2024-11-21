@@ -530,7 +530,7 @@ module Base () = struct
       then g, [%string "%{prefix}%{name}"]
       else [], [%string "%{prefix}%{name}_%{width a#Int}"]
     in
-    inst (prefix ^ name) ~g ~i ~o;
+    inst name ~g ~i ~o;
     out, name
   ;;
 
@@ -544,7 +544,7 @@ module Base () = struct
       then g, [%string "%{prefix}%{name}"]
       else [], [%string "%{prefix}%{name}_%{width a#Int}_%{width b#Int}"]
     in
-    inst (prefix ^ name) ~g ~i ~o;
+    inst name ~g ~i ~o;
     out, name
   ;;
 
@@ -624,6 +624,13 @@ module Base () = struct
     add_structural_rtl_component (Lt { name; width = width a });
     o
   ;;
+
+  include Comb.Expert.Gen_cases_from_mux (struct
+      type nonrec t = t
+
+      let mux = mux
+      let ( ==: ) = ( ==: )
+    end)
 
   let to_string s = name s
   let to_constant _ = failwith "Structural.Base.to_constant not supported"

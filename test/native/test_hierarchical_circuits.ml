@@ -45,7 +45,7 @@ let%expect_test "To_file" =
               .b(_5) );
         assign _1 = _5;
         inner
-            the_inner_0
+            the_inner_1
             ( .a(a),
               .b(_6) );
         assign _3 = _6;
@@ -156,7 +156,7 @@ let%expect_test "In_directory" =
             port map ( a => a,
                        b => hc_5 );
         hc_1 <= hc_5;
-        the_inner_0: entity work.inner (rtl)
+        the_inner_1: entity work.inner (rtl)
             port map ( a => a,
                        b => hc_6 );
         hc_3 <= hc_6;

@@ -258,31 +258,31 @@ let%expect_test "structural rtl comb components" =
         .i(a),
         .o(_6)
       );
-      hardcaml_lib_hardcaml_lib_add_8 _9
+      hardcaml_lib_add_8 _9
       (
         .i0(a),
         .i1(b),
         .o(_8)
       );
-      hardcaml_lib_hardcaml_lib_muls_8_8 _11
+      hardcaml_lib_muls_8_8 _11
       (
         .i0(a),
         .i1(b),
         .o(_10)
       );
-      hardcaml_lib_hardcaml_lib_and_8 _13
+      hardcaml_lib_and_8 _13
       (
         .i0(_8),
         .i1(_6),
         .o(_12)
       );
-      hardcaml_lib_hardcaml_lib_or_8 _15
+      hardcaml_lib_or_8 _15
       (
         .i0(_6),
         .i1(_8),
         .o(_14)
       );
-      hardcaml_lib_hardcaml_lib_xor_16 _18
+      hardcaml_lib_xor_16 _18
       (
         .i0(_16),
         .i1(_10),

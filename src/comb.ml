@@ -3,6 +3,15 @@
 open Base
 include Comb_intf
 
+module Gen_cases_from_mux (Comb : Comb_intf.Gen_cases_from_mux) = struct
+  open Comb
+
+  let cases ~default select cases =
+    List.fold_right ~init:default cases ~f:(fun (match_with, value) acc ->
+      mux (select ==: match_with) [ acc; value ])
+  ;;
+end
+
 module Make_primitives (Gates : Gates) = struct
   include Gates
 
@@ -116,6 +125,13 @@ module Make_primitives (Gates : Gates) = struct
     in
     build (bits_lsb s) d
   ;;
+
+  include Gen_cases_from_mux (struct
+      type nonrec t = t
+
+      let mux = mux
+      let ( ==: ) = ( ==: )
+    end)
 end
 
 type nonrec ('a, 'b) with_valid2 = ('a, 'b) with_valid2 =
@@ -289,7 +305,7 @@ module Make (Prims : Primitives) = struct
     of_constant (Constant.of_octal_string ~signedness ~width v)
   ;;
 
-  let of_z ~width v = of_constant (Constant.of_z ~width v)
+  let of_bigint ~width v = of_constant (Constant.of_bigint ~width v)
 
   let of_bit_list b =
     if List.length b = 0
@@ -563,6 +579,15 @@ module Make (Prims : Primitives) = struct
 
   let mux_init sel n ~f = mux sel (List.init n ~f)
 
+  let cases ~default select cases =
+    if List.length cases = 0 then raise_s [%message "[cases] no cases specified]"];
+    assert_widths_same "cases" (default :: List.map cases ~f:snd);
+    List.iter cases ~f:(fun (match_width, _) ->
+      if width match_width <> width select
+      then raise_s [%message "[cases] match width is not equal to select width"]);
+    Prims.cases ~default select cases
+  ;;
+
   (* logical *)
   let ( &: ) a b =
     assert_operator_widths_same "&:" a b;
@@ -660,7 +685,7 @@ module Make (Prims : Primitives) = struct
   let bits_msb s = bits_lsb s |> List.rev
   let to_array b = Array.of_list (bits_lsb b)
   let of_array l = concat_lsb (Array.to_list l)
-  let to_z b = to_constant b |> Constant.to_z
+  let to_bigint b = to_constant b |> Constant.to_bigint
   let of_bool b = if b then vdd else gnd
 
   (* {[
@@ -1126,6 +1151,8 @@ module Make (Prims : Primitives) = struct
       f b (msbs b))
   ;;
 
+  let gray_increment g ~by = binary_to_gray (gray_to_binary g +:. by)
+
   let[@cold] raise_of_decimal_string_empty_string () =
     raise_s
       [%message.omit_nil
@@ -1137,7 +1164,7 @@ module Make (Prims : Primitives) = struct
   let of_decimal_string ~width v =
     if String.is_empty v
     then raise_of_decimal_string_empty_string ()
-    else of_z ~width (Zarith.Z.of_string v)
+    else of_bigint ~width (Bigint.of_string v)
   ;;
 
   let[@cold] raise_of_verilog_format_missing_tick s =
@@ -1498,4 +1525,8 @@ module Make (Prims : Primitives) = struct
 
   module Uop = Unsigned
   module Sop = Signed
+end
+
+module Expert = struct
+  module Gen_cases_from_mux = Gen_cases_from_mux
 end

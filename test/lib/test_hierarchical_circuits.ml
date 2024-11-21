@@ -55,7 +55,7 @@ let%expect_test "generate hierarchy without sharing" =
     {|
     (circuit_database (
       (inner  inner)
-      (inner  inner_0)
+      (inner  inner_1)
       (middle middle)))
 
     Verilog
@@ -71,7 +71,7 @@ let%expect_test "generate hierarchy without sharing" =
         assign b = a;
 
     endmodule
-    module inner_0 (
+    module inner_1 (
         a,
         b
     );
@@ -95,8 +95,8 @@ let%expect_test "generate hierarchy without sharing" =
         wire _6;
         wire _3;
         wire _7;
-        inner_0
-            the_inner_0
+        inner_1
+            the_inner_1
             ( .a(a),
               .b(_5) );
         assign _1 = _5;
@@ -170,7 +170,7 @@ let%expect_test "generate hierarchy with sharing" =
               .b(_5) );
         assign _1 = _5;
         inner
-            the_inner_0
+            the_inner_1
             ( .a(a),
               .b(_6) );
         assign _3 = _6;

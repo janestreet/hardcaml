@@ -4,8 +4,8 @@
   (names bits_stubs))
  (name hardcaml)
  (public_name hardcaml)
- (libraries base bin_prot core core_kernel.flags base.md5 sexplib stdio
-   splittable_random zarith)
+ (libraries base bignum.bigint bin_prot core core_kernel.flags base.md5
+   sexplib splittable_random stdio)
  (preprocess
   (pps ppx_jane ppx_hardcaml0))
  (ocamlopt_flags

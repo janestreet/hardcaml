@@ -111,7 +111,18 @@ type condition =
       }
 [@@deriving sexp_of]
 
-type always =
+type match_with =
+  | Const of Bits.t
+  | Int of int
+  | Default
+[@@deriving sexp_of]
+
+type case =
+  { match_with : match_with
+  ; statements : always list
+  }
+
+and always =
   | If of
       { condition : condition
       ; on_true : always list
@@ -133,7 +144,7 @@ type always =
       }
   | Case of
       { select : var
-      ; cases : always list list
+      ; cases : case list
       }
 [@@deriving sexp_of]
 

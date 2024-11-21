@@ -111,7 +111,18 @@ type condition =
       }
 [@@deriving sexp_of]
 
-type always =
+type match_with =
+  | Const of Bits.t
+  | Int of int
+  | Default
+[@@deriving sexp_of]
+
+type case =
+  { match_with : match_with
+  ; statements : always list
+  }
+
+and always =
   | If of
       { condition : condition
       ; on_true : always list
@@ -133,7 +144,7 @@ type always =
       }
   | Case of
       { select : var
-      ; cases : always list list
+      ; cases : case list
       }
 [@@deriving sexp_of]
 
@@ -471,6 +482,7 @@ let create_vars ~rtl_name internal =
         let reg_or_wire =
           if Signal.Type.is_reg signal
              || (Signal.Type.is_mux signal && not (is_mux2 signal))
+             || Signal.Type.is_cases signal
           then Reg
           else Wire
         in
@@ -594,19 +606,24 @@ let create_statement
          ; low
          })
   | Mux { select; cases; _ } ->
+    let num_cases = List.length cases in
     let to_always () =
       Always
         { sensitivity_list = Star
         ; always =
             Case
-              { select = (find "Case.select" select).read
+              { select = (find "Mux_case.select" select).read
               ; cases =
-                  List.map cases ~f:(fun case : always list ->
-                    [ Assignment
-                        { lhs = (find "Case.lhs" signal).write
-                        ; rhs = (find "Case.rhs" case).read
-                        }
-                    ])
+                  List.mapi cases ~f:(fun idx case : case ->
+                    let match_with = if idx = num_cases - 1 then Default else Int idx in
+                    { match_with
+                    ; statements =
+                        [ Assignment
+                            { lhs = (find "Mux_case.lhs" signal).write
+                            ; rhs = (find "Mux_case.rhs" case).read
+                            }
+                        ]
+                    })
               }
         }
     in
@@ -619,6 +636,35 @@ let create_statement
            })
     in
     Mux { to_assignment; to_always; is_mux2 = is_mux2 signal }
+  | Cases { select; cases; default; _ } ->
+    if List.length cases < 1
+    then raise_s [%message "[Rtl_ast.create_statement] Less than 1 case specified"];
+    Always
+      { sensitivity_list = Star
+      ; always =
+          Case
+            { select = (find "Cases.select" select).read
+            ; cases =
+                List.map cases ~f:(fun (match_with, value) ->
+                  { match_with = Const (Signal.Type.const_value match_with)
+                  ; statements =
+                      [ Assignment
+                          { lhs = (find "Cases.lhs" signal).write
+                          ; rhs = (find "Cases.rhs" value).read
+                          }
+                      ]
+                  })
+                @ [ { match_with = Default
+                    ; statements =
+                        [ Assignment
+                            { lhs = (find "Cases.lhs" signal).write
+                            ; rhs = (find "Cases.default" default).read
+                            }
+                        ]
+                    }
+                  ]
+            }
+      }
   | Reg { register; d; _ } -> always_of_reg var_map register ~q:signal ~d
   | Const { constant; _ } ->
     Assignment (Const { lhs = (find "Const.lhs" signal).write; constant })
@@ -715,7 +761,10 @@ let of_circuit ~blackbox ~language circuit =
   else (
     let signal_graph = Signal_graph.create (Circuit.outputs circuit) in
     let internal =
-      Signal_graph.filter signal_graph ~f:(is_internal_signal_of_circuit circuit)
+      Signal_graph.filter
+        ~deps:(module Signal_graph.Deps_without_case_matches)
+        signal_graph
+        ~f:(is_internal_signal_of_circuit circuit)
     in
     let var_map, declarations, internal = create_vars ~rtl_name internal in
     let var_map = add_io_vars ~var_map inputs in

@@ -68,6 +68,23 @@ and gen_mux width depth inputs =
   in
   Signal.mux sel values
 
+and gen_case width select_width depth inputs =
+  let%bind match_with = gen_const select_width in
+  let%map value = gen_signal width (depth - 1) inputs in
+  match_with, value
+
+and gen_cases width depth inputs =
+  let%bind sel_width = Int.gen_incl 1 2 in
+  let%bind default = gen_signal width (depth - 1) inputs in
+  let%bind select = gen_signal sel_width (depth - 1) inputs in
+  let%bind num_cases = Int.gen_incl 1 (1 lsl sel_width) in
+  let%map cases =
+    Generator.list_with_length
+      num_cases
+      (gen_case width sel_width (max 2 (depth - 1)) inputs)
+  in
+  Signal.cases ~default select cases
+
 and gen_select width depth inputs =
   let new_width = Int.min (width * 2) max_width in
   let%bind v = gen_signal new_width (depth - 1) inputs in
@@ -138,6 +155,7 @@ and gen_signal width depth inputs =
         ; 2.0, gen_cat_or_bool width depth inputs
         ; 2.0, gen_register width depth inputs
         ; 2.0, gen_mux width depth inputs
+        ; 2.0, gen_cases width depth inputs
         ; 2.0, gen_memory width depth inputs
         ; 2.0, gen_select width depth inputs
         ; 1.0, gen_wire width depth inputs

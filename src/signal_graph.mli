@@ -41,28 +41,42 @@ val depth_first_search
 
 (** Fold across all signals in the graph, starting at the outputs.  Each signal is visited
     only once. *)
-val fold : t -> init:'a -> f:('a -> Signal.t -> 'a) -> 'a
+val fold
+  :  ?deps:(module Signal.Type.Deps)
+  -> t
+  -> init:'a
+  -> f:('a -> Signal.t -> 'a)
+  -> 'a
 
 (** Return a list of all signals in the graph for whom [f signal] returns true. *)
-val filter : t -> f:(Signal.t -> bool) -> Signal.t list
+val filter : ?deps:(module Signal.Type.Deps) -> t -> f:(Signal.t -> bool) -> Signal.t list
 
 (** Iterate over all signals in the graph. *)
-val iter : t -> f:(Signal.t -> unit) -> unit
+val iter : ?deps:(module Signal.Type.Deps) -> t -> f:(Signal.t -> unit) -> unit
 
 (** Retuns an error if the graph has a combinational loop, that is, a path from a signal
     back to itself that doesn't pass though a register, memory or instantiation. *)
 val detect_combinational_loops : t -> unit Or_error.t
+
+(** Rewrites [t] by creating a copy of every signal in [t] and applying [f] to each signal
+    and [f_upto] to all of the uptos of the signal graph. Also returns a map from the uid
+    of all of the rewritten signals to their corresponding new signal. *)
+val rewrite
+  :  t
+  -> f:(Signal.t -> Signal.t)
+  -> f_upto:(Signal.t -> Signal.t)
+  -> t * Signal.t Map.M(Signal.Uid).t
 
 (** [normalize_uids t] creates a copy of [t] that is identical to [t] except the
     uids are numbered starting at 1. *)
 val normalize_uids : t -> t
 
 (** Fan-out of each signal in the signal graph.  The fan-out of a signal is the set of
-    signals it drives.*)
+    signals it drives. *)
 val fan_out_map : t -> Signal.Type.Uid_set.t Map.M(Signal.Uid).t
 
 (** Fan-in of each signal in the signal graph.  The fan-in of a signal is the set of
-    signals that drive it.*)
+    signals that drive it. *)
 val fan_in_map : t -> Signal.Type.Uid_set.t Map.M(Signal.Uid).t
 
 (** [topological_sort t] sorts the signals in [t] so that all the signals in [deps s]
@@ -73,6 +87,10 @@ val topological_sort
   -> (Signal.t list, Signal.t list) Result.t
 
 val topological_sort_exn : deps:(module Signal.Type.Deps) -> t -> Signal.t list
+
+(** For rtl generation the case matches are written explicitly and do not need to be
+    tracked. *)
+module Deps_without_case_matches : Signal.Type.Deps
 
 (** Signal dependencies used for simulation scheduling. Breaks loops through sequential
     elements like registers and memories. *)

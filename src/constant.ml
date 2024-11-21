@@ -71,8 +71,7 @@ let to_int t = Int64.to_int_trunc (to_int64 t)
 let to_int32 t = Int64.to_int32_trunc (to_int64 t)
 let to_int64_array t = Array.init (words t) ~f:(fun i -> unsafe_get_int64 t i)
 
-let to_z ~signedness t =
-  let module Z = Zarith.Z in
+let to_bigint ~signedness t =
   let words = words t in
   let rec f word z =
     if word < 0
@@ -80,57 +79,48 @@ let to_z ~signedness t =
     else (
       let w = unsafe_get_int64 t word in
       let a = Int64.(w lsr 32) in
-      let z = Z.(logor (shift_left z 32) (of_int64 a)) in
+      let z = Bigint.(shift_left z 32 lor of_int64 a) in
       let a = Int64.(w land 0xFFFF_FFFFL) in
-      let z = Z.(logor (shift_left z 32) (of_int64 a)) in
+      let z = Bigint.(shift_left z 32 lor of_int64 a) in
       f (word - 1) z)
   in
-  let z = f (words - 1) Z.zero in
+  let z = f (words - 1) Bigint.zero in
   match (signedness : Signedness.t) with
   | Unsigned -> z
   | Signed ->
     let width = width t in
-    let is_unsigned = Z.(compare (z land shift_left one Int.(width - 1)) zero = 0) in
-    if is_unsigned then z else Z.(z - shift_left (of_int 1) width)
+    let is_unsigned = Bigint.((z land (one lsl Int.(width - 1))) = zero) in
+    if is_unsigned then z else Bigint.(z - shift_left (of_int 1) width)
 ;;
 
-let to_hex_string ~signedness t =
-  let rec of_binary ~(signedness : Signedness.t) s =
-    let hex_of_bin s =
-      match s with
-      | "0000" -> "0"
-      | "0001" -> "1"
-      | "0010" -> "2"
-      | "0011" -> "3"
-      | "0100" -> "4"
-      | "0101" -> "5"
-      | "0110" -> "6"
-      | "0111" -> "7"
-      | "1000" -> "8"
-      | "1001" -> "9"
-      | "1010" -> "a"
-      | "1011" -> "b"
-      | "1100" -> "c"
-      | "1101" -> "d"
-      | "1110" -> "e"
-      | "1111" -> "f"
-      | _ -> raise_s [%message "Invalid string"]
+let to_hex_string ?(capitalize = false) ~signedness t =
+  let width = width t in
+  let num_nibbles = Int.round_up ~to_multiple_of:4 width / 4 in
+  let bits_over = width land 3 in
+  let c0, ca, cA = Char.to_int '0', Char.to_int 'a', Char.to_int 'A' in
+  String.init num_nibbles ~f:(fun nibble_index ->
+    (* work backwards (msb is at start of string) *)
+    let nibble_index = num_nibbles - nibble_index - 1 in
+    (* grab the nibble *)
+    let byte = unsafe_get_byte t (nibble_index lsr 1) |> Char.to_int in
+    let nibble = if nibble_index land 1 = 0 then byte land 0xf else byte lsr 4 in
+    (* sign extend if last nibble, in signed mode and msb is set *)
+    let nibble =
+      if nibble_index = num_nibbles - 1
+         && Signedness.equal signedness Signed
+         && bits_over <> 0
+         && nibble land (1 lsl (bits_over - 1)) <> 0
+      then (
+        let mask = (0xf lsr bits_over) lsl bits_over in
+        nibble lor mask)
+      else nibble
     in
-    let len = String.length s in
-    match len with
-    | 0 -> raise_s [%message "[Hex.of_binary] binary value is empty"]
-    | 1 | 2 | 3 ->
-      hex_of_bin
-        ((match signedness with
-          | Signed -> String.init (4 - len) ~f:(fun _ -> s.[0])
-          | Unsigned -> String.init (4 - len) ~f:(fun _ -> '0'))
-         ^ s)
-    | 4 -> hex_of_bin s
-    | _ ->
-      of_binary ~signedness (String.sub s ~pos:0 ~len:(len - 4))
-      ^ hex_of_bin (String.sub s ~pos:(len - 4) ~len:4)
-  in
-  to_binary_string t |> of_binary ~signedness
+    (* convert to hex *)
+    if nibble < 10
+    then Char.of_int_exn (c0 + nibble)
+    else if capitalize
+    then Char.of_int_exn (cA + nibble - 10)
+    else Char.of_int_exn (ca + nibble - 10))
 ;;
 
 let of_hum x = String.filter x ~f:(fun c -> not Char.(c = '_'))
@@ -193,21 +183,20 @@ let of_int64_array ~width a =
   init_int64 ~width ~f:(fun i -> a.(i))
 ;;
 
-let z32mask = Zarith.Z.of_int64 0xFFFF_FFFFL
+let z32mask = Bigint.of_int64 0xFFFF_FFFFL
 
-let of_z ~width z =
-  let module Z = Zarith.Z in
+let of_bigint ~width z =
   let t = create width in
   let rec f i z width =
-    if width <= 0 || Z.(equal z zero)
+    if width <= 0 || Bigint.(z = zero)
     then ()
     else (
       (* grab 2 lots of 32 bits at a time. *)
-      let a = Z.(to_int64 (logand z z32mask)) in
-      let z = Z.shift_right z 32 in
+      let a = Bigint.(to_int64_exn (z land z32mask)) in
+      let z = Bigint.(z asr 32) in
       (* _trunc? *)
-      let b = Z.(to_int64 (logand z z32mask)) in
-      let z = Z.shift_right z 32 in
+      let b = Bigint.(to_int64_exn (z land z32mask)) in
+      let z = Bigint.(z asr 32) in
       (* construct 64 bit value *)
       let a = Int64.(a lor (b lsl 32)) in
       unsafe_set_int64 t i a;
