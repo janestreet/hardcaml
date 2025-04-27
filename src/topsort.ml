@@ -7,8 +7,8 @@ open Base
 module Node = struct
   type t = Signal.t [@@deriving sexp_of]
 
-  let compare a b = Signal.Uid.compare (Signal.uid a) (Signal.uid b)
-  let hash a = Signal.Uid.hash (Signal.uid a)
+  let compare a b = Signal.Type.Uid.compare (Signal.uid a) (Signal.uid b)
+  let hash a = Signal.Type.Uid.hash (Signal.uid a)
 end
 
 module Edge = struct

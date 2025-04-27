@@ -54,7 +54,7 @@ module Middle = struct
           Inner.create
           i
     in
-    { O.o = [| o1; o2 |]; x = Signal.of_int ~width:1 0 -- "x" }
+    { O.o = [| o1; o2 |]; x = Signal.of_int_trunc ~width:1 0 -- "x" }
   ;;
 end
 

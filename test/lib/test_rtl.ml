@@ -16,7 +16,6 @@ let%expect_test "Port names must be legal" =
     ("Error while writing circuit"
       (circuit_name test)
       (hierarchy_path (test))
-      (output ((language Verilog) (mode (To_channel <stdout>))))
       (exn (
         "[Rtl_name.add_port_name] illegal port name"
         (name       1^7)
@@ -33,7 +32,6 @@ let%expect_test "Port name clashes with reserved name" =
     ("Error while writing circuit"
       (circuit_name test)
       (hierarchy_path (test))
-      (output ((language Verilog) (mode (To_channel <stdout>))))
       (exn (
         "[Rtl_name.add_port_name] port name has already been defined or matches a reserved identifier"
         (port (
@@ -63,7 +61,6 @@ let%expect_test "instantiation input is empty" =
     ("Error while writing circuit"
       (circuit_name example)
       (hierarchy_path (example))
-      (output ((language Verilog) (mode (To_channel <stdout>))))
       (exn (
         "[Rtl_ast] failed to create statement for signal"
         (signal (
@@ -112,7 +109,10 @@ let test_multiple_circuits top_names =
   let circuits =
     List.map top_names ~f:(fun name -> Circuit.create_exn ~name (Top.create scope))
   in
-  Rtl.print_list ~database:(Scope.circuit_database scope) Verilog circuits
+  Rtl.create ~database:(Scope.circuit_database scope) Verilog circuits
+  |> Rtl.full_hierarchy
+  |> Rope.to_string
+  |> Stdio.print_string
 ;;
 
 let%expect_test "multiple circuits - inner component is shared" =
@@ -179,43 +179,5 @@ let%expect_test "multiple circuits - inner component is shared" =
 
 let%expect_test "same name in multiple top level circuits" =
   require_does_raise (fun () -> test_multiple_circuits [ "top"; "top" ]);
-  [%expect
-    {|
-    module inner (
-        a,
-        b
-    );
-
-        input a;
-        output b;
-
-        wire _2;
-        wire _4;
-        assign _2 = a;
-        assign _4 = ~ _2;
-        assign b = _4;
-
-    endmodule
-    module top (
-        a,
-        b
-    );
-
-        input a;
-        output b;
-
-        wire _2;
-        wire _5;
-        wire _3;
-        assign _2 = a;
-        inner
-            inner
-            ( .a(_2),
-              .b(_5) );
-        assign _3 = _5;
-        assign b = _3;
-
-    endmodule
-    ("Top level circuit name has already been used" (name top))
-    |}]
+  [%expect {| ("Top level circuit name has already been used" (name top)) |}]
 ;;

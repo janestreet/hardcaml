@@ -3,7 +3,7 @@ open Hardcaml
 open Bits
 
 let%expect_test "a.:[(msb,lsb)]" =
-  let x = of_int ~width:32 0x3eadbeef in
+  let x = of_int_trunc ~width:32 0x3eadbeef in
   Stdio.printf !"x = %{Bits}\n" x;
   let indices = [ 31, 0; 5, 0; 14, 7; 23, 19 ] in
   List.iter indices ~f:(fun (hi, lo) ->
@@ -19,7 +19,7 @@ let%expect_test "a.:[(msb,lsb)]" =
 ;;
 
 let%expect_test "a.:(bit)" =
-  let x = of_int ~width:32 0x3eadbeef in
+  let x = of_int_trunc ~width:32 0x3eadbeef in
   Stdio.printf !"x = %{Bits}\n" x;
   let indices = [ 31; 29; 23; 19; 7 ] in
   List.iter indices ~f:(fun i -> Stdio.printf !"  x.:(%d) = %{Bits}\n" i x.:(i));
@@ -40,7 +40,7 @@ let print_option = function
 ;;
 
 let%expect_test "a.:+[(lsb, width option)]" =
-  let x = of_int ~width:32 0x3eadbeef in
+  let x = of_int_trunc ~width:32 0x3eadbeef in
   Stdio.printf !"x = %{Bits}\n" x;
   let indices = [ 0, Some 5; 4, Some 7; 20, None ] in
   List.iter indices ~f:(fun (lsb, width) ->
@@ -55,7 +55,7 @@ let%expect_test "a.:+[(lsb, width option)]" =
 ;;
 
 let%expect_test "a.:-[(msb option, width)]" =
-  let x = of_int ~width:32 0x3eadbeef in
+  let x = of_int_trunc ~width:32 0x3eadbeef in
   Stdio.printf !"x = %{Bits}\n" x;
   let indices = [ Some 31, 7; Some 10, 10; None, 20 ] in
   List.iter indices ~f:(fun (msb, width) ->

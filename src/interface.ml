@@ -267,8 +267,8 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
                   (actual_width : int)])
     ;;
 
-    let of_int i = map port_widths ~f:(fun b -> Comb.of_int ~width:b i)
-    let of_ints i = map2 port_widths i ~f:(fun width -> Comb.of_int ~width)
+    let of_int i = map port_widths ~f:(fun b -> Comb.of_int_trunc ~width:b i)
+    let of_ints i = map2 port_widths i ~f:(fun width -> Comb.of_int_trunc ~width)
 
     let pack ?(rev = false) t =
       assert_widths t;
@@ -379,7 +379,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     include Make_comb (Signal)
 
     let assign t1 t2 = iter2 t1 t2 ~f:Signal.assign
-    let ( <== ) = assign
+    let ( <-- ) = assign
 
     let wires ?(named = false) ?from () =
       let wires =
@@ -425,6 +425,8 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     let apply_names ?(prefix = "") ?(suffix = "") ?(naming_op = Signal.( -- )) t =
       map2 t port_names ~f:(fun s n -> naming_op s (prefix ^ n ^ suffix))
     ;;
+
+    let __ppx_auto_name t prefix = apply_names ~prefix:(prefix ^ "$") t
   end
 
   module Names_and_widths = struct
@@ -461,6 +463,11 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     let apply_names ?prefix ?suffix ?naming_op t =
       ignore (Of_signal.apply_names ?prefix ?suffix ?naming_op (value t) : Signal.t t)
     ;;
+
+    let __ppx_auto_name t prefix =
+      apply_names ~prefix:(prefix ^ "$") t;
+      t
+    ;;
   end
 end
 [@@inline never]
@@ -482,16 +489,16 @@ struct
 end
 
 module Empty = struct
-  type 'a t = None [@@deriving sexp_of]
+  type 'a t = Empty [@@deriving sexp_of]
 
   include Make (struct
       type nonrec 'a t = 'a t [@@deriving sexp_of]
 
-      let port_names_and_widths = None
+      let port_names_and_widths = Empty
       let iter _ ~f:_ = ()
       let iter2 _ _ ~f:_ = ()
-      let map _ ~f:_ = None
-      let map2 _ _ ~f:_ = None
+      let map _ ~f:_ = Empty
+      let map2 _ _ ~f:_ = Empty
       let to_list _ = []
     end)
 end

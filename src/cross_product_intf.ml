@@ -1,5 +1,4 @@
-(** Functor to create a Hardcaml Interface from a cross-product of two
-    types. *)
+(** Functor to create a Hardcaml Interface from a cross-product of two types. *)
 
 module type S = sig
   module Inner : Interface.S

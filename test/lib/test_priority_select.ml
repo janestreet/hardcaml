@@ -6,7 +6,7 @@ let cases index =
   index
   |> Bits.bits_lsb
   |> List.mapi ~f:(fun i valid ->
-    { With_valid.valid; value = Bits.of_int ~width:8 (i + 1) })
+    { With_valid.valid; value = Bits.of_int_trunc ~width:8 (i + 1) })
 ;;
 
 let sexp_of_int_with_valid (i : int With_valid.t) =
@@ -19,7 +19,7 @@ let sexp_of_int_with_valid (i : int With_valid.t) =
 let test ~branching_factor ~case_count =
   print_s [%message (branching_factor : int) (case_count : int)];
   for index = 0 to (1 lsl case_count) - 1 do
-    let index = Bits.of_int ~width:case_count index in
+    let index = Bits.of_int_trunc ~width:case_count index in
     print_s
       [%message
         "priority_select"
@@ -28,7 +28,7 @@ let test ~branching_factor ~case_count =
           ~_:
             (cases index
              |> Bits.priority_select ~branching_factor
-             |> With_valid.map ~f:Bits.to_int
+             |> With_valid.map ~f:Bits.to_int_trunc
              : int_with_valid)]
   done
 ;;
@@ -179,7 +179,7 @@ let%expect_test "branching factor 4" =
 let test_with_default ~branching_factor ~case_count =
   print_s [%message (branching_factor : int) (case_count : int)];
   for index = 0 to (1 lsl case_count) - 1 do
-    let index = Bits.of_int ~width:case_count index in
+    let index = Bits.of_int_trunc ~width:case_count index in
     print_s
       [%message
         "priority_select_with_default"
@@ -188,7 +188,7 @@ let test_with_default ~branching_factor ~case_count =
           ~_:
             (cases index
              |> Bits.priority_select_with_default ~branching_factor ~default:(Bits.ones 8)
-             |> Bits.to_int
+             |> Bits.to_int_trunc
              : int)]
   done
 ;;
@@ -245,13 +245,15 @@ let%expect_test "with default" =
 let test_onehot ~branching_factor ~case_count =
   print_s [%message (branching_factor : int) (case_count : int)];
   for index = 0 to (1 lsl case_count) - 1 do
-    let index = Bits.of_int ~width:case_count index in
+    let index = Bits.of_int_trunc ~width:case_count index in
     print_s
       [%message
         "onehot_select"
           ~_:(index : Bits.t)
           "="
-          ~_:(cases index |> Bits.onehot_select ~branching_factor |> Bits.to_int : int)]
+          ~_:
+            (cases index |> Bits.onehot_select ~branching_factor |> Bits.to_int_trunc
+             : int)]
   done
 ;;
 

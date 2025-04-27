@@ -11,7 +11,6 @@ module Parameter = Parameter
 module Parameter_name = Parameter_name
 module Property = Property
 module Property_manager = Property_manager
-module Reg_spec = Reg_spec
 module Scope = Scope
 module Signal = Signal
 module Structural = Structural
@@ -45,6 +44,7 @@ module Rtl = struct
   module Name = Rtl_name
   module Verilog = Rtl_verilog_of_ast
   module Vhdl = Rtl_vhdl_of_ast
+  module Config = Rtl_config
 end
 
 module Rtl_attribute = Rtl_attribute
@@ -64,6 +64,7 @@ module Edge = Edge
 module Enum = Enum
 module Flags_vector = Flags_vector
 module Level = Level
+module Name_and_loc = Name_and_loc
 module Read_port = Read_port
 module Side = Side
 module Signedness = Signedness
@@ -79,7 +80,14 @@ module Ram = Ram
 
 (**/**)
 
+module Tools_config = Tools_config
+
 (** These are exposed for code that does [@@deriving hardcaml]. *)
 let sexp_of_array = Base.sexp_of_array
 
 let sexp_of_list = Base.sexp_of_list
+
+(** {1 Expert interface} *)
+module Expert = struct
+  module Simulation_memory = Simulation_memory
+end

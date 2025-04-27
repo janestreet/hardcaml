@@ -77,8 +77,8 @@ module T = struct
     done
   ;;
 
-  let to_int t = to_bits t |> Bits.to_int
-  let of_int t i = of_bits t (Bits.of_int ~width:t.width_in_bits i)
+  let to_int t = to_bits t |> Bits.to_int_trunc
+  let of_int t i = of_bits t (Bits.of_int_trunc ~width:t.width_in_bits i)
 
   let create_from_bits_mutable (bits : Bits.Mutable.t) =
     { byte_address = Bits.Expert.offset_for_data
@@ -97,6 +97,26 @@ module T = struct
     ; size_in_words = Int.round_up ~to_multiple_of:64 width_in_bits / 64
     ; read_only = true
     }
+  ;;
+
+  let rec equal' a b get idx size =
+    if idx = size
+    then true
+    else if Int64.equal (unsafe_get64 a idx) (get b idx)
+    then equal' a b get (idx + 1) size
+    else false
+  ;;
+
+  let equal_bits_mutable (t : t) bits =
+    if t.width_in_bits <> Bits.Mutable.width bits
+    then false
+    else equal' t bits Bits.Mutable.unsafe_get_int64 0 t.size_in_words
+  ;;
+
+  let equal_bits (t : t) bits =
+    if t.width_in_bits <> Bits.width bits
+    then false
+    else equal' t bits Bits.unsafe_get_int64 0 t.size_in_words
   ;;
 end
 
@@ -189,8 +209,12 @@ module Memory = struct
     done
   ;;
 
-  let to_int t ~address = to_bits t ~address |> Bits.to_int
-  let of_int t ~address i = of_bits t ~address (Bits.of_int ~width:t.width_in_bits i)
+  let to_int t ~address = to_bits t ~address |> Bits.to_int_trunc
+
+  let of_int t ~address i =
+    of_bits t ~address (Bits.of_int_trunc ~width:t.width_in_bits i)
+  ;;
+
   let read_all t = Array.init t.memory_size ~f:(fun address -> to_bits t ~address)
 
   let create_from_bits_mutable_array (bits : Bits.Mutable.t array) =
@@ -205,15 +229,16 @@ module Memory = struct
     { unsafe_set64; unsafe_get64; size_in_words; width_in_bits; memory_size }
   ;;
 
-  let create_from_read_only_bits_array (bits : Bits.t array) =
-    if Array.length bits = 0 then raise_s [%message "[Internal_memory] 0 size"];
-    let memory_size = Array.length bits in
-    let width_in_bits = Bits.width bits.(0) in
+  let create_from_unsafe_lookup_function
+    ~unsafe_get64
+    ~size:memory_size
+    ~width:width_in_bits
+    =
+    if memory_size <= 0 then raise_s [%message "[Internal_memory] <= 0 size"];
     let size_in_words = Int.round_up ~to_multiple_of:64 width_in_bits / 64 in
     let unsafe_set64 ~address:_ _idx _value =
       raise_s [%message "[Cyclesim_lookup.Memory.unsafe_set64] memory node is read-only"]
     in
-    let unsafe_get64 ~address idx = Bits.unsafe_get_int64 bits.(address) idx in
     { unsafe_set64; unsafe_get64; size_in_words; width_in_bits; memory_size }
   ;;
 

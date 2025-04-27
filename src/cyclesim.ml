@@ -35,11 +35,13 @@ let cycle_at_clock_edge (sim : _ t) = sim.cycle_at_clock_edge ()
 let cycle_after_clock_edge (sim : _ t) = sim.cycle_after_clock_edge ()
 let reset (sim : _ t) = sim.reset ()
 
-let cycle sim =
-  cycle_check sim;
-  cycle_before_clock_edge sim;
-  cycle_at_clock_edge sim;
-  cycle_after_clock_edge sim
+let cycle ?(n = 1) sim =
+  for _ = 1 to n do
+    cycle_check sim;
+    cycle_before_clock_edge sim;
+    cycle_at_clock_edge sim;
+    cycle_after_clock_edge sim
+  done
 ;;
 
 let in_port (sim : _ Cyclesim0.t) name =

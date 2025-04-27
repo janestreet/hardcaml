@@ -13,7 +13,7 @@ end
 
 let default =
   let open Bits in
-  { I.a = vdd; b = gnd; c = of_int ~width:2 1; d = gnd }
+  { I.a = vdd; b = gnd; c = of_int_trunc ~width:2 1; d = gnd }
 ;;
 
 let%expect_test "fields value" =
@@ -25,7 +25,7 @@ let%expect_test "fields value" =
   let f =
     { I.a = { With_valid.valid = vdd; value = gnd }
     ; b = { valid = gnd; value = vdd }
-    ; c = { valid = vdd; value = of_int ~width:2 3 }
+    ; c = { valid = vdd; value = of_int_trunc ~width:2 3 }
     ; d = { valid = gnd; value = vdd }
     }
   in
@@ -33,7 +33,7 @@ let%expect_test "fields value" =
   let f =
     { I.a = { With_valid.valid = gnd; value = gnd }
     ; b = { valid = vdd; value = vdd }
-    ; c = { valid = gnd; value = of_int ~width:2 3 }
+    ; c = { valid = gnd; value = of_int_trunc ~width:2 3 }
     ; d = { valid = vdd; value = vdd }
     }
   in
@@ -53,7 +53,7 @@ let%expect_test "wrap value" =
   in
   let f =
     { With_valid.valid = vdd
-    ; value = { I.a = gnd; b = vdd; c = of_int ~width:2 3; d = vdd }
+    ; value = { I.a = gnd; b = vdd; c = of_int_trunc ~width:2 3; d = vdd }
     }
   in
   print f;

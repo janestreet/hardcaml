@@ -89,7 +89,7 @@ val testbench : unit -> Waveform.t = <fun>
 
 # let waves = testbench ()
 val waves : Waveform.t = <abstr>
-# Waveform.print ~display_height:12 waves
+# Waveform.print waves
 ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
 │clock          ││┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌──│
 │               ││    └───┘   └───┘   └───┘   └───┘   └───┘   └───┘  │
@@ -100,7 +100,6 @@ val waves : Waveform.t = <abstr>
 │               ││────────────────┬───────┬───────┬───────────────   │
 │dout           ││ 00             │01     │02     │00                │
 │               ││────────────────┴───────┴───────┴───────────────   │
-│               ││                                                   │
 └───────────────┘└───────────────────────────────────────────────────┘
 - : unit = ()
 ```
@@ -112,7 +111,7 @@ Waveforms can be captured as expect test output.
 ```ocaml skip
 let%expect_test "counter" =
   let waves = testbench ()
-  Waveform.print ~display_height:12 waves
+  Waveform.print waves
   [%expect {|
 ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
 │clock          ││┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌──│
@@ -134,7 +133,8 @@ let%expect_test "counter" =
 The `Waveform.print` function takes optional arguments which control the rendering of the waveform.
 
 - `start_cycle` first cycle to display
-- `display_width`, `display_height` width and height of the waveform
+- `display_width`, `display_height` width and height of the waveform. The height is
+  inferred if not specified.
 - `wave_width` scale at which the waveform is shown (negative values allowed)
 - `display_rules` configuration of the signals to show
 

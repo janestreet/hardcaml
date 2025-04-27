@@ -2,8 +2,8 @@
 
 open! Import
 
-(** Test function called to check a result and provide an error message.  In expect tests,
-    this is a thin wrapper around [Expect_test_helpers_core.require].  In long-running
+(** Test function called to check a result and provide an error message. In expect tests,
+    this is a thin wrapper around [Expect_test_helpers_core.require]. In long-running
     regression tests in ../regression, this prints to a log. *)
 module type Require = sig
   val require : Source_code_position.t -> bool -> error_message:Sexp.t Lazy.t -> unit
@@ -23,7 +23,7 @@ module type Test_ = sig
 end
 
 module type Test_bits = sig
-  (** The following are operations from [Comb.Primitives].  The full [Comb.S] signature is
+  (** The following are operations from [Comb.Primitives]. The full [Comb.S] signature is
       derived from these primitives. *)
   module Primitive_op : sig
     type t =
@@ -53,7 +53,7 @@ module type Test_bits = sig
       | Bool_list
       | X_list
       | Bits
-      (** Special module which breaks a few primtives by inverting the result.  Used to
+      (** Special module which breaks a few primtives by inverting the result. Used to
           test the test-framework itself. *)
       | BadPrimitives
     [@@deriving sexp_of, enumerate]

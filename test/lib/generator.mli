@@ -1,8 +1,8 @@
 (** This module generates random Hardcaml circuits. Intended for testing simulators and
     circuit graph transformations. *)
 
-(** Generates a random circuit with maximum depth [depth].
-    The circuit won't have any inputs unless [allow_inputs] is true. *)
+(** Generates a random circuit with maximum depth [depth]. The circuit won't have any
+    inputs unless [allow_inputs] is true. *)
 val gen_circuit
   :  allow_inputs:bool
   -> depth:int

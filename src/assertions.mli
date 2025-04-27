@@ -4,8 +4,7 @@
 
     1. pass [trace_properties:true] to [Scope.create]
     2. enable them in the [Circuit.Config] (see [circuit_config_with_assertions])
-    3. (optionally) attach assertion tracing to the simulation (see [trace])
-*)
+    3. (optionally) attach assertion tracing to the simulation (see [trace]) *)
 
 open! Base
 

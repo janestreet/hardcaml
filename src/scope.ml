@@ -94,7 +94,7 @@ let name ?(sep = Path.default_path_seperator) scope n =
 ;;
 
 let instance (scope : t) = List.hd scope.path
-let naming ?sep scope s n = Signal.( -- ) s (name ?sep scope n)
+let naming ?sep scope ~(loc : [%call_pos]) s n = Signal.( -- ) ~loc s (name ?sep scope n)
 
 let make_ltl_ap scope name signal =
   let wire = Signal.wireof signal in

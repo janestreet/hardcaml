@@ -16,8 +16,7 @@ let%expect_test "[sexp_of_t]" =
        (assertions ())
        (port_checks        Port_sets_and_widths)
        (add_phantom_inputs true)
-       (modify_outputs     <opaque>)
-       (rtl_compatibility  Vivado)))
+       (modify_outputs     <opaque>)))
      (inputs         ())
      (outputs        ())
      (phantom_inputs ())
@@ -40,8 +39,7 @@ let%expect_test "[sexp_of_t] with an output" =
        (assertions ())
        (port_checks        Port_sets_and_widths)
        (add_phantom_inputs true)
-       (modify_outputs     <opaque>)
-       (rtl_compatibility  Vivado)))
+       (modify_outputs     <opaque>)))
      (inputs ())
      (outputs ((
        wire
@@ -63,7 +61,7 @@ let%expect_test "[sexp_of_t] with an output" =
 
 let%expect_test "[sexp_of_t] with an input" =
   let output = wire 1 in
-  output <== input "input" 1;
+  output <-- input "input" 1;
   show (Circuit.create_exn ~name:"name" [ output -- "output" ]);
   [%expect
     {|
@@ -74,8 +72,7 @@ let%expect_test "[sexp_of_t] with an input" =
        (assertions ())
        (port_checks        Port_sets_and_widths)
        (add_phantom_inputs true)
-       (modify_outputs     <opaque>)
-       (rtl_compatibility  Vivado)))
+       (modify_outputs     <opaque>)))
      (inputs ((wire (names (input)) (width 1))))
      (outputs ((
        wire
@@ -97,7 +94,7 @@ let%expect_test "[sexp_of_t] with an input" =
 
 let%expect_test "[sexp_of_t] with an operator" =
   let output = wire 1 in
-  output <== ~:(input "input" 1);
+  output <-- ~:(input "input" 1);
   show (Circuit.create_exn ~name:"name" [ output -- "output" ]);
   [%expect
     {|
@@ -108,8 +105,7 @@ let%expect_test "[sexp_of_t] with an operator" =
        (assertions ())
        (port_checks        Port_sets_and_widths)
        (add_phantom_inputs true)
-       (modify_outputs     <opaque>)
-       (rtl_compatibility  Vivado)))
+       (modify_outputs     <opaque>)))
      (inputs ((wire (names (input)) (width 1))))
      (outputs ((
        wire
@@ -228,8 +224,7 @@ let%expect_test "phantom inputs" =
        (assertions ())
        (port_checks        Port_sets_and_widths)
        (add_phantom_inputs true)
-       (modify_outputs     <opaque>)
-       (rtl_compatibility  Vivado)))
+       (modify_outputs     <opaque>)))
      (inputs ((wire (names (a)) (width 1))))
      (outputs ((
        wire
@@ -258,8 +253,7 @@ let%expect_test "phantom inputs" =
        (assertions ())
        (port_checks        Port_sets_and_widths)
        (add_phantom_inputs true)
-       (modify_outputs     <opaque>)
-       (rtl_compatibility  Vivado)))
+       (modify_outputs     <opaque>)))
      (inputs ((wire (names (a)) (width 1))))
      (outputs ((
        wire

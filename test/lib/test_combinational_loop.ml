@@ -16,7 +16,7 @@ let%expect_test "no loop" =
 
 let%expect_test "constant assigned to a wire" =
   let w = wire 1 in
-  w <== gnd;
+  w <-- gnd;
   test [ w ];
   [%expect {| (Ok ()) |}]
 ;;
@@ -29,7 +29,7 @@ let%expect_test "[wireof] constant" =
 
 let%expect_test "looping wire" =
   let w = wire 1 in
-  w <== w;
+  w <-- w;
   test [ w ];
   [%expect
     {|
@@ -45,7 +45,7 @@ let%expect_test "combinational loop" =
   let a = input "a" 2 in
   let w = wire 2 in
   let b = a +: w in
-  w <== b;
+  w <-- b;
   test [ b ];
   [%expect
     {|
@@ -67,7 +67,7 @@ let%expect_test "long combinational loop through logic" =
   let e = mux2 (lsbs a) (d +: c) (a |: b) in
   let f = d &: e in
   let g = reduce ~f:( ^: ) [ d; e; f ] in
-  w <== g;
+  w <-- g;
   (* loop occurs at all points in the logic *)
   test [ d ];
   [%expect
@@ -136,7 +136,7 @@ let%expect_test "combinational loop in 2nd arg" =
   let a = input "a" 2 in
   let w = wire 2 in
   let b = a +: w in
-  w <== b;
+  w <-- b;
   test [ a -:. 1; b ];
   [%expect
     {|
@@ -164,7 +164,7 @@ let%expect_test "loop through 2 registers" =
   let d = a +: w in
   let d = Signal.reg reg_spec ~enable:vdd d in
   let d = Signal.reg reg_spec ~enable:vdd d in
-  w <== d;
+  w <-- d;
   test [ d ];
   [%expect {| (Ok ()) |}]
 ;;
@@ -176,7 +176,7 @@ let%expect_test "loop through 2 registers" =
   let w = wire 2 in
   let d = Signal.reg reg_spec ~enable:vdd w in
   let d = Signal.reg reg_spec ~enable:vdd d in
-  w <== a +: d;
+  w <-- a +: d;
   test [ d ];
   [%expect {| (Ok ()) |}]
 ;;
@@ -186,7 +186,7 @@ let%expect_test "combinational loop before a register" =
   let a = input "a" 2 in
   let w = wire 2 in
   let b = a &: w in
-  w <== b;
+  w <-- b;
   let c = reg reg_spec ~enable:vdd b in
   test [ c ];
   [%expect
@@ -205,7 +205,7 @@ let%expect_test "combinational loop between registers" =
   let a = reg reg_spec ~enable:vdd (input "a" 2) in
   let w = wire 2 in
   let b = a &: w in
-  w <== b;
+  w <-- b;
   let c = reg reg_spec ~enable:vdd b in
   test [ c ];
   [%expect
@@ -225,7 +225,7 @@ let%expect_test "combinational loop inside register loop" =
     reg_fb reg_spec ~enable:vdd ~width:2 ~f:(fun d ->
       let w = wire 2 -- "wire_in_loop" in
       let e = d +: w in
-      w <== w;
+      w <-- w;
       e)
   in
   test [ a ];
@@ -251,7 +251,7 @@ let%expect_test "looping memory - q to read_address" =
       ~write_port:{ write_clock = clock; write_enable; write_address; write_data }
       ~read_address
   in
-  read_address <== q.:(0);
+  read_address <-- q.:(0);
   test [ q ];
   [%expect
     {|
@@ -279,7 +279,7 @@ let%expect_test "no loop in memory - q to write port" =
       ~write_port:{ write_clock = clock; write_enable; write_address; write_data }
       ~read_address
   in
-  write_address <== q.:(0);
+  write_address <-- q.:(0);
   test [ q ];
   (* write enable *)
   [%expect {| (Ok ()) |}];
@@ -293,7 +293,7 @@ let%expect_test "no loop in memory - q to write port" =
       ~write_port:{ write_clock = clock; write_enable; write_address; write_data }
       ~read_address
   in
-  write_enable <== q.:(0);
+  write_enable <-- q.:(0);
   test [ q ];
   [%expect {| (Ok ()) |}];
   (* write data *)
@@ -307,7 +307,7 @@ let%expect_test "no loop in memory - q to write port" =
       ~write_port:{ write_clock = clock; write_enable; write_address; write_data }
       ~read_address
   in
-  write_data <== q.:(0);
+  write_data <-- q.:(0);
   test [ q ];
   [%expect {| (Ok ()) |}]
 ;;
@@ -316,7 +316,7 @@ let%expect_test "looping instantiation" =
   let w = wire 1 in
   let x = Instantiation.create () ~name:"foo" ~inputs:[ "a", w ] ~outputs:[ "b", 1 ] in
   let b = Map.find_exn x "b" in
-  w <== b;
+  w <-- b;
   test [ b ];
   [%expect {| (Ok ()) |}]
 ;;

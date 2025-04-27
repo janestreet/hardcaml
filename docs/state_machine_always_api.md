@@ -26,8 +26,9 @@ A state machine is constructed with the following function:
     ?auto_wave_format:bool ->
     ?attributes:Hardcaml.Rtl_attribute.t list ->
     ?enable:t ->
+    ?unreachable:'a list ->
     (module Hardcaml.Always.State_machine.State with type t = 'a) ->
-    Hardcaml.Reg_spec.t -> 'a Always.State_machine.t
+    Reg_spec.t -> 'a Always.State_machine.t
 = <fun>
 ```
 
@@ -131,7 +132,7 @@ Always DSL in action.
       let state =
         List.nth_exn States.all (Bits.to_unsigned_int !(Cyclesim.out_port sim "state"))
       in
-      let done_ = Bits.is_vdd !(Cyclesim.out_port sim "done") in
+      let done_ = Bits.to_bool !(Cyclesim.out_port sim "done") in
       Stdio.print_s [%message
         (state : States.t) (done_ : bool)
       ]

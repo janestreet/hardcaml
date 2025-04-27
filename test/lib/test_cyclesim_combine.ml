@@ -70,8 +70,8 @@ let%expect_test "Test comparison" =
     (* expected to differ on cycle 3, when both a and b are 1 *)
     for i = 0 to 1 do
       for j = 0 to 1 do
-        a := Bits.of_int ~width:1 i;
-        b := Bits.of_int ~width:1 j;
+        a := Bits.of_int_trunc ~width:1 i;
+        b := Bits.of_int_trunc ~width:1 j;
         Cyclesim.cycle sim
       done
     done);

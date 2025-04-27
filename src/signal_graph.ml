@@ -7,13 +7,13 @@ let deps = (module Signal.Type.Deps : Signal.Type.Deps)
 
 type t =
   { outputs : Signal.t list
-  ; upto : Hash_set.M(Signal.Uid).t
+  ; upto : Hash_set.M(Signal.Type.Uid).t
   }
 [@@deriving sexp_of]
 
 let create ?(upto = []) t =
   { outputs = t
-  ; upto = Hash_set.of_list (module Signal.Uid) (List.map upto ~f:Signal.uid)
+  ; upto = Hash_set.of_list (module Signal.Type.Uid) (List.map upto ~f:Signal.uid)
   }
 ;;
 
@@ -116,7 +116,7 @@ let rewrite t ~f ~f_upto =
   let not_expecting_a_wire signal =
     raise_s [%message "not expecting a wire (internal error)" (signal : Signal.t)]
   in
-  let new_signal_by_old_uid = Hashtbl.create (module Uid) in
+  let new_signal_by_old_uid = Hashtbl.create (module Signal.Type.Uid) in
   let add_mapping ~old_signal ~new_signal =
     Hashtbl.add_exn new_signal_by_old_uid ~key:(uid old_signal) ~data:new_signal
   in
@@ -124,8 +124,7 @@ let rewrite t ~f ~f_upto =
     match Hashtbl.find new_signal_by_old_uid (uid signal) with
     | None ->
       raise_s
-        [%message
-          "[Signal_graph.normalize_uids] failed to rewrite signal" (signal : Signal.t)]
+        [%message "[Signal_graph.rewrite] failed to rewrite signal" (signal : Signal.t)]
     | Some s -> s
   in
   let rec rewrite_signal_upto_wires signal ~seen_uids =
@@ -138,8 +137,8 @@ let rewrite t ~f ~f_upto =
          raise_s
            [%message
              "Encountered a loop when rewriting signals"
-               (seen_uids : Set.M(Signal.Uid).t)
-               (uid : Signal.Uid.t)]
+               (seen_uids : Set.M(Signal.Type.Uid).t)
+               (uid : Signal.Type.Uid.t)]
        | false ->
          let new_signal =
            match Hash_set.mem t.upto (Signal.uid signal) with
@@ -157,7 +156,7 @@ let rewrite t ~f ~f_upto =
          new_signal)
   in
   let rewrite_signal_upto_wires =
-    rewrite_signal_upto_wires ~seen_uids:(Set.empty (module Signal.Uid))
+    rewrite_signal_upto_wires ~seen_uids:(Set.empty (module Signal.Type.Uid))
   in
   (* find wires *)
   let old_wires = filter t ~f:Type.is_wire in
@@ -169,12 +168,12 @@ let rewrite t ~f ~f_upto =
         (match old_wire with
          | Wire { signal_id; _ } -> f (Wire { signal_id; driver = None })
          | _ -> expecting_a_wire old_wire));
-  (* rewrite from every wire *)
-  List.iter old_wires ~f:(function
+  (* rewrite from every wire and output *)
+  List.iter (old_wires @ t.outputs) ~f:(function
     | Wire { driver; _ } ->
       Option.iter driver ~f:(fun driver ->
         ignore (rewrite_signal_upto_wires driver : Signal.t))
-    | signal -> expecting_a_wire signal);
+    | signal -> ignore (rewrite_signal_upto_wires signal : Signal.t));
   (* re-attach wires *)
   List.iter old_wires ~f:(fun old_wire ->
     match old_wire with
@@ -182,7 +181,7 @@ let rewrite t ~f ~f_upto =
       Option.iter driver ~f:(fun driver ->
         let new_driver = new_signal driver in
         let new_wire = new_signal old_wire in
-        Signal.(new_wire <== new_driver))
+        Signal.(new_wire <-- new_driver))
     | signal -> expecting_a_wire signal);
   let upto =
     t.upto
@@ -191,15 +190,19 @@ let rewrite t ~f ~f_upto =
       match Hashtbl.find new_signal_by_old_uid old_uid with
       | Some new_upto -> uid new_upto
       | None -> old_uid)
-    |> Hash_set.of_list (module Signal.Uid)
+    |> Hash_set.of_list (module Signal.Type.Uid)
   in
-  { outputs = List.map t.outputs ~f:new_signal; upto }
+  let signal_graph = { outputs = List.map t.outputs ~f:new_signal; upto } in
+  let new_signal_by_old_uid =
+    Hashtbl.to_alist new_signal_by_old_uid |> Map.of_alist_exn (module Signal.Type.Uid)
+  in
+  signal_graph, new_signal_by_old_uid
 ;;
 
 let normalize_uids t =
   (* uid generation (note; 1L and up, 0L reserved for empty) *)
   let fresh_id =
-    let `New new_id, _ = Signal.Uid.generator () in
+    let `New new_id, _ = Signal.Type.Uid.generator () in
     new_id
   in
   let rewrite_uid ~fresh_id signal =
@@ -207,13 +210,13 @@ let normalize_uids t =
     let update_id id = { id with Type.s_id = fresh_id () } in
     Signal.Type.map_signal_id signal ~f:update_id
   in
-  rewrite t ~f:(rewrite_uid ~fresh_id) ~f_upto:Fn.id
+  rewrite t ~f:(rewrite_uid ~fresh_id) ~f_upto:Fn.id |> fst
 ;;
 
 let fan_out_map t =
   depth_first_search
     t
-    ~init:(Map.empty (module Signal.Uid))
+    ~init:(Map.empty (module Signal.Type.Uid))
     ~f_before:(fun map signal ->
       let target = Signal.uid signal in
       (* [signal] is in the fan_out of all of its [deps] *)
@@ -228,10 +231,10 @@ let fan_out_map t =
 let fan_in_map t =
   depth_first_search
     t
-    ~init:(Map.empty (module Signal.Uid))
+    ~init:(Map.empty (module Signal.Type.Uid))
     ~f_before:(fun map signal ->
       Signal.Type.Deps.rev_map signal ~f:Signal.uid
-      |> Set.of_list (module Signal.Uid)
+      |> Set.of_list (module Signal.Type.Uid)
       |> fun data -> Map.set map ~key:(Signal.uid signal) ~data)
 ;;
 
@@ -324,7 +327,7 @@ let last_layer_of_nodes ~is_input graph =
 
      Note that the same map that keeps track of the whether the signal is in the last
      layer also doubles as a visited set for the DFS. *)
-  let rec visit_signal ((in_layer, _) : bool Map.M(Signal.Uid).t * bool) signal =
+  let rec visit_signal ((in_layer, _) : bool Map.M(Signal.Type.Uid).t * bool) signal =
     match Map.find in_layer (uid signal) with
     | Some is_in_layer -> in_layer, is_in_layer
     | None ->
@@ -352,7 +355,10 @@ let last_layer_of_nodes ~is_input graph =
       in_layer, is_in_layer || is_in_layer')
   in
   let in_layer, _ =
-    List.fold ~init:(Map.empty (module Signal.Uid), false) graph.outputs ~f:visit_signal
+    List.fold
+      ~init:(Map.empty (module Signal.Type.Uid), false)
+      graph.outputs
+      ~f:visit_signal
   in
   (* Drop nodes not in the final layer. That will track back to an input or constant but
      not be affected by a register or memory. *)

@@ -87,7 +87,7 @@ module Make_enums (Cases : Enum_intf.Cases) = struct
     ;;
 
     let of_enum (type a) (module Comb : Comb.S with type t = a) enum =
-      Comb.of_int ~width (to_int_repr enum)
+      Comb.of_int_trunc ~width (to_int_repr enum)
     ;;
 
     let to_enum =
@@ -96,7 +96,7 @@ module Make_enums (Cases : Enum_intf.Cases) = struct
     ;;
 
     let to_enum t =
-      let x = Bits.to_int t in
+      let x = Bits.to_int_trunc t in
       match Map.find to_enum x with
       | Some x -> Ok x
       | None ->

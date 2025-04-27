@@ -59,7 +59,7 @@ let rec to_string t =
   | Index strings ->
     let strings = Array.of_list strings in
     let to_string (bits : Bits.t) =
-      match strings.(Bits.to_int bits) with
+      match strings.(Bits.to_int_trunc bits) with
       | exception _ -> "-"
       | s -> s
     in

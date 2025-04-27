@@ -69,5 +69,4 @@ let command =
          Synth.Command.With_interface (Clz.With_regs.I_with_clock) (Clz.O)
        in
        Synth.run ~name:"count_leading_zeros" ~flags Clz.create)
-    ~behave_nicely_in_pipeline:false
 ;;

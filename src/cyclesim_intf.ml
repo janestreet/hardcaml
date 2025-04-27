@@ -16,8 +16,8 @@ module type Cyclesim = sig
   (** returns the circuit used to compile the simulation. *)
   val circuit : _ t -> Circuit.t option
 
-  (** advance by 1 clock cycle (check->comb->seq->comb) *)
-  val cycle : _ t -> unit
+  (** advance by n clock cycles (check->comb->seq->comb). [n] defaults to 1. *)
+  val cycle : ?n:int -> _ t -> unit
 
   (** check inputs are valid before a simulation cycle *)
   val cycle_check : _ t -> unit
@@ -42,7 +42,7 @@ module type Cyclesim = sig
       function. *)
   val traced : _ t -> Traced.t
 
-  (** Get output port given a name.  If [clock_edge] is [Before] the outputs are computed
+  (** Get output port given a name. If [clock_edge] is [Before] the outputs are computed
       prior to the clock edge - [After] means the outputs are computed after the clock
       edge. *)
   val out_port
@@ -63,20 +63,16 @@ module type Cyclesim = sig
   val lookup_node_or_reg : _ t -> Traced.internal_signal -> Node.t option
   val lookup_node_or_reg_by_name : _ t -> string -> Node.t option
 
-  (** Peek at internal registers, return Some _ if it's present. Note
-      that the node must marked as traced in [Cyclesim.Config.t] when creating
-      simulations for this to return (Some _). Writing to the [Bits.Mutable.t]
-      will change the simulation internal node's value and affect the results of
-      simulation.
-  *)
+  (** Peek at internal registers, return Some _ if it's present. Note that the node must
+      marked as traced in [Cyclesim.Config.t] when creating simulations for this to return
+      (Some _). Writing to the [Bits.Mutable.t] will change the simulation internal node's
+      value and affect the results of simulation. *)
   val lookup_reg : _ t -> Traced.internal_signal -> Reg.t option
 
   val lookup_reg_by_name : _ t -> string -> Reg.t option
 
-  (** Similar to [lookup_data], but for memories. This is very useful
-      for initializing memory contents without having to simulate the entire
-      circuit.
-  *)
+  (** Similar to [lookup_data], but for memories. This is very useful for initializing
+      memory contents without having to simulate the entire circuit. *)
   val lookup_mem : _ t -> Traced.internal_signal -> Memory.t option
 
   val lookup_mem_by_name : _ t -> string -> Memory.t option
@@ -86,9 +82,9 @@ module type Cyclesim = sig
 
   module Combine_error = Cyclesim_combine.Combine_error
 
-  (** Combine 2 simulators.  The inputs are set on the 1st simulator and copied to the
-      2nd.  Outputs are checked and [on_error] is called if a difference is found.  By
-      default, [on_error] raises.
+  (** Combine 2 simulators. The inputs are set on the 1st simulator and copied to the 2nd.
+      Outputs are checked and [on_error] is called if a difference is found. By default,
+      [on_error] raises.
 
       The simulators should have the same input and output port sets, unless
       [port_sets_may_differ] is [true], in which case only ports which exist on both
@@ -103,7 +99,7 @@ module type Cyclesim = sig
   module With_interface (I : Interface.S) (O : Interface.S) : sig
     type nonrec t = (Bits.t ref I.t, Bits.t ref O.t) t [@@deriving sexp_of]
 
-    (** Create a simulator using the provided [Create_fn].  The returned simulator ports
+    (** Create a simulator using the provided [Create_fn]. The returned simulator ports
         are coerced to the input and output interface types. *)
     val create
       :  ?config:Config.t

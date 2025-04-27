@@ -3,14 +3,14 @@ open Base
 type t =
   { ltl : (string, Property.LTL.path) Hashtbl.t
   ; mutable is_finalized : bool
-  ; aps : (Signal.Uid.t, Signal.t) Hashtbl.t
+  ; aps : (Signal.Type.Uid.t, Signal.t) Hashtbl.t
   }
 [@@deriving sexp_of]
 
 let create () =
   { ltl = Hashtbl.create (module String)
   ; is_finalized = false
-  ; aps = Hashtbl.create (module Signal.Uid)
+  ; aps = Hashtbl.create (module Signal.Type.Uid)
   }
 ;;
 

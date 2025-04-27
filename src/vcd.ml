@@ -1,8 +1,11 @@
+[@@@ocaml.flambda_o3]
+
 open Base
 open Cyclesim
 module Out_channel = Stdio.Out_channel
 
 let vcdcycle = 10
+let default_hierarchy_separator = '$'
 
 let char_allowed c =
   (* Names in VCD files are not allowed to have whitespace because they indicate the end
@@ -13,7 +16,14 @@ let char_allowed c =
   Char.is_print c && is_allowed c
 ;;
 
-let sanitize_name name = String.map ~f:(fun c -> if char_allowed c then c else '_') name
+let sanitize_name name =
+  let name_sanitized = String.map ~f:(fun c -> if char_allowed c then c else '_') name in
+  (* If we somehow end up with a signal or a scope that has a valid hierarchy but an empty
+     name at its hierarchy level, still emit a valid VCD. *)
+  match name_sanitized with
+  | "" -> "EMPTY_NAME"
+  | name -> name
+;;
 
 module Timescale = struct
   type t =
@@ -61,44 +71,130 @@ module Var = struct
     let to_string t = sexp_of_t t |> Sexp.to_string |> String.lowercase
   end
 
+  module Vcd_wave_format = struct
+    type t =
+      | Binary
+      | Index of
+          { strings : string array
+          ; bitwidth : int
+          }
+      | Map of
+          { map : string Map.M(Bits).t
+          ; bitwidth : int
+          }
+    [@@deriving sexp_of]
+
+    (* Convert the Hardcaml wave format to the closest VCD-representable option *)
+    let of_signal_wave_format f =
+      let max_bits_for_strings strings =
+        let longest =
+          strings
+          |> List.map ~f:String.length
+          |> List.max_elt ~compare:Int.compare
+          |> Option.value ~default:1 (* Lower bound the length at one character *)
+          |> Int.max 1
+        in
+        8 * longest
+      in
+      (* For efficiency, pre-compute the bitwidth for strings *)
+      match f with
+      | Wave_format.Index l ->
+        Index { strings = List.to_array l; bitwidth = max_bits_for_strings l }
+      | Wave_format.Map m ->
+        Map
+          { map = Map.of_alist_exn (module Bits) m
+          ; bitwidth = max_bits_for_strings (List.map m ~f:(fun (_, s) -> s))
+          }
+      | Wave_format.Custom _ ->
+        Binary
+        (* We have to drop the custom wave format because the maximum length of the string
+           needs to be known in advance (when defining the signals at the top of the VCD
+           file), and this isn't possible with an arbitrary conversion function. *)
+      | _ -> Binary
+    ;;
+
+    (* Get the width that the signal will be in the VCD given the width of the original
+       signal and the format *)
+    let get_vcd_width ~signal_width t =
+      match t with
+      | Binary -> signal_width
+      | Index { bitwidth; _ } | Map { bitwidth; _ } -> bitwidth
+    ;;
+  end
+
   type t =
     { typ : Type.t
     ; name : string
     ; id : string
     ; width : int
+    ; wave_format : Vcd_wave_format.t [@compare.ignore]
     }
   [@@deriving sexp_of, fields ~getters, compare, hash]
 
-  let create ?(typ = Type.Wire) ~name ~id ~width () = { typ; name; id; width }
-
-  let define chan { typ; name; id; width } =
-    Out_channel.output_string
-      chan
-      [%string "$var %{typ#Type} %{width#Int} %{id} %{sanitize_name name} $end\n"]
+  let create ?(typ = Type.Wire) ?(wave_format = Wave_format.Binary) ~name ~id ~width () =
+    { typ
+    ; name
+    ; id
+    ; width
+    ; wave_format = Vcd_wave_format.of_signal_wave_format wave_format
+    }
   ;;
 
-  let write_string chan { typ = _; name = _; id; width } bits =
-    if width = 1
+  let define chan { typ; name; id; width; wave_format } =
+    let actual_width = Vcd_wave_format.get_vcd_width ~signal_width:width wave_format in
+    Out_channel.output_string
+      chan
+      [%string "$var %{typ#Type} %{actual_width#Int} %{id} %{sanitize_name name} $end\n"]
+  ;;
+
+  let write_string chan { typ = _; name = _; id; width; wave_format } bits =
+    let actual_width = Vcd_wave_format.get_vcd_width ~signal_width:width wave_format in
+    if actual_width = 1
     then Out_channel.output_string chan [%string "%{bits}%{id}\n"]
     else Out_channel.output_string chan [%string "b%{bits} %{id}\n"]
   ;;
 
-  let write_bits chan ({ typ = _; name = _; id = _; width } as t) bits =
-    if Bits.width bits <> width
-    then raise_s [%message "Invalid bit width" (t : t) (bits : Bits.t)];
-    write_string chan t (Bits.to_string bits)
+  (* Pre-generate a lookup table for a slight performance boost when converting strings *)
+  let char_to_binary_table =
+    Array.init 256 ~f:(fun i ->
+      i
+      |> Int.Binary.to_string
+      |> String.chop_prefix_exn ~prefix:"0b"
+      |> String.pad_left ~char:'0' ~len:8)
   ;;
 
-  let write_four_state_vector
-    chan
-    ({ typ = _; name = _; id = _; width } as t)
-    (four_state : Logic.Four_state_vector.t)
-    =
-    if Logic.Four_state_vector.width four_state <> width
-    then
-      raise_s
-        [%message "Invalid bit width" (t : t) (four_state : Logic.Four_state_vector.t)];
-    let s = List.map four_state ~f:Logic.Four_state.to_char |> String.of_char_list in
+  let write_bits chan ({ typ = _; name = _; id = _; width; wave_format } as t) bits =
+    if Bits.width bits <> width
+    then raise_s [%message "Invalid bit width" (t : t) (bits : Bits.t)];
+    (* Convert an ASCII string to binary and then write it in a way compatible with
+       SystemVerilog strings. This is not particularly performant, but custom wave formats
+       are ideally used sparingly (for state parameters and such). *)
+    let write_string_ascii s =
+      let actual_width = Vcd_wave_format.get_vcd_width ~signal_width:width wave_format in
+      let bitstring =
+        s
+        |> String.concat_map ~f:(fun c -> char_to_binary_table.(Char.to_int c))
+        |> String.pad_left ~char:'0' ~len:actual_width
+      in
+      write_string chan t bitstring
+    in
+    match wave_format with
+    | Binary -> write_string chan t (Bits.to_string bits)
+    | Index { strings; _ } ->
+      let idx = Bits.to_unsigned_int bits in
+      let s = if idx < Array.length strings then strings.(idx) else "?" in
+      write_string_ascii s
+    | Map { map; _ } ->
+      let s = Map.find map bits |> Option.value ~default:"?" in
+      write_string_ascii s
+  ;;
+
+  let write_all_x chan ({ typ = _; name = _; id = _; width; wave_format } as t) =
+    let actual_width = Vcd_wave_format.get_vcd_width ~signal_width:width wave_format in
+    let s =
+      List.init actual_width ~f:(Fn.const Logic.Four_state.(to_char X))
+      |> String.of_char_list
+    in
     write_string chan t s
   ;;
 
@@ -149,6 +245,65 @@ module Scope = struct
     { name; typ; vars; subscopes }
   ;;
 
+  (* Recursive helper function for building the hierarchy *)
+  let rec create_helper ?(typ = Type.Module) ~name ~vars () =
+    let vars_in_this_scope = Queue.create () in
+    let vars_by_subscope = Hashtbl.create (module String) in
+    List.iter vars ~f:(fun (typ, name, id, width, wave_format) ->
+      match name with
+      | [] ->
+        failwith "Got an empty split variable name; this shouldn't be possible to reach"
+      | basename :: [] ->
+        (* Base case; the variable is in the current scope *)
+        Queue.enqueue vars_in_this_scope (typ, basename, id, width, wave_format)
+      | scope :: rest_of_the_name ->
+        (* The variable is in a subscope *)
+        (* Manually adjust the scope name to disambiguate inputs and outputs of the
+           current module - we prefer to see the inputs and outputs sorted before other
+           signals within the same scope, so prefix them with '-'. *)
+        let scope =
+          match scope with
+          | "i" -> "-inputs"
+          | "o" -> "-outputs"
+          | module_name -> module_name
+        in
+        let vars_in_subscope =
+          Hashtbl.find_or_add vars_by_subscope scope ~default:Queue.create
+        in
+        Queue.enqueue vars_in_subscope (typ, rest_of_the_name, id, width, wave_format));
+    { name
+    ; typ
+    ; vars =
+        vars_in_this_scope
+        |> Queue.to_list
+        |> List.map ~f:(fun (typ, name, id, width, wave_format) ->
+          { Var.typ; name; id; width; wave_format })
+        |> List.sort ~compare:(fun a b -> String.compare a.name b.name)
+    ; subscopes =
+        Hashtbl.to_alist vars_by_subscope
+        |> List.map ~f:(fun (scope_name, vars) ->
+          create_helper ~typ ~name:scope_name ~vars:(Queue.to_list vars) ())
+        |> List.sort ~compare:(fun a b -> String.compare a.name b.name)
+    }
+  ;;
+
+  let create_auto_hierarchy
+    ?typ
+    ?(split_on = default_hierarchy_separator)
+    ~name
+    ~(vars : Var.t list)
+    ()
+    =
+    create_helper
+      ?typ
+      ~name
+      ~vars:
+        (List.map vars ~f:(fun { typ; name; id; width; wave_format } ->
+           let name_split = String.split ~on:split_on name in
+           typ, name_split, id, width, wave_format))
+      ()
+  ;;
+
   let rec write chan { name; typ; vars; subscopes } =
     Out_channel.output_string
       chan
@@ -172,7 +327,7 @@ module Config = struct
 
   let default =
     { date = "..."
-    ; version = "Hardcaml"
+    ; version = "hardcaml"
     ; comment = Some "Hardware design in ocaml"
     ; timescale = Ns 1
     }
@@ -187,21 +342,18 @@ module Config = struct
   ;;
 end
 
-type 'a trace =
+(* ['prev] must be a mutable type if it is going to be used *)
+type 'data trace =
   { var : Var.t
-  ; data : 'a
-  ; prev : string ref
+  ; data : 'data
+  ; prev : Bits.Mutable.t
   }
 
 let enddefinitions chan = Out_channel.output_string chan "$enddefinitions $end\n"
 
 let dumpvars_as_x chan vars =
   Out_channel.output_string chan "$dumpvars\n";
-  List.iter vars ~f:(fun v ->
-    Var.write_four_state_vector
-      chan
-      v
-      (List.init v.width ~f:(Fn.const Logic.Four_state.X)));
+  List.iter vars ~f:(fun v -> Var.write_all_x chan v);
   Out_channel.output_string chan "$end\n"
 ;;
 
@@ -216,27 +368,35 @@ let write_time chan time = Out_channel.output_string chan [%string "#%{time#Int}
 
 let wrap chan sim =
   let var_generator = Var.Generator.create () in
+  (* Prefix clock and reset with dashes so they show up first if the viewer sorts the list
+     of signals *)
   let clock =
-    Var.create ~name:"clock" ~id:(Var.Generator.next var_generator) ~width:1 ()
+    Var.create ~name:"-clock" ~id:(Var.Generator.next var_generator) ~width:1 ()
   in
   let reset =
-    Var.create ~name:"reset" ~id:(Var.Generator.next var_generator) ~width:1 ()
+    Var.create ~name:"-reset" ~id:(Var.Generator.next var_generator) ~width:1 ()
   in
-  let write_var v d = Var.write_string chan v d in
+  let write_var_fast v d = Var.write_string chan v d in
   (* list of signals to trace *)
-  let create_var name width data =
-    { var = Var.create ~name ~id:(Var.Generator.next var_generator) ~width ()
+  let create_var ?wave_format name width data =
+    { var = Var.create ?wave_format ~name ~id:(Var.Generator.next var_generator) ~width ()
     ; data
-    ; prev = ref (String.init width ~f:(fun _ -> 'x'))
+    ; prev = Bits.Mutable.create width
     }
   in
   let trace signals =
-    List.map signals ~f:(fun (name, s) -> create_var name (Bits.width !s) s)
+    List.map signals ~f:(fun (name, (s : Bits.t ref)) ->
+      create_var name (Bits.width !s) s)
   in
   let trace_internal (s : Cyclesim.Traced.internal_signal list) =
-    List.concat_map s ~f:(fun ({ signal = _; mangled_names } as trace) ->
-      let s = Cyclesim.lookup_node_or_reg sim trace |> Option.value_exn in
-      List.map mangled_names ~f:(fun name -> create_var name (Node.width_in_bits s) s))
+    List.concat_map s ~f:(fun ({ signal; mangled_names } as trace) ->
+      let wave_format = Signal.Type.get_wave_format signal in
+      Cyclesim.lookup_node_or_reg sim trace
+      (* It is possible for a sim to request to trace a signal that corresponds to a
+         nonexistent node, handle this case by ignoring it. *)
+      |> Option.value_map ~default:[] ~f:(fun s ->
+        List.map mangled_names ~f:(fun name ->
+          create_var ~wave_format name (Node.width_in_bits s) s)))
   in
   let trace_in = trace (in_ports sim) in
   let trace_out = trace (out_ports sim ~clock_edge:Before) in
@@ -249,61 +409,72 @@ let wrap chan sim =
   in
   (* write the VCD header *)
   let scopes =
-    [ Scope.create
+    [ Scope.create_auto_hierarchy
         ~name:"inputs"
         ~vars:(clock :: reset :: List.map trace_in ~f:(fun t -> t.var))
         ()
-    ; Scope.create ~name:"outputs" ~vars:(List.map trace_out ~f:(fun t -> t.var)) ()
-    ; Scope.create ~name:"various" ~vars:(List.map trace_internal ~f:(fun t -> t.var)) ()
+    ; Scope.create_auto_hierarchy
+        ~name:"outputs"
+        ~vars:(List.map trace_out ~f:(fun t -> t.var))
+        ()
+    ; Scope.create_auto_hierarchy
+        ~name:"various"
+        ~vars:(List.map trace_internal ~f:(fun t -> t.var))
+        ()
     ]
   in
-  let write_header () = write_header chan ~config:Config.default ~scopes in
   let time = ref 0 in
-  write_header ();
+  write_header chan ~config:{ Config.default with version = "hardcaml-cyclesim" } ~scopes;
   (* reset *)
   let write_reset () =
     write_time chan !time;
-    write_var clock "0";
-    write_var reset "1";
+    write_var_fast clock "0";
+    write_var_fast reset "1";
     List.iter trace_in ~f:(fun t ->
       let str = Bits.to_bstr !(t.data) in
-      write_var t.var str;
-      t.prev := str);
+      write_var_fast t.var str;
+      Bits.Mutable.copy_bits ~src:!(t.data) ~dst:t.prev);
     List.iter trace_out ~f:(fun t ->
       let str = Bits.to_bstr !(t.data) in
-      write_var t.var str;
-      t.prev := str);
+      write_var_fast t.var str;
+      Bits.Mutable.copy_bits ~src:!(t.data) ~dst:t.prev);
     List.iter trace_internal ~f:(fun t ->
-      let str = Bits.to_bstr (Cyclesim.Node.to_bits t.data) in
-      write_var t.var str;
-      t.prev := str);
+      let bits = Cyclesim.Node.to_bits t.data in
+      (match t.var.wave_format with
+       | Binary -> write_var_fast t.var (Bits.to_bstr bits)
+       | _ -> Var.write_bits chan t.var bits);
+      Bits.Mutable.copy_bits ~src:bits ~dst:t.prev);
     time := !time + vcdcycle
   in
+  (* Since we write all Xs at the start, always write all values on the first cycle to
+     ensure that the initial value is consistent with what we expect. *)
+  let first = ref true in
   (* cycle *)
   let write_cycle () =
     write_time chan !time;
-    write_var clock "1";
-    write_var reset "0";
+    write_var_fast clock "1";
+    write_var_fast reset "0";
     List.iter trace_in ~f:(fun t ->
-      let data = Bits.to_bstr !(t.data) in
-      if not (String.equal data !(t.prev))
+      if !first || not (Bits.Mutable.equal_bits !(t.data) t.prev)
       then (
-        write_var t.var data;
-        t.prev := data));
+        write_var_fast t.var (Bits.to_bstr !(t.data));
+        Bits.Mutable.copy_bits ~src:!(t.data) ~dst:t.prev));
     List.iter trace_out ~f:(fun t ->
-      let data = Bits.to_bstr !(t.data) in
-      if not (String.equal data !(t.prev))
+      if !first || not (Bits.Mutable.equal_bits !(t.data) t.prev)
       then (
-        write_var t.var data;
-        t.prev := data));
+        write_var_fast t.var (Bits.to_bstr !(t.data));
+        Bits.Mutable.copy_bits ~src:!(t.data) ~dst:t.prev));
     List.iter trace_internal ~f:(fun t ->
-      let data = Bits.to_bstr (Cyclesim.Node.to_bits t.data) in
-      if not (String.equal data !(t.prev))
+      if !first || not (Node.equal_bits_mutable t.data t.prev)
       then (
-        write_var t.var data;
-        t.prev := data));
+        let bits = Cyclesim.Node.to_bits t.data in
+        (match t.var.wave_format with
+         | Binary -> write_var_fast t.var (Bits.to_bstr bits)
+         | _ -> Var.write_bits chan t.var bits);
+        Node.to_bits_mutable t.data t.prev));
     write_time chan (!time + (vcdcycle / 2));
-    write_var clock "0";
+    write_var_fast clock "0";
+    first := false;
     time := !time + vcdcycle
   in
   Private.modify sim [ After, Reset, write_reset; Before, At_clock_edge, write_cycle ]

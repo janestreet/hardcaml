@@ -24,6 +24,8 @@ module Mutable = struct
   let to_constant t = t
   let to_string t = Constant.to_binary_string t
   let to_int t = Constant.to_int t
+  let equal (a : t) (b : t) = Bytes.equal (a :> bytes) (b :> bytes)
+  let equal_bits = equal
 
   let copy ~src ~dst =
     let words = words src in
@@ -44,7 +46,12 @@ module Mutable = struct
   ;;
 
   let wire _ = empty
-  let ( -- ) a _ = a
+
+  let ( -- ) ~(loc : [%call_pos]) a _ =
+    ignore loc;
+    a
+  ;;
+
   let vdd = of_constant (Constant.of_int ~width:1 1)
   let gnd = of_constant (Constant.of_int ~width:1 0)
 
@@ -622,10 +629,14 @@ end
 include (Mutable.Comb : Comb.S with type t := Bits0.t)
 include Bits0.Comparable
 
+let ( <--. ) a b = a := of_int_trunc ~width:(width !a) b
+let ( <-:. ) a b = a := of_unsigned_int ~width:(width !a) b
+let ( <-+. ) a b = a := of_signed_int ~width:(width !a) b
+
 (* Override the functor implementations, as these allocate less (to_int doesn't allocate
    at all) *)
-let to_int x = Constant.to_int x
-let to_int32 x = Constant.to_int32 x
+let to_int_trunc x = Constant.to_int x
+let to_int32_trunc x = Constant.to_int32 x
 let zero w = Bits0.create w
 let pp fmt t = Stdlib.Format.fprintf fmt "%s" (to_bstr t)
 
@@ -636,3 +647,51 @@ module _ = Pretty_printer.Register (struct
     let module_name = "Hardcaml.Bits"
     let to_string = to_bstr
   end)
+
+module Binary = struct
+  type nonrec t = t [@@deriving compare]
+
+  let to_string t =
+    let width = width t in
+    let t = Constant.to_binary_string t in
+    [%string "%{width#Int}'b%{t#String}"]
+  ;;
+
+  let sexp_of_t t = [%sexp_of: string] (to_string t)
+end
+
+module Hex = struct
+  type nonrec t = t [@@deriving compare]
+
+  let to_string t =
+    let width = width t in
+    let t = Constant.to_hex_string ~signedness:Unsigned t in
+    [%string "%{width#Int}'h%{t#String}"]
+  ;;
+
+  let sexp_of_t t = [%sexp_of: string] (to_string t)
+end
+
+module Unsigned_int = struct
+  type nonrec t = t [@@deriving compare]
+
+  let to_string t =
+    let width = width t in
+    let t = Constant.to_bigint ~signedness:Unsigned t in
+    [%string "%{width#Int}'d%{t#Bigint}"]
+  ;;
+
+  let sexp_of_t t = [%sexp_of: string] (to_string t)
+end
+
+module Signed_int = struct
+  type nonrec t = t [@@deriving compare]
+
+  let to_string t =
+    let width = width t in
+    let t = Constant.to_bigint ~signedness:Signed t in
+    [%string "%{width#Int}'d%{t#Bigint}"]
+  ;;
+
+  let sexp_of_t t = [%sexp_of: string] (to_string t)
+end

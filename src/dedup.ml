@@ -19,7 +19,7 @@ module Structure_kind = struct
     | Wire of string list
     | Select of int * int
     | Mem_read_port
-    | Dont_dedup of Signal.Uid.t
+    | Dont_dedup of Signal.Type.Uid.t
   [@@deriving sexp_of, compare, hash]
 
   let equal a b = compare a b = 0
@@ -136,7 +136,7 @@ let rec shallow_equal a b =
     (* special case wires, due to special treatment of Mem_read_port... *)
     shallow_equal r_a r_b
   | _ ->
-    [%equal: Signal.Uid.t list]
+    [%equal: Signal.Type.Uid.t list]
       (Children.rev_map a ~f:Signal.uid)
       (Children.rev_map b ~f:Signal.uid)
 ;;
@@ -219,11 +219,11 @@ let compress_wires signals =
 ;;
 
 let canonicalize signals =
-  let hash_memo = Hashtbl.create (module Signal.Uid) in
-  let canonical = Hashtbl.create (module Signal.Uid) in
+  let hash_memo = Hashtbl.create (module Signal.Type.Uid) in
+  let canonical = Hashtbl.create (module Signal.Type.Uid) in
   let canonical_by_hash = Hashtbl.create (module Int) in
   (* we replace all sequential elements with wires, to be able to transform them later *)
-  let sequential_wires = Hashtbl.create (module Signal.Uid) in
+  let sequential_wires = Hashtbl.create (module Signal.Type.Uid) in
   List.iter
     (Signal_graph.topological_sort_exn
        ~deps:(module Children)
@@ -252,7 +252,7 @@ let canonicalize signals =
       in
       Hashtbl.add_exn canonical ~key:(Signal.uid signal) ~data:canonical_signal);
   Hashtbl.iter sequential_wires ~f:(fun (signal, wire) ->
-    Signal.( <== ) wire (transform_sequential_signal canonical signal));
+    Signal.( <-- ) wire (transform_sequential_signal canonical signal));
   fix_mem_read_ports (Hashtbl.data canonical);
   compress_wires (Hashtbl.data canonical);
   canonical

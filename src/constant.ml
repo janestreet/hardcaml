@@ -286,7 +286,7 @@ end
 (* Pretty printer *)
 let pp fmt t = Stdlib.Format.fprintf fmt "%s" (to_binary_string_hum t)
 
-module _ = Pretty_printer.Register (struct
+module (* Install pretty printer in top level *) _ = Pretty_printer.Register (struct
     type nonrec t = t
 
     let module_name = "Hardcaml.Constant"

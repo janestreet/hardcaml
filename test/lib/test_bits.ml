@@ -85,7 +85,7 @@ let%expect_test "set of [Bits.t]s" =
 let%expect_test "[floor_log2], [popcount]" =
   let or_error_of_with_valid (t : Bits.t With_valid.t) =
     if Bits.to_bool t.valid
-    then Ok (Bits.to_int t.value)
+    then Ok (Bits.to_int_trunc t.value)
     else error_s [%message "With_valid.valid = 0"]
   in
   List.iter
@@ -105,7 +105,7 @@ let%expect_test "[floor_log2], [popcount]" =
         [%message
           ""
             ~input:(s : string)
-            ~popcount:(Bits.popcount t |> Bits.to_int : int)
+            ~popcount:(Bits.popcount t |> Bits.to_int_trunc : int)
             ~floor_log2:(Bits.floor_log2 t |> or_error_of_with_valid : int Or_error.t)]);
   [%expect
     {|

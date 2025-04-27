@@ -1,8 +1,8 @@
 (** VCD (Verilog Change Dump) generation utilities, and a Cyclesim wrapper function.
 
     This deals with the gory details of the format, but external code is expected to
-    manage the generation of data values and properly detect they are the same and
-    should not be included.
+    manage the generation of data values and properly detect they are the same and should
+    not be included.
 
     To generate a vcd;
 
@@ -14,16 +14,14 @@
         - Var.write...
         - Var.write...
         - ...
-   v}
-*)
+    v} *)
 
 open Base
 open Stdio
 
 (** Timescales.
 
-    Note the integer part must be 1, 10 or 100 according to the standard. Dont know why.
-*)
+    Note the integer part must be 1, 10 or 100 according to the standard. Dont know why. *)
 module Timescale : sig
   type t =
     | Fs of int
@@ -42,8 +40,7 @@ end
 module Var : sig
   (** Various types of [Var]s.
 
-      Not at all sure what they each do, and I suspect it's waveform viewer dependant.
-  *)
+      Not at all sure what they each do, and I suspect it's waveform viewer dependant. *)
   module Type : sig
     type t =
       | Event
@@ -70,7 +67,15 @@ module Var : sig
 
   type t [@@deriving sexp_of, compare, hash]
 
-  val create : ?typ:Type.t -> name:string -> id:string -> width:int -> unit -> t
+  val create
+    :  ?typ:Type.t
+    -> ?wave_format:Wave_format.t
+    -> name:string
+    -> id:string
+    -> width:int
+    -> unit
+    -> t
+
   val typ : t -> Type.t
   val name : t -> string
   val id : t -> string
@@ -78,7 +83,7 @@ module Var : sig
   val define : Out_channel.t -> t -> unit
   val write_string : Out_channel.t -> t -> string -> unit
   val write_bits : Out_channel.t -> t -> Bits.t -> unit
-  val write_four_state_vector : Out_channel.t -> t -> Logic.Four_state_vector.t -> unit
+  val write_all_x : Out_channel.t -> t -> unit
 
   (** Construct unique IDs for [Var]s. *)
   module Generator : sig
@@ -121,6 +126,17 @@ module Scope : sig
     -> unit
     -> t
 
+  (** Create a scope, automatically inferring the module hierarchy by splitting module
+      names on the specified [split_on] character (defaulting to the hardcaml convention
+      of '$' as the split character). *)
+  val create_auto_hierarchy
+    :  ?typ:Type.t
+    -> ?split_on:char
+    -> name:string
+    -> vars:Var.t list
+    -> unit
+    -> t
+
   val name : t -> string
   val typ : t -> Type.t
 
@@ -153,7 +169,7 @@ end
 (** Write out the vcd header. *)
 val write_header : Out_channel.t -> config:Config.t -> scopes:Scope.t list -> unit
 
-(** Write a time in the data portion.  Should be followed by data values. *)
+(** Write a time in the data portion. Should be followed by data values. *)
 val write_time : Out_channel.t -> int -> unit
 
 (** wrap a [Cyclesim] simulator to generate a vcd file.

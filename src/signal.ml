@@ -4,10 +4,10 @@ module Type = Signal__type
 
 type t = Type.t
 
-module Uid = Type.Uid
 open Type
 
 let names = Type.names
+let names_and_locs = Type.names_and_locs
 let uid = Type.uid
 
 let add_attribute signal attribute =
@@ -94,13 +94,13 @@ module Base = struct
       raise_s [%message "cannot use [to_constant] on non-constant signal" ~_:(signal : t)]
   ;;
 
-  let ( -- ) signal name =
+  let ( -- ) ~(loc : [%call_pos]) signal name =
     match signal_id signal with
     | None ->
       raise_s
         [%message "attempt to set the name of the empty signal" ~to_:(name : string)]
     | Some _ ->
-      Type.add_name signal name;
+      Type.add_name signal { name; loc };
       signal
   ;;
 
@@ -130,6 +130,10 @@ module Base = struct
   let ( <: ) a b = op2 Signal_lt 1 a b
 
   let mux select cases =
+    (* We are a bit more lax about this in [Comb], but RTL generation requires 2 cases
+       so ensure it here. *)
+    if List.length cases < 2
+    then raise_s [%message "[Signal.mux] requires a minimum of 2 cases"];
     match cases with
     | first_case :: _ -> Mux { signal_id = make_id (width first_case); select; cases }
     | [] -> raise_s [%message "Mux with no cases"]
@@ -149,7 +153,7 @@ end
 module Comb_make = Comb.Make
 module Unoptimized = Comb.Make (Base)
 
-let ( <== ) a b =
+let assign a b =
   match a with
   | Wire { driver = Some _; _ } ->
     raise_s
@@ -174,7 +178,7 @@ let ( <== ) a b =
         "attempt to assign non-wire" ~assignment_target:(a : t) ~expression:(b : t)]
 ;;
 
-let assign = ( <== )
+let ( <-- ) = assign
 
 let wire w =
   let wire = Wire { signal_id = make_id w; driver = None } in
@@ -183,7 +187,7 @@ let wire w =
 
 let wireof s =
   let x = wire (width s) in
-  x <== s;
+  x <-- s;
   x
 ;;
 
@@ -191,7 +195,7 @@ let input name width = Unoptimized.( -- ) (wire width) name
 
 let output name s =
   let w = Unoptimized.( -- ) (wire (width s)) name in
-  w <== s;
+  w <-- s;
   w
 ;;
 
@@ -202,8 +206,8 @@ module Const_prop = struct
     let cv s = const_value s
 
     let eqs s n =
-      let d = Bits.( ==: ) (cv s) (Bits.of_int ~width:(width s) n) in
-      Bits.to_int d = 1
+      let d = Bits.( ==: ) (cv s) (Bits.of_int_trunc ~width:(width s) n) in
+      Bits.to_int_trunc d = 1
     ;;
 
     let cst b = of_constant (Bits.to_constant b)
@@ -233,10 +237,10 @@ module Const_prop = struct
         then zero (width c) @: d
         else (
           let c = cv c in
-          if Bits.to_int @@ Bits.popcount c <> 1
+          if Bits.to_int_trunc @@ Bits.popcount c <> 1
           then a *: b
           else (
-            let p = Bits.to_int @@ (Bits.floor_log2 c).value in
+            let p = Bits.to_int_trunc @@ (Bits.floor_log2 c).value in
             if p = 0 then uresize d ~width:w else uresize (d @: zero p) ~width:w))
       in
       match is_const a, is_const b with
@@ -337,7 +341,7 @@ module Const_prop = struct
       (*let len' = 1 lsl (width sel) in*)
       if is_const sel
       then (
-        let x = Bits.to_int (cv sel) in
+        let x = Bits.to_int_trunc (cv sel) in
         let x = min x (len - 1) in
         (* clip select *)
         List.nth_exn els x
@@ -368,6 +372,27 @@ end
 
 include (Const_prop.Comb : module type of Const_prop.Comb with type t := t)
 
+module Reg_spec_ = Reg_spec.Make (struct
+    type nonrec t = t [@@deriving sexp_of]
+
+    let is_empty = Signal__type.is_empty
+  end)
+
+let to_signal_type_reg_spec (spec : Reg_spec_.t) =
+  { Signal__type.clock = Reg_spec_.clock spec
+  ; clock_edge = Reg_spec_.clock_edge spec
+  ; reset = Reg_spec_.reset spec
+  ; reset_edge = Reg_spec_.reset_edge spec
+  ; clear = Reg_spec_.clear spec
+  }
+;;
+
+module Reg_spec = struct
+  include Reg_spec_
+
+  let sexp_of_t t = Signal__type.sexp_of_reg_spec (to_signal_type_reg_spec t)
+end
+
 type 'a with_register_spec =
   ?enable:t
   -> ?initialize_to:t
@@ -381,7 +406,7 @@ let reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
   (* if width d = 0 then raise_s [%message "[Signal.reg] width of data input is 0"]; *)
   let spec =
     Type.Register.of_reg_spec
-      (Reg_spec.Expert.to_signal_type_reg_spec spec)
+      (to_signal_type_reg_spec spec)
       ~enable
       ~initialize_to
       ~reset_to
@@ -395,7 +420,7 @@ let reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
 let reg_fb ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~width ~f =
   let d = wire width in
   let q = reg spec ?enable ?initialize_to ?reset_to ?clear_to ?clear d in
-  d <== f q;
+  d <-- f q;
   q
 ;;
 
@@ -438,7 +463,8 @@ let prev ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
   let tbl = Hashtbl.create (module Int) in
   Hashtbl.set tbl ~key:0 ~data:d;
   let rec f n =
-    if n < 0 then raise_s [%message "[Signal.prev] cannot look into the future" (n : int)];
+    if n < 0
+    then raise_s [%message "[Signal.prev] cannot accept a negative value" (n : int)];
     match Hashtbl.find tbl n with
     | Some x -> x
     | None ->
@@ -450,155 +476,43 @@ let prev ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
   Staged.stage f
 ;;
 
-let multiport_memory_prim
-  ?name
-  ?(attributes = [])
-  ?initialize_to
-  size
-  ~remove_unused_write_ports
-  ~data_width
-  ~address_width
-  ~(write_ports : _ Write_port.t array)
-  ~read_addresses
-  =
-  (* size > 0 *)
-  if size <= 0
-  then
-    raise_s
-      [%message "[Signal.multiport_memory] size must be greater than 0" (size : int)];
-  (* Check the number of initializer values and their widths are correct. *)
-  Option.iter initialize_to ~f:(fun initialize_to ->
-    let initializer_array_size = Array.length initialize_to in
-    if initializer_array_size <> size
-    then
-      raise_s
-        [%message
-          "[Signal.multiport_memory] size of initializer array differs from memory size"
-            (initializer_array_size : int)
-            (size : int)];
-    Array.iter initialize_to ~f:(fun initialize_to ->
-      let initializer_width = Bits.width initialize_to in
-      if initializer_width <> data_width
-      then
-        raise_s
-          [%message
-            "[Signal.multiport_memory] width of initializer is different to write port \
-             width"
-              (initializer_width : int)
-              (data_width : int)]));
-  (* cannot address all elements of the memory *)
-  if address_bits_for size <> address_width
-  then
-    raise_s
-      [%message
-        "[Signal.multiport_memory] size does not match what can be addressed"
-          (size : int)
-          (address_width : int)];
-  Array.iteri write_ports ~f:(fun port write_port ->
-    (* clocks must be 1 bit *)
-    if width write_port.write_clock <> 1
-    then
-      raise_s
-        [%message
-          "[Signal.multiport_memory] width of clock must be 1"
-            (port : int)
-            ~write_enable_width:(width write_port.write_enable : int)];
-    (* all write enables must be 1 bit *)
-    if width write_port.write_enable <> 1
-    then
-      raise_s
-        [%message
-          "[Signal.multiport_memory] width of write enable must be 1"
-            (port : int)
-            ~write_enable_width:(width write_port.write_enable : int)];
-    (* all write addresses must be the same width *)
-    if width write_port.write_address <> address_width
-    then
-      raise_s
-        [%message
-          "[Signal.multiport_memory] width of write address is inconsistent"
-            (port : int)
-            ~write_address_width:(width write_port.write_address : int)
-            ~expected:(address_width : int)];
-    if width write_port.write_data <> data_width
-    then
-      raise_s
-        [%message
-          "[Signal.multiport_memory] width of write data is inconsistent"
-            (port : int)
-            ~write_data_width:(width write_port.write_data : int)
-            ~expected:(data_width : int)]);
-  Array.iteri read_addresses ~f:(fun port read_address ->
-    if width read_address <> address_width
-    then
-      raise_s
-        [%message
-          "[Signal.multiport_memory] width of read address is inconsistent"
-            (port : int)
-            ~read_address_width:(width read_address : int)
-            ~expected:(address_width : int)]);
-  let write_ports =
-    if remove_unused_write_ports
-    then Array.filter write_ports ~f:(fun { write_enable; _ } -> is_gnd write_enable)
-    else write_ports
-  in
-  let memory =
-    add_attributes
-      (Multiport_mem
-         { signal_id = make_id data_width
-         ; size
-         ; write_ports
-         ; initialize_to = Option.map initialize_to ~f:Array.copy
-         })
-      attributes
-  in
-  Option.iter name ~f:(fun name -> ignore (memory -- name : t));
-  Array.map read_addresses ~f:(fun read_address ->
-    Mem_read_port { signal_id = make_id data_width; memory; read_address })
-;;
+include Multiport_memory.Make (struct
+    include Const_prop.Comb
 
-let multiport_memory
-  ?name
-  ?attributes
-  ?initialize_to
-  size
-  ~(write_ports : _ Write_port.t array)
-  ~read_addresses
-  =
-  if Array.is_empty write_ports
-  then raise_s [%message "[Signal.multiport_memory] requires at least one write port"];
-  if Array.is_empty read_addresses
-  then raise_s [%message "[Signal.multiport_memory] requires at least one read port"];
-  multiport_memory_prim
-    ?name
-    ?attributes
-    ?initialize_to
-    size
-    ~remove_unused_write_ports:false
-    ~data_width:(width write_ports.(0).write_data)
-    ~address_width:(width write_ports.(0).write_address)
-    ~write_ports
-    ~read_addresses
-;;
+    let multiport_memory_prim
+      ?name
+      ?(attributes = [])
+      ?initialize_to
+      size
+      ~remove_unused_write_ports
+      ~data_width
+      ~(write_ports : _ Write_port.t array)
+      ~read_addresses
+      =
+      let write_ports =
+        if remove_unused_write_ports
+        then Array.filter write_ports ~f:(fun { write_enable; _ } -> is_gnd write_enable)
+        else write_ports
+      in
+      let memory =
+        add_attributes
+          (Multiport_mem
+             { signal_id = make_id data_width
+             ; size
+             ; write_ports
+             ; initialize_to = Option.map initialize_to ~f:Array.copy
+             })
+          attributes
+      in
+      Option.iter name ~f:(fun name -> ignore (memory -- name : t));
+      Array.map read_addresses ~f:(fun read_address ->
+        Mem_read_port { signal_id = make_id data_width; memory; read_address })
+    ;;
+  end)
 
 let memory size ~write_port ~read_address =
   (multiport_memory size ~write_ports:[| write_port |] ~read_addresses:[| read_address |]).(
   0)
-;;
-
-let rom ~read_addresses initialize_to =
-  if Array.length read_addresses = 0
-  then raise_s [%message "Rom must have 1 or more read addresses"];
-  if Array.length initialize_to = 0
-  then raise_s [%message "Rom must have 1 or more initialization values"];
-  multiport_memory_prim
-    ~initialize_to
-    (Array.length initialize_to)
-    ~remove_unused_write_ports:true
-    ~data_width:(Bits.width initialize_to.(0))
-    ~address_width:(Int.ceil_log2 (Array.length initialize_to))
-    ~write_ports:[||]
-    ~read_addresses
 ;;
 
 let ram_rbw ?name ?attributes ~write_port ~(read_port : _ Read_port.t) size =
@@ -625,10 +539,12 @@ let ram_wbr ?name ?attributes ~write_port ~(read_port : _ Read_port.t) size =
   0)
 ;;
 
+let __ppx_auto_name = ( -- )
+
 (* Pretty printer *)
 let pp fmt t = Stdlib.Format.fprintf fmt "%s" ([%sexp (t : t)] |> Sexp.to_string_hum)
 
-module _ = Pretty_printer.Register (struct
+module (* Install pretty printer in top level *) _ = Pretty_printer.Register (struct
     type nonrec t = t
 
     let module_name = "Hardcaml.Signal"

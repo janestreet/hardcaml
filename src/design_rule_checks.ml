@@ -26,7 +26,7 @@ let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
   let clock_domains =
     Signal_graph.depth_first_search
       (Circuit.signal_graph t)
-      ~init:(Map.empty (module Signal.Uid))
+      ~init:(Map.empty (module Signal.Type.Uid))
       ~f_before:(fun unchanged signal ->
         match signal with
         | Reg { register = r; _ } ->
@@ -58,6 +58,6 @@ let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
       raise_s
         [%message
           "The following sequential elements have unexpected clock pin connections"
-            (signal_uid : Signal.Uid.t)
+            (signal_uid : Signal.Type.Uid.t)
             (signals : Signal.t list)])
 ;;

@@ -1,4 +1,4 @@
-(* A circuit is defined by transitively following the dependencies of its outputs,
+(* A f!circuit is defined by transitively following the dependencies of its outputs,
    stopping at unassigned wires or constants.  [Signal_graph.inputs] does this.
    All such unassigned wires are circuit inputs.  As a consequence, all other wires
    in a circuit are assigned, and hence cannot be changed. *)
@@ -7,7 +7,7 @@ open Base
 module Uid_set = Signal.Type.Uid_set
 
 module Signal_map = struct
-  type t = Signal.t Map.M(Signal.Uid).t [@@deriving sexp_of]
+  type t = Signal.t Map.M(Signal.Type.Uid).t [@@deriving sexp_of]
 
   let create graph =
     let add_signal map signal =
@@ -16,7 +16,7 @@ module Signal_map = struct
     in
     Signal_graph.depth_first_search
       graph
-      ~init:(Map.empty (module Signal.Uid))
+      ~init:(Map.empty (module Signal.Type.Uid))
       ~f_before:add_signal
   ;;
 end
@@ -43,7 +43,6 @@ module Config = struct
     ; port_checks : Port_checks.t
     ; add_phantom_inputs : bool
     ; modify_outputs : (Signal.t list -> Signal.t list[@sexp.opaque])
-    ; rtl_compatibility : Rtl_compatibility.t
     }
   [@@deriving sexp_of]
 
@@ -54,7 +53,6 @@ module Config = struct
     ; port_checks = Port_sets_and_widths
     ; add_phantom_inputs = true
     ; modify_outputs = Fn.id
-    ; rtl_compatibility = Vivado
     }
   ;;
 
@@ -65,7 +63,6 @@ module Config = struct
     ; port_checks = Port_sets_and_widths
     ; add_phantom_inputs = true
     ; modify_outputs = Fn.id
-    ; rtl_compatibility = Vivado
     }
   ;;
 end
@@ -264,7 +261,7 @@ let set_phantom_inputs circuit phantom_inputs =
 ;;
 
 let with_name t ~name = { t with name }
-let uid_equal a b = Signal.Uid.equal (Signal.uid a) (Signal.uid b)
+let uid_equal a b = Signal.Type.Uid.equal (Signal.uid a) (Signal.uid b)
 let is_input t signal = List.mem t.inputs signal ~equal:uid_equal
 let is_output t signal = List.mem t.outputs signal ~equal:uid_equal
 let signal_map t = Signal_map.create t.signal_graph
@@ -400,6 +397,21 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
        : Set.M(String).t)
   ;;
 
+  let check_port_and_output_lengths_match outputs =
+    let output_list = O.to_list outputs in
+    let port_names = O.Names_and_widths.port_names in
+    if List.(length port_names <> length output_list)
+    then
+      raise_s
+        [%message
+          "Number of ports in output interface"
+            ~_:(List.length port_names : int)
+            "does not match number of provided output signals!"
+            ~_:(List.length output_list : int)
+            "(are you using a wrong length list or array in the interface?)"
+            (port_names : string list)]
+  ;;
+
   let create_exn
     ?(config = Config.default)
     ?input_attributes
@@ -425,6 +437,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
     (* Construct outputs and apply attributes. *)
     let circuit_outputs =
       let ports =
+        check_port_and_output_lengths_match outputs;
         List.map2_exn O.Names_and_widths.port_names (O.to_list outputs) ~f:(fun n s ->
           n, Signal.output n s)
       in

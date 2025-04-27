@@ -6,8 +6,8 @@ module type S = sig
   [@@deriving hardcaml]
 
   val add_clear : Signal.t t -> Signal.t -> Signal.t t
-  val to_spec : Signal.t t -> Reg_spec.t
-  val to_spec_no_clear : Signal.t t -> Reg_spec.t
+  val to_spec : Signal.t t -> Signal.Reg_spec.t
+  val to_spec_no_clear : Signal.t t -> Signal.Reg_spec.t
 
   val reg
     :  Signal.t t

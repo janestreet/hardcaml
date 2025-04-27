@@ -11,7 +11,7 @@ type reg_or_wire =
 [@@deriving equal, sexp_of]
 
 type var =
-  { name : string
+  { name : Rope.t
   ; range : range
   ; reg_or_wire : reg_or_wire
   ; attributes : Rtl_attribute.t list
@@ -44,7 +44,10 @@ type multiport_memory_declaration =
 type declaration =
   | Logic of logic_declaration
   | Multiport_memory of multiport_memory_declaration
-  | Inst of logic_declaration
+  | Inst of
+      { logic : logic_declaration
+      ; instance_name : string
+      }
 [@@deriving sexp_of]
 
 type binop =
@@ -65,7 +68,6 @@ type assignment =
       ; arg_a : var
       ; op : binop
       ; arg_b : var
-      ; signed : bool
       }
   | Not of
       { lhs : var
@@ -190,14 +192,14 @@ type statement =
       { sensitivity_list : sensitivity_list
       ; always : always
       }
-  | Initial of { always : always array }
+  | Initial of { always : always list }
   | Mux of
       { to_assignment : unit -> statement
       ; to_always : unit -> statement
       ; is_mux2 : bool
       }
   | Multiport_mem of
-      { always : statement array
+      { always : statement list
       ; initial : statement option
       }
   | Mem_read_port of
@@ -213,17 +215,23 @@ type t =
   ; outputs : output list
   ; declarations : declaration list
   ; statements : statement list
-  ; var_map : declaration Map.M(Signal.Uid).t
+  ; var_map : declaration Map.M(Signal.Type.Uid).t
   (** Map all input, output and internal signals to a var declaration *)
+  ; config : Rtl_config.t (** Configuration for RTL emission. *)
   }
 [@@deriving sexp_of]
 
-val of_circuit : blackbox:bool -> language:Rtl_language.t -> Circuit.t -> t
+val of_circuit
+  :  blackbox:bool
+  -> language:Rtl_language.t
+  -> config:Rtl_config.t
+  -> Circuit.t
+  -> t
 
 (** Map signal names to mangled RTL names. This used in [Hardcaml_verilator]. *)
 module Signals_name_map : sig
   module Uid_with_index : sig
-    type t = Signal.Uid.t * int [@@deriving compare, sexp_of]
+    type t = Signal.Type.Uid.t * int [@@deriving compare, sexp_of]
 
     include Comparator.S with type t := t
   end

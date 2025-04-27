@@ -9,8 +9,8 @@
     [adder], [subtractors], [multipliers] and [comparators] show the total number of bits
     and the largest single node.
 
-    [multiplexers] are grouped by depth and show the total number of bits and largest
-    data width in each group.
+    [multiplexers] are grouped by depth and show the total number of bits and largest data
+    width in each group.
 
     [memories] are grouped by their aspect ratio - data width and depth.
 

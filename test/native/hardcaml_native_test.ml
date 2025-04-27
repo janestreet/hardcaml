@@ -1,0 +1,6 @@
+module Test_constant_propagation_arithmetic = Test_constant_propagation_arithmetic
+module Test_constants = Test_constants
+module Test_conversion = Test_conversion
+module Test_hierarchical_circuits = Test_hierarchical_circuits
+module Test_int_conversion = Test_int_conversion
+module Test_utils = Test_utils

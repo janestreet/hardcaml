@@ -1,7 +1,7 @@
 (** [Always] is a DSL that lets one describe a circuit in the same style as a Verliog
     [always] block.
 
-    [if] and [switch] control constructs are provided.  (<--) is used for assignment.
+    [if] and [switch] control constructs are provided. (<--) is used for assignment.
 
     Code is written as lists of assignments, if and control statements.
 
@@ -16,7 +16,7 @@
     assignment;
 
     {[
-      var <-- exp;
+      var <-- exp
     ]}
 
     if statements;
@@ -83,9 +83,9 @@
 
 open Base
 
-(** The type of variables in guarded assignments.  Variables may be asychronous
-    [wire]s, or synchronous [reg]s.  The current value of the variable may be
-    accessed through the [value] field below. *)
+(** The type of variables in guarded assignments. Variables may be asychronous [wire]s, or
+    synchronous [reg]s. The current value of the variable may be accessed through the
+    [value] field below. *)
 module Variable : sig
   type internal
 
@@ -103,6 +103,8 @@ module Variable : sig
 
   (** create a pipeline of registers *)
   val pipeline : (width:int -> depth:int -> t) Signal.with_register_spec
+
+  val __ppx_auto_name : t -> string -> t
 end
 
 type t = private
@@ -139,8 +141,14 @@ val proc : t list -> t
 (** assignment *)
 val ( <-- ) : Variable.t -> Signal.t -> t
 
-(** assignment with an integer constant - width is inferred *)
+(** assign an integer constant - width is inferred and value is truncated. *)
 val ( <--. ) : Variable.t -> int -> t
+
+(** assign an unsigned integer constant *)
+val ( <-:. ) : Variable.t -> int -> t
+
+(** assign a signed integer constant *)
+val ( <-+. ) : Variable.t -> int -> t
 
 (** increment (defaults to 1) *)
 val incr : ?by:int -> Variable.t -> t
@@ -153,8 +161,8 @@ module State_machine : sig
     { current : Signal.t
     ; is : 'a -> Signal.t
     ; set_next : 'a -> always
-    (** [switch cases] does a switch on all possible states.  The cases must be exhaustive
-        and irredundant.  If the cases are non-exhaustive, one can supply [~default] to
+    (** [switch cases] does a switch on all possible states. The cases must be exhaustive
+        and irredundant. If the cases are non-exhaustive, one can supply [~default] to
         make them exhaustive. *)
     ; switch : ?default:always list -> 'a cases -> always
     }
@@ -180,8 +188,7 @@ module State_machine : sig
       [encoding] chooses the state encoding from binary, gray or onehot. Generally binary
       is correctly identified by synthesizers and transformed to onehot.
 
-      [auto_wave_format] will automatically make state names show in waveforms.
-  *)
+      [auto_wave_format] will automatically make state names show in waveforms. *)
   val create
     :  ?encoding:Encoding.t (** default is [Binary] *)
     -> ?auto_wave_format:bool (** default is [true] *)
@@ -189,9 +196,13 @@ module State_machine : sig
          (** attributes to apply to the state register. Default is one_hot encoding up to
              32 states, sequential otherwise. *)
     -> ?enable:Signal.t
+    -> ?unreachable:'a list
+         (** List of states in [State.all] that cannot be defined nor set. *)
     -> (module State with type t = 'a)
-    -> Reg_spec.t
+    -> Signal.Reg_spec.t
     -> 'a t
+
+  val __ppx_auto_name : 'a t -> string -> 'a t
 end
 
 (** compile to structural code *)

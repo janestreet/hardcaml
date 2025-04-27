@@ -12,7 +12,7 @@ let output =
   in
   let output = wire 4 -- "result" in
   output
-  <== add_attribute (a +: b +:. 3) (Rtl_attribute.create "hello" ~value:(String "world"))
+  <-- add_attribute (a +: b +:. 3) (Rtl_attribute.create "hello" ~value:(String "world"))
       -- "tmp";
   output
 ;;
@@ -135,31 +135,25 @@ let%expect_test "Signal attributes on top of signals in VHDL" =
             a : in std_logic_vector(3 downto 0);
             result : out std_logic_vector(3 downto 0)
         );
+        attribute bar : integer;
+        attribute baz : boolean;
+        attribute hello : string;
+        attribute bar of b : signal is 10;
+        attribute baz of a : signal is true;
     end entity;
 
     architecture rtl of test is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_5 : std_logic_vector(3 downto 0);
         signal hc_4 : std_logic_vector(3 downto 0);
         signal tmp : std_logic_vector(3 downto 0);
+        attribute hello of tmp : signal is "world";
 
     begin
 
         hc_5 <= "0011";
-        hc_4 <= hc_slv(hc_uns(a) + hc_uns(b));
-        tmp <= hc_slv(hc_uns(hc_4) + hc_uns(hc_5));
+        hc_4 <= std_logic_vector(unsigned(a) + unsigned(b));
+        tmp <= std_logic_vector(unsigned(hc_4) + unsigned(hc_5));
         result <= tmp;
 
     end architecture;

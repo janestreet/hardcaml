@@ -1,6 +1,7 @@
 (library
  (name hardcaml_native_test)
  (libraries async bignum.bigint core expect_test_helpers_async
-   expect_test_helpers_core.expect_test_helpers_base hardcaml hardcaml_test)
+   expect_test_helpers_core.expect_test_helpers_base hardcaml hardcaml_test
+   jane_rope)
  (preprocess
   (pps ppx_hardcaml ppx_jane)))

@@ -16,7 +16,7 @@ let%expect_test "cases" =
   let cases' =
     [ "00", "001"; "10", "110" ] |> List.map ~f:(fun (m, v) -> of_string m, of_string v)
   in
-  let q = List.init 4 ~f:(fun i -> cases ~default (of_int ~width:2 i) cases') in
+  let q = List.init 4 ~f:(fun i -> cases ~default (of_int_trunc ~width:2 i) cases') in
   print_s [%message (q : t list)];
   [%expect {| (q (001 111 110 111)) |}]
 ;;
@@ -27,7 +27,7 @@ let%expect_test "first match output" =
     [ "00", "001"; "10", "110"; "10", "000" ]
     |> List.map ~f:(fun (m, v) -> of_string m, of_string v)
   in
-  let q = List.init 4 ~f:(fun i -> cases ~default (of_int ~width:2 i) cases') in
+  let q = List.init 4 ~f:(fun i -> cases ~default (of_int_trunc ~width:2 i) cases') in
   print_s [%message (q : t list)];
   [%expect {| (q (001 111 110 111)) |}]
 ;;

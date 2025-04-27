@@ -13,7 +13,8 @@ module Path : sig
   val to_list : t -> string list
 end
 
-(** Control of name generation in a hierarchy of modules. The position of a module within
+(** {v
+ Control of name generation in a hierarchy of modules. The position of a module within
     a hierarchy is determined by a path which leads back to the (single) top most parent
     module. Signal names may be pre-pended with some representation of that path.
 
@@ -28,7 +29,7 @@ end
 
     [Auto] mode works in conjunction with the [Hierarchy] module to automatically rewrite
     names with full paths without having to work with explicit path names.
-*)
+    v} *)
 module Naming_scheme : sig
   type t =
     | Auto
@@ -48,7 +49,8 @@ val create
   -> ?auto_label_hierarchical_ports:bool (** default [false] *)
   -> ?trace_properties:bool (** default [false] *)
   -> ?naming_scheme:Naming_scheme.t
-       (** defaults to [Full_path] when [flatten_design] is [true] and [No_path] otherwise. *)
+       (** defaults to [Full_path] when [flatten_design] is [true] and [No_path]
+           otherwise. *)
   -> ?name:string
   -> unit
   -> t
@@ -57,16 +59,15 @@ val create
     hierarchical path *)
 val sub_scope : t -> string -> t
 
-(** [path t] returns the {!Path.t} associated with [t]. This will determine the
-    prefix used when naming modules that are associated with this scope. *)
+(** [path t] returns the {!Path.t} associated with [t]. This will determine the prefix
+    used when naming modules that are associated with this scope. *)
 val path : t -> Path.t
 
-(** [circuit_database t] returns the circuit database associated with [t]. Note
-    that circuit databases are shared among {!sub_scope}s. *)
+(** [circuit_database t] returns the circuit database associated with [t]. Note that
+    circuit databases are shared among {!sub_scope}s. *)
 val circuit_database : t -> Circuit_database.t
 
-(** [flatten_design t] returns true when HardCaml will inline all module
-    instantiations. *)
+(** [flatten_design t] returns true when HardCaml will inline all module instantiations. *)
 val flatten_design : t -> bool
 
 (** [auto_label_hierarical_ports t] returns true when Hardcaml will add names to input and
@@ -93,17 +94,17 @@ val instance : t -> string option
 
 (** Creates a hierarchical name, built with [name], and applies it to the signal.
 
-    This is typically used as a partial application to construct a new signal
-    naming operator, .e.g:
+    This is typically used as a partial application to construct a new signal naming
+    operator, .e.g:
 
     {[
       let (--) = naming scope in
       let named_signal = some_signal -- "data" in
     ]} *)
-val naming : ?sep:string -> t -> Signal.t -> string -> Signal.t
+val naming : ?sep:string -> t -> loc:[%call_pos] -> Signal.t -> string -> Signal.t
 
-(** Creates an atomic proposition for use in an LTL formula,
-    naming the AP with the scope's name and the provided string argument *)
+(** Creates an atomic proposition for use in an LTL formula, naming the AP with the
+    scope's name and the provided string argument *)
 val make_ltl_ap : t -> string -> Signal.t -> Property.LTL.path
 
 val add_ltl_property : t -> string -> Property.LTL.path -> unit

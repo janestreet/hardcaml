@@ -11,7 +11,7 @@ let%expect_test "[is_pow2]" =
           "is_pow2"
             ~_:(i : int)
             "="
-            ~_:(Bits.is_pow2 (Bits.of_int ~width:bits i) : Bits.t)]
+            ~_:(Bits.is_pow2 (Bits.of_int_trunc ~width:bits i) : Bits.t)]
     done
   done;
   [%expect
@@ -54,8 +54,8 @@ let%expect_test "[is_pow2]" =
 ;;
 
 let sexp_of_bits_with_valid (t : Bits.t With_valid.t) =
-  if Bits.to_int t.valid = 1
-  then [%sexp (t.value |> Bits.to_int : int)]
+  if Bits.to_int_trunc t.valid = 1
+  then [%sexp (t.value |> Bits.to_int_trunc : int)]
   else [%message "<invalid>"]
 ;;
 
@@ -63,10 +63,10 @@ let test name (bits_f : Bits.t -> Bits.t With_valid.t) int_f =
   for bits = 1 to 4 do
     print_s [%message (bits : int)];
     for i = 0 to (1 lsl bits) - 1 do
-      let result = bits_f (Bits.of_int ~width:bits i) in
+      let result = bits_f (Bits.of_int_trunc ~width:bits i) in
       (match int_f i with
-       | exception _ -> require (Bits.is_gnd result.valid)
-       | x -> require_equal (module Int) x (result.value |> Bits.to_int));
+       | exception _ -> require (not (Bits.to_bool result.valid))
+       | x -> require_equal (module Int) x (result.value |> Bits.to_int_trunc));
       print_s [%message name ~_:(i : int) "=" ~_:(result : bits_with_valid)]
     done
   done

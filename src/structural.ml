@@ -502,7 +502,11 @@ module Base () = struct
 
   let width = width
   let wire = mk_wire
-  let ( -- ) a _ = a
+
+  let ( -- ) ~(loc : [%call_pos]) a _ =
+    ignore loc;
+    a
+  ;;
 
   let binop0 name a b =
     if width a <> width b then raise (Binop_arg_widths_different name);
@@ -769,6 +773,8 @@ end
        ()
    ]} *)
 
+let concat_map ?sep l ~f = Rope.concat ?sep (List.map l ~f)
+
 let get_attributes signal =
   match signal with
   | Module_input (_, _, _, attrs)
@@ -777,41 +783,41 @@ let get_attributes signal =
   | _ -> []
 ;;
 
-let attribute_value_to_string (v : Rtl_attribute.Value.t) =
+let attribute_value_to_rope (v : Rtl_attribute.Value.t) =
   match v with
-  | String s -> "\"" ^ s ^ "\""
-  | Int i -> Int.to_string i
-  | Bool b -> if b then "true" else "false"
+  | String s -> [%rope {|"%{s#String}"|}]
+  | Int i -> [%rope "%{i#Int}"]
+  | Bool b -> Rope.of_string (if b then "true" else "false")
 ;;
 
-let attributes_to_string attrs =
+let attributes_to_rope attrs =
   let body =
-    List.map attrs ~f:(fun attr ->
-      let name = Rtl_attribute.name attr in
-      match Rtl_attribute.value attr with
-      | None -> name
-      | Some value -> Printf.sprintf "%s=%s" name (attribute_value_to_string value))
-    |> String.concat ~sep:","
+    concat_map
+      attrs
+      ~f:(fun attr ->
+        let name = Rtl_attribute.name attr in
+        match Rtl_attribute.value attr with
+        | None -> Rope.of_string name
+        | Some value -> [%rope "%{name#String}=%{attribute_value_to_rope value}"])
+      ~sep:[%rope ","]
   in
-  Printf.sprintf "(* %s *)" body
+  [%rope "(* %{body} *)"]
 ;;
 
-let write_verilog os circuit =
-  let open Printf in
+let to_verilog circuit =
+  let name s = Rope.of_string (name s) in
   let declare typ signal =
-    (match get_attributes signal with
-     | [] -> ""
-     | attrs -> "  " ^ attributes_to_string attrs ^ "\n")
-    ^ "  "
-    ^ typ
-    ^ " "
-    ^ (if width signal = 1 then "" else sprintf "[%i:0] " (width signal - 1))
-    ^ name signal
+    let attrs =
+      match get_attributes signal with
+      | [] -> Rope.empty
+      | attrs -> [%rope "  %{attributes_to_rope attrs}\n"]
+    in
+    let width_spec =
+      if width signal = 1 then Rope.empty else [%rope "[%{(width signal - 1)#Int}:0] "]
+    in
+    [%rope "%{attrs}  %{typ#String} %{width_spec}%{name signal}"]
   in
-  let seperator sep l =
-    List.fold l ~init:"" ~f:(fun a s -> if String.is_empty a then s else a ^ sep ^ s)
-  in
-  let assign s0 s1 = os ("  assign " ^ name s0 ^ " = " ^ name s1 ^ ";\n") in
+  let assign s0 s1 = [%rope "  assign %{name s0} = %{name s1};\n"] in
   let part f = List.partition_tf ~f in
   let is_input = function
     | Module_input _ -> true
@@ -835,20 +841,22 @@ let write_verilog os circuit =
   let inouts, signals = part is_inout signals in
   let inst, signals = part is_inst signals in
   (* module interface *)
-  os ("module " ^ circuit.name ^ "\n");
-  os "(\n";
-  os
-    (seperator
-       ",\n"
-       (List.concat
-          [ List.map inputs ~f:(declare "input")
-          ; List.map outputs ~f:(declare "output")
-          ; List.map inouts ~f:(declare "inout")
-          ]));
-  os "\n);\n\n";
+  let io_ports =
+    let sep = [%rope ",\n"] in
+    Rope.concat
+      ~sep
+      ([ List.map inputs ~f:(declare "input")
+       ; List.map outputs ~f:(declare "output")
+       ; List.map inouts ~f:(declare "inout")
+       ]
+       |> List.concat)
+  in
   (* write wire declarations *)
-  let declare_wire s = os (declare "wire" s ^ ";\n") in
-  List.iter signals ~f:declare_wire;
+  let declare_wire s =
+    let wire s = declare "wire" s in
+    [%rope "%{wire s};\n"]
+  in
+  let wires = concat_map signals ~f:declare_wire in
   (* write assignments *)
   let connects = function
     | Empty | Instantiation_output _ | Instantiation_tristate _ -> false
@@ -856,92 +864,102 @@ let write_verilog os circuit =
   in
   let write_assignment s =
     match s with
-    | Internal_wire (_, _, con) -> if connects !con then assign s !con
+    | Internal_wire (_, _, con) -> if connects !con then assign s !con else Rope.empty
     | Internal_triwire (_, _, cons) ->
-      List.iter !cons ~f:(fun con -> if connects con then assign s con)
+      concat_map !cons ~f:(fun con -> if connects con then assign s con else Rope.empty)
     | Rtl_op (_, width, op) ->
-      os ("  assign " ^ name s ^ " = ");
-      (match op with
-       | Constant b -> os (Int.to_string width ^ "'b" ^ b)
-       | Select (hi, lo, s) ->
-         os (name s ^ "[" ^ Int.to_string hi ^ ":" ^ Int.to_string lo ^ "]")
-       | Concat d ->
-         os "{ ";
-         os (seperator ", " (List.map d ~f:name));
-         os " }"
-       | Mux (sel, d) ->
-         let rec write n l =
-           match l with
-           | [] -> ()
-           | [ x ] -> os ("    " ^ name x)
-           | x :: t ->
-             os ("    " ^ name sel ^ " == " ^ Int.to_string n ^ " ? " ^ name x ^ " :\n");
-             write (n + 1) t
-         in
-         os "\n";
-         write 0 d);
-      os ";\n"
+      let expr =
+        match op with
+        | Constant b -> [%rope "%{width#Int}'b%{b#String}"]
+        | Select (hi, lo, s) -> [%rope "%{name s}[%{hi#Int}:%{lo#Int}]"]
+        | Concat d ->
+          let parts = concat_map ~sep:[%rope ", "] d ~f:name in
+          [%rope "{ %{parts} }"]
+        | Mux (sel, d) ->
+          let rec write n l =
+            match l with
+            | [] -> Rope.empty
+            | [ x ] -> [%rope "    %{name x}"]
+            | x :: t ->
+              [%rope "    %{name sel} == %{n#Int} ? %{name x} :\n%{write (n+1) t}"]
+          in
+          [%rope "\n%{write 0 d}"]
+      in
+      [%rope "  assign %{name s} = %{expr};\n"]
     | _ -> failwith "write_assignment"
   in
-  List.iter signals ~f:write_assignment;
+  let assignments = concat_map signals ~f:write_assignment in
   (* write module outputs and inouts *)
   let assign_output s =
     match s with
-    | Module_output (_, _, _, con, _) -> if connects !con then assign s !con
+    | Module_output (_, _, _, con, _) ->
+      if connects !con then assign s !con else Rope.empty
     | Module_tristate (_, _, _, cons, _) ->
-      List.iter !cons ~f:(fun con -> if connects con then assign s con)
+      concat_map !cons ~f:(fun con -> if connects con then assign s con else Rope.empty)
     | _ -> failwith "assign_output"
   in
-  List.iter outputs ~f:assign_output;
-  List.iter inouts ~f:assign_output;
+  let assign_outputs = concat_map outputs ~f:assign_output in
+  let assign_inouts = concat_map inouts ~f:assign_output in
   (* write instantiations *)
   let write_inst = function
     | Instantiation (id, iname, g, i, o, t, instance_name, attributes) ->
-      if not (List.is_empty attributes)
-      then (
-        os "  ";
-        os (attributes_to_string attributes);
-        os "\n");
-      os ("  " ^ iname ^ "");
-      if not (List.is_empty g)
-      then (
-        os "\n  #(\n";
-        os
-          (seperator
-             ",\n"
-             (List.map g ~f:(fun (n, g) ->
-                "    ."
-                ^ n
-                ^ "("
-                ^ (match g with
-                   | GInt i -> Int.to_string i
-                   | GFloat f -> Float.to_string f
-                   | GString s -> "\"" ^ s ^ "\""
-                   | GUnquoted s -> s)
-                ^ ")")));
-        os "\n  )");
+      let attributes =
+        if List.is_empty attributes
+        then Rope.empty
+        else [%rope "  %{attributes_to_rope attributes}\n"]
+      in
+      let parameters =
+        let parameter (n, g) =
+          let value =
+            match g with
+            | GInt i -> [%rope "%{i#Int}"]
+            | GFloat f -> [%rope "%{f#Float}"]
+            | GString s -> [%rope {|"%{s#String}"|}]
+            | GUnquoted s -> Rope.of_string s
+          in
+          [%rope "    .%{n#String}(%{value})"]
+        in
+        if List.is_empty g
+        then Rope.empty
+        else (
+          let parameters = concat_map ~sep:[%rope ", \n"] g ~f:parameter in
+          [%rope "\n  #(\n%{parameters}\n  )"])
+      in
       let instance_name =
         match instance_name with
         | None -> "_" ^ Int.to_string id
         | Some instance_name -> instance_name
       in
-      os (" " ^ instance_name ^ "\n");
-      os "  (\n";
-      os
-        (seperator
-           ", \n"
-           (List.concat
-              [ List.map i ~f:(fun (n, s) -> "    ." ^ n ^ "(" ^ name s ^ ")")
-              ; List.map o ~f:(fun (n, s) -> "    ." ^ n ^ "(" ^ name s ^ ")")
-              ; List.map t ~f:(fun (n, s) -> "    ." ^ n ^ "(" ^ name s ^ ")")
-              ]));
-      os "\n  );\n"
+      let ports =
+        let sep = [%rope ", \n"] in
+        let port (n, s) = [%rope "    .%{n#String}(%{name s})"] in
+        Rope.concat
+          ~sep
+          ([ List.map i ~f:port; List.map o ~f:port; List.map t ~f:port ] |> List.concat)
+      in
+      [%rope_dedent
+        {|
+        > %{attributes}  %{iname#String}%{parameters} %{instance_name#String}
+        >   (
+        > %{ports}
+        >   );
+        >
+        |}]
     | _ ->
       (* This should never be raised *)
       raise_s [%message "Expecting an instantiation"]
   in
-  List.iter inst ~f:write_inst;
-  os "endmodule\n"
+  let insts = concat_map inst ~f:write_inst in
+  [%rope_dedent
+    {|
+    > module %{circuit.name#String}
+    > (
+    > %{io_ports}
+    > );
+    >
+    > %{wires}%{assignments}%{assign_outputs}%{assign_inouts}%{insts}endmodule
+    >
+    |}]
 ;;
 
 module With_interface (I : Interface.S) (O : Interface.S) (T : Interface.S) = struct

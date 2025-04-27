@@ -1,4 +1,4 @@
-(** The underlying representations of [Constant.t] and [Bits.t].  Not exposed by the
+(** The underlying representations of [Constant.t] and [Bits.t]. Not exposed by the
     Hardcaml interface.
 
     They are represented by 2 fields - a bit [width] and [data] represented as a
@@ -9,8 +9,7 @@
     is a requirement of functions over [Bits].
 
     It is represented with [Bytes.t] because that is a more efficient memory layout than
-    an ocaml array of [Int64]s.
-*)
+    an ocaml array of [Int64]s. *)
 open Base
 
 type t = private Bytes.t [@@deriving sexp, bin_io]
@@ -54,9 +53,8 @@ val init_int64 : width:int -> f:(int -> int64) -> t
 (** Get the n-th byte of the constant. *)
 val unsafe_get_byte : t -> int -> char
 
-(** Get the n-th 64-bit word of the constant. [unsafe_get_int64 t pos] accesses
-    the data at the [pos * 8]-th byte of t.
-*)
+(** Get the n-th 64-bit word of the constant. [unsafe_get_int64 t pos] accesses the data
+    at the [pos * 8]-th byte of t. *)
 val unsafe_get_int64 : t -> int -> int64
 
 (** Similar to [unsafe_get_int64], but for writing instead of reading. *)
@@ -65,9 +63,8 @@ val unsafe_set_int64 : t -> int -> int64 -> unit
 val get_int64 : t -> int -> int64
 val set_int64 : t -> int -> int64 -> unit
 
-(** Get the n-th 32-bit word of the constant. [unsafe_get_int32 t pos] accesses
-    the data at the [pos * 4]-th byte of t.
-*)
+(** Get the n-th 32-bit word of the constant. [unsafe_get_int32 t pos] accesses the data
+    at the [pos * 4]-th byte of t. *)
 val unsafe_get_int32 : t -> int -> int32
 
 val unsafe_set_int32 : t -> int -> int32 -> unit

@@ -136,7 +136,7 @@ an error if one is found.
         ~enable:i.incr
         (w +:. 1)
     in
-    w <== dout;
+    w <-- dout;
     { O.dout }
 val counter_with_wire : t I.t -> t O.t = <fun>
 # testbench counter_with_wire

@@ -2,13 +2,12 @@
 
     Exposes functions for constructing and scruntinizing a graph of signals. The function
     here are relevant for building transformations and generators based on a Hardcaml
-    design.  The [Signal] module exposes the functions used to build a Hardcaml design.
+    design. The [Signal] module exposes the functions used to build a Hardcaml design.
 
     This module is not directly exposed - it should be used through [Signal.Type].
 
     Note the double underscore in the module name is deliberate in order for Ocaml to
-    infer reasonable type names for signals.
-*)
+    infer reasonable type names for signals. *)
 
 open Base
 
@@ -90,11 +89,11 @@ module type Printable = sig
   type reg_spec
 
   (** [sexp_of_signal_recursive ~depth signal] converts a signal recursively to a sexp for
-      up to [depth] levels.  If [show_uids] is false then signal identifiers will not be
-      printed.  [max_list_length] controls how many [mux] and [concat] arguments
-      (dependancies) are printed. *)
+      up to [depth] levels. If [show_uids] is false then signal identifiers will not be
+      printed. [show_locs] includes source code locations. *)
   val sexp_of_signal_recursive
     :  ?show_uids:bool (** default is [false] *)
+    -> ?show_locs:bool (** default is [false] *)
     -> depth:int
     -> t
     -> Sexp.t
@@ -109,15 +108,14 @@ end
 
     All operations are implemented with [fold]. [fold], [iter] and [rev_map] are the most
     efficient as they only allocate whats strictly required. [map] and [to_list] allocate
-    the resulting list twice.
-*)
+    the resulting list twice. *)
 module type Deps = sig
   type t
 
   val fold : t -> init:'a -> f:('a -> t -> 'a) -> 'a
   val iter : t -> f:(t -> unit) -> unit
 
-  (** Map over the deps of [t].  Mapping occurs in order, but the result is reversed. *)
+  (** Map over the deps of [t]. Mapping occurs in order, but the result is reversed. *)
   val rev_map : t -> f:(t -> 'a) -> 'a list
 
   (** Implemented by [rev_map] with a list reversal at the end *)
@@ -144,10 +142,10 @@ module type Type = sig
   [@@deriving sexp_of, compare, equal, hash]
 
   type signal_metadata =
-    { mutable names : string list
+    { mutable names_and_locs : Name_and_loc.t list
     ; mutable attributes : Rtl_attribute.t list
     ; mutable comment : string option
-    ; mutable caller_id : Caller_id.t option
+    ; caller_id : Caller_id.t option
     ; mutable wave_format : Wave_format.t
     }
   [@@deriving sexp_of]
@@ -233,7 +231,7 @@ module type Type = sig
          if (reset == reset_level) d <= reset_to;
          else if (clear) d <= clear_to;
          else if (enable) d <= ...;
-     v} *)
+      v} *)
 
   and reg_spec =
     { clock : t
@@ -336,7 +334,7 @@ module type Signal__type = sig
   include Printable
   include Is_a
 
-  (** returns the (private) signal_id.  For internal use only. *)
+  (** returns the (private) signal_id. For internal use only. *)
   val signal_id : t -> signal_id option
 
   (** Returns the unique id of the signal. *)
@@ -345,10 +343,11 @@ module type Signal__type = sig
   (** Width in bits of [t]. *)
   val width : t -> int
 
+  (** Returns the list of names and source locations assigned to the signal. *)
+  val names_and_locs : t -> Name_and_loc.t list
+
   (** Returns the list of names assigned to the signal. *)
   val names : t -> string list
-
-  val caller_id : t -> Caller_id.t option
 
   (** Return the (binary) string representing a constants value. *)
   val const_value : t -> Bits.t
@@ -371,16 +370,18 @@ module type Signal__type = sig
   (** Creates a new signal uid. *)
   val new_id : unit -> Uid.t
 
-  (** Resets the signal identifiers. *)
-  val reset_id : unit -> unit
-
   (** Constructs a signal_id type. *)
   val make_id : int -> signal_id
 
   (** Create a constant *)
   val of_bits : Bits.t -> t
 
+  (** Returns true iff [t] is a constant, has width [1] and equals the value [1]. Does not
+      raise. *)
   val is_vdd : t -> bool
+
+  (** Returns true iff [t] is a constant, has width [1] and equals the value [0]. Does not
+      raise. *)
   val is_gnd : t -> bool
 
   (** Signal is a register or a memory with an [initialize_to] value specified *)
@@ -394,8 +395,8 @@ module type Signal__type = sig
   val set_comment : t -> string -> unit
   val get_comment : t -> string option
   val unset_comment : t -> unit
-  val add_name : t -> string -> unit
-  val set_names : t -> string list -> unit
+  val add_name : t -> Name_and_loc.t -> unit
+  val set_names : t -> Name_and_loc.t list -> unit
   val set_wave_format : t -> Wave_format.t -> unit
   val get_wave_format : t -> Wave_format.t
 

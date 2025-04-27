@@ -77,8 +77,8 @@ module In_scope (I : Interface.S) (O : Interface.S) = struct
 
   type create = Scope.t -> Interface.Create_fn(I)(O).t
 
-  let names s =
-    try Signal.names s with
+  let names_and_locs s =
+    try Signal.names_and_locs s with
     | _ -> []
   ;;
 
@@ -88,7 +88,10 @@ module In_scope (I : Interface.S) (O : Interface.S) = struct
     Signal_graph.iter
       (Signal_graph.create ~upto:(I.to_list inputs) (O.to_list outputs))
       ~f:(fun s ->
-        Signal.set_names s (List.map (names s) ~f:(fun n -> instance ^ "$" ^ n)));
+        Signal.set_names
+          s
+          (List.map (names_and_locs s) ~f:(fun n ->
+             { n with name = instance ^ "$" ^ n.name })));
     outputs
   ;;
 

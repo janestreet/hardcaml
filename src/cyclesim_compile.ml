@@ -40,10 +40,12 @@ module Nodes_and_addresses = struct
   module Constants = struct
     type t =
       { unique : Node.t Map.M(Bits).t
-      ; map : Node.t Map.M(Signal.Uid).t
+      ; map : Node.t Map.M(Signal.Type.Uid).t
       }
 
-    let empty = { unique = Map.empty (module Bits); map = Map.empty (module Signal.Uid) }
+    let empty =
+      { unique = Map.empty (module Bits); map = Map.empty (module Signal.Type.Uid) }
+    ;;
 
     let maybe_add t (node : Node.t) size =
       match node.signal with
@@ -153,7 +155,7 @@ end
 (* Mapping from signals to nodes. Note we don't touch regs_next here as it used during the
    sequential update phase. *)
 module Read_map = struct
-  type t = Node.t Map.M(Signal.Uid).t
+  type t = Node.t Map.M(Signal.Type.Uid).t
 
   let create (t : Nodes_and_addresses.t) : t =
     let map = t.consts.map in
@@ -512,7 +514,7 @@ let last_layer circuit (allocation : Node.t list) =
     Signal_graph.last_layer_of_nodes
       ~is_input:(Circuit.is_input circuit)
       (Circuit.signal_graph circuit)
-    |> Set.of_list (module Signal.Uid)
+    |> Set.of_list (module Signal.Type.Uid)
   in
   List.filter allocation ~f:(fun alloc -> Set.mem nodes (Signal.uid alloc.signal))
 ;;

@@ -3,10 +3,17 @@ open Signal
 
 let f_coefs = Test_fir_filter.f (List.init 4 ~f:(fun _ -> random ~width:16))
 
+let print ?scope circuit f =
+  Rtl.create ?database:(Option.map scope ~f:Scope.circuit_database) Verilog [ circuit ]
+  |> f
+  |> Rope.to_string
+  |> print_string
+;;
+
 let%expect_test "top level blackbox" =
   let module Circuit = Circuit.With_interface (Test_fir_filter.I) (Test_fir_filter.O) in
   let circuit = Circuit.create_exn ~name:"fir_filter_blackbox" f_coefs in
-  Rtl.print ~blackbox:Top Verilog circuit;
+  print circuit Rtl.top_levels_as_blackboxes;
   [%expect
     {|
     module fir_filter_blackbox (
@@ -38,7 +45,7 @@ let%expect_test "Instantiation blackbox" =
   let scope = Scope.create ~flatten_design:false () in
   let circuit = Circuit.create_exn ~name:"fir_filter_top" (f_inst scope) in
   (* Print the whole thing, include the fir filter sub-circuit. *)
-  Rtl.print ~database:(Scope.circuit_database scope) ~blackbox:None Verilog circuit;
+  print ~scope circuit Rtl.full_hierarchy;
   [%expect
     {|
     module fir_filter (
@@ -159,11 +166,7 @@ let%expect_test "Instantiation blackbox" =
     endmodule
     |}];
   (* Now just print the top level module, plus black boxes for the instantiations *)
-  Rtl.print
-    ~database:(Scope.circuit_database scope)
-    ~blackbox:Instantiations
-    Verilog
-    circuit;
+  print ~scope circuit Rtl.top_levels_and_blackboxes;
   [%expect
     {|
     module fir_filter (

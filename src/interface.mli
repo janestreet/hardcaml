@@ -7,8 +7,7 @@
       type t = { ... } [@@deriving hardcaml]
     ]}
 
-    The [sexp_of] is required, and must appear before [hardcaml].  This syntax
-    generates a call to [Interface.Make], which therefore does not need to be
-    explicitly called. *)
+    The [sexp_of] is required, and must appear before [hardcaml]. This syntax generates a
+    call to [Interface.Make], which therefore does not need to be explicitly called. *)
 
 include Interface_intf.Interface (** @inline *)

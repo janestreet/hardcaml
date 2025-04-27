@@ -131,7 +131,7 @@ let clock = Signal.input "clock" 1
 let clear = Signal.input "clear" 1
 let a = Signal.input "a" 8
 let b = Signal.input "b" 8
-let r_sync = Reg_spec.create ~clock ~clear ()
+let r_sync = Signal.Reg_spec.create ~clock ~clear ()
 
 let create =
   let open Signal in

@@ -108,7 +108,7 @@ at each iteration.
     let running_sum = msbs running_sum in
     (* Register the sum *)
     let sum = reg spec ~enable:vdd running_sum in
-    sum_w <== sum;
+    sum_w <-- sum;
     sum, running_sum_bit_out
 val running_sum_reg :
   Reg_spec.t -> Type.t -> Type.t -> Type.t -> Type.t * Type.t = <fun>
@@ -167,7 +167,7 @@ module Waveform = Hardcaml_waveterm.Waveform
 val create_sim :
   Circuit.t ->
   Waveform.t * (Cyclesim.Port_list.t, Cyclesim.Port_list.t) Cyclesim.t *
-  Bits.t ref * Bits.t ref * Bits.t ref * Bits.t ref = <fun>
+  Binary.t ref * Binary.t ref * Binary.t ref * Binary.t ref = <fun>
 ```
 
 The following testbench will take `a` and `b` and create a circuit
@@ -194,7 +194,7 @@ and return the final result.
     let result = !result in
     Cyclesim.cycle sim;
     waves, result
-val test : Bits.t -> Bits.t -> Waveform.t * Bits.t = <fun>
+val test : Binary.t -> Binary.t -> Waveform.t * Binary.t = <fun>
 ```
 
 Let's test our running examples of multiplying `3*5` and `100*99`.
@@ -202,11 +202,11 @@ Let's test our running examples of multiplying `3*5` and `100*99`.
 ```ocaml
 # let waves, result = test (Bits.of_unsigned_int ~width:2 3) (Bits.of_unsigned_int ~width:3 5)
 val waves : Waveform.t = <abstr>
-val result : Bits.t = 01111
+val result : Binary.t = 01111
 # Stdio.printf "%i" (Bits.to_unsigned_int result)
 15
 - : unit = ()
-# Waveform.print ~display_height:25 waves
+# Waveform.print waves
 ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
 │clock          ││┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌──│
 │               ││    └───┘   └───┘   └───┘   └───┘   └───┘   └───┘  │
@@ -228,13 +228,10 @@ val result : Bits.t = 01111
 │               ││────────┬───────┬───────┬───────                   │
 │running_sum_nex││ 3      │1      │3      │4                         │
 │               ││────────┴───────┴───────┴───────                   │
-│               ││                                                   │
-│               ││                                                   │
-│               ││                                                   │
 └───────────────┘└───────────────────────────────────────────────────┘
 - : unit = ()
 # let _, result = test (Bits.of_unsigned_int ~width:7 100) (Bits.of_unsigned_int ~width:7 99)
-val result : Bits.t = 10011010101100
+val result : Binary.t = 10011010101100
 # Stdio.printf "%i" (Bits.to_unsigned_int result)
 9900
 - : unit = ()

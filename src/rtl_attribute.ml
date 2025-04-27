@@ -61,6 +61,10 @@ module Vivado = struct
     create "ASYNC_REG" ~applies_to:[ Regs ] ~value:(true_or_false_string b)
   ;;
 
+  let user_sll_reg b =
+    create "USER_SLL_REG" ~applies_to:[ Regs ] ~value:(true_or_false_string b)
+  ;;
+
   let dont_touch b = create "dont_touch" ~value:(true_or_false_string b)
 
   let keep_hierarchy b =

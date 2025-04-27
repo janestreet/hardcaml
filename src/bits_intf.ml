@@ -6,9 +6,8 @@ module type Bits = sig
   include Comb.S with type t := t
   include Comparator.S with type t := t
 
-  (** The number of bytes used to represent the data in [t]. This excludes
-      any bytes used to represent any associated metadata.
-  *)
+  (** The number of bytes used to represent the data in [t]. This excludes any bytes used
+      to represent any associated metadata. *)
   val number_of_data_bytes : t -> int
 
   (** Get the i-th 64-bit word within the underlying representation. *)
@@ -20,10 +19,18 @@ module type Bits = sig
   val get_int64 : t -> int -> int64
   val set_int64 : t -> int -> int64 -> unit
 
+  (** Assign a simulation port to an integer value. Value is truncated if it cannot fit. *)
+  val ( <--. ) : t ref -> int -> unit
+
+  (** Assign a simulation port to an unsigned integer value. *)
+  val ( <-:. ) : t ref -> int -> unit
+
+  (** Assign a simulation port to a signed integer value. *)
+  val ( <-+. ) : t ref -> int -> unit
+
   module Expert : sig
-    (** Access the underlying data representation. Note that this is unstable,
-        and may change over time.
-    *)
+    (** Access the underlying data representation. Note that this is unstable, and may
+        change over time. *)
     val unsafe_underlying_repr : t -> bytes
 
     (** Offset to access actual data within in the underlying repr. *)
@@ -39,6 +46,8 @@ module type Bits = sig
       val empty : t
       val width : t -> int
       val to_string : t -> string
+      val equal : t -> t -> bool
+      val equal_bits : bits -> t -> bool
 
       (** Create a [t] of given width, initially set to [0]. *)
       val create : int -> t
@@ -62,7 +71,7 @@ module type Bits = sig
       val vdd : t
       val gnd : t
       val wire : int -> t
-      val ( -- ) : t -> string -> t
+      val ( -- ) : loc:[%call_pos] -> t -> string -> t
       val ( &: ) : t -> t -> t -> unit
       val ( |: ) : t -> t -> t -> unit
       val ( ^: ) : t -> t -> t -> unit
@@ -88,4 +97,13 @@ module type Bits = sig
 
   (** Pretty printer. *)
   val pp : Formatter.t -> t -> unit
+
+  module type To_sexp_and_string := sig
+    type nonrec t = t [@@deriving compare, sexp_of, to_string]
+  end
+
+  module Binary : To_sexp_and_string
+  module Hex : To_sexp_and_string
+  module Unsigned_int : To_sexp_and_string
+  module Signed_int : To_sexp_and_string
 end

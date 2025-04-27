@@ -1,100 +1,232 @@
 open Base
 
-let tab_len = 4
-let tab = String.init tab_len ~f:(Fn.const ' ')
-let tab2 = tab ^ tab
-let spaces n = String.init n ~f:(Fn.const ' ')
+(* Type of a VHDL attribute. *)
+module Attribute_type = struct
+  module Type = struct
+    type t =
+      | Int
+      | String
+      | Bool
+    [@@deriving sexp_of, equal]
 
-let slv (range : Rtl_ast.range) =
+    let to_string = function
+      | Int -> "integer"
+      | String -> "string"
+      | Bool -> "boolean"
+    ;;
+  end
+
+  type t =
+    { name : string
+    ; type_ : Type.t
+    }
+  [@@deriving sexp_of]
+
+  (* Map of all attributes in the design. An attribute may be present multiple times in
+     the design, but must only have one type.  The following ensures this. *)
+  let add_if_unique (attrs : t Map.M(String.Caseless).t) (attr : Rtl_attribute.t) =
+    Option.value_map ~default:attrs (Rtl_attribute.value attr) ~f:(function value ->
+      let name = Rtl_attribute.name attr in
+      let attr =
+        match value with
+        | Int _ -> { name; type_ = Int }
+        | String _ -> { name; type_ = String }
+        | Bool _ -> { name; type_ = Bool }
+      in
+      (match Map.find attrs name with
+       | Some { name; type_ } ->
+         if Type.equal type_ attr.type_
+         then attrs
+         else
+           raise_s
+             [%message
+               "Attribute used with two different types"
+                 (name : string)
+                 (type_ : Type.t)
+                 (attr.type_ : Type.t)]
+       | None -> Map.add_exn attrs ~key:name ~data:attr))
+  ;;
+
+  let add_from_var attrs (var : Rtl_ast.var) =
+    List.fold var.attributes ~init:attrs ~f:add_if_unique
+  ;;
+end
+
+let tab_len = 4
+let spaces n = String.init n ~f:(Fn.const ' ') |> Rope.of_string
+let tab = spaces 4
+let tab2 = spaces 8
+let concat_map ?sep t ~f = Rope.concat ?sep (List.map t ~f)
+
+let slv (range : Rtl_ast.range) two_state =
   match range with
-  | Bit -> "std_logic"
-  | Vector { width } -> [%string "std_logic_vector(%{(width-1)#Int} downto 0)"]
+  | Bit -> if two_state then [%rope "bit"] else [%rope "std_logic"]
+  | Vector { width } ->
+    if two_state
+    then [%rope "bit_vector(%{(width-1)#Int} downto 0)"]
+    else [%rope "std_logic_vector(%{(width-1)#Int} downto 0)"]
 ;;
 
-let input name range = [%string "%{name} : in %{slv range}"]
-let output name range = [%string "%{name} : out %{slv range}"]
+let slv_type (range : Rtl_ast.range) two_state =
+  match range with
+  | Bit -> if two_state then [%rope "bit"] else [%rope "std_logic"]
+  | Vector { width = _ } ->
+    if two_state then [%rope "bit_vector"] else [%rope "std_logic_vector"]
+;;
 
-let declare_io_ports buffer (ast : Rtl_ast.t) =
-  let add_string = Buffer.add_string buffer in
-  let hc = "hc_" in
+let to_integer (var : Rtl_ast.var) (two_state : bool) =
+  if Rtl_ast.equal_range var.range Bit
+  then
+    if two_state
+    then [%rope {|to_integer(unsigned'("" & %{var.name}))|}]
+    else [%rope {|to_integer(unsigned(std_logic_vector'("" & %{var.name})))|}]
+  else [%rope "to_integer(unsigned(%{var.name}))"]
+;;
+
+let input name range two_state = [%rope "%{name} : in %{slv range two_state}"]
+let output name range two_state = [%rope "%{name} : out %{slv range two_state}"]
+
+let attribute ~name ~class_ (attr : Rtl_attribute.t) =
+  match Rtl_attribute.value attr with
+  | None ->
+    (* In verilog we can have attributes with no value, but I am not sure how to do that
+       in vhdl - if you can at all. *)
+    Rope.empty
+  | Some attr_value ->
+    let attr_value =
+      match attr_value with
+      | String s -> [%rope {|"%{s#String}"|}]
+      | Int i -> [%rope "%{i#Int}"]
+      | Bool b -> if b then [%rope "true"] else [%rope "false"]
+    in
+    [%rope
+      "%{tab}attribute %{Rtl_attribute.name attr#String} of %{name} : %{class_#String} \
+       is %{attr_value};\n"]
+;;
+
+let attributes ~name ~class_ attrs = concat_map attrs ~f:(attribute ~name ~class_)
+
+let attributes_of_var ~class_ (var : Rtl_ast.var) =
+  attributes ~name:var.name ~class_ var.attributes
+;;
+
+let numeric_lib two_state =
+  Rope.of_string (if two_state then "numeric_bit" else "numeric_std")
+;;
+
+let preamble two_state =
+  if two_state
+  then
+    [%rope
+      {|%{tab}-- Conversions
+%{tab}function to_bit(s : std_ulogic) return bit is begin return to_bit(s, '0'); end;
+%{tab}function to_bitvector(s : std_ulogic_vector) return bit_vector is begin return to_bitvector(s, '0'); end;
+|}]
+  else Rope.empty
+;;
+
+let declare_io_ports (ast : Rtl_ast.t) (attrs : Attribute_type.t list) : Rope.t =
+  let two_state = ast.config.two_state in
   let io_ports =
-    String.concat
-      ~sep:[%string ";\n%{tab2}"]
+    Rope.concat
+      ~sep:[%rope ";\n%{tab2}"]
       (List.concat
-         [ List.map ast.inputs ~f:(fun { name; range; _ } -> input name range)
+         [ List.map ast.inputs ~f:(fun { name; range; _ } -> input name range two_state)
          ; List.map ast.outputs ~f:(fun { output = { name; range; _ }; driven_by = _ } ->
-             output name range)
+             output name range two_state)
          ])
   in
-  add_string
-    [%string
-      {|library ieee;
+  let attribute_types =
+    match attrs with
+    | [] -> Rope.empty
+    | _ ->
+      concat_map attrs ~f:(fun { name; type_ } ->
+        [%rope "%{tab}attribute %{name#String} : %{type_#Attribute_type.Type};\n"])
+  in
+  let attributes =
+    Rope.concat
+      [ concat_map ast.inputs ~f:(attributes_of_var ~class_:"signal")
+      ; concat_map ast.outputs ~f:(fun { output; _ } ->
+          attributes_of_var ~class_:"signal" output)
+      ]
+  in
+  let two_state = ast.config.two_state in
+  [%rope
+    {|library ieee;
 use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
+use ieee.%{numeric_lib two_state}.all;
 
-entity %{ast.name} is
+entity %{ast.name#String} is
 %{tab}port (
 %{tab2}%{io_ports}
 %{tab});
-end entity;
+%{attribute_types}%{attributes}end entity;
 
-architecture rtl of %{ast.name} is
-
-%{tab}-- conversion functions
-%{tab}function %{hc}uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-%{tab}function %{hc}uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-%{tab}function %{hc}sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-%{tab}function %{hc}sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-%{tab}function %{hc}sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-%{tab}function %{hc}sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-%{tab}function %{hc}sl (a : signed)           return std_logic        is begin return a(a'right); end;
-%{tab}function %{hc}sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-%{tab}function %{hc}slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-%{tab}function %{hc}slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-%{tab}function %{hc}slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
+architecture rtl of %{ast.name#String} is
+%{preamble two_state}
 |}]
-;;
-
-let raise_vhdl_doesnt_support_attributes_yet () =
-  raise_s [%message "[Rtl_vhdl_of_ast] Signal attributes are not supported in VHDL yet"]
-;;
-
-let vhdl_doesnt_support_attributes_yet attributes =
-  let raise_on_attributes = false in
-  if raise_on_attributes && not (List.is_empty attributes)
-  then raise_vhdl_doesnt_support_attributes_yet ()
 ;;
 
 let vhdl_constant constant =
   if Bits.width constant = 1
-  then [%string "'%{Bits.to_bstr constant}'"]
-  else [%string "\"%{Bits.to_bstr constant}\""]
+  then [%rope "'%{Bits.to_bstr constant#String}'"]
+  else [%rope "\"%{Bits.to_bstr constant#String}\""]
 ;;
 
-let declaration buffer (decl : Rtl_ast.declaration) =
-  let add_string = Buffer.add_string buffer in
-  let write_var (decl : Rtl_ast.logic_declaration) (var : Rtl_ast.var) =
+let protected_memory_type ~(memory : Rtl_ast.var) ~memory_type ~two_state ~depth =
+  let slv_ranged = slv memory.range two_state in
+  let slv_type = slv_type memory.range two_state in
+  [%rope
+    {|%{tab}type %{memory_type#String} is protected
+%{tab}%{tab}procedure set(address : integer; data : %{slv_ranged});
+%{tab}%{tab}impure function get(address : integer) return %{slv_type};
+%{tab}end protected;
+%{tab}type %{memory_type#String} is protected body
+%{tab}%{tab}type t is array (0 to %{(depth-1)#Int}) of %{slv_ranged};
+%{tab}%{tab}variable memory : t;
+%{tab}%{tab}procedure set(address : integer; data : %{slv_ranged}) is begin memory(address) := data; end procedure;
+%{tab}%{tab}impure function get(address : integer) return %{slv_type} is begin return memory(address); end function;
+%{tab}end protected body;
+|}]
+;;
+
+let shared_memory_variable ~(memory : Rtl_ast.var) ~memory_type =
+  [%rope "%{tab}shared variable %{memory.name} : %{memory_type#String};\n"]
+;;
+
+let declaration (decl : Rtl_ast.declaration) ~two_state =
+  let write_var ~write_attrs (decl : Rtl_ast.logic_declaration) (var : Rtl_ast.var) =
     let initialize_to =
-      Option.value_map ~default:"" decl.initialize_to ~f:(fun i ->
-        [%string " := %{vhdl_constant i}"])
+      Option.value_map ~default:Rope.empty decl.initialize_to ~f:(fun i ->
+        [%rope " := %{vhdl_constant i}"])
     in
-    vhdl_doesnt_support_attributes_yet var.attributes;
-    add_string [%string "%{tab}signal %{var.name} : %{slv var.range}%{initialize_to};\n"]
+    let attrs =
+      if write_attrs then attributes_of_var ~class_:"signal" var else Rope.empty
+    in
+    [%rope
+      "%{tab}signal %{var.name} : %{slv var.range two_state}%{initialize_to};\n%{attrs}"]
   in
   match decl with
-  | Logic decl -> List.iter decl.all_names ~f:(write_var decl)
-  | Inst inst -> List.iter inst.all_names ~f:(write_var inst)
+  | Logic decl -> concat_map decl.all_names ~f:(write_var ~write_attrs:true decl)
+  | Inst { logic; instance_name } ->
+    Rope.concat
+      [ concat_map logic.all_names ~f:(write_var ~write_attrs:false logic)
+      ; attributes
+          ~name:[%rope "%{instance_name#String}"]
+          ~class_:"label"
+          logic.write.attributes
+      ]
   | Multiport_memory { memory; memory_type; depth; range = _ } ->
-    vhdl_doesnt_support_attributes_yet memory.attributes;
-    add_string
-      [%string
-        "%{tab}type %{memory_type} is array (0 to %{(depth-1)#Int}) of %{slv \
-         memory.range};\n"];
-    add_string [%string "%{tab}signal %{memory.name} : %{memory_type};\n"]
+    let attrs = attributes_of_var ~class_:"variable" memory in
+    Rope.concat
+      [ protected_memory_type ~memory ~memory_type ~two_state ~depth
+      ; shared_memory_variable ~memory ~memory_type
+      ; attrs
+      ]
 ;;
 
-let declarations buffer (ast : Rtl_ast.t) =
-  List.iter ast.declarations ~f:(declaration buffer)
+let declarations (ast : Rtl_ast.t) =
+  concat_map ast.declarations ~f:(declaration ~two_state:ast.config.two_state)
 ;;
 
 let rec case_types_are_integer (cases : Rtl_ast.case list) =
@@ -105,254 +237,320 @@ let rec case_types_are_integer (cases : Rtl_ast.case list) =
   | { match_with = Const _; statements = _ } :: _ -> false
 ;;
 
-let rec write_always_statements indent buffer (t : Rtl_ast.always) =
-  let add_string = Buffer.add_string buffer in
+let rec write_always_statements indent (two_state : bool) (t : Rtl_ast.always) =
   let block indent ts ~f =
     match ts with
-    | [ _ ] -> f (indent ^ tab)
+    | [ _ ] -> f (Rope.concat [ indent; tab ])
     | _ ->
-      add_string [%string "%{indent}begin\n"];
-      f (indent ^ tab);
-      add_string [%string "%{indent}end\n"]
+      Rope.concat
+        [ [%rope "%{indent}begin\n"]
+        ; f (Rope.concat [ indent; tab ])
+        ; [%rope "%{indent}end\n"]
+        ]
   in
   let cond (c : Rtl_ast.condition) =
     match c with
-    | Level { level = High; var } -> [%string "%{var.name} = '1'"]
-    | Level { level = Low; var } -> [%string "%{var.name} = '0'"]
+    | Level { level = High; var } -> [%rope "%{var.name} = '1'"]
+    | Level { level = Low; var } -> [%rope "%{var.name} = '0'"]
     | Edge { edge = Rising; var } | Clock { edge = Rising; clock = var } ->
-      [%string "rising_edge(%{var.name})"]
+      [%rope "rising_edge(%{var.name})"]
     | Edge { edge = Falling; var } | Clock { edge = Falling; clock = var } ->
-      [%string "falling_edge(%{var.name})"]
+      [%rope "falling_edge(%{var.name})"]
   in
   match t with
   | If { condition; on_true; on_false = [] } ->
-    add_string [%string "%{indent}if %{cond condition} then\n"];
-    block indent on_true ~f:(fun indent ->
-      List.iter on_true ~f:(write_always_statements indent buffer));
-    add_string [%string "%{indent}end if;\n"]
+    Rope.concat
+      [ [%rope "%{indent}if %{cond condition} then\n"]
+      ; block indent on_true ~f:(fun indent ->
+          concat_map on_true ~f:(write_always_statements indent two_state))
+      ; [%rope "%{indent}end if;\n"]
+      ]
   | If { condition; on_true; on_false } ->
-    add_string [%string "%{indent}if %{cond condition} then\n"];
-    block indent on_true ~f:(fun indent ->
-      List.iter on_true ~f:(write_always_statements indent buffer));
-    add_string [%string "%{indent}else\n"];
-    block indent on_false ~f:(fun indent ->
-      List.iter on_false ~f:(write_always_statements indent buffer));
-    add_string [%string "%{indent}end if;\n"]
-  | Assignment { lhs; rhs } ->
-    add_string [%string "%{indent}%{lhs.name} <= %{rhs.name};\n"]
+    Rope.concat
+      [ [%rope "%{indent}if %{cond condition} then\n"]
+      ; block indent on_true ~f:(fun indent ->
+          concat_map on_true ~f:(write_always_statements indent two_state))
+      ; [%rope "%{indent}else\n"]
+      ; block indent on_false ~f:(fun indent ->
+          concat_map on_false ~f:(write_always_statements indent two_state))
+      ; [%rope "%{indent}end if;\n"]
+      ]
+  | Assignment { lhs; rhs } -> [%rope "%{indent}%{lhs.name} <= %{rhs.name};\n"]
   | Memory_assignment { lhs; index; rhs } ->
-    add_string
-      [%string
-        "%{indent}%{lhs.name}(to_integer(hc_uns(%{index.name}))) <= %{rhs.name};\n"]
+    [%rope "%{indent}%{lhs.name}.set(%{to_integer index two_state}, %{rhs.name});\n"]
   | Constant_memory_assignment { lhs; index; value } ->
-    add_string [%string "%{indent}%{lhs.name}(%{index#Int}) <= %{vhdl_constant value};\n"]
+    [%rope "%{indent}%{lhs.name}.set(%{index#Int}, %{vhdl_constant value});\n"]
   | Case { select; cases } ->
-    if case_types_are_integer cases
-    then add_string [%string "%{indent}case to_integer(%{select.name}) is\n"]
-    else add_string [%string "%{indent}case %{select.name} is\n"];
-    List.iter cases ~f:(fun case ->
-      let statements =
-        match case with
-        | { match_with = Int index; statements } ->
-          add_string [%string "%{indent}when %{index#Int} =>\n"];
-          statements
-        | { match_with = Const bits; statements } ->
-          add_string [%string "%{indent}when %{vhdl_constant bits} =>\n"];
-          statements
-        | { match_with = Default; statements } ->
-          add_string [%string "%{indent}when others =>\n"];
-          statements
-      in
-      block indent statements ~f:(fun indent ->
-        List.iter statements ~f:(write_always_statements indent buffer)));
-    add_string [%string "%{indent}end case;\n"]
+    Rope.concat
+      [ (if case_types_are_integer cases
+         then [%rope "%{indent}case %{to_integer select two_state} is\n"]
+         else [%rope "%{indent}case %{select.name} is\n"])
+      ; concat_map cases ~f:(fun case ->
+          let case, statements =
+            match case with
+            | { match_with = Int index; statements } ->
+              [%rope "%{indent}when %{index#Int} =>\n"], statements
+            | { match_with = Const bits; statements } ->
+              [%rope "%{indent}when %{vhdl_constant bits} =>\n"], statements
+            | { match_with = Default; statements } ->
+              [%rope "%{indent}when others =>\n"], statements
+          in
+          Rope.concat
+            [ case
+            ; block indent statements ~f:(fun indent ->
+                concat_map statements ~f:(write_always_statements indent two_state))
+            ])
+      ; [%rope "%{indent}end case;\n"]
+      ]
 ;;
 
-let write_always buffer (sensitivity_list : Rtl_ast.sensitivity_list) always =
-  let add_string = Buffer.add_string buffer in
+let write_always (two_state : bool) (sensitivity_list : Rtl_ast.sensitivity_list) always =
   let sensitivity_list =
     match sensitivity_list with
-    | Star -> "(all)"
+    | Star -> [%rope "(all)"]
     | Edges edges ->
       let edges =
-        List.map edges ~f:(fun { edge = _; var } -> var.name) |> String.concat ~sep:", "
+        concat_map
+          edges
+          ~f:(fun { edge = _; var } -> [%rope "%{var.name}"])
+          ~sep:[%rope ", "]
       in
-      [%string "(%{edges})"]
+      [%rope "(%{edges})"]
   in
-  add_string [%string "%{tab}process %{sensitivity_list} begin\n"];
-  write_always_statements tab2 buffer always;
-  add_string [%string "%{tab}end process;\n"]
+  Rope.concat
+    [ [%rope "%{tab}process %{sensitivity_list} begin\n"]
+    ; write_always_statements tab2 two_state always
+    ; [%rope "%{tab}end process;\n"]
+    ]
 ;;
 
-let write_initial buffer always =
-  let add_string = Buffer.add_string buffer in
-  add_string [%string "%{tab}process begin\n"];
-  Array.iter always ~f:(fun always -> write_always_statements tab2 buffer always);
-  add_string [%string "%{tab2}wait;\n"];
-  add_string [%string "%{tab}end process;\n"]
+let write_initial two_state always =
+  Rope.concat
+    [ [%rope "%{tab}process begin\n"]
+    ; concat_map always ~f:(write_always_statements tab2 two_state)
+    ; [%rope "%{tab2}wait;\n"]
+    ; [%rope "%{tab}end process;\n"]
+    ]
 ;;
 
 let parameter_value (p : Parameter.t) =
-  match p.value with
-  | String v -> [%string {|"%{v}"|}]
-  | Int v -> [%string "%{v#Int}"]
-  (* For consistency with VHDL but not proven necessary for verilog. In terms of
-     formatting floats, printfs [%f] seems to do with right thing. *)
-  | Real v -> Printf.sprintf "%f" v
-  | Bool b -> if b then "true" else "false"
-  | Bit b -> if b then "'1'" else "'0'"
-  | Std_logic_vector v ->
-    [%string {|std_logic_vector'("%{Logic.Std_logic_vector.to_string v}")|}]
-  | Std_ulogic_vector v ->
-    [%string {|std_ulogic_vector'("%{(Logic.Std_logic_vector.to_string v)}")|}]
-  | Bit_vector v -> [%string {|"%{(Logic.Bit_vector.to_string v)}"|}]
-  | Std_logic b | Std_ulogic b ->
-    (* According to the modelsim manual, you must encode the enumeration index. I suspect
-       this is not especially portable. *)
-    [%string "'%{(Logic.Std_logic.to_char b)#Char}'"]
+  let rec value_to_string (value : Parameter.Value.t) =
+    match value with
+    | String v -> [%string {|"%{v}"|}]
+    | Int v -> [%string "%{v#Int}"]
+    (* For consistency with VHDL but not proven necessary for verilog. In terms of
+       formatting floats, printfs [%f] seems to do with right thing. *)
+    | Real v -> Printf.sprintf "%f" v
+    | Bool b -> if b then "true" else "false"
+    | Bit b -> if b then "'1'" else "'0'"
+    | Std_logic_vector v ->
+      [%string {|std_logic_vector'("%{Logic.Std_logic_vector.to_string v}")|}]
+    | Std_ulogic_vector v ->
+      [%string {|std_ulogic_vector'("%{(Logic.Std_logic_vector.to_string v)}")|}]
+    | Bit_vector v -> [%string {|"%{(Logic.Bit_vector.to_string v)}"|}]
+    | Std_logic b | Std_ulogic b ->
+      (* According to the modelsim manual, you must encode the enumeration index. I
+         suspect this is not especially portable. *)
+      [%string "'%{(Logic.Std_logic.to_char b)#Char}'"]
+    | Array l ->
+      let array = List.map l ~f:value_to_string |> String.concat ~sep:", " in
+      [%string "(%{array})"]
+  in
+  value_to_string p.value |> Rope.of_string
 ;;
 
-let write_instantiation buffer (instantiation : Rtl_ast.instantiation) =
-  let add_string = Buffer.add_string buffer in
-  add_string
-    [%string "%{tab}%{instantiation.instance}: entity work.%{instantiation.name} (rtl)\n"];
-  (match instantiation.parameters with
-   | [] -> ()
-   | parameters ->
-     let parameters =
-       String.concat
-         ~sep:[%string ",\n%{spaces (tab_len*3 + 10)}"]
-         (List.map parameters ~f:(fun p ->
-            let name, value = Parameter_name.to_string p.name, parameter_value p in
-            [%string "%{name} => %{value}"]))
-     in
-     add_string [%string "%{tab2}generic map ( %{parameters} )\n"]);
-  let input_ports =
-    List.map instantiation.input_ports ~f:(fun { port_name; connection } ->
-      [%string "%{port_name} => %{connection.name}"])
-  in
-  let output_ports =
-    match instantiation.output_ports with
-    | [ { port_name; connection; high = 0; low = 0 } ] ->
-      [ [%string "%{port_name} => %{connection.name}"] ]
-    | output_ports ->
-      List.map output_ports ~f:(fun { port_name; connection; high; low } ->
-        if high = low
-        then [%string "%{port_name} => %{connection.name}(%{low#Int})"]
-        else [%string "%{port_name} => %{connection.name}(%{high#Int} downto %{low#Int})"])
-  in
-  let ports =
-    String.concat
-      ~sep:[%string ",\n%{spaces (tab_len*3 + 7)}"]
-      (input_ports @ output_ports)
-  in
-  add_string [%string "%{tab2}port map ( %{ports} );\n"]
+let write_instantiation (instantiation : Rtl_ast.instantiation) =
+  Rope.concat
+    [ [%rope
+        "%{tab}%{instantiation.instance#String}: entity \
+         work.%{instantiation.name#String} (rtl)\n"]
+    ; (match instantiation.parameters with
+       | [] -> Rope.empty
+       | parameters ->
+         let parameters =
+           concat_map ~sep:[%rope ",\n%{spaces (tab_len*3 + 10)}"] parameters ~f:(fun p ->
+             let name, value = Parameter_name.to_string p.name, parameter_value p in
+             [%rope "%{name#String} => %{value}"])
+         in
+         [%rope "%{tab2}generic map ( %{parameters} )\n"])
+    ; (let input_ports =
+         List.map instantiation.input_ports ~f:(fun { port_name; connection } ->
+           [%rope "%{port_name#String} => %{connection.name}"])
+       in
+       let output_ports =
+         match instantiation.output_ports with
+         | [ { port_name; connection; high = 0; low = 0 } ] ->
+           [ [%rope "%{port_name#String} => %{connection.name}"] ]
+         | output_ports ->
+           List.map output_ports ~f:(fun { port_name; connection; high; low } ->
+             if high = low
+             then [%rope "%{port_name#String} => %{connection.name}(%{low#Int})"]
+             else
+               [%rope
+                 "%{port_name#String} => %{connection.name}(%{high#Int} downto \
+                  %{low#Int})"])
+       in
+       let ports =
+         Rope.concat
+           ~sep:[%rope ",\n%{spaces (tab_len*3 + 7)}"]
+           (input_ports @ output_ports)
+       in
+       [%rope "%{tab2}port map ( %{ports} );\n"])
+    ]
 ;;
 
-let operator : Rtl_ast.binop -> string = function
-  | Add -> "+"
-  | Sub -> "-"
-  | And -> "and"
-  | Or -> "or"
-  | Xor -> "xor"
-  | Mulu -> "*"
-  | Muls -> "*"
-  | Eq -> "="
-  | Lt -> "<"
+let operator (op : Rtl_ast.binop) =
+  Rope.of_string
+    (match op with
+     | Add -> "+"
+     | Sub -> "-"
+     | And -> "and"
+     | Or -> "or"
+     | Xor -> "xor"
+     | Mulu -> "*"
+     | Muls -> "*"
+     | Eq -> "?="
+     | Lt -> "?<")
 ;;
 
-let rec statement buffer (stat : Rtl_ast.statement) =
-  let add_string = Buffer.add_string buffer in
-  let assign (lhs : Rtl_ast.var) expr =
+let rec statement two_state (stat : Rtl_ast.statement) =
+  let assign (lhs : Rtl_ast.var) expr = [%rope "%{tab}%{lhs.name} <= %{expr};\n"] in
+  let std_logic_vector x = [%rope "std_logic_vector(%{x})"] in
+  let bit_vector x = [%rope "bit_vector(%{x})"] in
+  let assign_vec (lhs : Rtl_ast.var) expr =
     if Rtl_ast.equal_range Bit lhs.range
-    then [%string "%{tab}%{lhs.name} <= hc_sl(%{expr});\n"]
-    else [%string "%{tab}%{lhs.name} <= hc_slv(%{expr});\n"]
+    then assign lhs [%rope {|(%{expr}) ?= "1"|}]
+    else if two_state
+    then assign lhs (bit_vector expr)
+    else assign lhs (std_logic_vector expr)
+  in
+  let to_vector (signedness : Signedness.t) (a : Rtl_ast.var) =
+    (* Parenthesization is handled below because bit conversions don't need extra parens *)
+    let signedness e =
+      match signedness with
+      | Unsigned -> [%rope "unsigned%{e}"]
+      | Signed -> [%rope "signed%{e}"]
+    in
+    if Rtl_ast.equal_range Bit a.range
+    then
+      signedness
+        (if two_state
+         then [%rope {|'("" & %{a.name})|}]
+         else [%rope {|(std_logic_vector'("" & %{a.name}))|}])
+    else signedness [%rope "(%{a.name})"]
   in
   match stat with
-  | Assignment (Not { lhs; arg }) ->
-    add_string (assign lhs [%string "not hc_uns(%{arg.name})"])
+  | Assignment (Not { lhs; arg }) -> assign lhs [%rope "not %{arg.name}"]
   | Assignment (Concat { lhs; args }) ->
-    let args = List.map args ~f:(fun arg -> arg.name) |> String.concat ~sep:" & " in
-    add_string [%string "%{tab}%{lhs.name} <= %{args};\n"]
-  | Assignment (Binop { lhs; arg_a; op; arg_b; signed = false }) ->
-    add_string
-      (assign lhs [%string "hc_uns(%{arg_a.name}) %{operator op} hc_uns(%{arg_b.name})"])
-  | Assignment (Binop { lhs; arg_a; op; arg_b; signed = true }) ->
-    add_string
-      (assign lhs [%string "hc_sgn(%{arg_a.name}) %{operator op} hc_sgn(%{arg_b.name})"])
-  | Assignment (Wire { lhs; driver }) ->
-    add_string [%string "%{tab}%{lhs.name} <= %{driver.name};\n"]
+    let args = concat_map args ~f:(fun arg -> [%rope "%{arg.name}"]) ~sep:[%rope " & "] in
+    assign lhs args
+  | Assignment (Binop { lhs; arg_a; op = (Or | Xor | And) as op; arg_b }) ->
+    assign lhs [%rope "%{arg_a.name} %{operator op} %{arg_b.name}"]
+  | Assignment (Binop { lhs; arg_a; op = Muls; arg_b }) ->
+    assign_vec
+      lhs
+      [%rope "%{to_vector Signed arg_a} %{operator Muls} %{to_vector Signed arg_b}"]
+  | Assignment (Binop { lhs; arg_a; op = Mulu; arg_b }) ->
+    assign_vec
+      lhs
+      [%rope "%{to_vector Unsigned arg_a} %{operator Mulu} %{to_vector Unsigned arg_b}"]
+  | Assignment (Binop { lhs; arg_a; op = (Add | Sub) as op; arg_b }) ->
+    assign_vec
+      lhs
+      [%rope "%{to_vector Unsigned arg_a} %{operator op} %{to_vector Unsigned arg_b}"]
+  | Assignment (Binop { lhs; arg_a; op = (Lt | Eq) as op; arg_b }) ->
+    assign
+      lhs
+      [%rope "%{to_vector Unsigned arg_a} %{operator op} %{to_vector Unsigned arg_b}"]
+  | Assignment (Wire { lhs; driver }) -> assign lhs driver.name
   | Assignment (Select { lhs; arg; high; low }) ->
     if Rtl_ast.equal_range Bit lhs.range
-    then
-      add_string
-        [%string
-          "%{tab}%{lhs.name} <= hc_sl(%{arg.name}(%{high#Int} downto %{low#Int}));\n"]
-    else
-      add_string
-        [%string "%{tab}%{lhs.name} <= %{arg.name}(%{high#Int} downto %{low#Int});\n"]
+    then assign lhs [%rope "%{arg.name}(%{low#Int})"]
+    else assign lhs [%rope "%{arg.name}(%{high#Int} downto %{low#Int})"]
   | Assignment (Const { lhs; constant }) ->
-    add_string [%string "%{tab}%{lhs.name} <= %{vhdl_constant constant};\n"]
+    [%rope "%{tab}%{lhs.name} <= %{vhdl_constant constant};\n"]
   | Assignment (Mux { lhs; select; cases }) ->
     let num_cases = List.length cases in
     let cases =
-      String.concat
-        ~sep:[%string ",\n%{tab2}"]
+      Rope.concat
+        ~sep:[%rope ",\n%{tab2}"]
         (List.mapi cases ~f:(fun i case ->
            if i = num_cases - 1
-           then [%string "%{case.name} when others"]
-           else [%string "%{case.name} when %{i#Int}"]))
+           then [%rope "%{case.name} when others"]
+           else [%rope "%{case.name} when %{i#Int}"]))
     in
-    add_string
-      [%string
-        "%{tab}with to_integer(hc_uns(%{select.name})) select %{lhs.name} <=\n\
-         %{tab2}%{cases};\n"]
+    [%rope
+      "%{tab}with %{to_integer select two_state} select %{lhs.name} <=\n\
+       %{tab2}%{cases};\n"]
   | Mux { to_assignment; to_always = _; is_mux2 = _ } ->
-    statement buffer (to_assignment ())
-  | Always { sensitivity_list; always } -> write_always buffer sensitivity_list always
-  | Initial { always } -> write_initial buffer always
-  | Instantiation instantiation -> write_instantiation buffer instantiation
+    statement two_state (to_assignment ())
+  | Always { sensitivity_list; always } -> write_always two_state sensitivity_list always
+  | Initial { always } -> write_initial two_state always
+  | Instantiation instantiation -> write_instantiation instantiation
   | Multiport_mem { always; initial } ->
-    Array.iter always ~f:(statement buffer);
-    Option.iter initial ~f:(statement buffer)
+    Rope.concat
+      [ concat_map always ~f:(statement two_state)
+      ; Option.value_map ~default:Rope.empty initial ~f:(statement two_state)
+      ]
   | Mem_read_port { lhs; memory; address } ->
-    add_string
-      [%string
-        "%{tab}%{lhs.name} <= %{memory.name}(to_integer(hc_uns(%{address.name})));\n"]
+    [%rope "%{tab}%{lhs.name} <= %{memory.name}.get(%{to_integer address two_state});\n"]
 ;;
 
-let statements buffer (ast : Rtl_ast.t) = List.iter ast.statements ~f:(statement buffer)
-
-let output_assignments buffer (ast : Rtl_ast.t) =
-  let add_string = Buffer.add_string buffer in
-  List.iter ast.outputs ~f:(fun { output; driven_by } ->
-    Option.iter driven_by ~f:(fun driven_by ->
-      add_string [%string "%{tab}%{output.name} <= %{driven_by.name};\n"]))
+let statements (ast : Rtl_ast.t) =
+  concat_map ast.statements ~f:(statement ast.config.two_state)
 ;;
 
-let write_alias buffer (decl : Rtl_ast.declaration) =
-  let add_string = Buffer.add_string buffer in
+let output_assignments (ast : Rtl_ast.t) =
+  concat_map ast.outputs ~f:(fun { output; driven_by } ->
+    Option.value_map ~default:Rope.empty driven_by ~f:(fun driven_by ->
+      [%rope "%{tab}%{output.name} <= %{driven_by.name};\n"]))
+;;
+
+let write_alias (decl : Rtl_ast.declaration) =
   match decl with
   | Logic decl ->
-    List.iter decl.all_names ~f:(fun var ->
+    concat_map decl.all_names ~f:(fun var ->
       if not (Rtl_ast.equal_var var decl.write)
-      then add_string [%string "%{tab}%{var.name} <= %{decl.write.name};\n"])
+      then [%rope "%{tab}%{var.name} <= %{decl.write.name};\n"]
+      else Rope.empty)
   (* We dont allow naming in the following cases, so no aliases *)
-  | Multiport_memory _ -> ()
-  | Inst _ -> ()
+  | Multiport_memory _ -> Rope.empty
+  | Inst _ -> Rope.empty
 ;;
 
-let write_aliases buffer (ast : Rtl_ast.t) =
-  List.iter ast.declarations ~f:(write_alias buffer)
+let write_aliases (ast : Rtl_ast.t) = concat_map ast.declarations ~f:write_alias
+
+(* Find attribute types in all ports and declarations. *)
+let get_attribute_types (ast : Rtl_ast.t) =
+  let add_decls ~attribute_types (decls : Rtl_ast.declaration list) =
+    List.fold decls ~init:attribute_types ~f:(fun attrs decl ->
+      match decl with
+      | Logic { all_names; _ } | Inst { logic = { all_names; _ }; _ } ->
+        List.fold all_names ~init:attrs ~f:Attribute_type.add_from_var
+      | Multiport_memory { memory; _ } -> Attribute_type.add_from_var attrs memory)
+  in
+  let attribute_types =
+    add_decls ~attribute_types:(Map.empty (module String.Caseless)) ast.declarations
+  in
+  let attribute_types =
+    List.fold ~init:attribute_types ast.inputs ~f:Attribute_type.add_from_var
+  in
+  let attribute_types =
+    List.fold ~init:attribute_types ast.outputs ~f:(fun attrs { output; _ } ->
+      Attribute_type.add_from_var attrs output)
+  in
+  Map.data attribute_types
 ;;
 
-let to_buffer buffer ast =
-  let add_string = Buffer.add_string buffer in
-  declare_io_ports buffer ast;
-  declarations buffer ast;
-  add_string "\nbegin\n\n";
-  statements buffer ast;
-  write_aliases buffer ast;
-  output_assignments buffer ast;
-  add_string "\nend architecture;\n"
+let to_rope (ast : Rtl_ast.t) =
+  let attribute_types = get_attribute_types ast in
+  Rope.concat
+    [ declare_io_ports ast attribute_types
+    ; declarations ast
+    ; [%rope "\nbegin\n\n"]
+    ; statements ast
+    ; write_aliases ast
+    ; output_assignments ast
+    ; [%rope "\nend architecture;\n"]
+    ]
 ;;

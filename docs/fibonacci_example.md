@@ -65,7 +65,7 @@ will be output in the state `S_write_result`.
 ```ocaml
 # let create (i : _ I.t) =
     let open Signal in
-    let r_sync = Reg_spec.create ~clock:i.clock ~clear:i.clear () in
+    let r_sync = Signal.Reg_spec.create ~clock:i.clock ~clear:i.clear () in
     let sm =
       Always.State_machine.create (module States) ~enable:vdd r_sync
     in
@@ -123,7 +123,7 @@ will be output in the state `S_write_result`.
        that follows. *)
     }
   ;;
-val create : Reg_spec.signal I.t -> Reg_spec.signal O.t = <fun>
+val create : Signal.t I.t -> Signal.t O.t = <fun>
 ```
 
 ## Testing the logic
@@ -137,7 +137,7 @@ Lets now write a testbench which traces the sequence of states and the computed 
       let state =
         List.nth_exn States.all (Bits.to_unsigned_int !(outputs.state))
       in
-      let done_ = Bits.is_vdd !(outputs.done_) in
+      let done_ = Bits.to_bool !(outputs.done_) in
       let result = Bits.to_unsigned_int !(outputs.result) in
       Stdio.print_s [%message
         (state : States.t) (done_ : bool) (result : int)
@@ -259,6 +259,5 @@ Showing the waveform.
 │                  ││────────────────────────┬───────────────────────────────┬───────┬───────│
 │state             ││ S_wait                 │S_counting                     │S_writ.│S_wait │
 │                  ││────────────────────────┴───────────────────────────────┴───────┴───────│
-│                  ││                                                                        │
 └──────────────────┘└────────────────────────────────────────────────────────────────────────┘
 ```

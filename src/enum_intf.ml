@@ -6,8 +6,8 @@ module type Cases = sig
   type t [@@deriving compare, enumerate, sexp_of]
 end
 
-(** Functions to project an [Cases] type into and out of hardcaml bit vectors representated
-    as an interface. *)
+(** Functions to project an [Cases] type into and out of hardcaml bit vectors
+    representated as an interface. *)
 module type S_enum = sig
   module Cases : Cases
   include Interface.S
@@ -32,24 +32,21 @@ module type S_enum = sig
   module Of_signal : sig
     include module type of Of_signal (** @inline *)
 
-    (** Tests for equality between two enums. For writing conditional statements
-        based on the value of the enum, consider using [match_] below, or
-        [Of_always.match_] instead
-    *)
+    (** Tests for equality between two enums. For writing conditional statements based on
+        the value of the enum, consider using [match_] below, or [Of_always.match_]
+        instead *)
     val ( ==: ) : t -> t -> Signal.t
 
     (** Create an Cases value from a statically known value. *)
     val of_enum : Cases.t -> Signal.t outer
 
-    (** Creates a Cases value from a raw value. Note that this only performs a
-        check widths, and does not generate circuitry to validate that the input
-        is valid. See documentation on Casess for more information.
-    *)
+    (** Creates a Cases value from a raw value. Note that this only performs a check
+        widths, and does not generate circuitry to validate that the input is valid. See
+        documentation on Casess for more information. *)
     val of_raw : Signal.t -> Signal.t outer
 
-    (** Multiplex on an enum value. If there are unhandled cases, a [default]
-        needs to be specified.
-    *)
+    (** Multiplex on an enum value. If there are unhandled cases, a [default] needs to be
+        specified. *)
     val match_
       :  ?default:Signal.t
       -> Signal.t outer
@@ -74,8 +71,7 @@ module type S_enum = sig
     include module type of Of_always (** @inline *)
 
     (** Performs a "pattern match" on a [Signal.t t], and "executes" the branch that
-        matches the signal value. Semantics similar to [switch] in verilog.
-    *)
+        matches the signal value. Semantics similar to [switch] in verilog. *)
     val match_
       :  ?default:Always.t list
       -> Signal.t t
@@ -99,19 +95,15 @@ module type S_enum = sig
   (** Similar to [sim_set], but operates on raw [Bits.t] instead. *)
   val sim_set_raw : Bits.t ref t -> Bits.t -> unit
 
-  (** Read an output port from simulation to a concreate Cases value.
-      Returns [Ok enum] when the [Bits.t] value can be parsed, and
-      [Error _] when the value is unhandled.
-  *)
+  (** Read an output port from simulation to a concreate Cases value. Returns [Ok enum]
+      when the [Bits.t] value can be parsed, and [Error _] when the value is unhandled. *)
   val sim_get : Bits.t ref t -> Cases.t Or_error.t
 
   (** Equivalent to [ok_exn (sim_get x)] *)
   val sim_get_exn : Bits.t ref t -> Cases.t
 
-  (** Similar to [sim_get], but operates on raw [Bits.t] instead. This
-      doesn't return [_ Or_error.t]. Undefined values will be returned as
-      it is.
-  *)
+  (** Similar to [sim_get], but operates on raw [Bits.t] instead. This doesn't return
+      [_ Or_error.t]. Undefined values will be returned as it is. *)
   val sim_get_raw : Bits.t ref t -> Bits.t
 
   val unwrap : 'a t -> 'a
@@ -142,9 +134,8 @@ module type Enum = sig
   (** [Make_enums] is semantically similar to:
 
       {[
-        module Binary = Make_binary(Cases)
-        module One_hot = Make_one_host(Cases)
-      ]}
-  *)
+        module Binary = Make_binary (Cases)
+        module One_hot = Make_one_host (Cases)
+      ]} *)
   module Make_enums (Cases : Cases) : S_enums with module Cases := Cases
 end

@@ -14,14 +14,15 @@ depends: [
   "base"
   "bignum"
   "bin_prot"
-  "core"
   "core_kernel"
+  "jane_rope"
   "ppx_jane"
+  "ppx_rope"
   "ppx_sexp_conv"
   "sexplib"
   "splittable_random"
   "stdio"
-  "dune"              {>= "3.11.0"}
+  "dune"              {>= "3.17.0"}
   "ppxlib"            {= "0.33.0+jst"}
 ]
 available: arch != "arm32" & arch != "x86_32"

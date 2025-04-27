@@ -11,7 +11,7 @@ val create : case_sensitive:bool -> t
 
 val add_identifier : t -> string -> [ `Ok | `Duplicate ]
 
-(** Add a list of identifiers to the mangler table.  Raises if an identifier is already in
+(** Add a list of identifiers to the mangler table. Raises if an identifier is already in
     the table. *)
 val add_identifiers_exn : t -> string list -> unit
 

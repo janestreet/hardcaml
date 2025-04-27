@@ -10,9 +10,9 @@ let%expect_test "negate" =
     [%message
       "negate"
         ~_63_bit_min_max:
-          ([ negate (of_int ~width:63 Int.max_value)
-           ; negate (of_int ~width:63 Int.min_value)
-           ; negate (of_int ~width:63 (Int.min_value + 1))
+          ([ negate (of_int_trunc ~width:63 Int.max_value)
+           ; negate (of_int_trunc ~width:63 Int.min_value)
+           ; negate (of_int_trunc ~width:63 (Int.min_value + 1))
            ]
            : signal fn1 list)];
   [%expect

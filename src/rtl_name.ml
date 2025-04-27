@@ -131,7 +131,7 @@ let mangle_name { mangler; instantiation_mangler = _; lang = (module Lang) } nam
   Mangler.mangle mangler legal_name
 ;;
 
-let derived_name signal = "_" ^ Signal.Uid.to_string (Signal.uid signal)
+let derived_name signal = "_" ^ Signal.Type.Uid.to_string (Signal.uid signal)
 
 let mangle_signal_names t signal =
   match Signal.names signal with

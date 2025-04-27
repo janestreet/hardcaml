@@ -1,8 +1,7 @@
 (** Basic double flop synchronizer.
 
     Registers first in the source clock domain which you would not necessarily need to do,
-    but is helpful for showing the behaviour of the synchronizer.
-*)
+    but is helpful for showing the behaviour of the synchronizer. *)
 
 open! Core
 open Hardcaml

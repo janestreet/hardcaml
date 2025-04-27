@@ -96,6 +96,7 @@ let%expect_test "gray_inc_mux only wraps around after 2^size increments" =
 module Async_fifo = Async_fifo.Make (struct
     let width = 72
     let log2_depth = 4
+    let optimize_for_same_clock_rate_and_always_reading = false
   end)
 
 module I = Async_fifo.I
@@ -116,7 +117,7 @@ let basic_test ?sync_stages () =
   let outputs = Cyclesim.outputs sim in
   let model = Queue.create () in
   for i = 1 to 3 do
-    inputs.data_in := Bits.of_int i ~width:72;
+    inputs.data_in := Bits.of_int_trunc i ~width:72;
     inputs.write_enable := Bits.vdd;
     Queue.enqueue model i;
     Cyclesim.cycle sim
@@ -130,12 +131,12 @@ let basic_test ?sync_stages () =
      | None -> [%test_result: bool] (Bits.to_bool !(outputs.valid)) ~expect:false
      | Some v ->
        [%test_result: bool] (Bits.to_bool !(outputs.valid)) ~expect:true;
-       [%test_result: int] (Bits.to_int !(outputs.data_out)) ~expect:v);
+       [%test_result: int] (Bits.to_int_trunc !(outputs.data_out)) ~expect:v);
     Cyclesim.cycle sim
   done;
   inputs.read_enable := Bits.gnd;
   for i = 1 to 16 do
-    inputs.data_in := Bits.of_int i ~width:72;
+    inputs.data_in := Bits.of_int_trunc i ~width:72;
     inputs.write_enable := Bits.vdd;
     Cyclesim.cycle sim
   done;
@@ -153,7 +154,7 @@ let basic_test ?sync_stages () =
       ; port_name_is ~alignment:Right "valid" ~wave_format:Bit
       ]
   in
-  Waveform.print waves ~display_rules ~wave_width:1 ~display_width:130 ~display_height:25
+  Waveform.print waves ~display_rules ~wave_width:1 ~display_width:130
 ;;
 
 let%expect_test "works with a synchronous clock" =
@@ -177,13 +178,6 @@ let%expect_test "works with a synchronous clock" =
     │                  ││────────────────────────────────────────────────────────────────────────────────────────────────┘           │
     │valid             ││            ┌───────────────────┐               ┌───────────────────────────────────────────────────────    │
     │                  ││────────────┘                   └───────────────┘                                                           │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
     └──────────────────┘└────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
     |}];
   basic_test ~sync_stages:3 ();
@@ -206,13 +200,6 @@ let%expect_test "works with a synchronous clock" =
     │                  ││────────────────────────────────────────────────────────────────────────────────────────────────┘           │
     │valid             ││                ┌───────────────┐                   ┌───────────────────────────────────────────────────    │
     │                  ││────────────────┘               └───────────────────┘                                                       │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
     └──────────────────┘└────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
     |}];
   basic_test ~sync_stages:4 ();
@@ -235,13 +222,6 @@ let%expect_test "works with a synchronous clock" =
     │                  ││────────────────────────────────────────────────────────────────────────────────────────────────┘           │
     │valid             ││                    ┌───────────┐                       ┌───────────────────────────────────────────────    │
     │                  ││────────────────────┘           └───────────────────────┘                                                   │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
     └──────────────────┘└────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
     |}]
 ;;
@@ -259,7 +239,7 @@ let%expect_test "works with a synchronous clock in delayed mode" =
   let waves, sim = create_sim_delay () in
   let inputs = Cyclesim.inputs sim in
   for i = 1 to 3 do
-    inputs.data_in := Bits.of_int i ~width:72;
+    inputs.data_in := Bits.of_int_trunc i ~width:72;
     inputs.write_enable := Bits.vdd;
     Cyclesim.cycle sim
   done;
@@ -272,7 +252,7 @@ let%expect_test "works with a synchronous clock in delayed mode" =
   done;
   inputs.read_enable := Bits.gnd;
   for i = 1 to 16 do
-    inputs.data_in := Bits.of_int i ~width:72;
+    inputs.data_in := Bits.of_int_trunc i ~width:72;
     inputs.write_enable := Bits.vdd;
     Cyclesim.cycle sim
   done;
@@ -290,7 +270,7 @@ let%expect_test "works with a synchronous clock in delayed mode" =
       ; port_name_is ~alignment:Right "valid" ~wave_format:Bit
       ]
   in
-  Waveform.print waves ~display_rules ~wave_width:1 ~display_width:130 ~display_height:20;
+  Waveform.print waves ~display_rules ~wave_width:1 ~display_width:130;
   [%expect
     {|
     ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -310,8 +290,6 @@ let%expect_test "works with a synchronous clock in delayed mode" =
     │                  ││────────────────────────────────────────────────────────────────────────────────────────────────┘           │
     │valid             ││                        ┌───────────┐                       ┌───────────────────────────────────────────    │
     │                  ││────────────────────────┘           └───────────────────────┘                                               │
-    │                  ││                                                                                                            │
-    │                  ││                                                                                                            │
     └──────────────────┘└────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
     |}]
 ;;

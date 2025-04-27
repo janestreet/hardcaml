@@ -123,7 +123,7 @@ let%expect_test "different number of outputs" =
 
 let%expect_test "attributes" =
   let attr1 = Rtl_attribute.Vivado.keep true in
-  let attr2 = Rtl_attribute.Vivado.keep false in
+  let attr2 = Rtl_attribute.Vivado.dont_touch true in
   let compare attrs1 attrs2 =
     let compare =
       Circuit.structural_compare

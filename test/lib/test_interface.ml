@@ -269,7 +269,8 @@ let%expect_test "[pack], [unpack]" =
   print_s
     [%sexp
       (I.Of_bits.pack
-         (I.map2 I.port_widths { x = -1; y = 0 } ~f:(fun width -> Bits.of_int ~width))
+         (I.map2 I.port_widths { x = -1; y = 0 } ~f:(fun width ->
+            Bits.of_int_trunc ~width))
        : Bits.t)];
   [%expect {| 000000001111 |}];
   print_s [%sexp (I.Of_bits.(unpack (Bits.of_bit_string "000000001111")) : Bits.t I.t)];
@@ -283,7 +284,8 @@ let%expect_test "[pack], [unpack]" =
       (I.Of_bits.(
          pack
            ~rev:true
-           (I.map2 I.port_widths { x = -1; y = 0 } ~f:(fun width -> Bits.of_int ~width)))
+           (I.map2 I.port_widths { x = -1; y = 0 } ~f:(fun width ->
+              Bits.of_int_trunc ~width)))
        : Bits.t)];
   [%expect {| 111100000000 |}];
   print_s
@@ -363,7 +365,7 @@ let%expect_test "[of_interface_list], [to_interface_list]" =
 let%expect_test "[mux]" =
   let data = List.init 4 ~f:I.Of_bits.of_int in
   let results =
-    List.init 4 ~f:(fun sel -> I.Of_bits.mux (Bits.of_int ~width:2 sel) data)
+    List.init 4 ~f:(fun sel -> I.Of_bits.mux (Bits.of_int_trunc ~width:2 sel) data)
   in
   print_s [%sexp (results : Bits.t I.t list)];
   [%expect
@@ -580,35 +582,43 @@ let%expect_test "onehot_select" =
     |}]
 ;;
 
-module _ = struct
-  open Core
-
-  module Another_module = struct
-    type 'a t = { value : 'a [@bits 16] } [@@deriving hardcaml]
-  end
-
-  type 'a t =
-    { foo : 'a [@bits 8] [@rtlname "value"]
-    ; bar : 'a Another_module.t
-    ; baz : 'a Another_module.t
-    }
-  [@@deriving hardcaml]
-
-  let%expect_test "all names are 'value'." =
-    print_s [%message (port_names : string t)];
-    [%expect {| (port_names ((foo value) (bar ((value value))) (baz ((value value))))) |}]
-  ;;
-
-  let%expect_test "pack and unpack work, even though port names are shared." =
-    let packed =
-      { foo = 0x1; bar = { value = 0xbb }; baz = { value = 0xaa } }
-      |> map2 port_widths ~f:(fun width -> Bits.of_int ~width)
-      |> Of_bits.pack
-    in
-    let unpacked = Of_bits.unpack packed |> map ~f:Bits.to_int in
-    print_s [%message (unpacked : Int.Hex.t t)];
-    (* We don't actually print out the (wrong) values, as we now raise in this
-       situation. *)
-    [%expect {| (unpacked ((foo 0x1) (bar ((value 0xbb))) (baz ((value 0xaa))))) |}]
-  ;;
+module Another_module = struct
+  type 'a t = { value : 'a [@bits 16] } [@@deriving hardcaml]
 end
+
+type 'a t =
+  { foo : 'a [@bits 8] [@rtlname "value"]
+  ; bar : 'a Another_module.t
+  ; baz : 'a Another_module.t
+  }
+[@@deriving hardcaml]
+
+let%expect_test "all names are 'value'." =
+  print_s [%message (port_names : string t)];
+  [%expect
+    {|
+    (port_names (
+      (foo value)
+      (bar ((value value)))
+      (baz ((value value)))))
+    |}]
+;;
+
+let%expect_test "pack and unpack work, even though port names are shared." =
+  let packed =
+    { foo = 0x1; bar = { value = 0xbb }; baz = { value = 0xaa } }
+    |> map2 port_widths ~f:(fun width -> Bits.of_int_trunc ~width)
+    |> Of_bits.pack
+  in
+  let unpacked = Of_bits.unpack packed |> map ~f:Bits.to_int_trunc in
+  print_s [%message (unpacked : Int.Hex.t t)];
+  (* We don't actually print out the (wrong) values, as we now raise in this
+       situation. *)
+  [%expect
+    {|
+    (unpacked (
+      (foo 0x1)
+      (bar ((value 0xbb)))
+      (baz ((value 0xaa)))))
+    |}]
+;;
