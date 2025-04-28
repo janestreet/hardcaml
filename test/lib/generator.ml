@@ -115,7 +115,7 @@ and gen_register width depth inputs =
   let d = wire width in
   let q = reg reg_spec ~reset_to ?clear_to ~enable d in
   let%map input = gen_signal width (depth - 1) (q :: inputs) in
-  d <== input;
+  d <-- input;
   q
 
 and gen_memory width depth inputs =

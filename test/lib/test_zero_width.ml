@@ -253,3 +253,12 @@ let%expect_test "repeat" =
   print_s [%message (repeat (Some vdd) ~count:1 : t)];
   [%expect {| ("repeat (Some vdd) ~count:1" (1)) |}]
 ;;
+
+let%expect_test "mux" =
+  require_does_raise (fun () -> ignore (mux None [] : non_zero_width));
+  [%expect {| "[mux] got no data inputs" |}];
+  print_s [%message (mux None [ vdd ] : non_zero_width)];
+  [%expect {| ("mux None [vdd]" 1) |}];
+  require_does_raise (fun () -> ignore (mux None [ vdd; gnd ] : non_zero_width));
+  [%expect {| "[With_zero_width.mux] select is 0 width but there is more than 1 input" |}]
+;;

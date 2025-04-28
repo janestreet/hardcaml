@@ -1,6 +1,6 @@
 open Base
 
-(** Uses a [valid] bit to indicate the validity of a [value].  Conceptually similar to an
+(** Uses a [valid] bit to indicate the validity of a [value]. Conceptually similar to an
     [Option.t]. *)
 module type With_valid = sig
   type ('a, 'b) t2 = ('a, 'b) Comb.with_valid2 =

@@ -76,20 +76,17 @@ let%expect_test "multiport memorydata" =
 
     architecture rtl of multimem is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        type hc_7_type is array (0 to 127) of std_logic_vector(31 downto 0);
-        signal hc_7 : hc_7_type;
+        type hc_7_type is protected
+            procedure set(address : integer; data : std_logic_vector(31 downto 0));
+            impure function get(address : integer) return std_logic_vector;
+        end protected;
+        type hc_7_type is protected body
+            type t is array (0 to 127) of std_logic_vector(31 downto 0);
+            variable memory : t;
+            procedure set(address : integer; data : std_logic_vector(31 downto 0)) is begin memory(address) := data; end procedure;
+            impure function get(address : integer) return std_logic_vector is begin return memory(address); end function;
+        end protected body;
+        shared variable hc_7 : hc_7_type;
         signal hc_8 : std_logic_vector(31 downto 0);
 
     begin
@@ -97,11 +94,11 @@ let%expect_test "multiport memorydata" =
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    hc_7(to_integer(hc_uns(wa))) <= d;
+                    hc_7.set(to_integer(unsigned(wa)), d);
                 end if;
             end if;
         end process;
-        hc_8 <= hc_7(to_integer(hc_uns(ra)));
+        hc_8 <= hc_7.get(to_integer(unsigned(ra)));
         q0 <= hc_8;
 
     end architecture;
@@ -158,20 +155,17 @@ let%expect_test "multiport memorydata" =
 
     architecture rtl of multimem is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        type hc_7_type is array (0 to 1) of std_logic_vector(14 downto 0);
-        signal hc_7 : hc_7_type;
+        type hc_7_type is protected
+            procedure set(address : integer; data : std_logic_vector(14 downto 0));
+            impure function get(address : integer) return std_logic_vector;
+        end protected;
+        type hc_7_type is protected body
+            type t is array (0 to 1) of std_logic_vector(14 downto 0);
+            variable memory : t;
+            procedure set(address : integer; data : std_logic_vector(14 downto 0)) is begin memory(address) := data; end procedure;
+            impure function get(address : integer) return std_logic_vector is begin return memory(address); end function;
+        end protected body;
+        shared variable hc_7 : hc_7_type;
         signal hc_8 : std_logic_vector(14 downto 0);
 
     begin
@@ -179,16 +173,16 @@ let%expect_test "multiport memorydata" =
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    hc_7(to_integer(hc_uns(wa))) <= d;
+                    hc_7.set(to_integer(unsigned(std_logic_vector'("" & wa))), d);
                 end if;
             end if;
         end process;
         process begin
-            hc_7(0) <= "000000000000000";
-            hc_7(1) <= "000000000000001";
+            hc_7.set(0, "000000000000000");
+            hc_7.set(1, "000000000000001");
             wait;
         end process;
-        hc_8 <= hc_7(to_integer(hc_uns(ra)));
+        hc_8 <= hc_7.get(to_integer(unsigned(std_logic_vector'("" & ra))));
         q0 <= hc_8;
 
     end architecture;
@@ -247,20 +241,17 @@ let%expect_test "multiport memorydata" =
 
     architecture rtl of multimem is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        type hc_7_type is array (0 to 3) of std_logic;
-        signal hc_7 : hc_7_type;
+        type hc_7_type is protected
+            procedure set(address : integer; data : std_logic);
+            impure function get(address : integer) return std_logic;
+        end protected;
+        type hc_7_type is protected body
+            type t is array (0 to 3) of std_logic;
+            variable memory : t;
+            procedure set(address : integer; data : std_logic) is begin memory(address) := data; end procedure;
+            impure function get(address : integer) return std_logic is begin return memory(address); end function;
+        end protected body;
+        shared variable hc_7 : hc_7_type;
         signal hc_8 : std_logic;
 
     begin
@@ -268,18 +259,18 @@ let%expect_test "multiport memorydata" =
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    hc_7(to_integer(hc_uns(wa))) <= d;
+                    hc_7.set(to_integer(unsigned(wa)), d);
                 end if;
             end if;
         end process;
         process begin
-            hc_7(0) <= '0';
-            hc_7(1) <= '1';
-            hc_7(2) <= '0';
-            hc_7(3) <= '1';
+            hc_7.set(0, '0');
+            hc_7.set(1, '1');
+            hc_7.set(2, '0');
+            hc_7.set(3, '1');
             wait;
         end process;
-        hc_8 <= hc_7(to_integer(hc_uns(ra)));
+        hc_8 <= hc_7.get(to_integer(unsigned(ra)));
         q0 <= hc_8;
 
     end architecture;
@@ -336,20 +327,17 @@ let%expect_test "multiport memorydata" =
 
     architecture rtl of multimem is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
-        type hc_7_type is array (0 to 1) of std_logic;
-        signal hc_7 : hc_7_type;
+        type hc_7_type is protected
+            procedure set(address : integer; data : std_logic);
+            impure function get(address : integer) return std_logic;
+        end protected;
+        type hc_7_type is protected body
+            type t is array (0 to 1) of std_logic;
+            variable memory : t;
+            procedure set(address : integer; data : std_logic) is begin memory(address) := data; end procedure;
+            impure function get(address : integer) return std_logic is begin return memory(address); end function;
+        end protected body;
+        shared variable hc_7 : hc_7_type;
         signal hc_8 : std_logic;
 
     begin
@@ -357,16 +345,16 @@ let%expect_test "multiport memorydata" =
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    hc_7(to_integer(hc_uns(wa))) <= d;
+                    hc_7.set(to_integer(unsigned(std_logic_vector'("" & wa))), d);
                 end if;
             end if;
         end process;
         process begin
-            hc_7(0) <= '0';
-            hc_7(1) <= '1';
+            hc_7.set(0, '0');
+            hc_7.set(1, '1');
             wait;
         end process;
-        hc_8 <= hc_7(to_integer(hc_uns(ra)));
+        hc_8 <= hc_7.get(to_integer(unsigned(std_logic_vector'("" & ra))));
         q0 <= hc_8;
 
     end architecture;
@@ -381,7 +369,7 @@ let%expect_test "rom - write port is filtered out" =
   let read_data =
     Signal.rom
       ~read_addresses:[| read_address; Signal.( +:. ) read_address 1 |]
-      (Array.init memory_size ~f:(fun i -> Bits.of_int ~width:data_width i))
+      (Array.init memory_size ~f:(fun i -> Bits.of_int_trunc ~width:data_width i))
   in
   let circuit =
     Circuit.create_exn
@@ -447,50 +435,47 @@ let%expect_test "rom - write port is filtered out" =
 
     architecture rtl of rom is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_4 : std_logic_vector(3 downto 0);
         signal hc_5 : std_logic_vector(3 downto 0);
         signal hc_7 : std_logic_vector(31 downto 0);
-        type hc_6_type is array (0 to 15) of std_logic_vector(31 downto 0);
-        signal hc_6 : hc_6_type;
+        type hc_6_type is protected
+            procedure set(address : integer; data : std_logic_vector(31 downto 0));
+            impure function get(address : integer) return std_logic_vector;
+        end protected;
+        type hc_6_type is protected body
+            type t is array (0 to 15) of std_logic_vector(31 downto 0);
+            variable memory : t;
+            procedure set(address : integer; data : std_logic_vector(31 downto 0)) is begin memory(address) := data; end procedure;
+            impure function get(address : integer) return std_logic_vector is begin return memory(address); end function;
+        end protected body;
+        shared variable hc_6 : hc_6_type;
         signal hc_8 : std_logic_vector(31 downto 0);
 
     begin
 
         hc_4 <= "0001";
-        hc_5 <= hc_slv(hc_uns(read_address) + hc_uns(hc_4));
-        hc_7 <= hc_6(to_integer(hc_uns(hc_5)));
+        hc_5 <= std_logic_vector(unsigned(read_address) + unsigned(hc_4));
+        hc_7 <= hc_6.get(to_integer(unsigned(hc_5)));
         process begin
-            hc_6(0) <= "00000000000000000000000000000000";
-            hc_6(1) <= "00000000000000000000000000000001";
-            hc_6(2) <= "00000000000000000000000000000010";
-            hc_6(3) <= "00000000000000000000000000000011";
-            hc_6(4) <= "00000000000000000000000000000100";
-            hc_6(5) <= "00000000000000000000000000000101";
-            hc_6(6) <= "00000000000000000000000000000110";
-            hc_6(7) <= "00000000000000000000000000000111";
-            hc_6(8) <= "00000000000000000000000000001000";
-            hc_6(9) <= "00000000000000000000000000001001";
-            hc_6(10) <= "00000000000000000000000000001010";
-            hc_6(11) <= "00000000000000000000000000001011";
-            hc_6(12) <= "00000000000000000000000000001100";
-            hc_6(13) <= "00000000000000000000000000001101";
-            hc_6(14) <= "00000000000000000000000000001110";
-            hc_6(15) <= "00000000000000000000000000001111";
+            hc_6.set(0, "00000000000000000000000000000000");
+            hc_6.set(1, "00000000000000000000000000000001");
+            hc_6.set(2, "00000000000000000000000000000010");
+            hc_6.set(3, "00000000000000000000000000000011");
+            hc_6.set(4, "00000000000000000000000000000100");
+            hc_6.set(5, "00000000000000000000000000000101");
+            hc_6.set(6, "00000000000000000000000000000110");
+            hc_6.set(7, "00000000000000000000000000000111");
+            hc_6.set(8, "00000000000000000000000000001000");
+            hc_6.set(9, "00000000000000000000000000001001");
+            hc_6.set(10, "00000000000000000000000000001010");
+            hc_6.set(11, "00000000000000000000000000001011");
+            hc_6.set(12, "00000000000000000000000000001100");
+            hc_6.set(13, "00000000000000000000000000001101");
+            hc_6.set(14, "00000000000000000000000000001110");
+            hc_6.set(15, "00000000000000000000000000001111");
             wait;
         end process;
-        hc_8 <= hc_6(to_integer(hc_uns(read_address)));
+        hc_8 <= hc_6.get(to_integer(unsigned(read_address)));
         q0 <= hc_8;
         q1 <= hc_7;
 

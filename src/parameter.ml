@@ -12,6 +12,7 @@ module Value = struct
     | Std_ulogic of Logic.Std_logic.t
     | Std_ulogic_vector of Logic.Std_logic_vector.t
     | String of string
+    | Array of t list
   [@@deriving equal, sexp, variants]
 end
 

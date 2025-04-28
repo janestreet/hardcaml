@@ -10,7 +10,7 @@ let command =
       and read_ports = flag "-read-ports" (required int) ~doc:""
       and vhdl = flag "-vhdl" no_arg ~doc:"" in
       fun () ->
-        let spec = Reg_spec.create ~clock:(Signal.input "clock" 1) () in
+        let spec = Signal.Reg_spec.create ~clock:(Signal.input "clock" 1) () in
         let rom =
           Signal.rom
             ~read_addresses:

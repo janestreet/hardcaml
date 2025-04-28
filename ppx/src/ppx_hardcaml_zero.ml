@@ -898,9 +898,21 @@ let declare_let_binding_extension ~name ~generate_naming_function =
          List.map bindings ~f:(fun { pvb_pat; pvb_expr; pvb_attributes; pvb_loc; _ } ->
            (* The [pvb_pat] must be a simple assignment to a name right now. Maybe we
               can add support for structure unpacking later. *)
+           let raise_binding_not_supported () =
+             Location.raise_errorf
+               ~loc:pvb_pat.ppat_loc
+               "This form of let binding is not currently supported"
+           in
            let loc = { pvb_loc with loc_ghost = true } in
-           match pvb_pat.ppat_desc with
-           | Ppat_var { txt; loc = _ } ->
+           let jane_pattern_desc =
+             Ppxlib_jane.Shim.Pattern_desc.of_parsetree pvb_pat.ppat_desc
+             (* This ppx is built to operate with Jane Street's parse
+             tree, so we have to use [Ppxlib_jane.Shim] to convert to/from the upstream
+             parse tree (which notably doesn't support labeled tuples). *)
+           in
+           match jane_pattern_desc with
+           | Ppat_var { txt; loc = _ }
+           | Ppat_constraint ({ ppat_desc = Ppat_var { txt; loc = _ }; _ }, _, _) ->
              let vb =
                value_binding
                  ~loc:pvb_loc
@@ -909,43 +921,140 @@ let declare_let_binding_extension ~name ~generate_naming_function =
                    [%expr [%e generate_naming_function ~arg ~loc ~name:txt] [%e pvb_expr]]
              in
              { vb with pvb_attributes }
-           | _ ->
-             Location.raise_errorf
-               ~loc:pvb_pat.ppat_loc
-               "This form of let binding is not currently supported")
+           | Ppat_tuple (pat_list, Closed) ->
+             (* {[ let ~a:c, b = expr in ]}
+                transforms to
+                {[ let ~a:c, b = (fun ~a:c, b -> ~a:(name c "c"), (name b "b")) expr in ]}
+                 We require that all tuple components have the same type.
+             *)
+             let pat_list =
+               List.map pat_list ~f:(function
+                 (* We transform the locations of the patterns into ghost locations,
+                  otherwise we get an error about pattern locations overlapping.
+                  I'm not too sure that this doesn't cause any harmful side effects... *)
+                 | label, p ->
+                 label, { p with ppat_loc = { p.ppat_loc with loc_ghost = true } })
+             in
+             let tuple_naming_func =
+               let tuple_component_naming_fn_calls =
+                 List.map pat_list ~f:(function _, var ->
+                   (match var.ppat_desc with
+                    | Ppat_var { txt; loc = _ } ->
+                      [%expr
+                        [%e generate_naming_function ~arg ~loc ~name:txt]
+                          [%e evar ~loc txt]]
+                    | _ -> raise_binding_not_supported ()))
+               in
+               let names_with_expressions =
+                 (* If the tuple is labelled, this pairs the labels with the naming expressions. *)
+                 List.map2_exn
+                   pat_list
+                   tuple_component_naming_fn_calls
+                   (* [name] here is [None] for regular tuple component,
+                   [Some "a"] for ~a:c labelled component. Therefore when creating the
+                   labelled tuple expression, we can use the same [name] from the pattern. *)
+                   ~f:(fun (name, _) expr -> name, expr)
+               in
+               let body : expression =
+                 { pexp_loc_stack = []
+                 ; pexp_attributes = []
+                 ; pexp_loc = loc
+                 ; pexp_desc =
+                     Ppxlib_jane.Shim.Expression_desc.(
+                       Pexp_tuple names_with_expressions |> to_parsetree ~loc)
+                     (* Convert the created descriptions back to upstream. *)
+                 }
+               in
+               let arg_pat : pattern =
+                 { ppat_loc_stack = pvb_pat.ppat_loc_stack
+                 ; ppat_attributes = pvb_pat.ppat_attributes
+                 ; ppat_loc = loc
+                 ; ppat_desc =
+                     Ppxlib_jane.Shim.Pattern_desc.(
+                       Ppat_tuple (pat_list, Closed) |> to_parsetree ~loc)
+                 }
+                 (* [arg_pat] is effectively the same thing as [pvb_pat], just with
+                 ghost locations *)
+               in
+               [%expr fun [%p arg_pat] -> [%e body]]
+             in
+             let vb =
+               value_binding
+                 ~loc:pvb_loc
+                 ~pat:pvb_pat
+                 ~expr:[%expr [%e tuple_naming_func] [%e pvb_expr]]
+             in
+             { vb with pvb_attributes }
+           | _ -> raise_binding_not_supported ())
        in
        pexp_let ~loc Nonrecursive bindings rhs)
 ;;
+
+(* Assumes [name], [scope], and [thing_to_name] are variables in context. *)
+let name_intf_expression ~module_of_type_of_expression_being_named ~loc =
+  let ppx_auto_name =
+    String.concat
+      ~sep:"."
+      (Longident.flatten_exn module_of_type_of_expression_being_named
+       @ [ "__ppx_auto_name" ])
+  in
+  [%expr [%e evar ~loc ppx_auto_name] thing_to_name (Hardcaml.Scope.name scope name)]
+;;
+
+let hardcaml_signal = Longident.parse "Hardcaml.Signal"
+let always_variable = Longident.parse "Hardcaml.Always.Variable"
 
 let hardcaml_name () =
   declare_let_binding_extension
     ~name:"hw"
     ~generate_naming_function:(fun ~arg ~loc ~name ->
-      match arg with
-      | None ->
-        [%expr
-          fun signal_to_name ->
-            Hardcaml.Scope.naming scope signal_to_name [%e estring ~loc name]]
-      | Some { loc = _; txt = module_of_type_of_expression_being_named } ->
-        let apply_names =
-          String.concat
-            ~sep:"."
-            (Longident.flatten_exn module_of_type_of_expression_being_named
-             @ [ "apply_names" ])
-        in
-        [%expr
-          fun intf_to_name ->
-            (* Ignore the result of 'apply_names'. Of_always.apply_names returns a unit,
-               but Of_signal.apply_names just returns a Signal that we want to ignore. It
-               is assumed that a scope named [scope] is present when calling this
-               fucntion. *)
-            let (_ : _) =
-              [%e evar ~loc apply_names]
-                ~prefix:[%e estring ~loc (name ^ "$")]
-                ~naming_op:(Hardcaml.Scope.naming scope)
-                intf_to_name
-            in
-            intf_to_name])
+      let module_of_type_of_expression_being_named =
+        Option.value_map arg ~default:hardcaml_signal ~f:(fun { loc = _; txt } -> txt)
+      in
+      [%expr
+        fun thing_to_name ->
+          let name = [%e estring ~loc name] in
+          [%e name_intf_expression ~module_of_type_of_expression_being_named ~loc]])
+;;
+
+let hardcaml_name_list () =
+  declare_let_binding_extension
+    ~name:"hw_list"
+    ~generate_naming_function:(fun ~arg ~loc ~name ->
+      let module_of_type_of_expression_being_named =
+        Option.value_map arg ~default:hardcaml_signal ~f:(fun { loc = _; txt } -> txt)
+      in
+      [%expr
+        List.mapi ~f:(fun idx thing_to_name ->
+          let name = [%e estring ~loc name] ^ "$" ^ Int.to_string idx in
+          [%e name_intf_expression ~module_of_type_of_expression_being_named ~loc])])
+;;
+
+let hardcaml_name_array () =
+  declare_let_binding_extension
+    ~name:"hw_array"
+    ~generate_naming_function:(fun ~arg ~loc ~name ->
+      let module_of_type_of_expression_being_named =
+        Option.value_map arg ~default:hardcaml_signal ~f:(fun { loc = _; txt } -> txt)
+      in
+      [%expr
+        Array.mapi ~f:(fun idx thing_to_name ->
+          let name = [%e estring ~loc name] ^ "$" ^ Int.to_string idx in
+          [%e name_intf_expression ~module_of_type_of_expression_being_named ~loc])])
+;;
+
+let raise_hw_var_doesn't_support_intfs ~loc ~hw_var_variant =
+  Location.raise_errorf
+    ~loc
+    "[hw_var%s] does not take a module argument. It is only used with plain \
+     [Variable.t]s - use [let%%hw%s.Your_type_here.Of_always] instead"
+    hw_var_variant
+    hw_var_variant
+;;
+
+(* Assumes [scope], [thing_to_name], [name] are variables in context *)
+let name_always_variable_expr ~loc =
+  name_intf_expression ~module_of_type_of_expression_being_named:always_variable ~loc
 ;;
 
 let hardcaml_name_var () =
@@ -955,16 +1064,36 @@ let hardcaml_name_var () =
       match arg with
       | None ->
         [%expr
-          fun (variable_to_name : Hardcaml.Always.Variable.t) ->
-            let (_ : Hardcaml.Signal.t) =
-              Hardcaml.Scope.naming scope variable_to_name.value [%e estring ~loc name]
-            in
-            variable_to_name]
-      | Some _ ->
-        Location.raise_errorf
-          ~loc
-          "[hw_var] does not take a module argument. It is only used with plain \
-           [Variable.t]s - use [let%%hw.Your_type_here.Of_always] instead")
+          fun (thing_to_name : Hardcaml.Always.Variable.t) ->
+            let name = [%e estring ~loc name] in
+            [%e name_always_variable_expr ~loc]]
+      | Some _ -> raise_hw_var_doesn't_support_intfs ~loc ~hw_var_variant:"")
+;;
+
+let hardcaml_name_var_list () =
+  declare_let_binding_extension
+    ~name:"hw_var_list"
+    ~generate_naming_function:(fun ~arg ~loc ~name ->
+      match arg with
+      | None ->
+        [%expr
+          List.mapi ~f:(fun idx (thing_to_name : Hardcaml.Always.Variable.t) ->
+            let name = [%e estring ~loc name] ^ "$" ^ Int.to_string idx in
+            [%e name_always_variable_expr ~loc])]
+      | Some _ -> raise_hw_var_doesn't_support_intfs ~loc ~hw_var_variant:"_list")
+;;
+
+let hardcaml_name_var_array () =
+  declare_let_binding_extension
+    ~name:"hw_var_array"
+    ~generate_naming_function:(fun ~arg ~loc ~name ->
+      match arg with
+      | None ->
+        [%expr
+          Array.mapi ~f:(fun idx (thing_to_name : Hardcaml.Always.Variable.t) ->
+            let name = [%e estring ~loc name] ^ "$" ^ Int.to_string idx in
+            [%e name_always_variable_expr ~loc])]
+      | Some _ -> raise_hw_var_doesn't_support_intfs ~loc ~hw_var_variant:"_array")
 ;;
 
 let () =
@@ -1013,6 +1142,10 @@ let () =
     "hardcaml_naming"
     ~rules:
       [ Context_free.Rule.extension (hardcaml_name ())
+      ; Context_free.Rule.extension (hardcaml_name_list ())
+      ; Context_free.Rule.extension (hardcaml_name_array ())
       ; Context_free.Rule.extension (hardcaml_name_var ())
+      ; Context_free.Rule.extension (hardcaml_name_var_list ())
+      ; Context_free.Rule.extension (hardcaml_name_var_array ())
       ]
 ;;

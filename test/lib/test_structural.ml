@@ -12,16 +12,18 @@ module T = struct
   type 'a t = { c : 'a } [@@deriving hardcaml]
 end
 
+let print_rope r = Rope.to_string r |> Stdio.print_string
+
 let%expect_test "Prints with circuit created via With_interface.create_circuit" =
   let open Structural.With_interface (I) (O) (T) in
   (* Simple example with attributes *)
-  Structural.write_verilog
-    Stdio.print_string
+  Structural.to_verilog
     (create_circuit "foo" (fun i o t ->
        Structural.add_attribute i.a (Rtl_attribute.Vivado.io_buffer_type `IBUF);
        Structural.add_attribute o.b (Rtl_attribute.Vivado.io_buffer_type `OBUF);
        Structural.add_attribute t.c (Rtl_attribute.Vivado.io_buffer_type `None);
-       ()));
+       ()))
+  |> print_rope;
   [%expect
     {|
     module foo
@@ -37,12 +39,12 @@ let%expect_test "Prints with circuit created via With_interface.create_circuit" 
     endmodule
     |}];
   (* An example that does some simple assignments *)
-  Structural.write_verilog
-    Stdio.print_string
+  Structural.to_verilog
     (create_circuit "bar" (fun i o t ->
        let open Structural in
        t.c <== mux (select i.a ~high:0 ~low:0) [ z 1; select i.a ~high:1 ~low:1 ];
-       o.b <== concat_msb [ select i.a ~high:0 ~low:0; i.a ]));
+       o.b <== concat_msb [ select i.a ~high:0 ~low:0; i.a ]))
+  |> print_rope;
   [%expect
     {|
     module bar
@@ -71,9 +73,8 @@ let%expect_test "Prints with circuit created via With_interface.create_circuit" 
     endmodule
     |}];
   (* An instantiation example *)
-  Structural.write_verilog
-    Stdio.print_string
-    (create_circuit "baz" (fun i o t -> inst "inner_baz" i o t));
+  Structural.to_verilog (create_circuit "baz" (fun i o t -> inst "inner_baz" i o t))
+  |> print_rope;
   [%expect
     {|
     module baz
@@ -106,7 +107,7 @@ module Structural_sexp_of_test = struct
     let cat_o = mk_output "cat" 16 in
     let sel_o = mk_output "sel" 4 in
     let mux_o = mk_output "mux" 8 in
-    let const = of_int ~width:8 123 in
+    let const = of_int_trunc ~width:8 123 in
     let sum = a +: b in
     let cat = a @: b in
     let sel = select a ~high:3 ~low:0 in
@@ -229,7 +230,7 @@ let%expect_test "structural rtl comb components" =
       let p = ((n |: m) @: (m &: n)) ^: o in
       c <== (p <: o))
   in
-  write_verilog Stdio.print_string circuit;
+  to_verilog circuit |> print_rope;
   [%expect
     {|
     module hardcaml_comb
@@ -435,7 +436,7 @@ let%expect_test "structural rtl reg components" =
             ~enable
             d8)
   in
-  write_verilog Stdio.print_string circuit;
+  to_verilog circuit |> print_rope;
   [%expect
     {|
     module hardcaml_regs

@@ -11,8 +11,8 @@ let%expect_test "bits = 1, 2, 3, 4" =
   for bits = 1 to 4 do
     let test f =
       List.init (1 lsl bits) ~f:(fun i ->
-        let c = Bits.of_int ~width:bits i in
-        c, f c |> Bits.to_int)
+        let c = Bits.of_int_trunc ~width:bits i in
+        c, f c |> Bits.to_int_trunc)
     in
     print_s
       [%message
@@ -163,8 +163,8 @@ let%expect_test "random" =
   for _ = 0 to 99 do
     let bits = Random.int 8 + 1 in
     let value = Bits.random ~width:bits in
-    let hw = Bits.leading_zeros value |> Bits.to_int in
-    let value = Bits.to_int value in
+    let hw = Bits.leading_zeros value |> Bits.to_int_trunc in
+    let value = Bits.to_int_trunc value in
     let sw = if value = 0 then bits else bits - (Int.floor_log2 value + 1) in
     require
       (hw = sw)

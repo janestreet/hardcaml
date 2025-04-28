@@ -10,13 +10,10 @@ let gray_inc_mux_inputs (type a) (module Comb : Comb.S with type t = a) width ~b
 module type S = sig
   val width : int
   val log2_depth : int
+  val optimize_for_same_clock_rate_and_always_reading : bool
 end
 
-module Make (M : sig
-    val width : int
-    val log2_depth : int
-  end) =
-struct
+module Make (M : S) = struct
   let address_width = M.log2_depth
   let fifo_capacity = 1 lsl address_width
   let gray_inc ~by x = mux x (gray_inc_mux_inputs (module Signal) address_width ~by)
@@ -91,7 +88,7 @@ struct
       assert (width address = address_width);
       if t.is_read then raise_s [%message "Async_ram has already previously been read"];
       t.is_read <- true;
-      t.read_address <== address;
+      t.read_address <-- address;
       t.multiport_mem
     ;;
 
@@ -101,11 +98,16 @@ struct
       if t.is_written
       then raise_s [%message "Async_ram has already previously been written"];
       t.is_written <- true;
-      t.write_address <== address;
-      t.write_data <== data;
+      t.write_address <-- address;
+      t.write_data <-- data;
       Always.(t.write_enable <--. 1)
     ;;
   end
+
+  type raddr_wd =
+    { raddr_wd : Always.Variable.t
+    ; raddr_wd_ffs : Always.Variable.t array
+    }
 
   let create ?(use_negedge_sync_chain = false) ?(sync_stages = 2) ?scope (i : _ I.t) =
     if sync_stages < 2
@@ -181,25 +183,35 @@ struct
         ~width:address_width
         ~name:"waddr_wd"
     in
-    let raddr_wd_ffs =
-      Array.init (sync_stages - 1) ~f:(fun idx ->
-        async_reg_var
-          ~clock_edge:(clock_edge_of_sync_chain idx)
-          ()
-          ~name:[%string "raddr_wd_ff_%{idx#Int}"]
-          ~clock:i.clock_write
-          ~reset:i.reset_write
-          ~width:address_width)
-    in
     let raddr_wd =
-      async_reg_var
-        ()
-        ~clock:i.clock_write
-        ~reset:i.reset_write
-        ~width:address_width
-        ~name:"raddr_wd"
+      if M.optimize_for_same_clock_rate_and_always_reading
+      then None
+      else (
+        let raddr_wd =
+          async_reg_var
+            ()
+            ~clock:i.clock_write
+            ~reset:i.reset_write
+            ~width:address_width
+            ~name:"raddr_wd"
+        in
+        let raddr_wd_ffs =
+          Array.init (sync_stages - 1) ~f:(fun idx ->
+            async_reg_var
+              ~clock_edge:(clock_edge_of_sync_chain idx)
+              ()
+              ~name:[%string "raddr_wd_ff_%{idx#Int}"]
+              ~clock:i.clock_write
+              ~reset:i.reset_write
+              ~width:address_width)
+        in
+        Some { raddr_wd; raddr_wd_ffs })
     in
-    let full = gray_inc ~by:1 waddr_wd.value ==: raddr_wd.value in
+    let full =
+      match raddr_wd with
+      | None -> gnd
+      | Some { raddr_wd; _ } -> gray_inc ~by:1 waddr_wd.value ==: raddr_wd.value
+    in
     let vld = waddr_rd.value <>: raddr_rd.value in
     let almost_empty =
       let current = waddr_rd.value ==: raddr_rd.value in
@@ -217,7 +229,10 @@ struct
         ~clock_write:i.clock_write
     in
     let raddr_rd_next =
-      mux2 (i.read_enable &: vld) (gray_inc ~by:1 raddr_rd.value) raddr_rd.value
+      let read_enable =
+        if M.optimize_for_same_clock_rate_and_always_reading then vdd else i.read_enable
+      in
+      mux2 (read_enable &: vld) (gray_inc ~by:1 raddr_rd.value) raddr_rd.value
     in
     Always.(
       compile
@@ -230,13 +245,18 @@ struct
           |> proc
         ; waddr_rd <-- (Array.last_exn waddr_rd_ffs).value
         ; (* @(posedge clk_write) *)
-          Array.init (Array.length raddr_wd_ffs) ~f:(fun idx ->
-            if idx = 0
-            then raddr_wd_ffs.(idx) <-- raddr_rd.value
-            else raddr_wd_ffs.(idx) <-- raddr_wd_ffs.(idx - 1).value)
-          |> Array.to_list
-          |> proc
-        ; raddr_wd <-- (Array.last_exn raddr_wd_ffs).value
+          (match raddr_wd with
+           | Some { raddr_wd_ffs; raddr_wd } ->
+             proc
+               [ Array.init (Array.length raddr_wd_ffs) ~f:(fun idx ->
+                   if idx = 0
+                   then raddr_wd_ffs.(idx) <-- raddr_rd.value
+                   else raddr_wd_ffs.(idx) <-- raddr_wd_ffs.(idx - 1).value)
+                 |> Array.to_list
+                 |> proc
+               ; raddr_wd <-- (Array.last_exn raddr_wd_ffs).value
+               ]
+           | None -> proc [])
         ; (* @(posedge clk_write) *)
           when_
             (i.write_enable &: ~:full)
@@ -270,7 +290,7 @@ struct
               (mux2 (delay_cnt_wire ==:. delay) d (d +:. 1))
               (zero min_bits))
         in
-        delay_cnt_wire <== delay_cnt;
+        delay_cnt_wire <-- delay_cnt;
         delay_cnt ==:. delay)
     in
     let async_fifo =
@@ -282,7 +302,7 @@ struct
         ; data_in = i.data_in -- "data_in"
         }
     in
-    async_fifo_has_valid_value <== async_fifo.valid;
+    async_fifo_has_valid_value <-- async_fifo.valid;
     { O.full = async_fifo.full -- "full"
     ; data_out = async_fifo.data_out
     ; valid = async_fifo.valid &: delay_val

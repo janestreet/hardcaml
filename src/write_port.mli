@@ -12,8 +12,7 @@ type 'a t =
 
 (** {2 A partial [Interface] implementation}
 
-    Use with [Interface.Update] to create a full interface specification.
-*)
+    Use with [Interface.Update] to create a full interface specification. *)
 
 val iter : 'a t -> f:('a -> unit) -> unit
 val iter2 : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit

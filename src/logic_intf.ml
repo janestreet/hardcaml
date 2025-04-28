@@ -15,8 +15,8 @@ module type Std_logic = sig
 
   include Equal.S with type t := t
 
-  (** Provide the index of [t] in textual order.  When passing a std_logic parameter from
-      verilog to vhdl, we need to encode this type into an integer.  For example, L1 =
+  (** Provide the index of [t] in textual order. When passing a std_logic parameter from
+      verilog to vhdl, we need to encode this type into an integer. For example, L1 =
       4'd3. *)
   val to_int : t -> int
 

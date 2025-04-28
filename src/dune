@@ -4,10 +4,10 @@
   (names bits_stubs))
  (name hardcaml)
  (public_name hardcaml)
- (libraries base bignum.bigint bin_prot core core_kernel.flags base.md5
+ (libraries base bignum.bigint bin_prot core_kernel.flags base.md5 jane_rope
    sexplib splittable_random stdio)
  (preprocess
-  (pps ppx_jane ppx_hardcaml0))
+  (pps ppx_jane ppx_hardcaml0 ppx_rope))
  (ocamlopt_flags
   :standard
   (:include ocamlopt-flags)))
@@ -17,3 +17,10 @@
  (deps)
  (action
   (bash "echo '()' > ocamlopt-flags")))
+
+(rule
+ (targets tools_config.ml)
+ (deps)
+ (action
+  (bash
+    "cat <<EOF > tools_config.ml\nlet iverilog = \"iverilog\"\nlet ghdl = \"ghdl\"\nlet verilator_v4 = \"verilator\"\nlet verilator_v5 = \"verilator\"\nlet default_verilator_version = 4\nlet minisat = \"minisat\"\nlet picosat = \"picosat\"\nlet z3 = \"z3\"\nlet nusmv = \"NuSMV\"\nlet yosys = \"yosys\"\nEOF")))

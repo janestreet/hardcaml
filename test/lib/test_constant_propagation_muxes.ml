@@ -5,22 +5,26 @@ open Test_constant_propagation.Trace
 let sexp_of_signal = Test_constants.sexp_of_const_signal
 
 let%expect_test "[mux]" =
-  let sel = of_int ~width:2 2 in
-  let width = 3 in
+  let sel = of_int_trunc ~width:2 2 in
   for length = 0 to 5 do
     print_s
       [%message
         ""
           (length : int)
           ~_:
-            (try_with (fun () -> mux sel (List.init length ~f:(fun i -> of_int ~width i)))
+            (try_with (fun () ->
+               mux sel (List.init length ~f:(fun i -> of_int_trunc ~width:3 i)))
              : t Or_error.t)]
   done;
   [%expect
     {|
     ((length 0)
      (Error  "[mux] got empty list"))
-    ((length 1) (Error ("[mux] got fewer than 2 inputs" (inputs_provided 1))))
+    ((length 1)
+     (Ok (
+       const
+       (width 3)
+       (value 0b000))))
     ((length 2)
      (Ok (
        const
@@ -45,13 +49,13 @@ let%expect_test "[mux]" =
 ;;
 
 let%expect_test "mux" =
-  let data4 = List.map ~f:(of_int ~width:5) [ 0; 10; 20; 30 ] in
+  let data4 = List.map ~f:(of_int_trunc ~width:5) [ 0; 10; 20; 30 ] in
   let mux = fn2 mux in
   print_s
     [%message
       "mux"
         ~_:
-          (List.init 4 ~f:(fun i -> mux (of_int ~width:2 i) data4)
+          (List.init 4 ~f:(fun i -> mux (of_int_trunc ~width:2 i) data4)
            : (signal, signal list) fn2 list)];
   [%expect
     {|

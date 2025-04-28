@@ -2,7 +2,6 @@
     generation.
 
     The API is very similar to {!module:Signal} except for instantiation which is done
-    differently.
-*)
+    differently. *)
 
 include Structural_intf.Structural (** @inline *)

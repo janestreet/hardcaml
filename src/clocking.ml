@@ -10,8 +10,8 @@ module Make () = struct
   [@@deriving hardcaml]
 
   let add_clear t clear = { t with clear = Signal.( |: ) t.clear clear }
-  let to_spec t = Reg_spec.create ~clock:t.clock ~clear:t.clear ()
-  let to_spec_no_clear t = Reg_spec.create ~clock:t.clock ()
+  let to_spec t = Signal.Reg_spec.create ~clock:t.clock ~clear:t.clear ()
+  let to_spec_no_clear t = Signal.Reg_spec.create ~clock:t.clock ()
   let reg t ?enable ?clear ?clear_to d = Signal.reg ?enable ?clear ?clear_to (to_spec t) d
   let reg_no_clear t ?enable d = Signal.reg ?enable (to_spec_no_clear t) d
 
@@ -28,7 +28,7 @@ module Make () = struct
       let open Signal in
       assert (width d = 1);
       if n <= 1
-      then Core.(raise_s [%message "stretch length must be >1" (n : int)])
+      then raise_s [%message "stretch length must be >1" (n : int)]
       else (
         let n = n - 1 in
         d |: lsb (reg_fb spec ~width:n ~f:(fun s -> mux2 d (ones n) (srl s ~by:1))))
@@ -67,7 +67,7 @@ module Make () = struct
     ;;
 
     let reg_with_int_default ?enable ?clear clocking ~width ~clear_to =
-      let clear_to = Signal.of_int ~width clear_to in
+      let clear_to = Signal.of_int_trunc ~width clear_to in
       reg ?enable ?clear ~clear_to clocking ~width
     ;;
   end

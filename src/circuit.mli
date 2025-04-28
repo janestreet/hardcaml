@@ -34,8 +34,6 @@ module Config : sig
         ([With_interface] only). *)
     ; modify_outputs : Signal.t list -> Signal.t list
     (** Map over circuit outputs just before constructing the circuit. *)
-    ; rtl_compatibility : Rtl_compatibility.t
-    (** Compatibility with different vendor tools. *)
     }
   [@@deriving sexp_of]
 
@@ -49,7 +47,7 @@ module Config : sig
   val default_for_simulations : t
 end
 
-(** create circuit data structure  *)
+(** create circuit data structure *)
 val create_exn : ?config:Config.t -> name:string -> Signal.t list -> t
 
 (** return circuit inputs *)
@@ -75,10 +73,10 @@ val is_input : t -> Signal.t -> bool
 (** is the signal an output of the circuit *)
 val is_output : t -> Signal.t -> bool
 
-(** For internal use.  Add phantom input ports to the circuit when writing RTL.  This
-    can be necessary to ensure [Interface] based input specifications match those
-    discovered when traversing the hardware design from its outputs.  It is especially
-    important when working with hierarchical designs. *)
+(** For internal use. Add phantom input ports to the circuit when writing RTL. This can be
+    necessary to ensure [Interface] based input specifications match those discovered when
+    traversing the hardware design from its outputs. It is especially important when
+    working with hierarchical designs. *)
 val set_phantom_inputs : t -> (string * int) list -> t
 
 val phantom_inputs : t -> (string * int) list

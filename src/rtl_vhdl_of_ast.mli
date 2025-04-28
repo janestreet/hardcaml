@@ -1,3 +1,3 @@
-open Base
+open! Base
 
-val to_buffer : Buffer.t -> Rtl_ast.t -> unit
+val to_rope : Rtl_ast.t -> Rope.t

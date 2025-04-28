@@ -20,7 +20,7 @@ module Variable = struct
 
   let sexp_of_t { value; internal = _ } = [%message "" ~_:(value : Signal.t)]
   let uid t = Signal.uid t.internal.assigns_to_wire
-  let compare t1 t2 = Signal.Uid.compare (uid t1) (uid t2)
+  let compare t1 t2 = Signal.Type.Uid.compare (uid t1) (uid t2)
   let equal = [%compare.equal: t]
 
   include (val Comparator.make ~compare ~sexp_of_t)
@@ -59,6 +59,12 @@ module Variable = struct
             r.value
       })
   ;;
+
+  let __ppx_auto_name t name =
+    (* Note the name provided by the ppx has been scoped already. *)
+    ignore (Signal.( -- ) t.value name : Signal.t);
+    t
+  ;;
 end
 
 type t =
@@ -92,7 +98,18 @@ let ( <-- ) (a : Variable.t) b =
   Assign (a, b)
 ;;
 
-let ( <--. ) (a : Variable.t) b = a <-- Signal.of_int ~width:(Signal.width a.value) b
+let ( <--. ) (a : Variable.t) b =
+  a <-- Signal.of_int_trunc ~width:(Signal.width a.value) b
+;;
+
+let ( <-:. ) (a : Variable.t) b =
+  a <-- Signal.of_unsigned_int ~width:(Signal.width a.value) b
+;;
+
+let ( <-+. ) (a : Variable.t) b =
+  a <-- Signal.of_signed_int ~width:(Signal.width a.value) b
+;;
+
 let incr ?(by = 1) (a : Variable.t) = a <-- Signal.(a.value +:. by)
 let decr ?(by = 1) (a : Variable.t) = a <-- Signal.(a.value -:. by)
 let list_of_set s = Set.fold s ~init:[] ~f:(fun l e -> e :: l)
@@ -135,7 +152,7 @@ let rec compile_mux statements ~default =
     let default =
       match statement with
       | If (s, t, f) ->
-        let s = Signal.reduce ~f:Signal.( |: ) (Signal.bits_msb s) in
+        let s = Signal.any_bit_set s in
         let t = compile_mux t ~default in
         let f = compile_mux f ~default in
         Signal.mux s [ f; t ]
@@ -168,7 +185,7 @@ let compile statements =
   let targets = list_of_set (find_targets (Set.empty (module Variable)) statements) in
   List.iter targets ~f:(fun target ->
     let statements = filter_by_target target statements in
-    Signal.( <== )
+    Signal.( <-- )
       target.internal.assigns_to_wire
       (compile_mux statements ~default:target.internal.default))
 ;;
@@ -215,20 +232,25 @@ module State_machine = struct
   ;;
 
   let create
+    (type a)
     ?(encoding = Encoding.Binary)
     ?(auto_wave_format = true)
     ?attributes
     ?(enable = Signal.vdd)
-    (type a)
+    ?(unreachable = ([] : a list))
     (module State : State with type t = a)
     reg_spec
     =
     let module State = struct
       include State
+
+      let equal a b = compare a b = 0
+      let all = List.filter all ~f:(Fn.non (List.mem unreachable ~equal))
+
       include Comparator.Make (State)
 
       let name_by_index =
-        Array.of_list_map State.all ~f:(fun s -> Sexp.to_string [%sexp (s : State.t)])
+        Array.of_list_map all ~f:(fun s -> Sexp.to_string [%sexp (s : State.t)])
       ;;
     end
     in
@@ -236,11 +258,11 @@ module State_machine = struct
     let ls = if nstates = 1 then 1 else Int.ceil_log2 nstates in
     let state_bits i =
       match encoding with
-      | Binary -> Bits.of_int ~width:ls i
-      | Gray -> Bits.binary_to_gray (Bits.of_int ~width:ls i)
+      | Binary -> Bits.of_int_trunc ~width:ls i
+      | Gray -> Bits.binary_to_gray (Bits.of_int_trunc ~width:ls i)
       | Onehot ->
         let nstates' = if nstates = 1 then 1 else nstates - 1 in
-        Bits.(select (binary_to_onehot (of_int ~width:ls i)) ~high:nstates' ~low:0)
+        Bits.(select (binary_to_onehot (of_int_trunc ~width:ls i)) ~high:nstates' ~low:0)
     in
     let state_signal i = state_bits i |> Bits.to_constant |> Signal.of_constant in
     let states = List.mapi State.all ~f:(fun i s -> s, (i, state_signal i)) in
@@ -269,6 +291,23 @@ module State_machine = struct
     let set_next s = var <-- state_val "set_next" s in
     let current = var.value in
     let switch ?default cases =
+      let cases =
+        List.filter_map cases ~f:(fun (state, impl) ->
+          if List.mem unreachable state ~equal:State.equal
+          then
+            if List.is_empty impl
+            then
+              (* Lazy programmer convenience - you can speficy the state, but it must
+                    have an empty implementation. *)
+              None
+            else
+              raise_s
+                [%message
+                  "[Always.State_machine.switch] unreachable state provided with a \
+                   non-empty implementation"
+                    (state : State.t)]
+          else Some (state, impl))
+      in
       let rec unique set = function
         | [] -> set
         | (state, _) :: tl ->
@@ -329,5 +368,10 @@ module State_machine = struct
       in
       ignore (Signal.(var.value --$ wave_format) : Signal.t));
     { current; is; set_next; switch }
+  ;;
+
+  let __ppx_auto_name t name =
+    ignore (Signal.( -- ) t.current name : Signal.t);
+    t
   ;;
 end

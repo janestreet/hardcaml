@@ -90,17 +90,17 @@ let sim combinational_ops_database (op1 : op1 list) (op2 : op2 list) args =
   (* cycle simulator *)
   S.reset sim;
   let step (arg_a, arg_b) =
-    i.a32 := Bits.of_int32 ~width:32 (Int32.bits_of_float arg_a);
-    i.a64 := Bits.of_int64 ~width:64 (Int64.bits_of_float arg_a);
-    i.b32 := Bits.of_int32 ~width:32 (Int32.bits_of_float arg_b);
-    i.b64 := Bits.of_int64 ~width:64 (Int64.bits_of_float arg_b);
+    i.a32 := Bits.of_int32_trunc ~width:32 (Int32.bits_of_float arg_a);
+    i.a64 := Bits.of_int64_trunc ~width:64 (Int64.bits_of_float arg_a);
+    i.b32 := Bits.of_int32_trunc ~width:32 (Int32.bits_of_float arg_b);
+    i.b64 := Bits.of_int64_trunc ~width:64 (Int64.bits_of_float arg_b);
     S.cycle sim;
     (* collect results *)
     let result (({ o32; o64 } : Bits.t ref O.t), op) =
       { opname = op.name
       ; expected = op.fop arg_a arg_b
-      ; got_32bit = Int32.float_of_bits (Bits.to_int32 !o32)
-      ; got_64bit = Int64.float_of_bits (Bits.to_int64 !o64)
+      ; got_32bit = Int32.float_of_bits (Bits.to_int32_trunc !o32)
+      ; got_64bit = Int64.float_of_bits (Bits.to_int64_trunc !o64)
       }
     in
     let result_in_error_bounds args =

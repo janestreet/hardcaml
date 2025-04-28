@@ -1,27 +1,28 @@
 open! Import
 
 let%expect_test "Uid hashes are equal between ocaml and javascript" =
-  let `New new_id, _ = Signal.Uid.generator () in
+  let module Uid = Signal.Type.Uid in
+  let `New new_id, _ = Uid.generator () in
   let id = new_id () in
-  print_s [%message (id : Signal.Uid.t) (Signal.Uid.hash id : int)];
+  print_s [%message (id : Uid.t) (Uid.hash id : int)];
   [%expect
     {|
-    ((id                   1)
-     ("Signal.Uid.hash id" 746625832))
+    ((id            1)
+     ("Uid.hash id" 746625832))
     |}];
   let id = new_id () in
-  print_s [%message (id : Signal.Uid.t) (Signal.Uid.hash id : int)];
+  print_s [%message (id : Uid.t) (Uid.hash id : int)];
   [%expect
     {|
-    ((id                   2)
-     ("Signal.Uid.hash id" 391307823))
+    ((id            2)
+     ("Uid.hash id" 391307823))
     |}];
   let id = new_id () in
-  print_s [%message (id : Signal.Uid.t) (Signal.Uid.hash id : int)];
+  print_s [%message (id : Uid.t) (Uid.hash id : int)];
   [%expect
     {|
-    ((id                   3)
-     ("Signal.Uid.hash id" 834235799))
+    ((id            3)
+     ("Uid.hash id" 834235799))
     |}]
 ;;
 
@@ -57,7 +58,7 @@ let%expect_test "input -> output" =
   [%expect {| (Ok (a b)) |}]
 ;;
 
-let reg_spec = Reg_spec.create () ~clock ~clear
+let reg_spec = Signal.Reg_spec.create () ~clock ~clear
 
 (* You require custom [deps] to express the fact that you may loop through certain
    nodes. *)
@@ -93,7 +94,7 @@ let%expect_test "mem loop" =
         { write_clock = clock; write_enable = w; write_address = w; write_data = w }
       ~read_address:Signal.vdd
   in
-  Signal.(w <== q);
+  Signal.(w <-- q);
   let result = topsort [ q ] in
   print_s [%sexp (result : topsort)];
   [%expect {| (Ok (0b1 memory_read_port multiport_memory clock wire)) |}]
@@ -109,7 +110,7 @@ let%expect_test "mem loop, including read address, which isn't allowed" =
         { write_clock = clock; write_enable = w; write_address = w; write_data = w }
       ~read_address:w
   in
-  Signal.(w <== q);
+  Signal.(w <-- q);
   let result = topsort [ q ] in
   print_s [%sexp (result : topsort)];
   [%expect {| (Error (wire memory_read_port)) |}]
@@ -120,7 +121,7 @@ let%expect_test "mem loop, including read address, which isn't allowed" =
 let%expect_test "Instantiation loop - not allowed." =
   let w = Signal.wire 1 in
   let inst = Instantiation.create () ~name:"foo" ~inputs:[ "a", w ] ~outputs:[ "b", 1 ] in
-  Signal.(w <== Map.find_exn inst "b");
+  Signal.(w <-- Map.find_exn inst "b");
   let result = topsort [ w ] in
   print_s [%sexp (result : topsort)];
   [%expect {| (Error (instantiation wire wire)) |}]

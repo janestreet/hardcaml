@@ -2,8 +2,8 @@ open Base
 
 (** Various functions that build a tree-structured circuit take an optional
     [branching_factor] argument that controls the number of branches at each level of the
-    circuit.  With [N] inputs and [branching_factor = 1] the depth is [N].  With
-    [branching_factor = 2] the the depth is [ceil_log2 N].  Similarly for
+    circuit. With [N] inputs and [branching_factor = 1] the depth is [N]. With
+    [branching_factor = 2] the the depth is [ceil_log2 N]. Similarly for
     [branching_factor = X], the depth is given by [ceil_log_{X} N]. *)
 type 'a optional_branching_factor = ?branching_factor:int (** default is 2 *) -> 'a
 
@@ -17,8 +17,7 @@ and ('a, 'b) with_valid2 =
 (** Types wrappers for vectors which differentiate their signedness.
 
     Operator argument widths are more flexible as we know how to resize them. Results are
-    sized to avoid truncation.
-*)
+    sized to avoid truncation. *)
 module type Typed_math = sig
   (** Base signal or bits type *)
   type t
@@ -43,7 +42,8 @@ module type Typed_math = sig
   (** Mulitplication. *)
   val ( *: ) : v -> v -> v
 
-  (** {2 Comparison operations}.  Arguments need not be the same width. *)
+  (** {2 Comparison operations}
+      . Arguments need not be the same width. *)
 
   val ( <: ) : v -> v -> v
   val ( >: ) : v -> v -> v
@@ -52,7 +52,7 @@ module type Typed_math = sig
   val ( ==: ) : v -> v -> v
   val ( <>: ) : v -> v -> v
 
-  (** Resize argument to given width.  Appropriate extension is performed. *)
+  (** Resize argument to given width. Appropriate extension is performed. *)
   val resize : v -> int -> v
 end
 
@@ -81,7 +81,7 @@ module type Gates = sig
   val select : t -> high:int -> low:int -> t
 
   (** names a signal *)
-  val ( -- ) : t -> string -> t
+  val ( -- ) : ?loc:Stdlib.Lexing.position -> t -> string -> t
 
   (** bitwise and *)
   val ( &: ) : t -> t -> t
@@ -144,7 +144,7 @@ module type S = sig
       [let a = a -- "a" in ...]
 
       signals may have multiple names. *)
-  val ( -- ) : t -> string -> t
+  val ( -- ) : ?loc:Stdlib.Lexing.position -> t -> string -> t
 
   (** returns the width (number of bits) of a signal.
 
@@ -158,8 +158,8 @@ module type S = sig
       you cannot have 0 width vectors). Raises if [num_elements] is [< 0]. *)
   val address_bits_for : int -> int
 
-  (** [num_bits_to_represent x] returns the number of bits required to represent the number
-      [x], which should be [>= 0]. *)
+  (** [num_bits_to_represent x] returns the number of bits required to represent the
+      number [x], which should be [>= 0]. *)
   val num_bits_to_represent : int -> int
 
   val of_constant : Constant.t -> t
@@ -178,9 +178,13 @@ module type S = sig
 
   (** Same as [of_int_trunc] *)
   val of_int : width:int -> int -> t
+  [@@deprecated "[since 2024-11] use [of_int_trunc]"]
 
   val of_int32 : width:int -> int32 -> t
+  [@@deprecated "[since 2024-11] use [of_int32_trunc]"]
+
   val of_int64 : width:int -> int64 -> t
+  [@@deprecated "[since 2024-11] use [of_int64_trunc]"]
 
   (** Convert non-negative values to constant. Input values which are not representable in
       [width] bits will raise. *)
@@ -205,9 +209,9 @@ module type S = sig
     -> string
     -> t
 
-  (** convert octal string to a constant. If the target width is greater than the octal length
-      and [signedness] is [Signed] then the result is sign extended. Otherwise the result
-      is zero padded. *)
+  (** convert octal string to a constant. If the target width is greater than the octal
+      length and [signedness] is [Signed] then the result is sign extended. Otherwise the
+      result is zero padded. *)
   val of_octal
     :  ?signedness:Signedness.t (** default is [Unsigned] *)
     -> width:int
@@ -234,7 +238,7 @@ module type S = sig
   (** [concat ts] concatenates a list of signals - the msb of the head of the list will
       become the msb of the result.
 
-      [let c = concat \[ a; b; c \] in ...]
+      [let c = concat [ a; b; c ] in ...]
 
       [concat] raises if [ts] is empty or if any [t] in [ts] is empty. *)
   val concat_msb : t list -> t
@@ -247,18 +251,18 @@ module type S = sig
 
       [let c = a @: b in ...]
 
-      equivalent to [concat \[ a; b \]] *)
+      equivalent to [concat [ a; b ]] *)
   val ( @: ) : t -> t -> t
 
   (** logic 1 *)
   val vdd : t
 
-  val is_vdd : t -> bool
+  val is_vdd : t -> bool [@@deprecated "[since 2025-03] use [to_bool]"]
 
   (** logic 0 *)
   val gnd : t
 
-  val is_gnd : t -> bool
+  val is_gnd : t -> bool [@@deprecated "[since 2025-03] use [not to_bool]"]
 
   (** [zero w] makes a the zero valued constant of width [w] *)
   val zero : int -> t
@@ -270,8 +274,8 @@ module type S = sig
   val one : int -> t
 
   (** [select t ~high ~low] selects from [t] bits in the range [high]...[low], inclusive.
-      [select] raises unless [high] and [low] fall within [0 .. width t - 1] and [high >=
-      lo]. *)
+      [select] raises unless [high] and [low] fall within [0 .. width t - 1] and
+      [high >= lo]. *)
   val select : t -> high:int -> low:int -> t
 
   (** select a single bit *)
@@ -326,21 +330,26 @@ module type S = sig
       [let m = mux sel inputs in ...]
 
       Given [l] = [List.length inputs] and [w] = [width sel] the following conditions must
-      hold.
+      hold:
 
-      [l] <= 2**[w], [l] >= 2
+      [l] <= [Int.pow 2 w], [l] >= 1
 
-      If [l] < 2**[w], the last input is repeated.
+      If [l] < [Int.pow 2 w], the last input is repeated.
 
       All inputs provided must have the same width, which will in turn be equal to the
       width of [m]. *)
   val mux : t -> t list -> t
 
-  (** [mux2 c t f] 2 input multiplexer.  Selects [t] if [c] is high otherwise [f].
+  (** Same as [mux] except requires:
+
+      [l] = [Int.pow 2 w] *)
+  val mux_strict : t -> t list -> t
+
+  (** [mux2 c t f] 2 input multiplexer. Selects [t] if [c] is high otherwise [f].
 
       [t] and [f] must have same width and [c] must be 1 bit.
 
-      Equivalent to [mux c \[f; t\]] *)
+      Equivalent to [mux c [f; t]] *)
   val mux2 : t -> t -> t -> t
 
   val mux_init : t -> int -> f:(int -> t) -> t
@@ -349,8 +358,7 @@ module type S = sig
       with [matchN] and outputs [valueN]. If nothing matches [default] is output. This
       construct maps to a case statement.
 
-      The [matchN] values must be constants.
-  *)
+      The [matchN] values must be constants. *)
   val cases : default:t -> t -> (t * t) list -> t
 
   (** logical and *)
@@ -368,7 +376,7 @@ module type S = sig
   val ( |:. ) : t -> int -> t
   val ( |+. ) : t -> int -> t
 
-  (** a <>:. 0 |: b <>:. 0 *)
+  (** {v  a <>:. 0 |: b <>:. 0 v} *)
   val ( ||: ) : t -> t -> t
 
   (** logic xor *)
@@ -476,9 +484,10 @@ module type S = sig
 
   (** Same as [to_int_trunc]. *)
   val to_int : t -> int
+  [@@deprecated "[since 2024-11] use [to_int_trunc]"]
 
-  val to_int32 : t -> int32
-  val to_int64 : t -> int64
+  val to_int32 : t -> int32 [@@deprecated "[since 2024-11] use [to_int_trunc]"]
+  val to_int64 : t -> int64 [@@deprecated "[since 2024-11] use [to_int_trunc]"]
 
   (** [to_signed_int t] treats [t] as signed and resizes it to fit exactly within an OCaml
       [Int.t].
@@ -501,10 +510,10 @@ module type S = sig
   val to_unsigned_int32 : t -> int32
   val to_unsigned_int64 : t -> int64
 
-  (** Convert signal to a [bool].  The signal must be 1 bit wide. *)
+  (** Convert signal to a [bool]. The signal must be 1 bit wide. *)
   val to_bool : t -> bool
 
-  (** Convert signal to a [char].  The signal must be 8 bits wide. *)
+  (** Convert signal to a [char]. The signal must be 8 bits wide. *)
   val to_char : t -> char
 
   (** create binary string from signal *)
@@ -536,13 +545,12 @@ module type S = sig
       - If [msbs] is provided, [msbs] most significant bits will be split off. *)
   val split_in_half_msb : ?msbs:int -> t -> t * t
 
-  (** Same as [split_in_half_msb],  but
+  (** Same as [split_in_half_msb], but
 
       - If [lsbs] is not provided, the LSB part might have one more bit.
       - If [lsbs] is provided, [lsbs] least significant bits will be split off.
 
-      The most significant bits will still be in the left half of the tuple.
-  *)
+      The most significant bits will still be in the left half of the tuple. *)
   val split_in_half_lsb : ?lsbs:int -> t -> t * t
 
   (** Split signal into a list of signals with width equal to [part_width]. The least
@@ -559,13 +567,12 @@ module type S = sig
 
         split_lsb ~exact:false ~part_width:4 17b11_0001_0010_0011_0100 =
           [ 4b0100; 4b0011; 4b0010; 4b0001; 2b11 ]
-      v}
-  *)
+      v} *)
   val split_lsb : ?exact:bool (** default is [true] **) -> part_width:int -> t -> t list
 
   (** Like [split_lsb] except the most significant bits are at the head of the returned
-      list. Residual bits when [exact] is [false] goes to the last element of the list,
-      so in the general case [split_lsb] is not necessarily equivalent to
+      list. Residual bits when [exact] is [false] goes to the last element of the list, so
+      in the general case [split_lsb] is not necessarily equivalent to
       [split_msb |> List.rev]. *)
   val split_msb : ?exact:bool (** default is [true] **) -> part_width:int -> t -> t list
 
@@ -589,15 +596,23 @@ module type S = sig
   (** shift by variable amount *)
   val log_shift : f:(t -> by:int -> t) -> t -> by:t -> t
 
-  (** [uresize t ~width:w] returns the unsigned resize of [t] to width [w]. If [w = width
-      t], this is a no-op. If [w < width t], this [select]s the [w] low bits of [t]. If [w
-      > width t], this extends [t] with [zero (w - width t)]. *)
+  (** [uresize t ~width:w] returns the unsigned resize of [t] to width [w]. If
+      [w = width t], this is a no-op. If [w < width t], this [select]s the [w] low bits of
+      [t]. If [w > width t], this extends [t] with [zero (w - width t)]. *)
   val uresize : t -> width:int -> t
 
-  (** [sresize t ~width:w] returns the signed resize of [t] to width [w]. If [w = width
-      t], this is a no-op. If [w < width t], this [select]s the [w] low bits of [t]. If [w
-      > width t], this extends [t] with [w - width t] copies of [msb t]. *)
+  (** [sresize t ~width:w] returns the signed resize of [t] to width [w]. If
+      [w = width t], this is a no-op. If [w < width t], this [select]s the [w] low bits of
+      [t]. If [w > width t], this extends [t] with [w - width t] copies of [msb t]. *)
   val sresize : t -> width:int -> t
+
+  (** [uextend t ~width:w] behaves similarly to [uresize t ~width:w] but asserts that
+      [w >= width] to prevent inadvertently chopping the signal. *)
+  val uextend : t -> width:int -> t
+
+  (** [sextend t ~width:w] behaves similarly to [sresize t ~width:w] but asserts that
+      [w >= width] to prevent inadvertently chopping the signal. *)
+  val sextend : t -> width:int -> t
 
   (** unsigned resize by +1 bit *)
   val ue : t -> t
@@ -610,7 +625,7 @@ module type S = sig
   val resize_list : resize:(t -> int -> t) -> t list -> t list
 
   (** [resize_op2 ~resize f a b] applies [resize x w] to [a] and [b] where [w] is the
-      maximum of their widths.  It then returns [f a b] *)
+      maximum of their widths. It then returns [f a b] *)
   val resize_op2 : resize:(t -> int -> t) -> (t -> t -> t) -> t -> t -> t
 
   (** fold 'op' though list *)
@@ -620,12 +635,12 @@ module type S = sig
   val reverse : t -> t
 
   (** [mod_counter max t] is [if t = max then 0 else (t + 1)], and can be used to count
-      from 0 to [max] then from zero again.  If [max == (1<<n - 1)], then a comparator is
+      from 0 to [max] then from zero again. If [max == (1<<n - 1)], then a comparator is
       not generated and overflow arithmetic is used instead. *)
   val mod_counter : max:int -> t -> t
 
   (** [compute_arity ~steps num_values] computes the tree arity required to reduce
-      [num_values] in [steps].  [steps<=0] raises. *)
+      [num_values] in [steps]. [steps<=0] raises. *)
   val compute_arity : steps:int -> int -> int
 
   (** [compute_tree_branches ~steps num_values] returns a list of length [steps] of
@@ -633,21 +648,21 @@ module type S = sig
       more balanced sequence than just applying [compute_arity] at every step. *)
   val compute_tree_branches : steps:int -> int -> int list
 
-  (** [tree ~arity ~f input] creates a tree of operations.  The arity of the operator is
-      configurable.  [tree] raises if [input = []]. *)
+  (** [tree ~arity ~f input] creates a tree of operations. The arity of the operator is
+      configurable. [tree] raises if [input = []]. *)
   val tree : arity:int -> f:('a list -> 'a) -> 'a list -> 'a
 
   (** [priority_select cases] returns the value associated with the first case whose
-      [valid] signal is high.  [valid] will be set low in the returned [with_valid] if
-      no case is selected. *)
+      [valid] signal is high. [valid] will be set low in the returned [with_valid] if no
+      case is selected. *)
   val priority_select : (t with_valid list -> t with_valid) optional_branching_factor
 
   (** Same as [priority_select] except returns [default] if no case matches. *)
   val priority_select_with_default
     : (t with_valid list -> default:t -> t) optional_branching_factor
 
-  (** Select a case where one and only one [valid] signal is enabled.  If more than one
-      case is [valid] then the return value is undefined.  If no cases are valid, [0] is
+  (** Select a case where one and only one [valid] signal is enabled. If more than one
+      case is [valid] then the return value is undefined. If no cases are valid, [0] is
       returned by the current implementation, though this should not be relied upon. *)
   val onehot_select : (t with_valid list -> t) optional_branching_factor
 
@@ -673,11 +688,11 @@ module type S = sig
       bit of [t] up. *)
   val trailing_zeros : (t -> t) optional_branching_factor
 
-  (** [floor_log2 x] returns the floor of log-base-2 of [x].  [x] is treated as unsigned
+  (** [floor_log2 x] returns the floor of log-base-2 of [x]. [x] is treated as unsigned
       and an error is indicated by [valid = gnd] in the return value if [x = 0]. *)
   val floor_log2 : (t -> t with_valid) optional_branching_factor
 
-  (** [ceil_log2 x] returns the ceiling of log-base-2 of [x].  [x] is treated as unsigned
+  (** [ceil_log2 x] returns the ceiling of log-base-2 of [x]. [x] is treated as unsigned
       and an error is indicated by [valid = gnd] in the return value if [x = 0]. *)
   val ceil_log2 : (t -> t with_valid) optional_branching_factor
 
@@ -699,6 +714,15 @@ module type S = sig
 
   (** create random constant vector of given width *)
   val random : width:int -> t
+
+  (** [any_bit_set t] returns [vdd] if at least one bit if set in [t] and [gnd] otherwise. *)
+  val any_bit_set : t -> t
+
+  (** [all_bits_set t] returns [vdd] if all bits in [t] are set and [gnd] otherwise. *)
+  val all_bits_set : t -> t
+
+  (** [no_bits_set t] returns [vdd] if no bits in [t] are set and [gnd] otherwise. *)
+  val no_bits_set : t -> t
 
   (** Concatention, selection and resizing functions for signals encoded as an option
       where [None] means zero width. *)
@@ -722,6 +746,7 @@ module type S = sig
     val sel_bottom : t -> width:int -> t
     val sel_top : t -> width:int -> t
     val repeat : t -> count:int -> t
+    val mux : t -> non_zero_width list -> non_zero_width
   end
 
   module type Typed_math = Typed_math with type t := t

@@ -38,7 +38,8 @@ let trace' sim assertion_manager =
   in
   let check_assertions () =
     List.iter asserts ~f:(fun (name, bits) ->
-      if Bits.is_gnd !bits then Hashtbl.add_multi asserted ~key:name ~data:!cycle_no);
+      if not (Bits.to_bool !bits)
+      then Hashtbl.add_multi asserted ~key:name ~data:!cycle_no);
     Int.incr cycle_no
   in
   let sim =

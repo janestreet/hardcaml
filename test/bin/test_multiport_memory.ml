@@ -6,6 +6,10 @@ open Hardcaml_test
    with Modelsim to check syntax. *)
 let () =
   let circuit = Test_multiport_memory.dual_port () in
-  Rtl.output Verilog ~output_mode:(To_file "dual_port.v") circuit;
-  Rtl.output Vhdl ~output_mode:(To_file "dual_port.vhd") circuit
+  Out_channel.write_all
+    "dual_port.v"
+    ~data:(Rtl.create Verilog [ circuit ] |> Rtl.full_hierarchy |> Rope.to_string);
+  Out_channel.write_all
+    "dual_port.vhd"
+    ~data:(Rtl.create Vhdl [ circuit ] |> Rtl.full_hierarchy |> Rope.to_string)
 ;;

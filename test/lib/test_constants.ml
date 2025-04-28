@@ -33,9 +33,9 @@ type of_int = (int * int) * Signal.t
 
 let app1 f a = a, f a
 let app2 f a b = (a, b), f ~width:a b
-let of_int = app2 of_int
-let of_int32 = app2 of_int32
-let of_int64 = app2 of_int64
+let of_int = app2 of_int_trunc
+let of_int32 = app2 of_int32_trunc
+let of_int64 = app2 of_int64_trunc
 let sexp_of_of_int = sexp_of_const_function [%sexp_of: int * int]
 let sexp_of_of_int32 = sexp_of_const_function [%sexp_of: int * int32]
 let sexp_of_of_int64 = sexp_of_const_function [%sexp_of: int * int64]
@@ -390,21 +390,21 @@ let%expect_test "widths must be greater than zero" =
     |}];
   require_does_raise (fun () -> of_bit_list []);
   [%expect {| ("Width of constant must be greater than zero" (width 0)) |}];
-  require_does_raise (fun () -> of_int ~width:0 0);
+  require_does_raise (fun () -> of_int_trunc ~width:0 0);
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
      (const 0))
     |}];
-  require_does_raise (fun () -> of_int32 ~width:0 0l);
+  require_does_raise (fun () -> of_int32_trunc ~width:0 0l);
   [%expect
     {|
     ("Width of constant must be greater than zero"
      (width 0)
      (const 0))
     |}];
-  require_does_raise (fun () -> of_int64 ~width:0 0L);
+  require_does_raise (fun () -> of_int64_trunc ~width:0 0L);
   [%expect
     {|
     ("Width of constant must be greater than zero"

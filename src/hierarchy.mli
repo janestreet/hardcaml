@@ -6,8 +6,7 @@ open Base
 (** Fold through every circuit and instantiation in a hierarchical design.
 
     [f] will be passed the corresponding circuit if it exists in the database, and a
-    [Signal.instanation] specification, unless the top most module.
-*)
+    [Signal.instanation] specification, unless the top most module. *)
 val fold
   :  Circuit.t
   -> Circuit_database.t
@@ -18,9 +17,9 @@ val fold
 val print : Circuit.t -> Circuit_database.t -> unit
 
 module With_interface (I : Interface.S) (O : Interface.S) : sig
-  (** [create database ~name create_fn inputs] creates a sub-circuit using [create_fn
-      inputs] and adds it to [database].  It is then referenced in current circuit by an
-      instantiation.
+  (** [create database ~name create_fn inputs] creates a sub-circuit using
+      [create_fn inputs] and adds it to [database]. It is then referenced in current
+      circuit by an instantiation.
 
       [attributes] are applied to the instantiation of the circuit.
 
@@ -40,15 +39,15 @@ end
 
 (** Support for hierarchically structured Hardcaml designs. We extend the standard
     [Interface.Create_fn] pattern so that the create function also takes a [Scope.t]
-    argument. This allows scoping of signal names and automatic recording of the design
-    in a [Circuit_database.t].
+    argument. This allows scoping of signal names and automatic recording of the design in
+    a [Circuit_database.t].
 
     The scope argument controls construction of a flat or modular design as required for
     simulation or syntheis. *)
 module In_scope (I : Interface.S) (O : Interface.S) : sig
   type create = Scope.t -> Interface.Create_fn(I)(O).t
 
-  (** Create a Hardcaml child design and link it into the parent design.  This will not
+  (** Create a Hardcaml child design and link it into the parent design. This will not
       form a hierarchical structure, but the signal naming will still be scoped. *)
   val create
     :  scope:Scope.t
@@ -57,7 +56,7 @@ module In_scope (I : Interface.S) (O : Interface.S) : sig
     -> Circuit.With_interface(I)(O).create
 
   (** Create a Hardcaml child design hierarchically, depending on the construction mode.
-      In a flat design [In_scope.create] is called.  In a hierarchical design a circuit is
+      In a flat design [In_scope.create] is called. In a hierarchical design a circuit is
       constructed, added to a [Circuit_database.t] and an instantiation inserted into the
       parent design.
 

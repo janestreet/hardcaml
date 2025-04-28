@@ -6,7 +6,7 @@ let name s =
   "bool("
   ^ (match List.hd (Signal.names s) with
      | Some s -> s
-     | None -> "_" ^ Signal.Uid.to_string (Signal.uid s))
+     | None -> "_" ^ Signal.Type.Uid.to_string (Signal.uid s))
   ^ ")"
 ;;
 

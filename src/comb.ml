@@ -147,7 +147,7 @@ module Make (Prims : Primitives) = struct
   let equal = Prims.equal
   let empty = Prims.empty
   let is_empty = Prims.is_empty
-  let ( -- ) a b = Prims.( -- ) a b
+  let ( -- ) ?(loc = Stdlib.Lexing.dummy_pos) a b = Prims.( -- ) ~loc a b
   let width = Prims.width
 
   let[@cold] raise_arg_greater_than_zero fn x =
@@ -319,7 +319,7 @@ module Make (Prims : Primitives) = struct
     of_constant (Constant.of_bit_list b)
   ;;
 
-  let of_char c = of_int ~width:8 (Char.to_int c)
+  let of_char c = of_int_trunc ~width:8 (Char.to_int c)
 
   let[@cold] raise_concat_empty s =
     raise_s
@@ -562,18 +562,46 @@ module Make (Prims : Primitives) = struct
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
+  let[@cold] raise_mux_no_inputs () =
+    raise_s
+      [%message.omit_nil
+        "[mux] got no data inputs" ~loc:(Caller_id.get () : Caller_id.t option)]
+  ;;
+
+  let[@cold] raise_mux_not_exact width_of_sel number_of_data_elements =
+    raise_s
+      [%message.omit_nil
+        "[mux] select does not exactly index the number of data elements"
+          (width_of_sel : int)
+          (number_of_data_elements : int)
+          ~loc:(Caller_id.get () : Caller_id.t option)]
+  ;;
+
   (* mux *)
   let mux sel l =
-    let els = List.length l in
-    let max_els = 1 lsl width sel in
+    let number_of_data_elements = List.length l in
+    let max_number_of_data_elements = 1 lsl width sel in
     assert_widths_same "mux" l;
-    if els > max_els then raise_mux_too_many_inputs els max_els;
-    if els < 2 then raise_mux_too_few_inputs els;
-    Prims.mux sel l
+    if number_of_data_elements > max_number_of_data_elements
+    then raise_mux_too_many_inputs number_of_data_elements max_number_of_data_elements;
+    match number_of_data_elements with
+    | 0 -> raise_mux_no_inputs ()
+    | 1 -> List.hd_exn l
+    | _ -> Prims.mux sel l
+  ;;
+
+  let mux_strict sel l =
+    let number_of_data_elements = List.length l in
+    (match number_of_data_elements with
+     | 0 | 1 -> raise_mux_too_few_inputs number_of_data_elements
+     | _ ->
+       if 1 lsl width sel <> number_of_data_elements
+       then raise_mux_not_exact (width sel) number_of_data_elements);
+    mux sel l
   ;;
 
   let mux2 sel a b =
-    assert_width_one sel "[mux] got select argument that is not one bit";
+    assert_width_one sel "[mux2] got select argument that is not one bit";
     mux sel [ b; a ]
   ;;
 
@@ -697,14 +725,21 @@ module Make (Prims : Primitives) = struct
          else concat [ s; repeat s (n-1) ]
      ]} *)
 
+  let[@cold] raise_repeat_negative_times () =
+    raise_s
+      [%message.omit_nil
+        "Cannot [repeat] negative times" ~loc:(Caller_id.get () : Caller_id.t option)]
+  ;;
+
   let[@cold] raise_repeat_zero_times () =
     raise_s
-      [%message "Cannot [repeat] zero times" ~loc:(Caller_id.get () : Caller_id.t option)]
+      [%message.omit_nil
+        "Cannot [repeat] zero times" ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
   let[@cold] raise_repeat_empty_signal () =
     raise_s
-      [%message
+      [%message.omit_nil
         "Cannot [repeat] empty signal" ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
@@ -714,9 +749,10 @@ module Make (Prims : Primitives) = struct
     then raise_repeat_empty_signal ()
     else (
       match n with
+      | _ when n < 0 -> raise_repeat_negative_times ()
       | 0 -> raise_repeat_zero_times ()
       | 1 -> s
-      | _ ->
+      | n ->
         let cat t s =
           match t, s with
           | t, None -> Some t
@@ -883,6 +919,29 @@ module Make (Prims : Primitives) = struct
     else select s ~high:(w - 1) ~low:0
   ;;
 
+  let[@cold] raise_extend_tried_to_shrink op signal_width width =
+    raise_s
+      [%message.omit_nil
+        (op ^ " got a width smaller than the original signal width")
+          (signal_width : int)
+          (width : int)
+          ~loc:(Caller_id.get () : Caller_id.t option)]
+  ;;
+
+  let uextend s ~width:w =
+    let x = width s in
+    if w < x
+    then raise_extend_tried_to_shrink "[uextend]" x w
+    else (uresize [@inlined hint]) s ~width:w
+  ;;
+
+  let sextend s ~width:w =
+    let x = width s in
+    if w < x
+    then raise_extend_tried_to_shrink "[sextend]" x w
+    else (sresize [@inlined hint]) s ~width:w
+  ;;
+
   let ue s = uresize s ~width:(width s + 1)
   let se s = sresize s ~width:(width s + 1)
 
@@ -928,7 +987,7 @@ module Make (Prims : Primitives) = struct
     then raise_mod_counter_limit max counter_max_value
     else if counter_max_value = max
     then c +: one w
-    else mux2 (c ==: of_int ~width:w max) (zero w) (c +: one w)
+    else mux2 (c ==: of_int_trunc ~width:w max) (zero w) (c +: one w)
   ;;
 
   let compute_arity ~steps num_leaves =
@@ -971,15 +1030,8 @@ module Make (Prims : Primitives) = struct
 
   let rec tree ~arity ~f l =
     if arity <= 1 then raise_tree_invalid_arity ();
-    let split l n =
-      let lh, ll, _ =
-        List.fold l ~init:([], [], 0) ~f:(fun (l0, l1, m) e ->
-          if m < n then e :: l0, l1, m + 1 else l0, e :: l1, m + 1)
-      in
-      List.rev lh, List.rev ll
-    in
     let rec t0 l =
-      let l0, l1 = split l arity in
+      let l0, l1 = List.split_n l arity in
       if List.is_empty l1 then [ f l0 ] else f l0 :: t0 l1
     in
     match l with
@@ -1044,10 +1096,10 @@ module Make (Prims : Primitives) = struct
 
   let leading_zeros_of_bits_list ?branching_factor d =
     let result_width = num_bits_to_represent (List.length d) in
-    List.mapi d ~f:(fun i valid -> { valid; value = of_int ~width:result_width i })
+    List.mapi d ~f:(fun i valid -> { valid; value = of_int_trunc ~width:result_width i })
     |> priority_select_with_default
          ?branching_factor
-         ~default:(of_int ~width:result_width (List.length d))
+         ~default:(of_int_trunc ~width:result_width (List.length d))
   ;;
 
   let leading_ones ?branching_factor t =
@@ -1082,7 +1134,7 @@ module Make (Prims : Primitives) = struct
     let result_width = max 1 (Int.ceil_log2 width) in
     { valid = t <>:. 0
     ; value =
-        of_int ~width:result_width (width - 1)
+        of_int_trunc ~width:result_width (width - 1)
         -: uresize leading_zeros ~width:result_width
     }
   ;;
@@ -1263,14 +1315,14 @@ module Make (Prims : Primitives) = struct
 
   let rec random ~width =
     if width <= 16
-    then of_int ~width (Random.int (1 lsl width))
-    else of_int ~width:16 (Random.int (1 lsl 16)) @: random ~width:(width - 16)
+    then of_int_trunc ~width (Random.int (1 lsl width))
+    else of_int_trunc ~width:16 (Random.int (1 lsl 16)) @: random ~width:(width - 16)
   ;;
 
   let to_bool c =
     if width c <> 1
     then raise_s [%message "Cannot convert a multi-bit value to a bool" (c : t)];
-    to_int c <> 0
+    to_int_trunc c <> 0
   ;;
 
   let rec to_signed ~num_bits ~to_int_type_trunc t =
@@ -1463,9 +1515,29 @@ module Make (Prims : Primitives) = struct
       | _, 0 -> None
       | Some t, n -> Some (repeat t ~count:n)
     ;;
+
+    let raise_too_many_mux_inputs () =
+      raise_s
+        [%message
+          "[With_zero_width.mux] select is 0 width but there is more than 1 input"]
+    ;;
+
+    let mux sel l =
+      match sel with
+      | None ->
+        (match l with
+         | [] -> raise_mux_no_inputs ()
+         | [ h ] -> h
+         | _ -> raise_too_many_mux_inputs ())
+      | Some sel -> mux sel l
+    ;;
   end
 
   module type Typed_math = Typed_math with type t := t
+
+  let any_bit_set t = if width t = 1 then t else t <>:. 0
+  let all_bits_set t = if width t = 1 then t else t ==+. -1
+  let no_bits_set t = if width t = 1 then ~:t else t ==:. 0
 
   (* General arithmetic on unsigned signals.  Operands and results are resized to fit a
      appropriate. *)

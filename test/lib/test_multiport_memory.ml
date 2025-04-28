@@ -3,8 +3,8 @@ open Hardcaml_waveterm_cyclesim
 
 let write_port address_width data_width =
   { Write_port.write_clock = Signal.gnd
-  ; write_address = Signal.of_int ~width:address_width 0
-  ; write_data = Signal.of_int ~width:data_width 0
+  ; write_address = Signal.of_int_trunc ~width:address_width 0
+  ; write_data = Signal.of_int_trunc ~width:data_width 0
   ; write_enable = Signal.gnd
   }
 ;;
@@ -14,7 +14,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 3 8 |]
-      ~read_addresses:[| Signal.of_int ~width:3 0 |]);
+      ~read_addresses:[| Signal.of_int_trunc ~width:3 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] size does not match what can be addressed"
@@ -25,7 +25,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 5 8 |]
-      ~read_addresses:[| Signal.of_int ~width:3 0 |]);
+      ~read_addresses:[| Signal.of_int_trunc ~width:3 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] size does not match what can be addressed"
@@ -36,7 +36,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8 |]
-      ~read_addresses:[| Signal.of_int ~width:3 0 |]);
+      ~read_addresses:[| Signal.of_int_trunc ~width:3 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] width of read address is inconsistent"
@@ -48,7 +48,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8 |]
-      ~read_addresses:[| Signal.of_int ~width:5 0 |]);
+      ~read_addresses:[| Signal.of_int_trunc ~width:5 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] width of read address is inconsistent"
@@ -59,8 +59,9 @@ let%expect_test "exceptions" =
   require_does_raise (fun () ->
     Signal.multiport_memory
       16
-      ~write_ports:[| { (write_port 4 8) with write_clock = Signal.of_int ~width:2 0 } |]
-      ~read_addresses:[| Signal.of_int ~width:4 0 |]);
+      ~write_ports:
+        [| { (write_port 4 8) with write_clock = Signal.of_int_trunc ~width:2 0 } |]
+      ~read_addresses:[| Signal.of_int_trunc ~width:4 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] width of clock must be 1"
@@ -70,8 +71,9 @@ let%expect_test "exceptions" =
   require_does_raise (fun () ->
     Signal.multiport_memory
       16
-      ~write_ports:[| { (write_port 4 8) with write_enable = Signal.of_int ~width:2 0 } |]
-      ~read_addresses:[| Signal.of_int ~width:4 0 |]);
+      ~write_ports:
+        [| { (write_port 4 8) with write_enable = Signal.of_int_trunc ~width:2 0 } |]
+      ~read_addresses:[| Signal.of_int_trunc ~width:4 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] width of write enable must be 1"
@@ -82,7 +84,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[||]
-      ~read_addresses:[| Signal.of_int ~width:4 0 |]);
+      ~read_addresses:[| Signal.of_int_trunc ~width:4 0 |]);
   [%expect {| "[Signal.multiport_memory] requires at least one write port" |}];
   require_does_raise (fun () ->
     Signal.multiport_memory 16 ~write_ports:[| write_port 4 8 |] ~read_addresses:[||]);
@@ -91,7 +93,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8 |]
-      ~read_addresses:[| Signal.of_int ~width:4 0; Signal.of_int ~width:5 0 |]);
+      ~read_addresses:[| Signal.of_int_trunc ~width:4 0; Signal.of_int_trunc ~width:5 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] width of read address is inconsistent"
@@ -103,7 +105,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8; write_port 5 8 |]
-      ~read_addresses:[| Signal.of_int ~width:4 0 |]);
+      ~read_addresses:[| Signal.of_int_trunc ~width:4 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] width of write address is inconsistent"
@@ -115,7 +117,7 @@ let%expect_test "exceptions" =
     Signal.multiport_memory
       16
       ~write_ports:[| write_port 4 8; write_port 4 16 |]
-      ~read_addresses:[| Signal.of_int ~width:4 0 |]);
+      ~read_addresses:[| Signal.of_int_trunc ~width:4 0 |]);
   [%expect
     {|
     ("[Signal.multiport_memory] width of write data is inconsistent"
@@ -131,7 +133,7 @@ let%expect_test "sexp" =
     Signal.multiport_memory
       32
       ~write_ports:[| write_port 5 12; write_port 5 12 |]
-      ~read_addresses:[| Signal.of_int ~width:5 0; Signal.of_int ~width:5 0 |]
+      ~read_addresses:[| Signal.of_int_trunc ~width:5 0; Signal.of_int_trunc ~width:5 0 |]
   in
   print_s [%message (memory : signal array)];
   [%expect
@@ -431,28 +433,25 @@ let%expect_test "dual port VHDL" =
 
     architecture rtl of multi_port_memory is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_18 : std_logic_vector(14 downto 0);
         signal hc_19 : std_logic_vector(14 downto 0);
-        type foo_type is array (0 to 31) of std_logic_vector(14 downto 0);
-        signal foo : foo_type;
+        type foo_type is protected
+            procedure set(address : integer; data : std_logic_vector(14 downto 0));
+            impure function get(address : integer) return std_logic_vector;
+        end protected;
+        type foo_type is protected body
+            type t is array (0 to 31) of std_logic_vector(14 downto 0);
+            variable memory : t;
+            procedure set(address : integer; data : std_logic_vector(14 downto 0)) is begin memory(address) := data; end procedure;
+            impure function get(address : integer) return std_logic_vector is begin return memory(address); end function;
+        end protected body;
+        shared variable foo : foo_type;
         signal hc_20 : std_logic_vector(14 downto 0);
         signal hc_21 : std_logic_vector(14 downto 0);
 
     begin
 
-        hc_18 <= foo(to_integer(hc_uns(read_address2)));
+        hc_18 <= foo.get(to_integer(unsigned(read_address2)));
         process (read_clock2) begin
             if rising_edge(read_clock2) then
                 if read_enable2 = '1' then
@@ -463,18 +462,104 @@ let%expect_test "dual port VHDL" =
         process (write_clock1) begin
             if rising_edge(write_clock1) then
                 if write_enable1 = '1' then
-                    foo(to_integer(hc_uns(write_address1))) <= write_data1;
+                    foo.set(to_integer(unsigned(write_address1)), write_data1);
                 end if;
             end if;
         end process;
         process (write_clock2) begin
             if rising_edge(write_clock2) then
                 if write_enable2 = '1' then
-                    foo(to_integer(hc_uns(write_address2))) <= write_data2;
+                    foo.set(to_integer(unsigned(write_address2)), write_data2);
                 end if;
             end if;
         end process;
-        hc_20 <= foo(to_integer(hc_uns(read_address1)));
+        hc_20 <= foo.get(to_integer(unsigned(read_address1)));
+        process (read_clock1) begin
+            if rising_edge(read_clock1) then
+                if read_enable1 = '1' then
+                    hc_21 <= hc_20;
+                end if;
+            end if;
+        end process;
+        q0 <= hc_21;
+        q1 <= hc_19;
+
+    end architecture;
+    |}];
+  Rtl.print ~config:{ Rtl.Config.default with two_state = true } Vhdl circuit;
+  [%expect
+    {|
+    library ieee;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_bit.all;
+
+    entity multi_port_memory is
+        port (
+            read_enable2 : in bit;
+            read_clock2 : in bit;
+            read_address2 : in bit_vector(4 downto 0);
+            read_enable1 : in bit;
+            read_clock1 : in bit;
+            write_enable2 : in bit;
+            write_data2 : in bit_vector(14 downto 0);
+            write_address2 : in bit_vector(4 downto 0);
+            write_clock2 : in bit;
+            write_enable1 : in bit;
+            write_data1 : in bit_vector(14 downto 0);
+            write_address1 : in bit_vector(4 downto 0);
+            write_clock1 : in bit;
+            read_address1 : in bit_vector(4 downto 0);
+            q0 : out bit_vector(14 downto 0);
+            q1 : out bit_vector(14 downto 0)
+        );
+    end entity;
+
+    architecture rtl of multi_port_memory is
+        -- Conversions
+        function to_bit(s : std_ulogic) return bit is begin return to_bit(s, '0'); end;
+        function to_bitvector(s : std_ulogic_vector) return bit_vector is begin return to_bitvector(s, '0'); end;
+
+        signal hc_18 : bit_vector(14 downto 0);
+        signal hc_19 : bit_vector(14 downto 0);
+        type foo_type is protected
+            procedure set(address : integer; data : bit_vector(14 downto 0));
+            impure function get(address : integer) return bit_vector;
+        end protected;
+        type foo_type is protected body
+            type t is array (0 to 31) of bit_vector(14 downto 0);
+            variable memory : t;
+            procedure set(address : integer; data : bit_vector(14 downto 0)) is begin memory(address) := data; end procedure;
+            impure function get(address : integer) return bit_vector is begin return memory(address); end function;
+        end protected body;
+        shared variable foo : foo_type;
+        signal hc_20 : bit_vector(14 downto 0);
+        signal hc_21 : bit_vector(14 downto 0);
+
+    begin
+
+        hc_18 <= foo.get(to_integer(unsigned(read_address2)));
+        process (read_clock2) begin
+            if rising_edge(read_clock2) then
+                if read_enable2 = '1' then
+                    hc_19 <= hc_18;
+                end if;
+            end if;
+        end process;
+        process (write_clock1) begin
+            if rising_edge(write_clock1) then
+                if write_enable1 = '1' then
+                    foo.set(to_integer(unsigned(write_address1)), write_data1);
+                end if;
+            end if;
+        end process;
+        process (write_clock2) begin
+            if rising_edge(write_clock2) then
+                if write_enable2 = '1' then
+                    foo.set(to_integer(unsigned(write_address2)), write_data2);
+                end if;
+            end if;
+        end process;
+        hc_20 <= foo.get(to_integer(unsigned(read_address1)));
         process (read_clock1) begin
             if rising_edge(read_clock1) then
                 if read_enable1 = '1' then
@@ -506,21 +591,21 @@ let%expect_test "simulation - write and read data on both ports" =
   Cyclesim.reset simulator;
   (* write on port 1 and 2 *)
   write_enable1 := Bits.vdd;
-  write_address1 := Bits.of_int ~width:5 3;
-  write_data1 := Bits.of_int ~width:15 100;
+  write_address1 := Bits.of_int_trunc ~width:5 3;
+  write_data1 := Bits.of_int_trunc ~width:15 100;
   Cyclesim.cycle simulator;
-  write_address1 := Bits.of_int ~width:5 4;
-  write_data1 := Bits.of_int ~width:15 640;
+  write_address1 := Bits.of_int_trunc ~width:5 4;
+  write_data1 := Bits.of_int_trunc ~width:15 640;
   Cyclesim.cycle simulator;
   write_enable1 := Bits.gnd;
   (* read on port 1 *)
   Cyclesim.cycle simulator;
-  read_address1 := Bits.of_int ~width:5 3;
+  read_address1 := Bits.of_int_trunc ~width:5 3;
   read_enable1 := Bits.vdd;
   Cyclesim.cycle simulator;
   (* read on port 2 *)
   read_enable1 := Bits.gnd;
-  read_address2 := Bits.of_int ~width:5 3;
+  read_address2 := Bits.of_int_trunc ~width:5 3;
   read_enable2 := Bits.vdd;
   Cyclesim.cycle simulator;
   read_enable2 := Bits.gnd;
@@ -528,13 +613,13 @@ let%expect_test "simulation - write and read data on both ports" =
   (* read on ports 1 and 2 *)
   read_enable1 := Bits.vdd;
   read_enable2 := Bits.vdd;
-  read_address1 := Bits.of_int ~width:5 4;
-  read_address2 := Bits.of_int ~width:5 4;
+  read_address1 := Bits.of_int_trunc ~width:5 4;
+  read_address2 := Bits.of_int_trunc ~width:5 4;
   Cyclesim.cycle simulator;
   read_enable1 := Bits.gnd;
   read_enable2 := Bits.gnd;
   Cyclesim.cycle simulator;
-  Waveform.print ~display_height:42 ~display_width:86 ~wave_width:2 waves;
+  Waveform.print ~display_width:86 ~wave_width:2 waves;
   [%expect
     {|
     ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────┐
@@ -598,24 +683,24 @@ let%expect_test "simulation - write on both ports - highest indexed port wins" =
   let read_enable2 = Cyclesim.in_port simulator "read_enable2" in
   Cyclesim.reset simulator;
   write_enable1 := Bits.vdd;
-  write_address1 := Bits.of_int ~width:5 9;
-  write_data1 := Bits.of_int ~width:15 100;
+  write_address1 := Bits.of_int_trunc ~width:5 9;
+  write_data1 := Bits.of_int_trunc ~width:15 100;
   write_enable2 := Bits.vdd;
-  write_address2 := Bits.of_int ~width:5 9;
-  write_data2 := Bits.of_int ~width:15 200;
+  write_address2 := Bits.of_int_trunc ~width:5 9;
+  write_data2 := Bits.of_int_trunc ~width:15 200;
   Cyclesim.cycle simulator;
   write_enable1 := Bits.gnd;
   write_enable2 := Bits.gnd;
   Cyclesim.cycle simulator;
   read_enable1 := Bits.vdd;
-  read_address1 := Bits.of_int ~width:5 9;
+  read_address1 := Bits.of_int_trunc ~width:5 9;
   read_enable2 := Bits.vdd;
-  read_address2 := Bits.of_int ~width:5 9;
+  read_address2 := Bits.of_int_trunc ~width:5 9;
   Cyclesim.cycle simulator;
   read_enable1 := Bits.gnd;
   read_enable2 := Bits.gnd;
   Cyclesim.cycle simulator;
-  Waveform.print ~display_height:42 ~display_width:60 ~wave_width:2 waves;
+  Waveform.print ~display_width:60 ~wave_width:2 waves;
   [%expect
     {|
     ┌Signals──────┐┌Waves──────────────────────────────────────┐
@@ -675,19 +760,19 @@ let%expect_test "simulation - demonstrate collision modes" =
     let read_enable1 = Cyclesim.in_port simulator "read_enable1" in
     Cyclesim.reset simulator;
     write_enable1 := Bits.vdd;
-    write_address1 := Bits.of_int ~width:5 13;
-    write_data1 := Bits.of_int ~width:15 10;
+    write_address1 := Bits.of_int_trunc ~width:5 13;
+    write_data1 := Bits.of_int_trunc ~width:15 10;
     Cyclesim.cycle simulator;
     write_enable1 := Bits.vdd;
-    write_address1 := Bits.of_int ~width:5 13;
-    write_data1 := Bits.of_int ~width:15 20;
+    write_address1 := Bits.of_int_trunc ~width:5 13;
+    write_data1 := Bits.of_int_trunc ~width:15 20;
     read_enable1 := Bits.vdd;
-    read_address1 := Bits.of_int ~width:5 13;
+    read_address1 := Bits.of_int_trunc ~width:5 13;
     Cyclesim.cycle simulator;
     write_enable1 := Bits.gnd;
     read_enable1 := Bits.gnd;
     Cyclesim.cycle simulator;
-    Waveform.print ~display_height:42 ~display_width:60 ~wave_width:2 waves
+    Waveform.print ~display_width:60 ~wave_width:2 waves
   in
   test Read_before_write;
   [%expect
@@ -792,7 +877,7 @@ let%expect_test "memory initialization" =
         ~write_ports:[| write_port address_width data_width |]
         ~read_addresses:[| Signal.input "read_address" address_width |]
         ~initialize_to:
-          (Array.init memory_size ~f:(fun i -> Bits.of_int ~width:data_width i))
+          (Array.init memory_size ~f:(fun i -> Bits.of_int_trunc ~width:data_width i))
     in
     let circuit =
       Circuit.create_exn
@@ -849,23 +934,20 @@ let%expect_test "memory initialization" =
 
     architecture rtl of initialized_memory is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_5 : std_logic_vector(7 downto 0);
         signal hc_4 : std_logic_vector(1 downto 0);
         signal gnd : std_logic;
-        type hc_6_type is array (0 to 3) of std_logic_vector(7 downto 0);
-        signal hc_6 : hc_6_type;
+        type hc_6_type is protected
+            procedure set(address : integer; data : std_logic_vector(7 downto 0));
+            impure function get(address : integer) return std_logic_vector;
+        end protected;
+        type hc_6_type is protected body
+            type t is array (0 to 3) of std_logic_vector(7 downto 0);
+            variable memory : t;
+            procedure set(address : integer; data : std_logic_vector(7 downto 0)) is begin memory(address) := data; end procedure;
+            impure function get(address : integer) return std_logic_vector is begin return memory(address); end function;
+        end protected body;
+        shared variable hc_6 : hc_6_type;
         signal hc_7 : std_logic_vector(7 downto 0);
 
     begin
@@ -876,18 +958,18 @@ let%expect_test "memory initialization" =
         process (gnd) begin
             if rising_edge(gnd) then
                 if gnd = '1' then
-                    hc_6(to_integer(hc_uns(hc_4))) <= hc_5;
+                    hc_6.set(to_integer(unsigned(hc_4)), hc_5);
                 end if;
             end if;
         end process;
         process begin
-            hc_6(0) <= "00000000";
-            hc_6(1) <= "00000001";
-            hc_6(2) <= "00000010";
-            hc_6(3) <= "00000011";
+            hc_6.set(0, "00000000");
+            hc_6.set(1, "00000001");
+            hc_6.set(2, "00000010");
+            hc_6.set(3, "00000011");
             wait;
         end process;
-        hc_7 <= hc_6(to_integer(hc_uns(read_address)));
+        hc_7 <= hc_6.get(to_integer(unsigned(read_address)));
         q0 <= hc_7;
 
     end architecture;
@@ -942,23 +1024,20 @@ let%expect_test "memory initialization" =
 
     architecture rtl of initialized_memory is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_5 : std_logic;
         signal hc_4 : std_logic_vector(2 downto 0);
         signal gnd : std_logic;
-        type hc_6_type is array (0 to 7) of std_logic;
-        signal hc_6 : hc_6_type;
+        type hc_6_type is protected
+            procedure set(address : integer; data : std_logic);
+            impure function get(address : integer) return std_logic;
+        end protected;
+        type hc_6_type is protected body
+            type t is array (0 to 7) of std_logic;
+            variable memory : t;
+            procedure set(address : integer; data : std_logic) is begin memory(address) := data; end procedure;
+            impure function get(address : integer) return std_logic is begin return memory(address); end function;
+        end protected body;
+        shared variable hc_6 : hc_6_type;
         signal hc_7 : std_logic;
 
     begin
@@ -969,22 +1048,22 @@ let%expect_test "memory initialization" =
         process (gnd) begin
             if rising_edge(gnd) then
                 if gnd = '1' then
-                    hc_6(to_integer(hc_uns(hc_4))) <= hc_5;
+                    hc_6.set(to_integer(unsigned(hc_4)), hc_5);
                 end if;
             end if;
         end process;
         process begin
-            hc_6(0) <= '0';
-            hc_6(1) <= '1';
-            hc_6(2) <= '0';
-            hc_6(3) <= '1';
-            hc_6(4) <= '0';
-            hc_6(5) <= '1';
-            hc_6(6) <= '0';
-            hc_6(7) <= '1';
+            hc_6.set(0, '0');
+            hc_6.set(1, '1');
+            hc_6.set(2, '0');
+            hc_6.set(3, '1');
+            hc_6.set(4, '0');
+            hc_6.set(5, '1');
+            hc_6.set(6, '0');
+            hc_6.set(7, '1');
             wait;
         end process;
-        hc_7 <= hc_6(to_integer(hc_uns(read_address)));
+        hc_7 <= hc_6.get(to_integer(unsigned(read_address)));
         q0 <= hc_7;
 
     end architecture;
@@ -1012,7 +1091,7 @@ let%expect_test "initialized memory" =
         |]
       ~read_addresses:[| read_address; Signal.( +:. ) read_address 1 |]
       ~initialize_to:
-        (Array.init memory_size ~f:(fun i -> Bits.of_int ~width:data_width (i + 10)))
+        (Array.init memory_size ~f:(fun i -> Bits.of_int_trunc ~width:data_width (i + 10)))
   in
   let circuit =
     Circuit.create_exn
@@ -1024,22 +1103,22 @@ let%expect_test "initialized memory" =
   let waves, sim = Waveform.create sim in
   let read_address = Cyclesim.in_port sim "read_address" in
   for i = 0 to memory_size - 1 do
-    read_address := Bits.of_int ~width:address_width i;
+    read_address := Bits.of_int_trunc ~width:address_width i;
     Cyclesim.cycle sim
   done;
-  read_address := Bits.of_int ~width:address_width 4;
-  Cyclesim.in_port sim "write_address" := Bits.of_int ~width:address_width 4;
+  read_address := Bits.of_int_trunc ~width:address_width 4;
+  Cyclesim.in_port sim "write_address" := Bits.of_int_trunc ~width:address_width 4;
   Cyclesim.in_port sim "write_enable" := Bits.vdd;
-  Cyclesim.in_port sim "write_data" := Bits.of_int ~width:data_width 255;
+  Cyclesim.in_port sim "write_data" := Bits.of_int_trunc ~width:data_width 255;
   Cyclesim.cycle sim;
-  Cyclesim.in_port sim "write_address" := Bits.of_int ~width:address_width 5;
+  Cyclesim.in_port sim "write_address" := Bits.of_int_trunc ~width:address_width 5;
   Cyclesim.in_port sim "write_enable" := Bits.vdd;
-  Cyclesim.in_port sim "write_data" := Bits.of_int ~width:data_width 254;
+  Cyclesim.in_port sim "write_data" := Bits.of_int_trunc ~width:data_width 254;
   Cyclesim.cycle sim;
   Cyclesim.in_port sim "write_enable" := Bits.gnd;
   Cyclesim.cycle sim;
   Cyclesim.cycle sim;
-  Waveform.print ~display_height:22 ~display_width:88 ~wave_width:1 waves;
+  Waveform.print ~display_width:88 ~wave_width:1 waves;
   [%expect
     {|
     ┌Signals───────────┐┌Waves─────────────────────────────────────────────────────────────┐
@@ -1062,7 +1141,6 @@ let%expect_test "initialized memory" =
     │                  ││────┬───┬───┬───┬───┬───┬───┬───┬───────┬───────                  │
     │q1                ││ 0B │0C │0D │0E │0F │10 │11 │0A │0F     │FE                       │
     │                  ││────┴───┴───┴───┴───┴───┴───┴───┴───────┴───────                  │
-    │                  ││                                                                  │
     └──────────────────┘└──────────────────────────────────────────────────────────────────┘
     |}]
 ;;
@@ -1074,7 +1152,7 @@ let%expect_test "rom" =
     let read_data =
       Signal.rom
         ~read_addresses:[| read_address; Signal.( +:. ) read_address 1 |]
-        (Array.init memory_size ~f:(fun i -> Bits.of_int ~width:data_width i))
+        (Array.init memory_size ~f:(fun i -> Bits.of_int_trunc ~width:data_width i))
     in
     let circuit =
       Circuit.create_exn
@@ -1086,10 +1164,10 @@ let%expect_test "rom" =
     let waves, sim = Waveform.create sim in
     let read_address = Cyclesim.in_port sim "read_address" in
     for i = 0 to memory_size - 1 do
-      read_address := Bits.of_int ~width:address_width i;
+      read_address := Bits.of_int_trunc ~width:address_width i;
       Cyclesim.cycle sim
     done;
-    Waveform.print ~display_height:12 ~display_width:88 ~wave_width:1 waves
+    Waveform.print ~display_width:88 ~wave_width:1 waves
   in
   test 2 4;
   [%expect
@@ -1104,7 +1182,6 @@ let%expect_test "rom" =
     │                  ││────┬───┬───┬───                                                  │
     │q1                ││ 1  │2  │3  │0                                                    │
     │                  ││────┴───┴───┴───                                                  │
-    │                  ││                                                                  │
     └──────────────────┘└──────────────────────────────────────────────────────────────────┘
     |}];
   test 4 8;
@@ -1120,7 +1197,6 @@ let%expect_test "rom" =
     │                  ││────┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───  │
     │q1                ││ 01 │02 │03 │04 │05 │06 │07 │08 │09 │0A │0B │0C │0D │0E │0F │00   │
     │                  ││────┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───  │
-    │                  ││                                                                  │
     └──────────────────┘└──────────────────────────────────────────────────────────────────┘
     |}]
 ;;

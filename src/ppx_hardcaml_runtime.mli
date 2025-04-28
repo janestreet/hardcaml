@@ -1,6 +1,6 @@
-(** Implementation of runtime requirements for ppx_hardcaml. This module is not
-    exported from this library. It exists only to allow ppx_hardcaml to be used
-    within hardcaml itself. *)
+(** Implementation of runtime requirements for ppx_hardcaml. This module is not exported
+    from this library. It exists only to allow ppx_hardcaml to be used within hardcaml
+    itself. *)
 open Base
 
 module Array : sig

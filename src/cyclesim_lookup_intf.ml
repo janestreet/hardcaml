@@ -3,8 +3,7 @@
     Combinational nodes may be read. Registers and memories may also be written.
 
     Though data is represented as a [Bytes.t] we assume throughout that we are really
-    working with arrays of [Int64.t]s.
-*)
+    working with arrays of [Int64.t]s. *)
 
 open Base
 
@@ -30,6 +29,8 @@ module type READ = sig
   val to_bits_mutable : t -> Bits.Mutable.t -> unit
   val to_bits : t -> Bits.t
   val to_int : t -> int
+  val equal_bits : t -> Bits.t -> bool
+  val equal_bits_mutable : t -> Bits.Mutable.t -> bool
 end
 
 module type WRITE = sig
@@ -67,7 +68,13 @@ module type Cyclesim_lookup = sig
     val size_in_words : t -> int
     val memory_size : t -> int
     val create_from_bits_mutable_array : Bits.Mutable.t array -> t
-    val create_from_read_only_bits_array : Bits.t array -> t
+
+    val create_from_unsafe_lookup_function
+      :  unsafe_get64:(address:int -> int -> int64)
+      -> size:int
+      -> width:int
+      -> t
+
     val create_from_signal : byte_address:int -> data:Bytes.t -> Signal.t -> t
     val unsafe_set64 : t -> address:int -> int -> Int64.t -> unit
     val unsafe_get64 : t -> address:int -> int -> Int64.t

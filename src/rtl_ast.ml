@@ -11,7 +11,7 @@ type reg_or_wire =
 [@@deriving equal, sexp_of]
 
 type var =
-  { name : string
+  { name : Rope.t
   ; range : range
   ; reg_or_wire : reg_or_wire
   ; attributes : Rtl_attribute.t list
@@ -44,7 +44,10 @@ type multiport_memory_declaration =
 type declaration =
   | Logic of logic_declaration
   | Multiport_memory of multiport_memory_declaration
-  | Inst of logic_declaration
+  | Inst of
+      { logic : logic_declaration
+      ; instance_name : string
+      }
 [@@deriving sexp_of]
 
 type binop =
@@ -65,7 +68,6 @@ type assignment =
       ; arg_a : var
       ; op : binop
       ; arg_b : var
-      ; signed : bool
       }
   | Not of
       { lhs : var
@@ -190,14 +192,14 @@ type statement =
       { sensitivity_list : sensitivity_list
       ; always : always
       }
-  | Initial of { always : always array }
+  | Initial of { always : always list }
   | Mux of
       { to_assignment : unit -> statement
       ; to_always : unit -> statement
       ; is_mux2 : bool
       }
   | Multiport_mem of
-      { always : statement array
+      { always : statement list
       ; initial : statement option
       }
   | Mem_read_port of
@@ -213,7 +215,8 @@ type t =
   ; outputs : output list
   ; declarations : declaration list
   ; statements : statement list
-  ; var_map : declaration Map.M(Signal.Uid).t
+  ; var_map : declaration Map.M(Signal.Type.Uid).t
+  ; config : Rtl_config.t
   }
 [@@deriving sexp_of]
 
@@ -236,7 +239,7 @@ let declaration_of_logic ~reg_or_wire ~rtl_name signal =
   let range = bit_or_vec_of_signal signal in
   let initialize_to = initializer_of_reg signal in
   let var name =
-    { name
+    { name = Rope.of_string name
     ; range
     ; reg_or_wire
     ; attributes = Signal.attributes signal
@@ -253,6 +256,11 @@ let declaration_of_logic ~reg_or_wire ~rtl_name signal =
     }
 ;;
 
+let declaration_of_inst ~rtl_name signal =
+  let logic = declaration_of_logic ~reg_or_wire:Wire ~rtl_name signal in
+  Inst { logic; instance_name = Rtl_name.mangle_instantiation_name rtl_name signal }
+;;
+
 let declaration_of_multiport_memory ~rtl_name signal =
   let array, type_ = Rtl_name.mangle_multiport_mem_name rtl_name signal in
   let depth =
@@ -261,7 +269,7 @@ let declaration_of_multiport_memory ~rtl_name signal =
     | _ -> assert false
   in
   { memory =
-      { name = array
+      { name = Rope.of_string array
       ; range = bit_or_vec_of_signal signal
       ; reg_or_wire = Reg
       ; attributes = Signal.attributes signal
@@ -284,7 +292,7 @@ let var_of_io_port ~(rtl_name : Rtl_name.t) signal =
   | [ name ] ->
     Rtl_name.add_port_name rtl_name signal name;
     ( Signal.uid signal
-    , { name
+    , { name = Rope.of_string name
       ; range = bit_or_vec_of_signal signal
       ; reg_or_wire = Wire
       ; attributes = Signal.attributes signal
@@ -307,8 +315,15 @@ let is_internal_signal_of_circuit circuit signal =
 let find_logic var_map signal =
   match Map.find_exn var_map (Signal.uid signal) with
   | Logic logic -> logic
-  | Inst inst -> inst
+  | Inst { logic; _ } -> logic
   | Multiport_memory _ -> (* only Mem_read_ports should be seen here. *) assert false
+;;
+
+let find_instance_name var_map signal =
+  match Map.find_exn var_map (Signal.uid signal) with
+  | Inst { instance_name; _ } -> instance_name
+  | Logic _ | Multiport_memory _ ->
+    (* should only ever be called on instantiations *) assert false
 ;;
 
 let find_multiport_memory var_map signal =
@@ -388,7 +403,7 @@ let always_of_multiport_mem ~var_map ~multiport_memory_declaration ~write_ports 
     in
     let enabled =
       let write_enable = write_port.write_enable in
-      if Signal.is_empty write_enable || Signal.is_vdd write_enable
+      if Signal.is_empty write_enable || Signal.Type.is_vdd write_enable
       then q_of ()
       else
         If
@@ -408,13 +423,13 @@ let always_of_multiport_mem ~var_map ~multiport_memory_declaration ~write_ports 
     let sensitivity_list = Edges [ { edge = Rising; var = (find write_clock).read } ] in
     Always { sensitivity_list; always = clocked }
   in
-  Array.map write_ports ~f:always_of_write_port
+  List.map (Array.to_list write_ports) ~f:always_of_write_port
 ;;
 
 let initial_of_multiport_mem ~multiport_memory_declaration ~initialize_to =
   Initial
     { always =
-        Array.mapi initialize_to ~f:(fun index value ->
+        List.mapi (Array.to_list initialize_to) ~f:(fun index value ->
           Constant_memory_assignment
             { lhs = multiport_memory_declaration.memory; index; value })
     }
@@ -424,7 +439,7 @@ let create_phantom_inputs ~rtl_name circuit =
   Circuit.phantom_inputs circuit
   |> List.map ~f:(fun (name, width) ->
     Rtl_name.add_phantom_port_name rtl_name name;
-    { name
+    { name = Rope.of_string name
     ; range = bit_or_vec width
     ; reg_or_wire = Wire
     ; attributes = []
@@ -457,7 +472,7 @@ let create_vars ~rtl_name internal =
         add_to_decl_map signal decl)
       else if Signal.Type.is_inst signal
       then (
-        let decl = Inst (declaration_of_logic ~reg_or_wire:Wire ~rtl_name signal) in
+        let decl = declaration_of_inst ~rtl_name signal in
         add_to_decl_map signal decl)
       else if Signal.Type.is_const signal && List.is_empty (Signal.names signal)
       then (
@@ -490,20 +505,18 @@ let create_vars ~rtl_name internal =
         add_to_decl_map signal decl)
   in
   let map, decls, internal =
-    f (Map.empty (module Signal.Uid)) (Map.empty (module Bits)) [] [] internal
+    f (Map.empty (module Signal.Type.Uid)) (Map.empty (module Bits)) [] [] internal
   in
   map, List.rev decls, List.rev internal
 ;;
 
 let map_parameters_for_compatibility
-  (language : Rtl_language.t)
-  rtl_compatibility
+  lang
+  Rtl_config.{ backend; _ }
   (parameters : Parameter.t list)
   =
-  match
-    language, Rtl_compatibility.force_std_logic_generics_to_bits rtl_compatibility
-  with
-  | Verilog, true ->
+  match lang, Rtl_compatibility.force_std_logic_generics_to_bits backend with
+  | Rtl_language.Verilog, true ->
     List.map parameters ~f:(function
       | { name; value = Std_logic v | Std_ulogic v } ->
         let v =
@@ -519,13 +532,7 @@ let map_parameters_for_compatibility
   | Verilog, false | Vhdl, (true | false) -> parameters
 ;;
 
-let create_statement
-  ~(rtl_compatibility : Rtl_compatibility.t)
-  ~language
-  ~rtl_name
-  var_map
-  (signal : Signal.t)
-  =
+let create_statement ~(rtl_config : Rtl_config.t) ~language var_map (signal : Signal.t) =
   let find context signal =
     try find_logic var_map signal with
     | _ ->
@@ -568,7 +575,6 @@ let create_statement
          ; arg_a = (find "Op2.arg_a" arg_a).read
          ; op = Muls
          ; arg_b = (find "Op2.arg_b" arg_b).read
-         ; signed = true
          })
   | Op2 { op; arg_a; arg_b; _ } ->
     let op =
@@ -589,7 +595,6 @@ let create_statement
          ; arg_a = (find "Op2.arg_a" arg_a).read
          ; op
          ; arg_b = (find "Op2.arg_b" arg_b).read
-         ; signed = false
          })
   | Wire { driver = Some driver; _ } ->
     Assignment
@@ -683,21 +688,18 @@ let create_statement
     in
     Instantiation
       { name = instantiation.inst_name
-      ; instance = Rtl_name.mangle_instantiation_name rtl_name signal
+      ; instance = find_instance_name var_map signal
       ; parameters =
-          map_parameters_for_compatibility
-            language
-            rtl_compatibility
-            instantiation.inst_generics
+          map_parameters_for_compatibility language rtl_config instantiation.inst_generics
       ; input_ports
       ; output_ports
       ; attributes = Signal.attributes signal
       }
 ;;
 
-let create_statements ~rtl_compatibility ~language ~rtl_name var_map internal =
+let create_statements ~rtl_config ~language var_map internal =
   List.map internal ~f:(fun signal ->
-    try create_statement ~rtl_compatibility ~language ~rtl_name var_map signal with
+    try create_statement ~rtl_config ~language var_map signal with
     | exn ->
       raise_s
         [%message
@@ -715,7 +717,7 @@ let add_io_vars ~var_map vars =
 ;;
 
 let create_var_map inputs internal_vars =
-  let var_map = Map.of_alist_exn (module Signal.Uid) internal_vars in
+  let var_map = Map.of_alist_exn (module Signal.Type.Uid) internal_vars in
   add_io_vars ~var_map inputs
 ;;
 
@@ -740,7 +742,7 @@ let create_outputs ~blackbox var_map outputs output_vars =
   outputs, var_map
 ;;
 
-let of_circuit ~blackbox ~language circuit =
+let of_circuit ~blackbox ~(language : Rtl_language.t) ~(config : Rtl_config.t) circuit =
   let rtl_name = Rtl_name.of_language language in
   let module_name = Circuit.name circuit in
   let inputs = Circuit.inputs circuit |> List.map ~f:(var_of_io_port ~rtl_name) in
@@ -757,6 +759,7 @@ let of_circuit ~blackbox ~language circuit =
     ; declarations = []
     ; statements = []
     ; var_map
+    ; config
     })
   else (
     let signal_graph = Signal_graph.create (Circuit.outputs circuit) in
@@ -768,14 +771,7 @@ let of_circuit ~blackbox ~language circuit =
     in
     let var_map, declarations, internal = create_vars ~rtl_name internal in
     let var_map = add_io_vars ~var_map inputs in
-    let statements =
-      create_statements
-        ~rtl_compatibility:(Circuit.config circuit).rtl_compatibility
-        ~language
-        ~rtl_name
-        var_map
-        internal
-    in
+    let statements = create_statements ~rtl_config:config ~language var_map internal in
     let outputs, var_map = create_outputs ~blackbox var_map outputs output_vars in
     { name = module_name
     ; inputs = List.map inputs ~f:snd @ phantom_inputs
@@ -783,13 +779,14 @@ let of_circuit ~blackbox ~language circuit =
     ; declarations
     ; statements
     ; var_map
+    ; config
     })
 ;;
 
 module Signals_name_map = struct
   module Uid_with_index = struct
     module T = struct
-      type t = Signal.Uid.t * int [@@deriving compare, sexp_of]
+      type t = Signal.Type.Uid.t * int [@@deriving compare, sexp_of]
     end
 
     include T
@@ -806,9 +803,9 @@ module Signals_name_map = struct
         match declaration with
         | Logic { all_names; _ } -> all_names
         | Multiport_memory { memory; _ } -> [ memory ]
-        | Inst { all_names; _ } -> all_names
+        | Inst { logic = { all_names; _ }; _ } -> all_names
       in
       List.foldi all_names ~init:map ~f:(fun idx map var ->
-        Map.add_exn map ~key:(uid, idx) ~data:var.name))
+        Map.add_exn map ~key:(uid, idx) ~data:(Rope.to_string var.name)))
   ;;
 end

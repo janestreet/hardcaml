@@ -1,4 +1,4 @@
-(** How to display the value of a signal.  Generally used in waveforms. *)
+(** How to display the value of a signal. Generally used in waveforms. *)
 
 open Base
 
@@ -19,6 +19,5 @@ include Equal.S with type t := t
 
 (** Convert [Bits.t] to a string representation depending on the required format.
 
-    Staging is used to precompute arrays/maps to make the conversion operation faster.
-*)
+    Staging is used to precompute arrays/maps to make the conversion operation faster. *)
 val to_string : t -> (Bits.t -> string) Staged.t

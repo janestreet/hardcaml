@@ -1,11 +1,10 @@
-(** A [Signal_graph.t] is a created from a list of signals, and defined by tracing back
-    to inputs (unassigned wires or constants).  Functions are provided for traversing
-    the graph.
+(** A [Signal_graph.t] is a created from a list of signals, and defined by tracing back to
+    inputs (unassigned wires or constants). Functions are provided for traversing the
+    graph.
 
     When traversing using [depth_first_seach] we can specify [upto] which means the search
     will stop when it reaches any signal in the given list (which is also /not/ included
-    as part of the search).
-*)
+    as part of the search). *)
 
 open Base
 
@@ -14,7 +13,7 @@ type t [@@deriving sexp_of]
 (** Create a [Signal_graph.t] from a list of signals (commonly, circuit outputs). *)
 val create : ?upto:Signal.t list -> Signal.t list -> t
 
-(** Traverse the graph and find all inputs.  Badly formed inputs (no name, or multiple
+(** Traverse the graph and find all inputs. Badly formed inputs (no name, or multiple
     names) return an error. *)
 val inputs : t -> Signal.t list Or_error.t
 
@@ -24,13 +23,13 @@ val validate_outputs : t -> unit Or_error.t
 (** Return the outputs of the signal graph. *)
 val outputs : t -> Signal.t list
 
-(** Visit all signals in the graph, starting at the outputs, in a depth-first manner.
-    Each signal is visited only once.  [f_before] is called before recursing on each
-    signal's fan-in.  Similiarly, [f_after] is called after recursing on the fan-in.
+(** Visit all signals in the graph, starting at the outputs, in a depth-first manner. Each
+    signal is visited only once. [f_before] is called before recursing on each signal's
+    fan-in. Similiarly, [f_after] is called after recursing on the fan-in.
 
-    If [deps] is provided it will be used to compute signal dependencies rather
-    than the default definition. This is useful for terminating traversals
-    based on some condition on signals, e.g., if it's a register or a memory. *)
+    If [deps] is provided it will be used to compute signal dependencies rather than the
+    default definition. This is useful for terminating traversals based on some condition
+    on signals, e.g., if it's a register or a memory. *)
 val depth_first_search
   :  ?deps:(module Signal.Type.Deps)
   -> ?f_before:('a -> Signal.t -> 'a)
@@ -39,7 +38,7 @@ val depth_first_search
   -> init:'a
   -> 'a
 
-(** Fold across all signals in the graph, starting at the outputs.  Each signal is visited
+(** Fold across all signals in the graph, starting at the outputs. Each signal is visited
     only once. *)
 val fold
   :  ?deps:(module Signal.Type.Deps)
@@ -65,19 +64,19 @@ val rewrite
   :  t
   -> f:(Signal.t -> Signal.t)
   -> f_upto:(Signal.t -> Signal.t)
-  -> t * Signal.t Map.M(Signal.Uid).t
+  -> t * Signal.t Map.M(Signal.Type.Uid).t
 
-(** [normalize_uids t] creates a copy of [t] that is identical to [t] except the
-    uids are numbered starting at 1. *)
+(** [normalize_uids t] creates a copy of [t] that is identical to [t] except the uids are
+    numbered starting at 1. *)
 val normalize_uids : t -> t
 
-(** Fan-out of each signal in the signal graph.  The fan-out of a signal is the set of
+(** Fan-out of each signal in the signal graph. The fan-out of a signal is the set of
     signals it drives. *)
-val fan_out_map : t -> Signal.Type.Uid_set.t Map.M(Signal.Uid).t
+val fan_out_map : t -> Signal.Type.Uid_set.t Map.M(Signal.Type.Uid).t
 
-(** Fan-in of each signal in the signal graph.  The fan-in of a signal is the set of
+(** Fan-in of each signal in the signal graph. The fan-in of a signal is the set of
     signals that drive it. *)
-val fan_in_map : t -> Signal.Type.Uid_set.t Map.M(Signal.Uid).t
+val fan_in_map : t -> Signal.Type.Uid_set.t Map.M(Signal.Type.Uid).t
 
 (** [topological_sort t] sorts the signals in [t] so that all the signals in [deps s]
     occur before [s]. *)
@@ -96,9 +95,10 @@ module Deps_without_case_matches : Signal.Type.Deps
     elements like registers and memories. *)
 module Deps_for_simulation_scheduling : Signal.Type.Deps
 
-(** Like [Deps_for_simulation_scheduling], except loops are allowed through instantiations. *)
+(** Like [Deps_for_simulation_scheduling], except loops are allowed through
+    instantiations. *)
 module Deps_for_loop_checking : Signal.Type.Deps
 
 (** Final layer of combinational nodes which sit on the path between the outputs and any
     driving register or memory. *)
-val last_layer_of_nodes : is_input:(Signal.t -> bool) -> t -> Signal.Uid.t List.t
+val last_layer_of_nodes : is_input:(Signal.t -> bool) -> t -> Signal.Type.Uid.t List.t

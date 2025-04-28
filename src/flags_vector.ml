@@ -56,7 +56,7 @@ module Make (Cases : Cases) = struct
   let to_bits b = b
 
   let of_flags (type a) (module Comb : Comb.S with type t = a) flags =
-    Comb.of_int ~width:number_of (Flags.to_int_exn flags)
+    Comb.of_int_trunc ~width:number_of (Flags.to_int_exn flags)
   ;;
 
   let of_cases_list (type a) (module Comb : Comb.S with type t = a) ts =
@@ -68,7 +68,7 @@ module Make (Cases : Cases) = struct
   let to_cases_list (t : Bits.t t) =
     let bits = Bits.bits_lsb t in
     List.filter_mapi bits ~f:(fun index bit ->
-      if Bits.is_vdd bit then Some (case_of_rank index) else None)
+      if Bits.to_bool bit then Some (case_of_rank index) else None)
   ;;
 
   let to_flags (t : Bits.t t) =

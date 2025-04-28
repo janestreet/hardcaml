@@ -143,10 +143,9 @@ module type Cyclesim0 = sig
       ; deduplicate_signals : bool
       (** Perform a pass which finds structurally equal signals and shares them. *)
       ; store_circuit : bool
-      (** Stores the post-processed circuit that is used to compile the
-          simulation. This should generally be set to false, so that the Circuit
-          can be garbage collected once the simulation is constructed.
-      *)
+      (** Stores the post-processed circuit that is used to compile the simulation. This
+          should generally be set to false, so that the Circuit can be garbage collected
+          once the simulation is constructed. *)
       ; random_initializer : Random_initializer.t option
       (** How to initializer stateful circuit elements at the start of simulation. If not
           configured, all state starts at [0]. *)

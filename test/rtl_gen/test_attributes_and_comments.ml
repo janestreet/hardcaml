@@ -16,7 +16,7 @@ let%expect_test "attributes on signals" =
   let circuit =
     Circuit.create_exn
       ~name:"attributes"
-      [ name_attr
+      [ true_attr
           (output
              "o"
              (true_attr
@@ -36,7 +36,7 @@ let%expect_test "attributes on signals" =
         input j;
         (* stringattr="foo" *)
         input i;
-        (* nameattr *)
+        (* boolattr=1 *)
         output o;
 
         (* boolattr=1,intattr=123 *)
@@ -55,28 +55,239 @@ let%expect_test "attributes on signals" =
             i : in std_logic;
             o : out std_logic
         );
+        attribute boolattr : boolean;
+        attribute intattr : integer;
+        attribute stringattr : string;
+        attribute boolattr of j : signal is false;
+        attribute stringattr of i : signal is "foo";
+        attribute boolattr of o : signal is true;
     end entity;
 
     architecture rtl of attributes is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_4 : std_logic;
+        attribute boolattr of hc_4 : signal is true;
+        attribute intattr of hc_4 : signal is 123;
 
     begin
 
-        hc_4 <= hc_sl(hc_uns(i) or hc_uns(j));
+        hc_4 <= i or j;
         o <= hc_4;
+
+    end architecture;
+    |}]
+;;
+
+module C = struct
+  module I = struct
+    type 'a t = { a : 'a } [@@deriving hardcaml]
+  end
+
+  module O = struct
+    type 'a t = { b : 'a } [@@deriving hardcaml]
+  end
+
+  let create _ (i : _ I.t) = { O.b = i.a }
+
+  let hier scope =
+    let module Hier = Hierarchy.In_scope (I) (O) in
+    Hier.hierarchical
+      ~scope
+      ~attributes:[ Rtl_attribute.create "stringattr" ~value:(String "foo") ]
+      ~name:"inner"
+      create
+  ;;
+end
+
+let%expect_test "attributes on instantiations" =
+  let scope = Scope.create () in
+  let circuit =
+    let i = input "i" 1 in
+    let inner = C.hier scope { C.I.a = i } in
+    Circuit.create_exn ~name:"attributes" [ name_attr (output "o" inner.b) ]
+  in
+  Testing.analyse_vhdl_and_verilog
+    ~show:true
+    ~database:(Scope.circuit_database scope)
+    circuit;
+  [%expect
+    {|
+    module inner (
+        a,
+        b
+    );
+
+        input a;
+        output b;
+
+        wire _2;
+        assign _2 = a;
+        assign b = _2;
+
+    endmodule
+    module attributes (
+        i,
+        o
+    );
+
+        input i;
+        (* nameattr *)
+        output o;
+
+        wire _4;
+        wire _2;
+        (* stringattr="foo" *)
+        inner
+            inner
+            ( .a(i),
+              .b(_4) );
+        assign _2 = _4;
+        assign o = _2;
+
+    endmodule
+    library ieee;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_std.all;
+
+    entity inner is
+        port (
+            a : in std_logic;
+            b : out std_logic
+        );
+    end entity;
+
+    architecture rtl of inner is
+
+        signal hc_2 : std_logic;
+
+    begin
+
+        hc_2 <= a;
+        b <= hc_2;
+
+    end architecture;
+    library ieee;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_std.all;
+
+    entity attributes is
+        port (
+            i : in std_logic;
+            o : out std_logic
+        );
+        attribute stringattr : string;
+    end entity;
+
+    architecture rtl of attributes is
+
+        signal hc_4 : std_logic;
+        attribute stringattr of inner : label is "foo";
+        signal hc_2 : std_logic;
+
+    begin
+
+        inner: entity work.inner (rtl)
+            port map ( a => i,
+                       b => hc_4 );
+        hc_2 <= hc_4;
+        o <= hc_2;
+
+    end architecture;
+    |}]
+;;
+
+let%expect_test "attributes on memories" =
+  let circuit =
+    Circuit.create_exn
+      ~name:"attributes"
+      [ output
+          "q"
+          (multiport_memory
+             4
+             ~attributes:[ Rtl_attribute.create "on_mem" ~value:(Int 123) ]
+             ~write_ports:
+               [| { write_clock = input "clk" 1
+                  ; write_address = input "write_address" 2
+                  ; write_enable = input "write_enable" 1
+                  ; write_data = input "write_data" 8
+                  }
+               |]
+             ~read_addresses:[| input "read_address" 2 |]).(0)
+      ]
+  in
+  Testing.analyse_vhdl_and_verilog ~show:true circuit;
+  [%expect
+    {|
+    module attributes (
+        write_enable,
+        write_data,
+        write_address,
+        clk,
+        read_address,
+        q
+    );
+
+        input write_enable;
+        input [7:0] write_data;
+        input [1:0] write_address;
+        input clk;
+        input [1:0] read_address;
+        output [7:0] q;
+
+        (* on_mem=123 *)
+        reg [7:0] _7[0:3];
+        wire [7:0] _8;
+        always @(posedge clk) begin
+            if (write_enable)
+                _7[write_address] <= write_data;
+        end
+        assign _8 = _7[read_address];
+        assign q = _8;
+
+    endmodule
+    library ieee;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_std.all;
+
+    entity attributes is
+        port (
+            write_enable : in std_logic;
+            write_data : in std_logic_vector(7 downto 0);
+            write_address : in std_logic_vector(1 downto 0);
+            clk : in std_logic;
+            read_address : in std_logic_vector(1 downto 0);
+            q : out std_logic_vector(7 downto 0)
+        );
+        attribute on_mem : integer;
+    end entity;
+
+    architecture rtl of attributes is
+
+        type hc_7_type is protected
+            procedure set(address : integer; data : std_logic_vector(7 downto 0));
+            impure function get(address : integer) return std_logic_vector;
+        end protected;
+        type hc_7_type is protected body
+            type t is array (0 to 3) of std_logic_vector(7 downto 0);
+            variable memory : t;
+            procedure set(address : integer; data : std_logic_vector(7 downto 0)) is begin memory(address) := data; end procedure;
+            impure function get(address : integer) return std_logic_vector is begin return memory(address); end function;
+        end protected body;
+        shared variable hc_7 : hc_7_type;
+        attribute on_mem of hc_7 : variable is 123;
+        signal hc_8 : std_logic_vector(7 downto 0);
+
+    begin
+
+        process (clk) begin
+            if rising_edge(clk) then
+                if write_enable = '1' then
+                    hc_7.set(to_integer(unsigned(write_address)), write_data);
+                end if;
+            end if;
+        end process;
+        hc_8 <= hc_7.get(to_integer(unsigned(read_address)));
+        q <= hc_8;
 
     end architecture;
     |}]
@@ -120,23 +331,11 @@ let%expect_test "comments on signals" =
 
     architecture rtl of comments is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_4 : std_logic;
 
     begin
 
-        hc_4 <= hc_sl(hc_uns(i) or hc_uns(j));
+        hc_4 <= i or j;
         o <= hc_4;
 
     end architecture;

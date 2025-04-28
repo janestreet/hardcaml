@@ -1,10 +1,10 @@
 open! Import
 open! Signal
 
-let ( <--. ) dst src = dst := Bits.of_int ~width:(Bits.width !dst) src
+let ( <--. ) dst src = dst := Bits.of_int_trunc ~width:(Bits.width !dst) src
 
 let assign_reg dst src =
-  Cyclesim.Reg.of_bits dst (Bits.of_int ~width:(Cyclesim.Reg.width_in_bits dst) src)
+  Cyclesim.Reg.of_bits dst (Bits.of_int_trunc ~width:(Cyclesim.Reg.width_in_bits dst) src)
 ;;
 
 let%expect_test "Cyclesim.internal_port can peek at combinational node" =
@@ -86,7 +86,7 @@ let assign_mem dst ~address src =
   Cyclesim.Memory.of_bits
     dst
     ~address
-    (Bits.of_int ~width:(Cyclesim.Memory.width_in_bits dst) src)
+    (Bits.of_int_trunc ~width:(Cyclesim.Memory.width_in_bits dst) src)
 ;;
 
 let%expect_test "lookup_mem can read and write internal memory" =
@@ -133,7 +133,7 @@ let%expect_test "lookup_mem can read and write internal memory" =
   assign_mem mem ~address:42 123;
   read_address <--. 42;
   Cyclesim.cycle sim;
-  printf "Read_data = %d" (Bits.to_int !read_data);
+  printf "Read_data = %d" (Bits.to_int_trunc !read_data);
   [%expect {| Read_data = 123 |}];
   (* Write a value via hardcaml, and make sure that the value is written after
      calling Cyclesim.cycle

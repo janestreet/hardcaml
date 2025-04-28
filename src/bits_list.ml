@@ -77,7 +77,11 @@ module Make_gates (T : T) = struct
 
   let to_bstr = to_bstr
   let to_string t = Sexp.to_string_hum (sexp_of_t t)
-  let ( -- ) a _ = a
+
+  let ( -- ) ?(loc = Stdlib.Lexing.dummy_pos) a _ =
+    ignore loc;
+    a
+  ;;
 
   let sexp_of_t =
     if T.constant_only

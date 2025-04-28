@@ -1,7 +1,6 @@
 (** Device a hardcaml interfaces for bit flags from an enumeration.
 
-    From software, the interface can be controlled using normal flags.
-*)
+    From software, the interface can be controlled using normal flags. *)
 
 open Base
 

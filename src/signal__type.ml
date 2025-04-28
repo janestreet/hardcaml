@@ -61,10 +61,10 @@ type signal_op =
 [@@deriving sexp_of, compare, equal, hash]
 
 type signal_metadata =
-  { mutable names : string list
+  { mutable names_and_locs : Name_and_loc.t list
   ; mutable attributes : Rtl_attribute.t list
   ; mutable comment : string option
-  ; mutable caller_id : Caller_id.t option
+  ; caller_id : Caller_id.t option
   ; mutable wave_format : Wave_format.t
   }
 [@@deriving sexp_of]
@@ -308,20 +308,9 @@ let signal_id s =
 ;;
 
 let uid s =
-  match s with
-  | Empty -> Uid.zero
-  | Const { signal_id; _ }
-  | Select { signal_id; _ }
-  | Reg { signal_id; _ }
-  | Multiport_mem { signal_id; _ }
-  | Mem_read_port { signal_id; _ }
-  | Wire { signal_id; _ }
-  | Inst { signal_id; _ }
-  | Op2 { signal_id; _ }
-  | Mux { signal_id; _ }
-  | Cases { signal_id; _ }
-  | Cat { signal_id; _ }
-  | Not { signal_id; _ } -> signal_id.s_id
+  match signal_id s with
+  | None -> Uid.zero
+  | Some s -> s.s_id
 ;;
 
 let width s =
@@ -331,20 +320,19 @@ let width s =
 ;;
 
 let caller_id s =
-  match signal_id s with
-  | None -> None
-  | Some s ->
-    (match s.s_metadata with
-     | None -> None
-     | Some id -> id.caller_id)
+  let%bind.Option s = signal_id s in
+  let%bind.Option m = s.s_metadata in
+  m.caller_id
 ;;
 
-let names s =
+let names_and_locs s =
   match signal_id s with
   | None -> raise_s [%message "cannot get [names] from the empty signal"]
   | Some s ->
-    Option.value_map ~default:[] s.s_metadata ~f:(fun metadata -> metadata.names)
+    Option.value_map ~default:[] s.s_metadata ~f:(fun metadata -> metadata.names_and_locs)
 ;;
+
+let names s : string list = List.map (names_and_locs s) ~f:(fun s -> s.name)
 
 let structural_compare
   ?(check_names = true)
@@ -436,8 +424,8 @@ let structural_compare
         let b = attributes_set b in
         [%equal: Set.M(Rtl_attribute).t option] a b
       in
-      if kinds_are_the_same ()
-         && widths_are_the_same ()
+      if widths_are_the_same ()
+         && kinds_are_the_same ()
          && attributes_are_the_same ()
          && names_are_the_same ()
       then deps_are_the_same ()
@@ -523,8 +511,10 @@ let string_of_op = function
   | Signal_lt -> "lt"
 ;;
 
-let rec sexp_of_instantiation_recursive ?show_uids ~depth inst =
-  let sexp_of_next s = sexp_of_signal_recursive ?show_uids ~depth:(depth - 1) s in
+let rec sexp_of_instantiation_recursive ?show_uids ?show_locs ~depth inst =
+  let sexp_of_next s =
+    sexp_of_signal_recursive ?show_uids ?show_locs ~depth:(depth - 1) s
+  in
   let name =
     if String.is_empty inst.inst_lib
     then inst.inst_name
@@ -541,8 +531,10 @@ let rec sexp_of_instantiation_recursive ?show_uids ~depth inst =
       ~inputs:(inst.inst_inputs : (string * next) list)
       ~outputs:(inst.inst_outputs : (string * output_width) list)]
 
-and sexp_of_register_recursive ?show_uids ~depth (reg : t register) =
-  let sexp_of_next s = sexp_of_signal_recursive ?show_uids ~depth:(depth - 1) s in
+and sexp_of_register_recursive ?show_uids ?show_locs ~depth (reg : t register) =
+  let sexp_of_next s =
+    sexp_of_signal_recursive ?show_uids ?show_locs ~depth:(depth - 1) s
+  in
   let sexp_of_opt s ~f = Option.map s ~f:(fun s -> sexp_of_next (f s)) in
   [%message
     ""
@@ -567,8 +559,10 @@ and sexp_of_register_recursive ?show_uids ~depth (reg : t register) =
          : (Sexp.t option[@sexp.option]))
       ~enable:(sexp_of_opt reg.enable ~f:Fn.id : (Sexp.t option[@sexp.option]))]
 
-and sexp_of_reg_spec_recursive ?show_uids ~depth spec =
-  let sexp_of_next s = sexp_of_signal_recursive ?show_uids ~depth:(depth - 1) s in
+and sexp_of_reg_spec_recursive ?show_uids ?show_locs ~depth spec =
+  let sexp_of_next s =
+    sexp_of_signal_recursive ?show_uids ?show_locs ~depth:(depth - 1) s
+  in
   let sexp_of_opt s = Option.map s ~f:(fun s -> sexp_of_next s) in
   let sexp_of_edge g s = Option.map g ~f:(fun _ -> Edge.sexp_of_t s) in
   [%message
@@ -582,10 +576,13 @@ and sexp_of_reg_spec_recursive ?show_uids ~depth spec =
 
 and sexp_of_memory_recursive
   ?show_uids
+  ?show_locs
   ~depth
   (size, write_address, read_address, write_enable)
   =
-  let sexp_of_signal s = sexp_of_signal_recursive ?show_uids ~depth:(depth - 1) s in
+  let sexp_of_signal s =
+    sexp_of_signal_recursive ?show_uids ?show_locs ~depth:(depth - 1) s
+  in
   [%message
     ""
       (size : int)
@@ -593,8 +590,10 @@ and sexp_of_memory_recursive
       (read_address : signal)
       (write_enable : signal)]
 
-and sexp_of_multiport_memory_recursive ?show_uids ~depth (size, write_ports) =
-  let sexp_of_signal s = sexp_of_signal_recursive ?show_uids ~depth:(depth - 1) s in
+and sexp_of_multiport_memory_recursive ?show_uids ?show_locs ~depth (size, write_ports) =
+  let sexp_of_signal s =
+    sexp_of_signal_recursive ?show_uids ?show_locs ~depth:(depth - 1) s
+  in
   let sexp_of_write_port (w : _ Write_port.t) =
     [%message
       ""
@@ -604,11 +603,13 @@ and sexp_of_multiport_memory_recursive ?show_uids ~depth (size, write_ports) =
   in
   [%message "" (size : int) (write_ports : write_port array)]
 
-and sexp_of_mem_read_port_recursive ?show_uids ~depth (memory, read_addresses) =
-  let sexp_of_signal s = sexp_of_signal_recursive ?show_uids ~depth:(depth - 1) s in
+and sexp_of_mem_read_port_recursive ?show_uids ?show_locs ~depth (memory, read_addresses) =
+  let sexp_of_signal s =
+    sexp_of_signal_recursive ?show_uids ?show_locs ~depth:(depth - 1) s
+  in
   [%message "" (memory : signal) (read_addresses : signal)]
 
-and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
+and sexp_of_signal_recursive ?(show_uids = false) ?(show_locs = false) ~depth signal =
   let display_const c =
     if Bits.width c <= 8
     then "0b" ^ Bits.to_bstr c
@@ -648,10 +649,16 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
     let sexp_of_mem_read_port = sexp_of_mem_read_port_recursive ~show_uids ~depth in
     let sexp_of_register = sexp_of_register_recursive ~show_uids ~depth in
     let uid = if show_uids then Some (uid signal) else None in
-    let names =
-      match names signal with
-      | [] -> None
-      | names -> Some names
+    let names, names_and_locs =
+      if show_locs
+      then (
+        match names_and_locs signal with
+        | [] -> None, None
+        | names_and_locs -> None, Some names_and_locs)
+      else (
+        match names signal with
+        | [] -> None, None
+        | names -> Some names, None)
     in
     let width = width signal in
     let loc = caller_id signal in
@@ -671,25 +678,26 @@ and sexp_of_signal_recursive ?(show_uids = false) ~depth signal =
       ?data_in
       constructor
       =
-      [%message
+      [%message.omit_nil
         constructor
-          (uid : (Uid.t option[@sexp.option]))
-          (names : (string list option[@sexp.option]))
-          (loc : (Caller_id.t option[@sexp.option]))
+          (uid : Uid.t option)
+          (names : string list option)
+          (names_and_locs : Name_and_loc.t list option)
+          (loc : Caller_id.t option)
           (width : int)
-          (value : (string option[@sexp.option]))
-          (range : ((int * int) option[@sexp.option]))
-          (select : (next option[@sexp.option]))
-          (cases : ((next * next) list option[@sexp.option]))
-          (data : (next list option[@sexp.option]))
-          (default : (next option[@sexp.option]))
-          ~_:(instantiation : (instantiation option[@sexp.option]))
-          ~_:(register : (register option[@sexp.option]))
-          ~_:(memory : (memory option[@sexp.option]))
-          ~_:(multiport_memory : (multiport_memory option[@sexp.option]))
-          ~_:(mem_read_port : (mem_read_port option[@sexp.option]))
-          (arguments : (next list option[@sexp.option]))
-          (data_in : (next option[@sexp.option]))]
+          (value : string option)
+          (range : (int * int) option)
+          (select : next option)
+          (cases : (next * next) list option)
+          (data : next list option)
+          (default : next option)
+          ~_:(instantiation : instantiation option)
+          ~_:(register : register option)
+          ~_:(memory : memory option)
+          ~_:(multiport_memory : multiport_memory option)
+          ~_:(mem_read_port : mem_read_port option)
+          (arguments : next list option)
+          (data_in : next option)]
     in
     match signal with
     | Empty -> create "empty"
@@ -770,7 +778,7 @@ let wire_driver = function
 ;;
 
 let has_name t = not (List.is_empty (names t))
-let `New new_id, `Reset reset_id = Uid.generator ()
+let `New new_id, `Reset _ = Uid.generator ()
 let default_wave_format = Wave_format.Bit_or Binary
 
 let make_id width =
@@ -779,7 +787,7 @@ let make_id width =
   ; s_width = width
   ; s_metadata =
       Option.map (Caller_id.get () ~skip:[]) ~f:(fun caller_id ->
-        { names = []
+        { names_and_locs = []
         ; attributes = []
         ; comment = None
         ; caller_id = Some caller_id
@@ -789,16 +797,15 @@ let make_id width =
 ;;
 
 let get_metadata t =
-  match signal_id t with
-  | None -> None
-  | Some signal_id -> signal_id.s_metadata
+  let%bind.Option s = signal_id t in
+  s.s_metadata
 ;;
 
 let get_or_alloc_metadata t =
   match t.s_metadata with
   | None ->
     let metadata =
-      { names = []
+      { names_and_locs = []
       ; attributes = []
       ; comment = None
       ; caller_id = None
@@ -828,11 +835,9 @@ let check_attribute t attr =
   let applies_to = Rtl_attribute.applies_to attr in
   match applies_to with
   | [] -> ()
-  | applies_to ->
-    if List.fold applies_to ~init:false ~f:(fun acc app ->
-         acc || check_attribute_applies_to t app)
-    then ()
-    else
+  | _ ->
+    if not (List.exists applies_to ~f:(check_attribute_applies_to t))
+    then
       raise_s
         [%message
           "Rtl_attribute is applied to wrong type of signal"
@@ -843,6 +848,15 @@ let check_attribute t attr =
 let add_attribute t attr =
   change_metadata t ~f:(fun metadata ->
     check_attribute t attr;
+    List.iter metadata.attributes ~f:(fun existing_attr ->
+      if String.equal (Rtl_attribute.name existing_attr) (Rtl_attribute.name attr)
+      then
+        raise_s
+          [%message
+            "Tried to assign the same attribute to a signal twice"
+              (t : t)
+              ~old:(existing_attr : Rtl_attribute.t)
+              ~new_:(attr : Rtl_attribute.t)]);
     metadata.attributes <- attr :: metadata.attributes)
 ;;
 
@@ -852,8 +866,9 @@ let get_attributes t =
 
 let set_attributes t attributes =
   change_metadata t ~f:(fun metadata ->
-    List.iter attributes ~f:(check_attribute t);
-    metadata.attributes <- attributes)
+    metadata.attributes <- [];
+    (* Add the attributes one by one to check for duplicated names *)
+    List.iter attributes ~f:(add_attribute t))
 ;;
 
 let set_comment t comment =
@@ -865,26 +880,24 @@ let get_comment t =
   metadata.comment
 ;;
 
-let unset_comment t =
-  match get_metadata t with
-  | None -> ()
-  | Some metadata -> metadata.comment <- None
+let unset_comment t = change_metadata t ~f:(fun metadata -> metadata.comment <- None)
+
+let add_name t name_and_loc =
+  change_metadata t ~f:(fun metadata ->
+    metadata.names_and_locs <- name_and_loc :: metadata.names_and_locs)
 ;;
 
-let add_name t name =
-  change_metadata t ~f:(fun metadata -> metadata.names <- name :: metadata.names)
+let set_names t names =
+  change_metadata t ~f:(fun metadata -> metadata.names_and_locs <- names)
 ;;
-
-let set_names t names = change_metadata t ~f:(fun metadata -> metadata.names <- names)
 
 let set_wave_format t wave_format =
   change_metadata t ~f:(fun metadata -> metadata.wave_format <- wave_format)
 ;;
 
 let get_wave_format t =
-  match get_metadata t with
-  | Some metadata -> metadata.wave_format
-  | None -> default_wave_format
+  Option.value_map (get_metadata t) ~default:default_wave_format ~f:(fun m ->
+    m.wave_format)
 ;;
 
 let is_vdd = function
@@ -938,16 +951,14 @@ module Register = struct
 
   let assert_width_or_none signal w msg =
     match signal with
-    | None -> ()
-    | Some signal ->
-      if width signal <> w
-      then
-        raise_s
-          [%message
-            msg
-              ~info:"signal should have expected width or be empty"
-              ~expected_width:(w : int)
-              (signal : t)]
+    | Some signal when width signal <> w ->
+      raise_s
+        [%message
+          msg
+            ~info:"signal should have expected width or be empty"
+            ~expected_width:(w : int)
+            (signal : t)]
+    | None | Some _ -> ()
   ;;
 
   let zero w = of_bits (Bits.zero w)

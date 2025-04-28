@@ -1,4 +1,5 @@
 open! Core
+open Expect_test_helpers_base
 open Hardcaml
 open Signal
 open Always
@@ -160,22 +161,11 @@ let%expect_test "" =
             start : in std_logic;
             is_done : out std_logic
         );
+        attribute fsm_encoding : string;
     end entity;
 
     architecture rtl of statemachine is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_10 : std_logic_vector(1 downto 0);
         signal hc_24 : std_logic_vector(1 downto 0);
         signal hc_22 : std_logic_vector(3 downto 0);
@@ -196,6 +186,7 @@ let%expect_test "" =
         signal hc_26 : std_logic_vector(1 downto 0);
         signal hc_8 : std_logic_vector(1 downto 0);
         signal hc_11 : std_logic_vector(1 downto 0);
+        attribute fsm_encoding of hc_11 : signal is "one_hot";
         signal hc_27 : std_logic;
 
     begin
@@ -207,7 +198,7 @@ let%expect_test "" =
         hc_2 <= clear;
         hc_4 <= clock;
         hc_16 <= "0001";
-        hc_17 <= hc_slv(hc_uns(hc_15) + hc_uns(hc_16));
+        hc_17 <= std_logic_vector(unsigned(hc_15) + unsigned(hc_16));
         process (all) begin
             case hc_11 is
             when "01" =>
@@ -228,14 +219,14 @@ let%expect_test "" =
                 end if;
             end if;
         end process;
-        hc_23 <= hc_sl(hc_uns(hc_15) = hc_uns(hc_22));
-        with to_integer(hc_uns(hc_23)) select hc_25 <=
+        hc_23 <= unsigned(hc_15) ?= unsigned(hc_22);
+        with to_integer(unsigned(std_logic_vector'("" & hc_23))) select hc_25 <=
             hc_11 when 0,
             hc_24 when others;
         hc_18 <= "10";
         hc_13 <= "01";
         hc_7 <= start;
-        with to_integer(hc_uns(hc_7)) select hc_20 <=
+        with to_integer(unsigned(std_logic_vector'("" & hc_7))) select hc_20 <=
             hc_11 when 0,
             hc_13 when others;
         process (all) begin
@@ -262,7 +253,7 @@ let%expect_test "" =
                 end if;
             end if;
         end process;
-        hc_27 <= hc_sl(hc_uns(hc_10) = hc_uns(hc_11));
+        hc_27 <= unsigned(hc_10) ?= unsigned(hc_11);
         is_done <= hc_27;
 
     end architecture;
@@ -329,4 +320,54 @@ let%expect_test "show that the pseudo-constants for matches are not printed sepe
 
     endmodule
     |}]
+;;
+
+let create ~unreachable cases =
+  let i = I.Of_signal.wires () in
+  let spec = Reg_spec.create ~clock:i.clock ~clear:i.clear () in
+  let sm = State_machine.create ~unreachable (module State) spec in
+  compile [ sm.switch (cases sm.set_next) ];
+  { O.is_done = sm.is A }
+;;
+
+let%expect_test "unreachable" =
+  require_does_not_raise (fun () ->
+    ignore
+      (create ~unreachable:[] (fun next ->
+         [ A, [ next A ]; B, [ next B ]; C, [ next C ]; D, [ next D ] ])
+       : _ O.t));
+  require_does_not_raise (fun () ->
+    ignore
+      (create ~unreachable:[ B ] (fun next ->
+         [ A, [ next A ]; C, [ next C ]; D, [ next D ] ])
+       : _ O.t));
+  require_does_not_raise (fun () ->
+    ignore
+      (create ~unreachable:[ B; D ] (fun next -> [ A, [ next A ]; C, [ next C ] ])
+       : _ O.t));
+  require_does_raise (fun () ->
+    ignore
+      (create ~unreachable:[ B; D ] (fun next ->
+         [ A, [ next A ]; B, [ next A ]; C, [ next C ] ])
+       : _ O.t));
+  [%expect
+    {|
+    ("[Always.State_machine.switch] unreachable state provided with a non-empty implementation"
+     (state B))
+    |}];
+  require_does_not_raise (fun () ->
+    ignore
+      (create ~unreachable:[ B; D ] (fun next -> [ A, [ next A ]; B, []; C, [ next C ] ])
+       : _ O.t));
+  [%expect {| |}];
+  require_does_raise (fun () ->
+    ignore
+      (create ~unreachable:[ A; D ] (fun next -> [ A, []; B, []; C, [ next C ]; D, [] ])
+       : _ O.t));
+  [%expect {| ("[Always.State_machine.is] got unknown state" A) |}];
+  require_does_raise (fun () ->
+    ignore
+      (create ~unreachable:[ B; D ] (fun next -> [ A, [ next A ]; C, [ next D ] ])
+       : _ O.t));
+  [%expect {| ("[Always.State_machine.set_next] got unknown state" D) |}]
 ;;

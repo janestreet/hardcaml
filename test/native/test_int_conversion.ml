@@ -21,7 +21,7 @@ struct
       print_s [%message (width : int)];
       for value = 0 to (1 lsl width) - 1 do
         let to_int ~width value =
-          try Ok (to_unsigned_int (of_int ~width value)) with
+          try Ok (to_unsigned_int (of_int_trunc ~width value)) with
           | exn -> Or_error.error_s [%message (exn : exn)]
         in
         print_s [%message "" ~_:(to_int ~width value : Int.t Or_error.t)]
@@ -198,7 +198,7 @@ struct
       print_s [%message (width : int)];
       for value = -(1 lsl (width - 1)) to 1 lsl (width - 1) do
         let to_int ~width value =
-          try Ok (to_signed_int (of_int ~width value)) with
+          try Ok (to_signed_int (of_int_trunc ~width value)) with
           | exn -> Or_error.error_s [%message (exn : exn)]
         in
         print_s [%message "" ~_:(to_int ~width value : Int.t Or_error.t)]

@@ -75,17 +75,16 @@ end
 ```ocaml
 # let create (_scope : Scope.t) (input : Signal.t I.t) =
     let spec_with_clear =
-      Reg_spec.create ~clock:input.clock ~clear:input.clear ()
+      Signal.Reg_spec.create ~clock:input.clock ~clear:input.clear ()
     in
     let foo_d = Signal.reg spec_with_clear ~enable:Signal.vdd input.foo in
     { O. foo_d }
-val create : Scope.t -> Reg_spec.signal I.t -> Reg_spec.signal O.t = <fun>
+val create : Scope.t -> Signal.t I.t -> Signal.t O.t = <fun>
 
 # let hierarchical (scope : Scope.t) (input : Signal.t I.t) =
     let module H = Hierarchy.In_scope(I)(O) in
     H.hierarchical ~scope ~name:"module_name" ~instance:"module_instance_2" create input
-val hierarchical : Scope.t -> Reg_spec.signal I.t -> Reg_spec.signal O.t =
-  <fun>
+val hierarchical : Scope.t -> Signal.t I.t -> Signal.t O.t = <fun>
 ```
 
 And that's it! When we want to instantiate this design as a
@@ -108,8 +107,9 @@ from the `scope` argument.
 
 ```ocaml
 # Scope.naming;;
-- : ?sep:string -> Scope.t -> Reg_spec.signal -> string -> Reg_spec.signal =
-<fun>
+- : ?sep:string ->
+    Scope.t -> loc:[%call_pos] -> Signal.t -> string -> Signal.t
+= <fun>
 ```
 
 Here is an example.
@@ -119,7 +119,7 @@ let create (scope : Scope.t) (input : _ I.t) =
   (* A useful function alias for naming signals. *)
   let (--) = Scope.naming scope in
   let spec_with_clear =
-    Reg_spec.create ~clock:input.clock ~clear:input.clear ()
+    Signal.Reg_spec.create ~clock:input.clock ~clear:input.clear ()
   in
   let foo_d_next = Signal.(+:) input.foo input.foo -- "foo_d_next" in
   let foo_d = Signal.reg spec_with_clear ~enable:Signal.vdd foo_d_next in

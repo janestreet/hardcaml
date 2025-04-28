@@ -49,7 +49,7 @@ let create (i : _ I.t) =
   ; o_cat1 = i.i_a @: i.i_b
   ; o_cat2 = concat_msb [ i.i_a; i.i_b; i.i_c ]
   ; o_mux2 = mux2 i.i_a.:[0, 0] i.i_a i.i_b
-  ; o_mux = mux i.i_a.:[2, 1] [ i.i_a; i.i_b; i.i_c.:[7, 0]; of_int ~width:8 0xab ]
+  ; o_mux = mux i.i_a.:[2, 1] [ i.i_a; i.i_b; i.i_c.:[7, 0]; of_int_trunc ~width:8 0xab ]
   }
 ;;
 
@@ -210,18 +210,6 @@ let%expect_test "operators" =
 
     architecture rtl of operators is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_25 : std_logic_vector(7 downto 0);
         signal hc_24 : std_logic_vector(7 downto 0);
         signal hc_23 : std_logic_vector(1 downto 0);
@@ -251,32 +239,32 @@ let%expect_test "operators" =
         hc_25 <= "10101011";
         hc_24 <= hc_11(7 downto 0);
         hc_23 <= hc_21(2 downto 1);
-        with to_integer(hc_uns(hc_23)) select hc_26 <=
+        with to_integer(unsigned(hc_23)) select hc_26 <=
             hc_21 when 0,
             hc_19 when 1,
             hc_24 when 2,
             hc_25 when others;
-        hc_27 <= hc_sl(hc_21(0 downto 0));
-        with to_integer(hc_uns(hc_27)) select hc_28 <=
+        hc_27 <= hc_21(0);
+        with to_integer(unsigned(std_logic_vector'("" & hc_27))) select hc_28 <=
             hc_19 when 0,
             hc_21 when others;
         hc_29 <= hc_21 & hc_19 & hc_11;
         hc_30 <= hc_21 & hc_19;
         hc_31 <= hc_11(9 downto 4);
         hc_32 <= hc_21(4 downto 3);
-        hc_33 <= hc_sl(hc_uns(hc_21) < hc_uns(hc_19));
-        hc_34 <= hc_sl(hc_uns(hc_21) = hc_uns(hc_19));
-        hc_35 <= hc_slv(hc_sgn(hc_21) * hc_sgn(hc_11));
+        hc_33 <= unsigned(hc_21) ?< unsigned(hc_19);
+        hc_34 <= unsigned(hc_21) ?= unsigned(hc_19);
+        hc_35 <= std_logic_vector(signed(hc_21) * signed(hc_11));
         hc_11 <= i_c;
-        hc_36 <= hc_slv(hc_uns(hc_21) * hc_uns(hc_11));
-        hc_37 <= hc_slv(hc_uns(hc_21) - hc_uns(hc_19));
-        hc_38 <= hc_slv(hc_uns(hc_21) + hc_uns(hc_19));
-        hc_39 <= hc_slv(not hc_uns(hc_21));
-        a_b <= hc_slv(hc_uns(hc_21) xor hc_uns(hc_19));
-        module <= hc_slv(hc_uns(hc_21) or hc_uns(hc_19));
+        hc_36 <= std_logic_vector(unsigned(hc_21) * unsigned(hc_11));
+        hc_37 <= std_logic_vector(unsigned(hc_21) - unsigned(hc_19));
+        hc_38 <= std_logic_vector(unsigned(hc_21) + unsigned(hc_19));
+        hc_39 <= not hc_21;
+        a_b <= hc_21 xor hc_19;
+        module <= hc_21 or hc_19;
         hc_19 <= i_b;
         hc_21 <= i_a;
-        hc_42 <= hc_slv(hc_uns(hc_21) and hc_uns(hc_19));
+        hc_42 <= hc_21 and hc_19;
         o_and <= hc_42;
         o_or <= module;
         o_xor <= a_b;

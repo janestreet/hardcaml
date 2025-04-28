@@ -5,7 +5,7 @@
     multiplexing etc.
 
     In operators, a trailing colon [:] indicates that the operator treats the bits as
-    unsigned or that sign doesn't matter, while a trailing plus [+] indicates that
-    the operator treats the bits as signed twos-complement. *)
+    unsigned or that sign doesn't matter, while a trailing plus [+] indicates that the
+    operator treats the bits as signed twos-complement. *)
 
 include Comb_intf.Comb (** @inline *)

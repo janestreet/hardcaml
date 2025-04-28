@@ -126,18 +126,6 @@ let%expect_test "instantiation, with 0 or more parameters." =
 
     architecture rtl of temp is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_13 : std_logic_vector(1 downto 0);
         signal hc_10 : std_logic_vector(1 downto 0);
         signal hc_8 : std_logic_vector(1 downto 0);
@@ -159,8 +147,8 @@ let%expect_test "instantiation, with 0 or more parameters." =
         hc_13 <= hc_12(2 downto 1);
         hc_10 <= hc_9(2 downto 1);
         hc_8 <= hc_7(2 downto 1);
-        hc_11 <= hc_slv(hc_uns(hc_8) or hc_uns(hc_10));
-        hc_14 <= hc_slv(hc_uns(hc_11) or hc_uns(hc_13));
+        hc_11 <= hc_8 or hc_10;
+        hc_14 <= hc_11 or hc_13;
         the_foo: entity work.foo (rtl)
             generic map ( par => 3,
                           far => "baloo" )
@@ -168,14 +156,14 @@ let%expect_test "instantiation, with 0 or more parameters." =
                        bar => hc_3,
                        moo => hc_12(2 downto 1),
                        zoo => hc_12(0) );
-        hc_18 <= hc_sl(hc_12(0 downto 0));
+        hc_18 <= hc_12(0);
         the_foo_1: entity work.foo (rtl)
             generic map ( par => 3 )
             port map ( foo => hc_5,
                        bar => hc_3,
                        moo => hc_9(2 downto 1),
                        zoo => hc_9(0) );
-        hc_16 <= hc_sl(hc_9(0 downto 0));
+        hc_16 <= hc_9(0);
         hc_3 <= bar;
         hc_5 <= foo;
         the_foo_2: entity work.foo (rtl)
@@ -183,9 +171,9 @@ let%expect_test "instantiation, with 0 or more parameters." =
                        bar => hc_3,
                        moo => hc_7(2 downto 1),
                        zoo => hc_7(0) );
-        hc_15 <= hc_sl(hc_7(0 downto 0));
-        hc_17 <= hc_sl(hc_uns(hc_15) or hc_uns(hc_16));
-        hc_19 <= hc_sl(hc_uns(hc_17) or hc_uns(hc_18));
+        hc_15 <= hc_7(0);
+        hc_17 <= hc_15 or hc_16;
+        hc_19 <= hc_17 or hc_18;
         zoo <= hc_19;
         moo <= hc_14;
 
@@ -256,18 +244,6 @@ let%expect_test "instantiation output corner case" =
 
     architecture rtl of temp is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_2 : std_logic;
         signal hc_4 : std_logic;
         signal hc_7 : std_logic;
@@ -302,35 +278,33 @@ let%expect_test "all parameter types" =
   end
   in
   let module C = Circuit.With_interface (I) (O) in
+  let config = { Rtl.Config.default with backend = Modelsim } in
   let circuit =
-    C.create_exn
-      ~config:{ Circuit.Config.default with rtl_compatibility = Modelsim }
-      ~name:"temp"
-      (fun (i : _ I.t) ->
-         let module I = Instantiation.With_interface (I) (O) in
-         I.create
-           ~name:"foo"
-           ~parameters:
-             [ Parameter.create ~name:"a" ~value:(Bit true)
-             ; Parameter.create ~name:"a2" ~value:(Bit false)
-             ; Parameter.create ~name:"b" ~value:(Bit_vector [ 1; 0 ])
-             ; Parameter.create ~name:"c" ~value:(Bool true)
-             ; Parameter.create ~name:"c2" ~value:(Bool false)
-             ; Parameter.create ~name:"d" ~value:(Int 123)
-             ; Parameter.create ~name:"e" ~value:(Real 1.24)
-             ; Parameter.create ~name:"f" ~value:(Std_logic U)
-             ; Parameter.create
-                 ~name:"g"
-                 ~value:(Std_logic_vector [ U; X; L0; L1; Z; W; L; H; Don't_care ])
-             ; Parameter.create ~name:"h" ~value:(Std_ulogic W)
-             ; Parameter.create
-                 ~name:"i"
-                 ~value:(Std_ulogic_vector [ U; X; L0; L1; Z; W; L; H; Don't_care ])
-             ; Parameter.create ~name:"j" ~value:(String "foo")
-             ]
-           i)
+    C.create_exn ~name:"temp" (fun (i : _ I.t) ->
+      let module I = Instantiation.With_interface (I) (O) in
+      I.create
+        ~name:"foo"
+        ~parameters:
+          [ Parameter.create ~name:"a" ~value:(Bit true)
+          ; Parameter.create ~name:"a2" ~value:(Bit false)
+          ; Parameter.create ~name:"b" ~value:(Bit_vector [ 1; 0 ])
+          ; Parameter.create ~name:"c" ~value:(Bool true)
+          ; Parameter.create ~name:"c2" ~value:(Bool false)
+          ; Parameter.create ~name:"d" ~value:(Int 123)
+          ; Parameter.create ~name:"e" ~value:(Real 1.24)
+          ; Parameter.create ~name:"f" ~value:(Std_logic U)
+          ; Parameter.create
+              ~name:"g"
+              ~value:(Std_logic_vector [ U; X; L0; L1; Z; W; L; H; Don't_care ])
+          ; Parameter.create ~name:"h" ~value:(Std_ulogic W)
+          ; Parameter.create
+              ~name:"i"
+              ~value:(Std_ulogic_vector [ U; X; L0; L1; Z; W; L; H; Don't_care ])
+          ; Parameter.create ~name:"j" ~value:(String "foo")
+          ]
+        i)
   in
-  Testing.analyse_vhdl_and_verilog ~quiet:true ~show:true circuit;
+  Testing.analyse_vhdl_and_verilog ~quiet:true ~show:true ~config circuit;
   [%expect
     {|
     ("Icarus Verilog failed with" (error_code (Error (Exit_non_zero 3))))
@@ -386,18 +360,6 @@ let%expect_test "all parameter types" =
 
     architecture rtl of temp is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_2 : std_logic;
         signal hc_4 : std_logic;
         signal hc_7 : std_logic;
@@ -477,18 +439,6 @@ let%expect_test "phantom input" =
 
     architecture rtl of temp is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_2 : std_logic;
 
     begin
@@ -533,9 +483,11 @@ let%expect_test "vivado compatibility mode" =
            else [])
         i)
   in
+  let config = { Rtl.Config.default with backend = Vivado } in
   Testing.analyse_vhdl_and_verilog
     ~quiet:true
     ~show:true
+    ~config
     (circuit ~with_dodgy_std_logic_parameter:false);
   [%expect
     {|
@@ -584,18 +536,6 @@ let%expect_test "vivado compatibility mode" =
 
     architecture rtl of temp is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_2 : std_logic;
         signal hc_4 : std_logic;
         signal hc_7 : std_logic;
@@ -622,24 +562,29 @@ let%expect_test "vivado compatibility mode" =
     Testing.analyse_vhdl_and_verilog
       ~quiet:true
       ~show:true
+      ~config
       (circuit ~with_dodgy_std_logic_parameter:true));
   [%expect
     {|
-    ("[Rtl_ast] failed to create statement for signal"
-     (signal (
-       instantiation
-       (width 1)
-       ("work.foo(rtl){the_foo}"
-         (parameters (
-           (a (Std_logic 0))
-           (b (Std_logic 1))
-           (c (Std_logic 0))
-           (d (Std_logic 1))
-           (e (Std_logic U))))
-         (inputs (
-           (foo wire)
-           (bar wire)))
-         (outputs ((zoo 1))))))
-     (exn ("Cannot map Std_logic value to Bit type" (v U))))
+    ("Error while writing circuit"
+      (circuit_name temp)
+      (hierarchy_path (temp))
+      (exn (
+        "[Rtl_ast] failed to create statement for signal"
+        (signal (
+          instantiation
+          (width 1)
+          ("work.foo(rtl){the_foo}"
+            (parameters (
+              (a (Std_logic 0))
+              (b (Std_logic 1))
+              (c (Std_logic 0))
+              (d (Std_logic 1))
+              (e (Std_logic U))))
+            (inputs (
+              (foo wire)
+              (bar wire)))
+            (outputs ((zoo 1))))))
+        (exn ("Cannot map Std_logic value to Bit type" (v U))))))
     |}]
 ;;

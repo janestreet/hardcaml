@@ -78,15 +78,15 @@ and `(module Signal)` shipped with Hardcaml support them)
 # let x : Signal.t Hello.Binary.t =
     Hello.Binary.of_enum (module Signal) (Foo Foo_a)
   ;;
-val x : Reg_spec.signal Hello.Binary.t = <abstr>
+val x : Signal.t Hello.Binary.t = <abstr>
 # let y = Hello.Binary.Of_signal.of_enum (Bar Bar_a)
-val y : Reg_spec.signal Hello.Binary.t = <abstr>
+val y : Signal.t Hello.Binary.t = <abstr>
 
 # let z = Hello.Binary.Of_signal.(==:) x y
-val z : Reg_spec.signal = (const (width 1) (value 0b0))
+val z : Signal.t = (const (width 1) (value 0b0))
 
 # let a = Hello.Binary.Of_signal.is x (Foo Foo_a)
-val a : Reg_spec.signal = (const (width 1) (value 0b1))
+val a : Signal.t = (const (width 1) (value 0b1))
 ```
 
 You get several enum-specific features for defining circuits in the
@@ -133,7 +133,7 @@ for non-exhaustive matches.
 ```ocaml
 # Hello.Binary.Of_always.match_ ;;
 - : ?default:Always.t list ->
-    Reg_spec.signal Hello.Binary.t ->
+    Signal.t Hello.Binary.t ->
     (Hello.Enum.t * Always.t list) list -> Always.t
 = <fun>
 
@@ -151,7 +151,7 @@ for non-exhaustive matches.
         ]
       ]
   ;;
-val exhaustive_matching : Reg_spec.signal Hello.Binary.t -> Always.t = <fun>
+val exhaustive_matching : Signal.t Hello.Binary.t -> Always.t = <fun>
 ```
 
 This generated enum module implements the `Hardcaml.Interface.S`, so you
@@ -175,7 +175,7 @@ let multiplexers =
 ;;
 
 let clock = Signal.input "clock" 1
-let spec = Reg_spec.create ~clock ()
+let spec = Signal.Reg_spec.create ~clock ()
 
 (* Registers that stores the enum value. *)
 let registers : Signal.t Hello.Binary.t =
@@ -235,13 +235,12 @@ Exception: (Failure "Width mismatch. Enum expects 3, but obtained 30").
 # let this_is_valid_and_fine =
     Hello.Binary.Of_signal.of_raw (Signal.of_unsigned_int ~width:3 0)
   ;;
-val this_is_valid_and_fine : Reg_spec.signal Hello.Binary.t = <abstr>
+val this_is_valid_and_fine : Signal.t Hello.Binary.t = <abstr>
 
 # let this_is_undefined_and_will_not_raise =
     Hello.Binary.Of_signal.of_raw (Signal.of_unsigned_int ~width:3 6)
   ;;
-val this_is_undefined_and_will_not_raise : Reg_spec.signal Hello.Binary.t =
-  <abstr>
+val this_is_undefined_and_will_not_raise : Signal.t Hello.Binary.t = <abstr>
 ```
 
 Enums are well supported in simulations too! Let's make a little state
@@ -263,7 +262,7 @@ end
 ```ocaml
 # let create (i : _ I.t) =
     let open Signal in
-    let spec = Reg_spec.create ~clock:i.clock ~clear:i.clear () in
+    let spec = Signal.Reg_spec.create ~clock:i.clock ~clear:i.clear () in
     let ctr = Always.Variable.reg spec ~width:32 ~enable:vdd in
     let prev_hello = Hello.Binary.Of_always.reg ~enable:vdd spec in
     Always.(compile [
@@ -285,7 +284,7 @@ end
     ; prev_hello = Hello.Binary.Of_always.value prev_hello
     }
   ;;
-val create : Reg_spec.signal I.t -> Reg_spec.signal O.t = <fun>
+val create : Signal.t I.t -> Signal.t O.t = <fun>
 ```
 
 Since these enum files are not simply of type `Bits.t ref`, we need to

@@ -32,7 +32,8 @@ let%expect_test "3 bit adder, bits" =
       [%message
         ""
           ~_:
-            (List.init 8 ~f:(fun b -> Bits_nand.(of_int ~width:3 a +: of_int ~width:3 b))
+            (List.init 8 ~f:(fun b ->
+               Bits_nand.(of_int_trunc ~width:3 a +: of_int_trunc ~width:3 b))
              : Bits.t list)]
   done;
   [%expect

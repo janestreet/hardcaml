@@ -3,17 +3,20 @@ open Base
 module type Names = sig
   type t
 
+  (** Returns the list of names and locations assigned to the signal. *)
+  val names_and_locs : t -> Name_and_loc.t list
+
   (** Returns the list of names assigned to the signal. *)
   val names : t -> string list
 
-  (** Set the given names on the signal.  Wipes any names currently set. *)
-  val set_names : t -> string list -> unit
+  (** Set the given names on the signal. Wipes any names currently set. *)
+  val set_names : t -> Name_and_loc.t list -> unit
 end
 
 module type Attributes = sig
   type t
 
-  (** Add an attribute to node. This is currently supported only in Verilog. *)
+  (** Add an attribute to node. *)
   val add_attribute : t -> Rtl_attribute.t -> t
 
   (** Returns attributes associated to the signal. *)
@@ -58,7 +61,7 @@ module type Wires = sig
   val wireof : t -> t
 
   (** Assigns to wire. *)
-  val ( <== ) : t -> t -> unit
+  val ( <-- ) : t -> t -> unit
 
   val assign : t -> t -> unit
 end
@@ -75,6 +78,8 @@ end
 
 module type Regs = sig
   type t
+
+  module Reg_spec : Reg_spec.S with type signal := t
 
   type 'a with_register_spec =
     ?enable:t
@@ -104,8 +109,33 @@ end
 module type Memories = sig
   type t
 
+  (** Synchronous write / asynchronous read memory. Supports an arbitrary number of
+      [read_addresses] and [write_ports]. Placement of registers on the address or data
+      output will allow synthesizers to infer RAMs from generated RTL (see also
+      [Ram.create] which builds on this primitive to implement inferred memories).
+
+      Any provided attributes are applied to the memory array itself.
+
+      The memory may be initialized by providing [initialize_to].
+
+      [enable_modelling_features] allows multibit enable and port scaling features. In
+      both cases they will generate valid synthesizable RTL but backend tool inference is
+      unlikely to work leading to sub-optimal designs.
+
+      In both cases extra read/write ports are generated and the internal RAM may be
+      narrowed to support the feature.
+
+      For multibit enables the number of write enables must evenly divide the write data
+      width or an exception will be raised.
+
+      For port scaling the read/write port ratio must be a power of two. It is specified
+      by making the read and write address widths different and scaling the write data
+      width appropriately. The [size] and [initialize_to] parameters are specified
+      relative to the write port with the widest data bus. *)
   val multiport_memory
-    :  ?name:string
+    :  ?enable_modelling_features:bool
+    -> ?verbose:bool
+    -> ?name:string
     -> ?attributes:Rtl_attribute.t list
     -> ?initialize_to:Bits.t array
     -> int
@@ -136,12 +166,10 @@ module type Memories = sig
     -> t
 end
 
-module type Signal = sig
+module type S = sig
   (** Signal type for constructing logic designs. *)
 
-  type t = Signal__type.t
-
-  module Type = Signal__type
+  type t
 
   (** {1 Naming}
 
@@ -180,10 +208,9 @@ module type Signal = sig
       are how we can create cycles which we require in order to build logic like, for
       example, a counter.
 
-      It is entirely possible to create combinational loops using wires.  Often this is
-      not the intent and Hardcaml has functions to detect this - for example, Cyclesim
-      will fail if there is such a loop.
-  *)
+      It is entirely possible to create combinational loops using wires. Often this is not
+      the intent and Hardcaml has functions to detect this - for example, Cyclesim will
+      fail if there is such a loop. *)
 
   include Wires with type t := t
 
@@ -208,9 +235,9 @@ module type Signal = sig
 
   (** {1 Memories}
 
-      [multiport_memory] provides the low-level primitive from which Hardcaml memories
-      are created. It provides a memory with an arbitrary number of read and write ports
-      that is asychronously read.
+      [multiport_memory] provides the low-level primitive from which Hardcaml memories are
+      created. It provides a memory with an arbitrary number of read and write ports that
+      is asychronously read.
 
       By default synthesizers will infer either LUT ram or register banks from this
       primitive.
@@ -226,13 +253,16 @@ module type Signal = sig
 
   (**/**)
 
-  (* The following are exposed for convenience.  They are also available under [Types].*)
+  (* Apply a name to a signal using the hardcaml ppx [%hw] extension *)
+  val __ppx_auto_name : ?loc:Stdlib.Lexing.position -> t -> string -> t
+end
+
+module type Signal = sig
+  type t = Signal__type.t
+
+  module Type = Signal__type
+  include S with type t := Signal__type.t
 
   (** Returns the unique id of the signal. *)
   val uid : t -> Type.Uid.t
-
-  (** Returns the list of names assigned to the signal. *)
-  val names : t -> string list
-
-  module Uid = Type.Uid
 end

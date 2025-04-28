@@ -445,7 +445,7 @@ let get_sub_word t index =
   else (
     t.non_cache_hits <- t.non_cache_hits + 1;
     t.cached_sub_word <- bits;
-    t.cached_bits <- Bits.of_int ~width:t.width bits;
+    t.cached_bits <- Bits.of_int_trunc ~width:t.width bits;
     t.cached_bits)
 ;;
 

@@ -1,8 +1,7 @@
 (** Functions for working with bit vectors packed into a single [Bytes.t].
 
     The size and offset of data is passed to the functions rather than embedded like with
-    [Bits.t].
-*)
+    [Bits.t]. *)
 
 open Base
 

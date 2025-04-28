@@ -178,17 +178,17 @@ let create_instantiation_test =
     |> Signal.output ("b_" ^ hdl)
   in
   let a = Signal.input "a" 1 in
-  let circ hdl =
-    Circuit.create_exn
-      ~config:{ Circuit.Config.default with rtl_compatibility = Modelsim }
-      ~name:("test_parameter_instantiation_" ^ hdl)
-      [ inst "vhdl" a; inst "verilog" a ]
-  in
-  circ
+  let config = { Rtl.Config.default with backend = Modelsim } in
+  fun hdl ->
+    ( Circuit.create_exn
+        ~name:("test_parameter_instantiation_" ^ hdl)
+        [ inst "vhdl" a; inst "verilog" a ]
+    , config )
 ;;
 
 let%expect_test "instantiation in verilog" =
-  Rtl.print Verilog (create_instantiation_test "verilog");
+  let circ, config = create_instantiation_test "verilog" in
+  Rtl.print Verilog ~config circ;
   [%expect
     {|
     module test_parameter_instantiation_verilog (
@@ -243,7 +243,8 @@ let%expect_test "instantiation in verilog" =
 ;;
 
 let%expect_test "instantiation in vhdl" =
-  Rtl.print Vhdl (create_instantiation_test "vhdl");
+  let circ, config = create_instantiation_test "vhdl" in
+  Rtl.print Vhdl ~config circ;
   [%expect
     {|
     library ieee;
@@ -260,18 +261,6 @@ let%expect_test "instantiation in vhdl" =
 
     architecture rtl of test_parameter_instantiation_vhdl is
 
-        -- conversion functions
-        function hc_uns(a : std_logic)        return unsigned         is variable b : unsigned(0 downto 0); begin b(0) := a; return b; end;
-        function hc_uns(a : std_logic_vector) return unsigned         is begin return unsigned(a); end;
-        function hc_sgn(a : std_logic)        return signed           is variable b : signed(0 downto 0); begin b(0) := a; return b; end;
-        function hc_sgn(a : std_logic_vector) return signed           is begin return signed(a); end;
-        function hc_sl (a : std_logic_vector) return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : unsigned)         return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : signed)           return std_logic        is begin return a(a'right); end;
-        function hc_sl (a : boolean)          return std_logic        is begin if a then return '1'; else return '0'; end if; end;
-        function hc_slv(a : std_logic_vector) return std_logic_vector is begin return a; end;
-        function hc_slv(a : unsigned)         return std_logic_vector is begin return std_logic_vector(a); end;
-        function hc_slv(a : signed)           return std_logic_vector is begin return std_logic_vector(a); end;
         signal hc_6 : std_logic_vector(1 downto 0);
         signal hc_1 : std_logic_vector(1 downto 0);
         signal hc_7 : std_logic_vector(1 downto 0);

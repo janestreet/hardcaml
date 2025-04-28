@@ -108,3 +108,25 @@ let%expect_test "output width does not match" =
       " in interface")
     |}]
 ;;
+
+module%test Wrong_length_list = struct
+  module O = struct
+    type 'a t = { l : 'a list [@length 2] } [@@deriving hardcaml]
+  end
+
+  let create _ = { O.l = List.init 3 ~f:(fun _ -> Signal.vdd) }
+
+  let%expect_test "Raises if using a list of wrong length" =
+    let module Circuit = Circuit.With_interface (I) (O) in
+    require_does_raise (fun () -> Circuit.create_exn ~name:"foo" create);
+    [%expect
+      {|
+      ("Number of ports in output interface"
+       2
+       "does not match number of provided output signals!"
+       3
+       "(are you using a wrong length list or array in the interface?)"
+       (port_names (l0 l1)))
+      |}]
+  ;;
+end

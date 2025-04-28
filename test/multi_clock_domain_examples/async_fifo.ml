@@ -7,6 +7,7 @@ module Fifo = Async_fifo.Make (struct
     (* 8 deep, 4 wide *)
     let width = 4
     let log2_depth = 3
+    let optimize_for_same_clock_rate_and_always_reading = false
   end)
 
 include struct
@@ -37,10 +38,10 @@ let fifo () =
 let%expect_test "show expected behavior of the async fifo (and show that the cyclesim \
                  based event simulator gives the same output)"
   =
-  List.iter Bool.all ~f:(fun use_cyclesim ->
+  List.iter Hardcaml_event_driven_sim.Sim_mode.all ~f:(fun sim_mode ->
     let waves, { Fifo_sim.simulator; _ } =
       Fifo_sim.with_waveterm
-        ~config:{ Config.default with use_cyclesim }
+        ~config:{ Config.trace_all with sim_mode }
         (fifo ())
         (fun inputs _outputs ->
            [ Fifo_sim.create_clock inputs.clock_read.signal ~time:3
@@ -49,13 +50,13 @@ let%expect_test "show expected behavior of the async fifo (and show that the cyc
                [ !&(inputs.clock_write.signal) ]
                (let cnt = ref 0 in
                 fun () ->
-                  if Logic.is_vdd !!(inputs.clock_write.signal)
+                  if Logic.to_bool !!(inputs.clock_write.signal)
                   then (
                     Int.incr cnt;
                     let write_data_if ~cycle_is ~data =
                       if !cnt = cycle_is
                       then (
-                        inputs.data_in.signal <-- Logic.of_int ~width:4 data;
+                        inputs.data_in.signal <-- Logic.of_int_trunc ~width:4 data;
                         inputs.write_enable.signal <-- Logic.vdd)
                     in
                     inputs.write_enable.signal <-- Logic.gnd;
@@ -65,7 +66,7 @@ let%expect_test "show expected behavior of the async fifo (and show that the cyc
                [ !&(inputs.clock_read.signal) ]
                (let cnt = ref 0 in
                 fun () ->
-                  if Logic.is_vdd !!(inputs.clock_read.signal)
+                  if Logic.to_bool !!(inputs.clock_read.signal)
                   then (
                     Int.incr cnt;
                     if !cnt = 7
@@ -74,7 +75,7 @@ let%expect_test "show expected behavior of the async fifo (and show that the cyc
            ])
     in
     Simulator.run ~time_limit:100 simulator;
-    Waveform.expect waves ~wave_width:(-1) ~display_width:82 ~display_height:30;
+    Waveform.expect waves ~wave_width:(-1) ~display_width:82;
     [%expect
       {|
       ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────┐
@@ -90,7 +91,24 @@ let%expect_test "show expected behavior of the async fifo (and show that the cyc
       │                  ││───────────────────────────┬─────────────────┬─────┬────────│
       │data_out          ││ 0                         │A                │0    │B       │
       │                  ││───────────────────────────┴─────────────────┴─────┴────────│
+      │                  ││───────────────────────────┬─────────────────┬─────┬────────│
+      │data_out_0        ││ 0                         │A                │0    │B       │
+      │                  ││───────────────────────────┴─────────────────┴─────┴────────│
       │full              ││                                                            │
+      │                  ││────────────────────────────────────────────────────────────│
+      │gnd               ││                                                            │
+      │                  ││────────────────────────────────────────────────────────────│
+      │                  ││─────────────────────────────────────────────┬──────────────│
+      │raddr_rd          ││ 0                                           │1             │
+      │                  ││─────────────────────────────────────────────┴──────────────│
+      │                  ││────────────────────────────────────────────────────────────│
+      │raddr_wd          ││ 0                                                          │
+      │                  ││────────────────────────────────────────────────────────────│
+      │                  ││───────────────────────────────────────────────────────┬────│
+      │raddr_wd_ff_0     ││ 0                                                     │1   │
+      │                  ││───────────────────────────────────────────────────────┴────│
+      │                  ││────────────────────────────────────────────────────────────│
+      │ram               ││ 0                                                          │
       │                  ││────────────────────────────────────────────────────────────│
       │read_enable       ││                                       ┌─────┐              │
       │                  ││───────────────────────────────────────┘     └──────────────│
@@ -100,13 +118,18 @@ let%expect_test "show expected behavior of the async fifo (and show that the cyc
       │                  ││────────────────────────────────────────────────────────────│
       │valid             ││                                 ┌───────────┐           ┌──│
       │                  ││─────────────────────────────────┘           └───────────┘  │
+      │                  ││─────────────────────────────────┬───────────────────────┬──│
+      │waddr_rd          ││ 0                               │1                      │3 │
+      │                  ││─────────────────────────────────┴───────────────────────┴──│
+      │                  ││───────────────────────────┬───────────────────────┬────────│
+      │waddr_rd_ff_0     ││ 0                         │1                      │3       │
+      │                  ││───────────────────────────┴───────────────────────┴────────│
+      │                  ││─────────────────────────┬───────────────────┬──────────────│
+      │waddr_wd          ││ 0                       │1                  │3             │
+      │                  ││─────────────────────────┴───────────────────┴──────────────│
       │write_enable      ││               ┌─────────┐         ┌─────────┐              │
       │                  ││───────────────┘         └─────────┘         └──────────────│
-      │                  ││                                                            │
-      │                  ││                                                            │
-      │                  ││                                                            │
-      │                  ││                                                            │
       └──────────────────┘└────────────────────────────────────────────────────────────┘
-      e9fa5d6b717e9173b3ded2a2613d4682
+      9d45c59d907202ea2c276ef7fb9afc29
       |}])
 ;;

@@ -64,10 +64,10 @@ let run_cyclesim_test circuit =
     else inputs.enable := Bits.of_bool true;
     Cyclesim.cycle sim
   done;
-  Cyclesim_waveform.print waves ~wave_width:3 ~display_width:82 ~display_height:8
+  Cyclesim_waveform.print waves ~wave_width:3 ~display_width:82
 ;;
 
-let run_event_sim_test ?(display_height = 8) circuit =
+let run_event_sim_test circuit =
   let module Event_sim =
     Hardcaml_event_driven_sim.Make (Hardcaml_event_driven_sim.Two_state_logic)
   in
@@ -90,18 +90,14 @@ let run_event_sim_test ?(display_height = 8) circuit =
          ])
   in
   Event_sim.Event_simulator.run ~time_limit:20 sim;
-  Hardcaml_event_driven_sim.Waveterm.Waveform.expect
-    waves
-    ~wave_width:1
-    ~display_width:82
-    ~display_height
+  Hardcaml_event_driven_sim.Waveterm.Waveform.expect waves ~wave_width:1 ~display_width:82
 ;;
 
-let run_test ?display_height circuit =
+let run_test circuit =
   print_endline "Cyclesim result";
   run_cyclesim_test circuit;
   print_endline "Event sim result";
-  run_event_sim_test ?display_height circuit
+  run_event_sim_test circuit
 ;;
 
 let%expect_test "rising edge" =
@@ -118,6 +114,7 @@ let%expect_test "rising edge" =
     │                  ││        └───────┘       └───────┘       └───────┘       └───│
     │                  ││────────┬───────────────┬───────────────┬───────────────┬───│
     │reg_out           ││ 00     │01             │02             │03             │04 │
+    │                  ││────────┴───────────────┴───────────────┴───────────────┴───│
     └──────────────────┘└────────────────────────────────────────────────────────────┘
     Event sim result
     ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────┐
@@ -127,6 +124,7 @@ let%expect_test "rising edge" =
     │                  ││        └───────┘       └───────┘       └───────┘       └───│
     │                  ││────────────────┬───────────────┬───────────────┬───────────│
     │reg_out           ││ 00             │01             │02             │03         │
+    │                  ││────────────────┴───────────────┴───────────────┴───────────│
     └──────────────────┘└────────────────────────────────────────────────────────────┘
     af6143bb92c8204c7d94352b47425ff4
     |}]
@@ -148,6 +146,7 @@ let%expect_test "falling edge" =
     │                  ││        └───────┘       └───────┘       └───────┘       └───│
     │                  ││────────┬───────────────┬───────────────┬───────────────┬───│
     │reg_out           ││ 00     │01             │02             │03             │04 │
+    │                  ││────────┴───────────────┴───────────────┴───────────────┴───│
     └──────────────────┘└────────────────────────────────────────────────────────────┘
     Event sim result
     ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────┐
@@ -157,6 +156,7 @@ let%expect_test "falling edge" =
     │                  ││        └───────┘       └───────┘       └───────┘       └───│
     │                  ││────┬───────────────┬───────────────┬───────────────┬───────│
     │reg_out           ││ 00 │01             │02             │03             │04     │
+    │                  ││────┴───────────────┴───────────────┴───────────────┴───────│
     └──────────────────┘└────────────────────────────────────────────────────────────┘
     69b589fef15636ef82429349cc133622
     |}]
@@ -165,7 +165,7 @@ let%expect_test "falling edge" =
 let%expect_test "inverted clock" =
   (* Cyclesim still writes to [reg_out] on the Rising edge because it doesn't know that the
      register is clocked with ~clock. *)
-  run_test inverted_clock ~display_height:11;
+  run_test inverted_clock;
   [%expect
     {|
     Cyclesim result
@@ -176,6 +176,7 @@ let%expect_test "inverted clock" =
     │                  ││        └───────┘       └───────┘       └───────┘       └───│
     │                  ││────────┬───────────────┬───────────────┬───────────────┬───│
     │reg_out           ││ 00     │01             │02             │03             │04 │
+    │                  ││────────┴───────────────┴───────────────┴───────────────┴───│
     └──────────────────┘└────────────────────────────────────────────────────────────┘
     Event sim result
     ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────┐
@@ -195,7 +196,7 @@ let%expect_test "inverted clock" =
 
 let%expect_test "gated clock" =
   (* Cyclesim still writes to [reg_out] on every Rising edge *)
-  run_test gated_clock ~display_height:10;
+  run_test gated_clock;
   [%expect
     {|
     Cyclesim result
@@ -206,6 +207,7 @@ let%expect_test "gated clock" =
     │                  ││        └───────┘       └───────┘       └───────┘       └───│
     │                  ││────────┬───────┬───────┬───────┬───────┬───────┬───────┬───│
     │reg_out           ││ 00     │01     │02     │03     │04     │05     │06     │07 │
+    │                  ││────────┴───────┴───────┴───────┴───────┴───────┴───────┴───│
     └──────────────────┘└────────────────────────────────────────────────────────────┘
     Event sim result
     ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────┐
@@ -217,6 +219,7 @@ let%expect_test "gated clock" =
     │                  ││    └───────────┘   └───────────┘   └───────────┘   └───────│
     │                  ││────────────────┬───────────────┬───────────────┬───────────│
     │reg_out           ││ 00             │01             │02             │03         │
+    │                  ││────────────────┴───────────────┴───────────────┴───────────│
     └──────────────────┘└────────────────────────────────────────────────────────────┘
     ac097252976342f7f663fe13e8b04bfd
     |}]
@@ -225,7 +228,7 @@ let%expect_test "gated clock" =
 let%expect_test "falling edge - enable as a reg" =
   (* Same as the previous falling edge test - Cyclesim still writes to the regs on the
      [Rising] edge *)
-  run_test falling_edge_enable_reg ~display_height:10;
+  run_test falling_edge_enable_reg;
   [%expect
     {|
     Cyclesim result
@@ -236,6 +239,7 @@ let%expect_test "falling edge - enable as a reg" =
     │                  ││        └───────┘       └───────┘       └───────┘       └───│
     │                  ││────────────────┬───────────────┬───────────────┬───────────│
     │reg_out           ││ 00             │01             │02             │03         │
+    │                  ││────────────────┴───────────────┴───────────────┴───────────│
     └──────────────────┘└────────────────────────────────────────────────────────────┘
     Event sim result
     ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────┐
@@ -247,6 +251,7 @@ let%expect_test "falling edge - enable as a reg" =
     │                  ││────┘       └───────┘       └───────┘       └───────┘       │
     │                  ││────────────┬───────────────┬───────────────┬───────────────│
     │reg_out           ││ 00         │01             │02             │03             │
+    │                  ││────────────┴───────────────┴───────────────┴───────────────│
     └──────────────────┘└────────────────────────────────────────────────────────────┘
     27cbf5428b03c61e7156ea640c786f99
     |}]

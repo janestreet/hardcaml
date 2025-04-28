@@ -28,5 +28,5 @@ val inverted_clock : Interface.Create_fn(I)(O).t
 val gated_clock : Interface.Create_fn(I)(O).t
 
 (** Increment [reg_out] if [enable_reg], a reg driven by [enable], with both regs on the
-[clock]'s falling edge. *)
+    [clock]'s falling edge. *)
 val falling_edge_enable_reg : Interface.Create_fn(I)(O).t

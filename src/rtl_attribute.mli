@@ -1,6 +1,6 @@
 open Base
 
-(** RTL attribute specification.  Only relevant to downstream tooling. *)
+(** RTL attribute specification. Only relevant to downstream tooling. *)
 
 (** Specification of attributes which may be attached to various objects within a RTL
     design. Such attributes are used to provide implementation hints to down stream CAD
@@ -45,6 +45,12 @@ module Vivado : sig
   (** Inform Vivado that a registers data input is asychronous to it's clock. *)
   val async_reg : bool -> t
 
+  (** This attribute should be applied to registers on both sides of an SLR crossing, and
+      instructs Vivado to place the register in a location optimal for connecting to the
+      Super-long-lines (SLLs), giving better timing. This uses Laguna registers for
+      Ultrascale architectures, and close-by slice registers for Versal. *)
+  val user_sll_reg : bool -> t
+
   (** Instruct the synthesizer and place & route tools to keep the node. Cannot be applied
       to a port. *)
   val dont_touch : bool -> t
@@ -56,7 +62,7 @@ module Vivado : sig
   (** Setting USE_DSP to yes can force an operation to utilize the DSP. *)
   val use_dsp : bool -> t
 
-  (** Select encoding of finite state machine.  Apply to state register. *)
+  (** Select encoding of finite state machine. Apply to state register. *)
   val fsm_encoding : [ `auto | `gray | `johnson | `none | `one_hot | `sequential ] -> t
 
   (** Export net for debugging with chipscope. *)
@@ -103,8 +109,7 @@ module Vivado : sig
       - reg_srl: The tool infers an SRL and leaves one register before the SRL.
       - reg_srl_reg: The tool infers an SRL and leaves one register before and one
         register after the SRL.
-      - block: The tool infers the SRL inside a block RAM.
-  *)
+      - block: The tool infers the SRL inside a block RAM. *)
   module Srl_style : sig
     val register : t
     val srl : t

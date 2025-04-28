@@ -8,7 +8,7 @@ type 'a signed_and_unsigned =
   }
 [@@deriving sexp_of]
 
-let bits ~f bits = List.init (1 lsl bits) ~f:(fun i -> of_int ~width:bits i |> f)
+let bits ~f bits = List.init (1 lsl bits) ~f:(fun i -> of_int_trunc ~width:bits i |> f)
 
 let convert ~uint ~sint ~trunc const =
   let tryf f =

@@ -19,13 +19,13 @@ val to_binary_string : t -> string
 (** Same as [to_binary_string] but adds ['_']s every chars *)
 val to_binary_string_hum : t -> string
 
-(** Convert constant to an [int].  Bits above [Int.num_bits] are dropped. *)
+(** Convert constant to an [int]. Bits above [Int.num_bits] are dropped. *)
 val to_int : t -> int
 
-(** Convert constant to an [int32].  Bits above [Int32.num_bits] are dropped. *)
+(** Convert constant to an [int32]. Bits above [Int32.num_bits] are dropped. *)
 val to_int32 : t -> int32
 
-(** Convert constant to an [int64].  Bits above [Int64.num_bits] are dropped. *)
+(** Convert constant to an [int64]. Bits above [Int64.num_bits] are dropped. *)
 val to_int64 : t -> int64
 
 (** Convert to array of int64s *)
@@ -89,13 +89,12 @@ val to_bit_list : t -> int list
 val pp : Formatter.t -> t -> unit
 
 (** Convert to from constants from raw bit patterns stored in strings and bytes. Data is
-    copied and resized as appropriate.
-*)
+    copied and resized as appropriate. *)
 module Raw : sig
-  (** Convert from a byte buffer.  The copied data is padded as required. *)
+  (** Convert from a byte buffer. The copied data is padded as required. *)
   val of_bytes : Bytes.t -> width:int -> t
 
-  (** Convert from a string buffer.  The copied data is padded as required. *)
+  (** Convert from a string buffer. The copied data is padded as required. *)
   val of_string : String.t -> width:int -> t
 
   (** Convert to a string buffer. The output buffer length is rounded to a multiple of 8

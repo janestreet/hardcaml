@@ -1,5 +1,5 @@
 open! Import
-module Uid = Signal.Uid
+module Uid = Signal.Type.Uid
 
 let `New new_id, _ = Uid.generator ()
 
