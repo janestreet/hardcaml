@@ -109,7 +109,13 @@ module Make (M : S) = struct
     ; raddr_wd_ffs : Always.Variable.t array
     }
 
-  let create ?(use_negedge_sync_chain = false) ?(sync_stages = 2) ?scope (i : _ I.t) =
+  let create_internal
+    ?(use_synchronous_clear_semantics = false)
+    ?(use_negedge_sync_chain = false)
+    ?(sync_stages = 2)
+    ?scope
+    (i : _ I.t)
+    =
     if sync_stages < 2
     then raise_s [%message "[sync_stages] must be >= 2!" (sync_stages : int)];
     if use_negedge_sync_chain && sync_stages % 2 = 1
@@ -121,8 +127,13 @@ module Make (M : S) = struct
       | Some scope -> Scope.naming scope
       | None -> ( -- )
     in
+    let reg_spec ~clock ~reset =
+      if use_synchronous_clear_semantics
+      then Reg_spec.create ~clock ~clear:reset ()
+      else Reg_spec.create ~clock ~reset ()
+    in
     let async_reg_var ?clock_edge () ~name ~clock ~reset ~width =
-      let spec = Reg_spec.create ~clock ~reset () |> Reg_spec.override ?clock_edge in
+      let spec = reg_spec ~clock ~reset |> Reg_spec.override ?clock_edge in
       let var = Always.Variable.reg spec ~enable:vdd ~width in
       ignore
         (Signal.add_attribute var.value (Rtl_attribute.Vivado.async_reg true) -- name
@@ -130,9 +141,7 @@ module Make (M : S) = struct
       var
     in
     let reg_var ~name ~clock ~reset ~width =
-      let var =
-        Always.Variable.reg (Reg_spec.create ~clock ~reset ()) ~enable:vdd ~width
-      in
+      let var = Always.Variable.reg (reg_spec ~clock ~reset) ~enable:vdd ~width in
       ignore
         (Signal.add_attribute var.value (Rtl_attribute.Vivado.dont_touch true) -- name
          : Signal.t);
@@ -271,6 +280,8 @@ module Make (M : S) = struct
     { O.full; data_out = data_out.value; valid = vld; almost_empty }
   ;;
 
+  let create = create_internal ~use_synchronous_clear_semantics:false
+
   let create_with_delay ?(delay = 0) scope (i : _ I.t) =
     let ( -- ) = Scope.naming scope in
     let async_fifo_has_valid_value = wire 1 in
@@ -328,6 +339,12 @@ module Make (M : S) = struct
     let module H = Hierarchy.In_scope (I) (O) in
     H.hierarchical ~name ~scope (create_with_delay ?delay) i
   ;;
+
+  module For_testing = struct
+    let create_with_synchronous_clear_semantics_for_simulation_only =
+      create_internal ~use_synchronous_clear_semantics:true
+    ;;
+  end
 end
 
 module For_testing = struct

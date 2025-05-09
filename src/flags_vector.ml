@@ -43,6 +43,7 @@ module Make (Cases : Cases) = struct
     ;;
 
     let to_string t = Sexp.to_string (sexp_of_t t)
+    let all = complement empty
   end
 
   let init (type a) (module Comb : Comb.S with type t = a) f =
@@ -93,6 +94,10 @@ module Make (Cases : Cases) = struct
 
   let mux2 (type a) (module Comb : Comb.S with type t = a) (sel : a) (s : a t) (t : a t) =
     Comb.mux2 sel s t
+  ;;
+
+  let all (type a) (module Comb : Comb.S with type t = a) =
+    of_flags (module Comb) Flags.all
   ;;
 
   let deref (a : 'a ref t) : 'a t = !a

@@ -28,6 +28,7 @@ CAMLprim intnat hardcaml_bits_uint64_compare(uint64_t a, uint64_t b) {
   intnat ltu, gtu;
   ltu = a < b;
   gtu = a > b;
+
   return gtu - ltu;
 }
 
@@ -165,7 +166,7 @@ static void mulu(uint32_t *w, uint32_t *u, uint32_t *v, int m, int n) {
  *
  * Arguments are the same as [mulu].
  * */
-void muls(uint32_t *w, uint32_t *u, uint32_t *v, int m, int n) {
+static void muls(uint32_t *w, uint32_t *u, uint32_t *v, int m, int n) {
   uint64_t t, b;
   int i, j;
 
@@ -173,6 +174,7 @@ void muls(uint32_t *w, uint32_t *u, uint32_t *v, int m, int n) {
 
   if ((int32_t)u[m - 1] < 0) {
     b = 0;
+
     for (j = 0; j < n; j++) {
       t = (uint64_t)w[j + m] - (uint64_t)v[j] - b;
       w[j + m] = t;
@@ -181,9 +183,12 @@ void muls(uint32_t *w, uint32_t *u, uint32_t *v, int m, int n) {
   }
   if ((int32_t)v[n - 1] < 0) {
     b = 0;
+
     for (i = 0; i < m; i++) {
       t = (uint64_t)w[i + n] - (uint64_t)u[i] - b;
+
       w[i + n] = t;
+
       b = t >> 63;
     }
   }
@@ -232,6 +237,13 @@ CAMLprim value hardcaml_bits_packed_umul_bc(value *args, value n_args) {
   return hardcaml_bits_packed_umul(args[0], args[1], args[2], args[3], args[4], args[5]);
 }
 
+// We need this in order to avoid running afoul of strict aliasing rules in
+// [hardcaml_bits_smul_i] below.
+union variable_size_uint {
+  uint32_t as_uint32;
+  uint64_t as_uint64;
+};
+
 /* Signed multiplication. Arguments are copied to temporary arrays so they can
    be modified for signed extension as necesseary. */
 static inline void hardcaml_bits_smul_i(uint64_t *dst, uint64_t *_a, uint64_t *_b,
@@ -245,23 +257,23 @@ static inline void hardcaml_bits_smul_i(uint64_t *dst, uint64_t *_a, uint64_t *_
   intnat bytes_a = sizeof(uint64_t) * words_a;
   intnat bytes_b = sizeof(uint64_t) * words_b;
   intnat bytes_r = sizeof(uint64_t) * words_r;
-  uint64_t *a = alloca(bytes_a);
-  uint64_t *b = alloca(bytes_b);
-  uint64_t *r = alloca(bytes_r);
+  union variable_size_uint *a = alloca(bytes_a);
+  union variable_size_uint *b = alloca(bytes_b);
+  union variable_size_uint *r = alloca(bytes_r);
 
   uint64_t sign_mask_a;
   uint64_t sign_mask_b;
 
   memset(r, 0, bytes_r);
   memcpy(a, _a, bytes_a);
-  sign_mask_a = sign_mask(width_a, a);
-  a[words_a - 1] = a[words_a - 1] | sign_mask_a;
+  sign_mask_a = sign_mask(width_a, &a[0].as_uint64);
+  a[words_a - 1].as_uint64 = a[words_a - 1].as_uint64 | sign_mask_a;
 
   memcpy(b, _b, bytes_b);
-  sign_mask_b = sign_mask(width_b, b);
-  b[words_b - 1] = b[words_b - 1] | sign_mask_b;
+  sign_mask_b = sign_mask(width_b, &b->as_uint64);
+  b[words_b - 1].as_uint64 = b[words_b - 1].as_uint64 | sign_mask_b;
 
-  muls((uint32_t *)r, (uint32_t *)a, (uint32_t *)b, bytes_a >> 2, bytes_b >> 2);
+  muls(&r[0].as_uint32, &a[0].as_uint32, &b[0].as_uint32, bytes_a >> 2, bytes_b >> 2);
 
   memcpy(dst, r, sizeof(uint64_t) * words_dst);
 }

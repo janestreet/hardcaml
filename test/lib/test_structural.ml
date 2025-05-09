@@ -42,8 +42,8 @@ let%expect_test "Prints with circuit created via With_interface.create_circuit" 
   Structural.to_verilog
     (create_circuit "bar" (fun i o t ->
        let open Structural in
-       t.c <== mux (select i.a ~high:0 ~low:0) [ z 1; select i.a ~high:1 ~low:1 ];
-       o.b <== concat_msb [ select i.a ~high:0 ~low:0; i.a ]))
+       t.c <-- mux (select i.a ~high:0 ~low:0) [ z 1; select i.a ~high:1 ~low:1 ];
+       o.b <-- concat_msb [ select i.a ~high:0 ~low:0; i.a ]))
   |> print_rope;
   [%expect
     {|
@@ -124,13 +124,13 @@ module Structural_sexp_of_test = struct
       ~i:[ "I" ==> mux ]
       ~o:[ "O" ==> out_wire; "OO" ==> out_direct ]
       ~t:[ "T" ==> tri_wire; "TO" ==> tri_direct ];
-    tri_indirect <== tri_wire;
-    out_indirect <== out_wire;
-    const_o <== const;
-    sum_o <== sum;
-    cat_o <== cat;
-    sel_o <== sel;
-    mux_o <== mux;
+    tri_indirect <-- tri_wire;
+    out_indirect <-- out_wire;
+    const_o <-- const;
+    sum_o <-- sum;
+    cat_o <-- cat;
+    sel_o <-- sel;
+    mux_o <-- mux;
     end_circuit ();
     print_s (sexp_of_t a);
     print_s (sexp_of_t const);
@@ -228,7 +228,7 @@ let%expect_test "structural rtl comb components" =
       let m = a +: b in
       let o = a *+ b in
       let p = ((n |: m) @: (m &: n)) ^: o in
-      c <== (p <: o))
+      c <-- (p <: o))
   in
   to_verilog circuit |> print_rope;
   [%expect
@@ -419,14 +419,14 @@ let%expect_test "structural rtl reg components" =
       let d1 = mk_input "d1" 1 in
       let d8 = mk_input "d8" 8 in
       let q0 = mk_output "q0" 1 in
-      q0 <== reg ~clock d1;
+      q0 <-- reg ~clock d1;
       let q1 = mk_output "q1" 8 in
-      q1 <== reg ~clock ~reset ~reset_value:(ones 8) d8;
+      q1 <-- reg ~clock ~reset ~reset_value:(ones 8) d8;
       let q2 = mk_output "q2" 1 in
-      q2 <== reg ~clock ~clear d1;
+      q2 <-- reg ~clock ~clear d1;
       let q3 = mk_output "q3" 1 in
       q3
-      <== reg
+      <-- reg
             ~clock
             ~clock_edge:Falling
             ~reset

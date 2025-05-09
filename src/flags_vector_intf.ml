@@ -22,6 +22,7 @@ module type S = sig
 
     val of_cases : cases -> t
     val to_string : t -> string
+    val all : t
   end
 
   val number_of : int
@@ -37,6 +38,7 @@ module type S = sig
   val remove : (module Comb.S with type t = 'a) -> 'a t -> 'a t -> 'a t
   val is_set : (module Comb.S with type t = 'a) -> 'a t -> cases -> 'a
   val mux2 : (module Comb.S with type t = 'a) -> 'a -> 'a t -> 'a t -> 'a t
+  val all : (module Comb.S with type t = 'a) -> 'a t
   val deref : 'a ref t -> 'a t
 
   (** [iter_flags] calls [f] for each flag where [is_set] is true. **)
