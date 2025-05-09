@@ -366,7 +366,7 @@ let mk_tristate name width =
 let mk_wire width = Internal_wire (id (), width, ref Empty) >> add_sig
 let mk_triwire width = Internal_triwire (id (), width, ref []) >> add_sig
 
-let ( <== ) a b =
+let ( <-- ) a b =
   match a with
   | Module_output (_, _, _, con, _) | Internal_wire (_, _, con) ->
     (match !con with
@@ -416,11 +416,11 @@ let inst ?instance_name ?(attributes = []) ?(g = []) ?(i = []) ?(o = []) ?(t = [
   List.iter o ~f:(fun (n, s) ->
     if not (is_writeable s)
     then raise (Invalid_submodule_output_connection (name, n, s))
-    else s <== Instantiation_output (mod_id, n));
+    else s <-- Instantiation_output (mod_id, n));
   List.iter t ~f:(fun (n, s) ->
     if not (is_readwrite s)
     then raise (Invalid_submodule_tristate_connection (name, n, s))
-    else s <== Instantiation_tristate (mod_id, n));
+    else s <-- Instantiation_tristate (mod_id, n));
   Option.iter instance_name ~f:(fun instance_name ->
     if String.is_prefix instance_name ~prefix:"_"
     then raise_s [%message "explicitly specified instance_names cannot start with a '_'"]);

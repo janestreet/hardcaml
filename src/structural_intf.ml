@@ -121,7 +121,7 @@ module type Structural = sig
   val mk_tristate : string -> int -> signal
   val mk_wire : int -> signal
   val mk_triwire : int -> signal
-  val ( <== ) : signal -> signal -> unit
+  val ( <-- ) : signal -> signal -> unit
   val is_connected : signal -> bool
 
   val inst

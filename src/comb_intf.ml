@@ -486,8 +486,8 @@ module type S = sig
   val to_int : t -> int
   [@@deprecated "[since 2024-11] use [to_int_trunc]"]
 
-  val to_int32 : t -> int32 [@@deprecated "[since 2024-11] use [to_int_trunc]"]
-  val to_int64 : t -> int64 [@@deprecated "[since 2024-11] use [to_int_trunc]"]
+  val to_int32 : t -> int32 [@@deprecated "[since 2024-11] use [to_int32_trunc]"]
+  val to_int64 : t -> int64 [@@deprecated "[since 2024-11] use [to_int64_trunc]"]
 
   (** [to_signed_int t] treats [t] as signed and resizes it to fit exactly within an OCaml
       [Int.t].

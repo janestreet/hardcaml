@@ -221,7 +221,7 @@ let parameter_value (p : Parameter.t) =
   let rec value_to_string (value : Parameter.Value.t) =
     match value with
     | String v -> [%string {|"%{v}"|}]
-    | Int v -> [%string "%{v#Int}"]
+    | Int v -> [%string.global "%{v#Int}"]
     (* For consistency with VHDL but not proven necessary for verilog. In terms of
        formatting floats, printfs [%f] seems to do with right thing. *)
     | Real v -> Printf.sprintf "%f" v
