@@ -167,7 +167,7 @@ let create_instantiation_test =
       ]
   in
   let inst hdl a =
-    Map.find_exn
+    Instantiation.output
       (Instantiation.create
          ()
          ~name:("test_parameters_" ^ hdl)

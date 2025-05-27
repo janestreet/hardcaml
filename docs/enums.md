@@ -1,4 +1,4 @@
-# Enums in Hardcaml
+# 5.5 Enums in Hardcaml
 
 <!--
 ```ocaml
@@ -6,6 +6,7 @@
 - : unit = ()
 ```
 -->
+
 
 Hardcaml provides support for enumerations with a finite number of
 instances through the Enum module. An Enum type declares a finite (ie
@@ -100,8 +101,7 @@ let non_exhaustive_matching =
   Hello.Binary.match_
     (module Signal)
     (* [default] needs to be specified when the match cases are not
-       exhaustive.
-    *)
+       exhaustive. *)
     ~default:(zero 10)
     x
     [ Foo Foo_a, ones 10
@@ -110,8 +110,7 @@ let non_exhaustive_matching =
 ;;
 
 (* [Of_signal.match_] is similar to [match_], except it does not
-   require an explicit a first class module argument.
-*)
+   require an explicit a first class module argument. *)
 let exhaustive_matching =
   let open Signal in
   Hello.Binary.Of_signal.match_
@@ -147,7 +146,7 @@ for non-exhaustive matches.
           (* Some logic here. *)
         ];
         Bar Bar_a, [
-          (* Even more logic here *)
+          (* Even more logic here. *)
         ]
       ]
   ;;
@@ -160,8 +159,7 @@ get access to the various convenient functions defined in `Of_signal`,
 
 ```ocaml
 (* A multiplexer that returns value of the enum, as opposed to
-   multiplexing on the enum itself (as match_ does)
-*)
+   multiplexing on the enum itself (as match_ does). *)
 let multiplexers =
   let selector = Signal.input "selector" 2 in
   Hello.Binary.Of_signal.(mux
@@ -185,7 +183,7 @@ let registers : Signal.t Hello.Binary.t =
 ;;
 
 (* Usage in always blocks. You can (almost) seamlessly assign values
-   to them*)
+   to them. *)
 let _ : Always.t list =
   let cond = Signal.input "cond" 1 in
   let var = Hello.Binary.Of_always.reg ~enable:Signal.vdd spec in
@@ -203,7 +201,7 @@ let _ : Always.t list =
 ;;
 ```
 
-The generated enum can even be used as part of regular hardcaml
+The generated enum can even be used as part of regular Hardcaml
 interfaces! This makes Hardcaml Enums powerful, since the circuit
 interfaces can simply use it without nasty type conversions. For
 example:
@@ -292,36 +290,25 @@ opt for special APIs for getting/setting them in simulations:
 
 ```ocaml
 # Hello.Binary.sim_set
-  ;;
 - : Bits.t ref Hello.Binary.t -> Hello.Enum.t -> unit = <fun>
-
 # Hello.Binary.sim_set_raw
-  ;;
 - : Bits.t ref Hello.Binary.t -> Bits.t -> unit = <fun>
-
 # Hello.Binary.sim_get
-  ;;
 - : Bits.t ref Hello.Binary.t -> Hello.Enum.t Or_error.t = <fun>
-
 # Hello.Binary.sim_get_raw
-  ;;
 - : Bits.t ref Hello.Binary.t -> Bits.t = <fun>
 ```
 
-Using those functions, we can drive a hardcaml Cyclesim.t similar to
-regular hardcaml sims:
+Using those functions, we can drive a Hardcaml Cyclesim.t similar to
+regular Hardcaml sims:
 
 ```ocaml
 let sim =
     let module Sim = Cyclesim.With_interface(I)(O) in
     Sim.create create
-  ;;
 
 let inputs = Cyclesim.inputs sim
-;;
-
 let outputs = Cyclesim.outputs sim
-;;
 
 let print () =
   let prev_hello = Or_error.ok_exn (Hello.Binary.sim_get outputs.prev_hello) in
@@ -330,7 +317,6 @@ let print () =
     (prev_hello : Hello.Enum.t)
     (counter : int)
   ]
-;;
 ```
 
 ```ocaml

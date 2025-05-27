@@ -128,42 +128,19 @@ module type Primitives = sig
   val cases : default:t -> t -> (t * t) list -> t
 end
 
-(** Full combinational API *)
-module type S = sig
-  type t [@@deriving sexp_of]
+(** Constructors for combinational types. *)
+module type Constructors = sig
+  (** Type for implementing the combinational interface. *)
+  type t
 
-  include Equal.S with type t := t
+  (** logic 1 *)
+  val vdd : t
 
-  (** the empty signal *)
-  val empty : t
+  (** logic 0 *)
+  val gnd : t
 
-  val is_empty : t -> bool
-
-  (** names a signal
-
-      [let a = a -- "a" in ...]
-
-      signals may have multiple names. *)
-  val ( -- ) : loc:[%call_pos] -> t -> string -> t
-
-  (** returns the width (number of bits) of a signal.
-
-      [let w = width s in ...] *)
-  val width : t -> int
-
-  (** [addess_bits_for num_elements] returns the address width required to index
-      [num_elements].
-
-      It is the same as [Int.ceil_log2], except it wll return a minimum value of 1 (since
-      you cannot have 0 width vectors). Raises if [num_elements] is [< 0]. *)
-  val address_bits_for : int -> int
-
-  (** [num_bits_to_represent x] returns the number of bits required to represent the
-      number [x], which should be [>= 0]. *)
-  val num_bits_to_represent : int -> int
-
+  (** create signal from a constant *)
   val of_constant : Constant.t -> t
-  val to_constant : t -> Constant.t
 
   (** convert binary string to constant *)
   val of_bit_string : string -> t
@@ -235,6 +212,58 @@ module type S = sig
   (** convert a [bool] to [vdd] or [gnd] *)
   val of_bool : bool -> t
 
+  (** create random constant vector of given width *)
+  val random : width:int -> t
+
+  (** [zero w] makes a the zero valued constant of width [w] *)
+  val zero : int -> t
+
+  (** [ones w] makes a constant of all ones of width [w] *)
+  val ones : int -> t
+
+  (** [one w] makes a one valued constant of width [w] *)
+  val one : int -> t
+end
+
+(** Full combinational API *)
+module type S = sig
+  type t [@@deriving sexp_of]
+
+  include Equal.S with type t := t
+  include Constructors with type t := t
+
+  (** the empty signal *)
+  val empty : t
+
+  (** returns true if the signal is empty *)
+  val is_empty : t -> bool
+
+  (** names a signal
+
+      [let a = a -- "a" in ...]
+
+      signals may have multiple names. *)
+  val ( -- ) : loc:[%call_pos] -> t -> string -> t
+
+  (** returns the width (number of bits) of a signal.
+
+      [let w = width s in ...] *)
+  val width : t -> int
+
+  (** [addess_bits_for num_elements] returns the address width required to index
+      [num_elements].
+
+      It is the same as [Int.ceil_log2], except it wll return a minimum value of 1 (since
+      you cannot have 0 width vectors). Raises if [num_elements] is [< 0]. *)
+  val address_bits_for : int -> int
+
+  (** [num_bits_to_represent x] returns the number of bits required to represent the
+      number [x], which should be [>= 0]. *)
+  val num_bits_to_represent : int -> int
+
+  (** convert the signal to a constant *)
+  val to_constant : t -> Constant.t
+
   (** [concat ts] concatenates a list of signals - the msb of the head of the list will
       become the msb of the result.
 
@@ -254,24 +283,8 @@ module type S = sig
       equivalent to [concat [ a; b ]] *)
   val ( @: ) : t -> t -> t
 
-  (** logic 1 *)
-  val vdd : t
-
   val is_vdd : t -> bool [@@deprecated "[since 2025-03] use [to_bool]"]
-
-  (** logic 0 *)
-  val gnd : t
-
   val is_gnd : t -> bool [@@deprecated "[since 2025-03] use [not to_bool]"]
-
-  (** [zero w] makes a the zero valued constant of width [w] *)
-  val zero : int -> t
-
-  (** [ones w] makes a constant of all ones of width [w] *)
-  val ones : int -> t
-
-  (** [one w] makes a one valued constant of width [w] *)
-  val one : int -> t
 
   (** [select t ~high ~low] selects from [t] bits in the range [high]...[low], inclusive.
       [select] raises unless [high] and [low] fall within [0 .. width t - 1] and
@@ -711,9 +724,6 @@ module type S = sig
   (** Increment a gray code value. The implementation converts to binary, increments the
       binary value, then converts back to gray code. *)
   val gray_increment : t -> by:int -> t
-
-  (** create random constant vector of given width *)
-  val random : width:int -> t
 
   (** [any_bit_set t] returns [vdd] if at least one bit if set in [t] and [gnd] otherwise. *)
   val any_bit_set : t -> t

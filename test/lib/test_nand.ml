@@ -54,7 +54,7 @@ module Asic_nand = Comb.Make (Comb.Make_primitives (Make_nand_gates (struct
 
     let nand a b =
       assert (Bits.width a = Bits.width b);
-      Map.find_exn
+      Instantiation.output
         (Instantiation.create
            ()
            ~name:"nand"
@@ -495,7 +495,7 @@ module Fpga_nand = Comb.Make (Comb.Make_primitives (Make_nand_gates (struct
     open Signal
 
     let nand_lut a b =
-      Map.find_exn
+      Instantiation.output
         (Instantiation.create
            ()
            ~name:"LUT2"

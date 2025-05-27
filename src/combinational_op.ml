@@ -41,5 +41,5 @@ let instantiate t ~inputs =
     List.mapi t.output_widths ~f:(fun i width -> "o" ^ Int.to_string i, width)
   in
   let instance = Instantiation.create () ~name:t.name ~inputs ~outputs in
-  List.map outputs ~f:(fun (name, _) -> Map.find_exn instance name)
+  List.map outputs ~f:(fun (name, _) -> Instantiation.output instance name)
 ;;

@@ -1,4 +1,4 @@
-# Sequential Logic
+# 2.2 Sequential Logic
 
 <!--
 ```ocaml
@@ -32,7 +32,7 @@ val spec : Signal.Reg_spec.t = <abstr>
 Multiple sequential elements are then able to refer to the same
 `Reg_spec.t`.
 
-# Registers, pipelines
+# Registers, Pipelines
 
 A simple register takes a signal as input and basically delays it for one cycle.
 
@@ -56,7 +56,7 @@ val q_out_after_3_clocks : Signal.t =
  (data_in register))
 ```
 
-# Registers with feedback
+# Registers with Feedback
 
 We noted [previously](combinational_logic.md) that combinational
 logic could not contain cycles.  We can lift this restriction with

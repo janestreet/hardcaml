@@ -121,7 +121,7 @@ let%expect_test "mem loop, including read address, which isn't allowed" =
 let%expect_test "Instantiation loop - not allowed." =
   let w = Signal.wire 1 in
   let inst = Instantiation.create () ~name:"foo" ~inputs:[ "a", w ] ~outputs:[ "b", 1 ] in
-  Signal.(w <-- Map.find_exn inst "b");
+  Signal.(w <-- Instantiation.output inst "b");
   let result = topsort [ w ] in
   print_s [%sexp (result : topsort)];
   [%expect {| (Error (instantiation wire wire)) |}]

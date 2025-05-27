@@ -84,7 +84,13 @@ module type Comb_monomorphic = sig
   val validate : t -> unit
 
   (** Each field is set to the constant integer value provided. *)
-  val of_int : int -> t
+  val of_int_trunc : int -> t
+
+  val of_unsigned_int : int -> t
+  val of_signed_int : int -> t
+
+  (** Identical to [of_unsigned_int 0] *)
+  val zero : unit -> t
 
   (** Pack interface into a vector. *)
   val pack : ?rev:bool -> t -> comb
@@ -121,9 +127,12 @@ module type Comb = sig
   (** Actual bit widths of each field. *)
   val widths : t -> int interface
 
-  (** [consts c] sets each field to the integer value in [c] using the declared field bit
-      width. *)
-  val of_ints : int interface -> t
+  (** [of_ints_trunc c] sets each field to the integer value in [c] using the declared
+      field bit width. *)
+  val of_ints_trunc : int interface -> t
+
+  val of_unsigned_ints : int interface -> t
+  val of_signed_ints : int interface -> t
 end
 
 module type Names_and_widths = sig

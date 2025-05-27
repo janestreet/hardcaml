@@ -267,8 +267,24 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
                   (actual_width : int)])
     ;;
 
-    let of_int i = map port_widths ~f:(fun b -> Comb.of_int_trunc ~width:b i)
-    let of_ints i = map2 port_widths i ~f:(fun width -> Comb.of_int_trunc ~width)
+    let ( of_int_trunc
+        , of_unsigned_int
+        , of_signed_int
+        , of_ints_trunc
+        , of_unsigned_ints
+        , of_signed_ints )
+      =
+      let map1 f i = map port_widths ~f:(fun width -> f ~width i) in
+      let map2 f = map2 port_widths ~f:(fun width -> f ~width) in
+      ( map1 Comb.of_int_trunc
+      , map1 Comb.of_unsigned_int
+      , map1 Comb.of_signed_int
+      , map2 Comb.of_int_trunc
+      , map2 Comb.of_unsigned_int
+      , map2 Comb.of_signed_int )
+    ;;
+
+    let zero () = of_unsigned_int 0
 
     let pack ?(rev = false) t =
       assert_widths t;

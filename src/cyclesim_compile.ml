@@ -572,21 +572,27 @@ let copy_out_ports (t : Bytes.t) (ports : (Port.t * Bits.t ref) list) =
     bits := new_bits)
 ;;
 
-let lookup_node runtime (map : Read_map.t) (traced : Cyclesim0.Traced.internal_signal) =
+let lookup_node_by_id runtime (map : Read_map.t) signal_id =
+  Map.find map signal_id
+  |> Option.map ~f:(fun { address; signal } ->
+    Cyclesim0.Node.create_from_signal ~byte_address:(address * 8) ~data:runtime signal)
+;;
+
+let lookup_node runtime map (traced : Cyclesim0.Traced.internal_signal) =
   if not (Signal.Type.is_mem traced.signal || Signal.Type.is_reg traced.signal)
-  then
-    Map.find map (Signal.uid traced.signal)
-    |> Option.map ~f:(fun { address; signal } ->
-      Cyclesim0.Node.create_from_signal ~byte_address:(address * 8) ~data:runtime signal)
+  then lookup_node_by_id runtime map (Signal.uid traced.signal)
   else None
 ;;
 
-let lookup_reg runtime (map : Read_map.t) (traced : Cyclesim0.Traced.internal_signal) =
+let lookup_reg_by_id runtime (map : Read_map.t) signal_id =
+  Map.find map signal_id
+  |> Option.map ~f:(fun { address; signal } ->
+    Cyclesim0.Reg.create_from_signal ~byte_address:(address * 8) ~data:runtime signal)
+;;
+
+let lookup_reg runtime map (traced : Cyclesim0.Traced.internal_signal) =
   if Signal.Type.is_reg traced.signal
-  then
-    Map.find map (Signal.uid traced.signal)
-    |> Option.map ~f:(fun { address; signal } ->
-      Cyclesim0.Reg.create_from_signal ~byte_address:(address * 8) ~data:runtime signal)
+  then lookup_reg_by_id runtime map (Signal.uid traced.signal)
   else None
 ;;
 
@@ -685,7 +691,9 @@ let create_cyclesim
     ~cycle_at_clock_edge
     ~cycle_after_clock_edge
     ~traced
+    ~lookup_node_by_id:(lookup_node_by_id runtime map)
     ~lookup_node:(lookup_node runtime map)
+    ~lookup_reg_by_id:(lookup_reg_by_id runtime map)
     ~lookup_reg:(lookup_reg runtime map)
     ~lookup_mem:(lookup_mem runtime map)
     ()

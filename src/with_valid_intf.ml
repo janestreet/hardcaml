@@ -36,6 +36,20 @@ module type With_valid = sig
     module M (X : T1) : sig
       module type S = S with type 'a value := 'a X.t
     end
+
+    (** Convenient interface to create [module With_valid = ...] using the
+        [include functor] extension. *)
+    module Include : sig
+      module type S = sig
+        type 'a value
+
+        module With_valid : S with type 'a value := 'a value
+      end
+
+      module type F = functor (X : Interface.Pre) -> S with type 'a value := 'a X.t
+
+      module Make (X : Interface.Pre) : S with type 'a value := 'a X.t
+    end
   end
 
   (** Create a new hardcaml interface with type [('a, 'a X.t) With_valid.t2]. *)
@@ -55,6 +69,20 @@ module type With_valid = sig
       type nonrec 'a t = ('a, 'a X.t) t2
 
       module type S = S with type 'a value := 'a X.t
+    end
+
+    (** Convenient interface to create [module With_valid = ...] using the
+        [include functor] extension. *)
+    module Include : sig
+      module type S = sig
+        type 'a value
+
+        module With_valid : S with type 'a value := 'a value
+      end
+
+      module type F = functor (X : Interface.Pre) -> S with type 'a value := 'a X.t
+
+      module Make (X : Interface.Pre) : S with type 'a value := 'a X.t
     end
   end
 

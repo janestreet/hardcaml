@@ -1,4 +1,4 @@
-# Simulation
+# 3.1 Simulating with Cyclesim
 
 <!--
 ```ocaml
@@ -18,11 +18,11 @@ order to produce an executable model of the design.
 A testbench is used to control the design by:
 
 1. Performing a reset
-2. Stepping the simulation forward by 1 cycle.
+2. Stepping the simulation forward by 1 cycle
 3. Setting inputs ports
 4. Reading output ports
 
-# Working with simulators
+# Working with Simulators
 
 A simulation is built from a circuit as follows. First, we will create
 a trivial circuit.
@@ -53,7 +53,7 @@ val x : Bits.t ref = {Base.Ref.contents = 0}
 val y : Bits.t ref = {Base.Ref.contents = 0}
 ```
 
-Note that looking up a non-existant port will produce an exception
+Note that looking up a non-existent port will produce an exception
 
 ```ocaml
 # let foo = Cyclesim.in_port simulator "foo"
@@ -91,32 +91,50 @@ and read an output like so:
 - : int = 1
 # Bits.to_unsigned_int !y
 - : int = 1
+# Cyclesim.cycle simulator
+- : unit = ()
+# Bits.to_unsigned_int !y
+- : int = 0
 ```
 
-# Visualizing Simulation Waveforms
 
-See the pages on [waveforms](waveforms.md) and using the
-[interactive viewer](waveterm_interactive_viewer.md) for more information.
+## The simulation algorithm
 
+Cyclesim performs the following steps when `cycle` is called.
+
+1. Based on the current value of the inputs, update (in the correct order) all the
+   combinational nodes in the circuit. Nodes which read a register or memory read port use
+   their current value.
+2. Update all registers and memory writes. The previous step will have defined the new
+   values to load.
+3. Perform a final update of the (subset of) combinational nodes that depend on the new
+   register/memory values.
+
+### Before and After outputs
+
+When we look up an output port there is an optional argument `clock_edge`. It defaults to
+`After` which means the output value after all 3 steps of the simulation algorithm have
+run. `Before` samples the values after step 1 - that is before the sequential nodes update.
 
 # Limitations
 
-The simulators provided by Hardcaml are called cycle-accurate
-simulators, rather than the more complex event-driven simulators
-often used for RTL design.
+Cyclesim implements a cycle-accurate simulation algorithm. This is in contrast to the
+more complex event-driven simulators often used for RTL design.
 
-Verilator is an example of a popular cycle-accurate simulator, while
-Icarus Verilog and Modelsim are examples of event-driven simulators.
+Verilator is an example of a popular cycle-accurate simulator, while Icarus Verilog and
+Modelsim are examples of event-driven simulators.
 
-While event-driven simulators are more powerful, for testing standard
-synchronous designs cycle accurate simulators are generally good
-enough, simpler to write testbenches for and easier to make run
-reasonably fast.
+While event-driven simulators are more powerful, for testing standard synchronous designs
+cycle accurate simulators are generally good enough, simpler to write testbenches for and
+easier to make run reasonably fast.
 
-The Hardcaml simulators also add some further restrictions -
-specifically it is possible to (approximately) model multiple clock
-domains with cycle-accurate simulators, but we do not currently allow
-that. Further, we do not model different clock edges and assume all
-synchronous logic is triggered on the rising edge.
+The Hardcaml Cyclesim simulator also add some further restrictions:
 
-Let us know if this is particularly restrictive for you!
+- We only support 1 clock. In designs with more that 1 clock, they are all assumed to be
+  the same.
+- We don't model different clock edges - we assume everything is rising edge triggered.
+- We only support 2 state logic.
+
+The Hardcaml toolset provides an event driver simulator framework with the
+`Hardcaml_event_driven_sim` library. This is rather more complex to use but provides more
+accurate modeling possibilities.

@@ -1,0 +1,57 @@
+introduction
+    why {path: "../why.mdx"}
+    installing_with_opam {path: "../installing_with_opam.mdx"}
+    quick_overview {path: "../quick_overview.mdx"}
+designing-circuits
+    combinational_logic {path: "../combinational_logic.mdx"}
+    rom {path: "../rom.mdx"}
+    mux4 {path: "../mux4.mdx"}
+    priority_encoder {path: "../priority_encoder.mdx"}
+    parity {path: "../parity.mdx"}
+    alu {path: "../alu.mdx"}
+    sequential_logic {path: "../sequential_logic.mdx"}
+    jk_flip_flop {path: "../jk_flip_flop.mdx"}
+    t_flip_flop {path: "../t_flip_flop.mdx"}
+    d_flip_flop {path: "../d_flip_flop.mdx"}
+    ring_counter {path: "../ring_counter.mdx"}
+    mobius_counter {path: "../mobius_counter.mdx"}
+    modulo_n_counter {path: "../modulo_n_counter.mdx"}
+    gray_counter {path: "../gray_counter.mdx"}
+    bidirectional_shift_reg {path: "../bidirectional_shift_reg.mdx"}
+    single_port_ram {path: "../single_port_ram.mdx"}
+    sync_fifo {path: "../sync_fifo.mdx"}
+    circuits {path: "../circuits.mdx"}
+    rtl_generation {path: "../rtl_generation.mdx"}
+simulating-circuits
+    simulation {path: "../simulation.mdx"}
+    waveforms {path: "../waveforms.mdx"}
+    waveterm_interactive_viewer {path: "../waveterm_interactive_viewer.mdx"}
+more-on-circuit-design
+    naming {path: "../naming.mdx"}
+    always {path: "../always.mdx"}
+    binary_coded_decimal {path: "../binary_coded_decimal.mdx"}
+    cylon_eye {path: "../cylon_eye.mdx"}
+    state_machine_always_api {path: "../state_machine_always_api.mdx"}
+    sequence_detector {path: "../sequence_detector.mdx"}
+    double_dabble {path: "../double_dabble.mdx"}
+    instantiation {path: "../instantiation.mdx"}
+    structural {path: "../structural.mdx"}
+using-interfaces
+    hardcaml_interfaces {path:"../hardcaml_interfaces.mdx"}
+    interfaces_with_ppx_hardcaml {path:"../interface_ppx.mdx"}
+    module_interfaces {path:"../module_interface.mdx"}
+    simulating_with_interfaces {path:"../simulating_with_interfaces.mdx"}
+    enums_in_hardcaml {path:"../enums.mdx"}
+    typed_alu {path:"../typed_alu.mdx"}
+    scopes {path:"../scopes.mdx"}
+    module_hierarchies {path:"../module_hierarchy.mdx"}
+    naming_with_ppx_hardcaml {path:"../ppx_naming.mdx"}
+examples
+    counter {path:"../counter_example.mdx"}
+    serial_multiplier {path:"../serial_multiplier_example.mdx"}
+    fibonacci_numbers {path:"../fibonacci_example.mdx"}
+    fft {path:"../fft.mdx"}
+    binary_search {path:"../binary_search.mdx"}
+    quicksort {path:"../quicksort.mdx"}
+libraries
+    high_performance_simulation_backends {path:"../accelerating_simulations.mdx"}

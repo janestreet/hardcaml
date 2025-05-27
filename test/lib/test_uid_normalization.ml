@@ -32,7 +32,11 @@ let design () =
   let reg_spec = Reg_spec.create () ~clock ~clear in
   [ output "c" (reg reg_spec ~enable:vdd (a +: b))
   ; output "d" (mux2 vdd a b)
-  ; output "e" (Map.find_exn x "c" |: Map.find_exn x "d" |: Map.find_exn x "e")
+  ; output
+      "e"
+      (Instantiation.output x "c"
+       |: Instantiation.output x "d"
+       |: Instantiation.output x "e")
   ; output "f" m
   ; output "g" m
   ; output "h" w

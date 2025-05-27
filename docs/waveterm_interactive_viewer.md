@@ -1,72 +1,75 @@
-# Waveterm Interactive Viewer
+# 3.3 Interactive Viewer
 
-Normally we write expect_tests which can output waveforms in ASCII
-when testing Hardcaml, but we can also use the interactive viewer tool
-to view waveforms that run for many cycles or
-have a lot of signals. This is a very useful debugging tool
-when initially designing a hardcaml circuit.
+Writing waveforms in expect tests can be very useful, but does come with it's
+limitations. In particular it is not really possible to print very long traces, and
+designs with lots and lots of signals can become unwieldy.
 
-## Buliding a simulation application
+As an alternative we can use the terminal based interactive waveform viewer.
 
-The [`hardcaml_waveterm_interactive`](https://github.com/janestreet/hardcaml_waveterm/tree/master/interactive)
-library can be used to build an
-application which includes a hardware circuit that can be simulated
-and the results viewed with the interactive viewer.
+# Building a Simulation Application
 
-A waveform is created in the normal way by wrapping a simulator with
-`Hardcaml_waveterm.create` and then running a testbench.
+The interactive waveform viewer should be built as a top level application. It should be
+linked with the
+[`hardcaml_waveterm_interactive`](https://github.com/janestreet/hardcaml_waveterm/tree/master/interactive)
+library.
 
-The following function is used to display the waveform.
+Waveforms are created in the normal way by wrapping a simulator with
+`Hardcaml_waveterm.Wavform.create` and then running a testbench.
+
+The following function is used to run the viewer.
 
 ```ocaml skip
 # Hardcaml_waveterm_interactive.run waves
 ```
 
 
-## Using the waveform viewer
+# Using the Waveform Viewer
 
-* `q` quits
+* `q/escape` quits
 * `left/right` or `ctrl+mouse-wheel` scroll waveform horizontally
 * `up/down` or `mouse-wheel` scroll waveform vertically
 * `-/=` decrease/increase waveform scale
+* `e/b` will find the next/prev transition on the highlighted signal
+* `s/S` save or load the current waveform configuration
+* `h/j/k/l` move the cursor
+* `9/(` - increase/decrease the signals pane size 
+* `0/)` - increase/decrease the values pane size
+* `_/+` - increase/decrease the waves pane size
 
-Left clicking on the waveform will position a cursor and show the
-value of all signals in the values window.
+Left clicking on the waveform will position a cursor and show the value of signals at that
+cycle in the values window.
 
 All windows also have scroll bars that can be clicked on.
 
-## Interactive waveforms from expect tests
+# Interactive Waveforms from Expect Tests
 
-Waveform-based expect tests are very information limited. We often
-either run very small simulations, show a small portion of a larger
-simulation, or zoom far out to capture general behaviour. Often we can
-see the behaviour of control signals but not the detailed values on
-data buses.
+Waveform-based expect tests are very information limited. We often either run very small
+simulations, show a small portion of a larger simulation, or zoom far out to capture
+general behavior. Often we can see the behavior of control signals but not the detailed
+values on data buses.
 
-To help with this, the `Hardcaml_waveterm` library can optionally
-serialize a waveform to disk. It provides an `expect` function which is
-very similar to `Hardcaml_waveterm.Waveform.print`
+To help with this, the `Hardcaml_waveterm` library can optionally serialize a waveform to
+disk. It provides an `expect` function which is very similar to
+`Hardcaml_waveterm.Waveform.print`
 
 ```ocaml skip
 Hardcaml_waveterm.Waveform.expect ~serialize_to:"filename" waves
 ```
 
-This provides an optional argument called `serialize_to` which
-specifies the filename to which the waveform will be saved. The suffix
-`.hardcamlwaveform` will be added.
+This provides an optional argument called `serialize_to` which specifies the filename to
+which the waveform will be saved. The suffix `.hardcamlwaveform` will be added.
 
-By default, waveforms are not saved. To do so execute the tests with
-the following environment variable set.
+By default, waveforms are not saved. To do so execute the tests with the following
+environment variable set.
 
 ```
-EXPECT_TEST_WAVEFORM=1 ./inline_tests_runner
+EXPECT_TEST_WAVEFORM=1
 ```
 
-Which will output a file in the same directory called
-`filename.hardcamlwaveform`.
+Which will output a file in the same directory called `filename.hardcamlwaveform`.
 
-To view the waveform, a tool called `waveform_viewer` is provided with
-`hardcaml_waveterm` in the `bin` directory.
+To view the waveform, a tool called `waveform_viewer` is provided with `hardcaml_waveterm`
+in the `bin` directory.
 
 ```
 waveform_viewer.exe show filename.hardcamlwaveform

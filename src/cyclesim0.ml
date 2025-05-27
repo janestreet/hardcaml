@@ -96,7 +96,9 @@ type ('i, 'o) t =
   ; cycle_at_clock_edge : task
   ; cycle_after_clock_edge : task
   ; traced : Traced.t
+  ; lookup_node_by_id : Signal.Type.Uid.t -> Node.t option
   ; lookup_node : Traced.internal_signal -> Node.t option
+  ; lookup_reg_by_id : Signal.Type.Uid.t -> Reg.t option
   ; lookup_reg : Traced.internal_signal -> Reg.t option
   ; lookup_mem : Traced.internal_signal -> Memory.t option
   ; circuit : Circuit.t option
@@ -217,7 +219,9 @@ module Private = struct
     ~cycle_at_clock_edge
     ~cycle_after_clock_edge
     ~traced
+    ~lookup_node_by_id
     ~lookup_node
+    ~lookup_reg_by_id
     ~lookup_reg
     ~lookup_mem
     ()
@@ -234,7 +238,9 @@ module Private = struct
     ; cycle_at_clock_edge
     ; cycle_after_clock_edge
     ; traced
+    ; lookup_node_by_id
     ; lookup_node
+    ; lookup_reg_by_id
     ; lookup_reg
     ; lookup_mem
     ; circuit

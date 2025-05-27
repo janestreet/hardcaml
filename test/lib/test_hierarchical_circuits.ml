@@ -20,11 +20,11 @@ let middle ~cause_exn ~db ~share =
   let inst =
     Instantiation.create () ~name:inner_name1 ~inputs:[ "a", a ] ~outputs:[ "b", 1 ]
   in
-  let b1 = Map.find_exn inst "b" in
+  let b1 = Instantiation.output inst "b" in
   let inst =
     Instantiation.create () ~name:inner_name2 ~inputs:[ "a", a ] ~outputs:[ "b", 1 ]
   in
-  let b2 = Map.find_exn inst "b" in
+  let b2 = Instantiation.output inst "b" in
   let circ = Circuit.create_exn ~name:"middle" [ output "b" (b1 |: b2) ] in
   let name = Circuit_database.insert ~share db circ in
   name
@@ -37,7 +37,7 @@ let outer ~cause_exn ~db ~share =
   let inst =
     Instantiation.create () ~name:middle_name ~inputs:[ "a", a ] ~outputs:[ "b", 1 ]
   in
-  let b = output "b" (Map.find_exn inst "b") in
+  let b = output "b" (Instantiation.output inst "b") in
   Circuit.create_exn ~name:"outer" [ b ]
 ;;
 

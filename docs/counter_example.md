@@ -1,4 +1,4 @@
-# Counter example design
+# 6.1 Counter
 
 <!--
 ```ocaml
@@ -7,9 +7,8 @@
 ```
 -->
 
-The following is a simple 8-bit counter. It resets back to 0 when the
-clear signal is high and counts up when the incr signal is high.
-Otherwise, it holds its previous value.
+The following is a simple 8-bit counter. It resets back to 0 when the clear signal is high
+and counts up when the incr signal is high. Otherwise, it holds its previous value.
 
 ## Design
 
@@ -47,33 +46,29 @@ end
 val create : t I.t -> t O.t = <fun>
 ```
 
-This design, although simple, shows the usual pattern for defining a
-circuit in Hardcaml. The inputs and outputs of the circuit are
-specified using interfaces, and the circuit is built using a
-function which takes an input interface and returns an output
-interface.
+This design, although simple, shows the usual pattern for defining a circuit in Hardcaml.
+The inputs and outputs of the circuit are specified using interfaces, and the circuit is
+built using a function which takes an input interface and returns an output interface.
 
-The implementation uses the `reg_fb` function. This constructs a
-register with feedback. Let's look at each argument in turn.
+The implementation uses the `reg_fb` function. This constructs a register with feedback.
+Let's look at each argument in turn.
 
-- `Reg_spec.t` packages up the `clock` and synchronous clear `signal`.
-  There are various other arguments which can control an asynchronous
-  reset, rising or falling clock edge and so on.
-- `enable`: when high the register will load a new value. Otherwise, it
-  holds its previous value.
+- `Reg_spec.t` packages up the `clock` and synchronous clear `signal`. There are various
+  other arguments which can control an asynchronous reset, rising or falling clock edge
+  and so on.
+- `enable`: when high the register will load a new value. Otherwise, it holds its previous
+  value.
 - `width` is the bit width of the register.
-- `f`: this function receives the current value of the
-  register, and computes the next value. In this case, it increments it
-  by one.
+- `f`: this function receives the current value of the register, and computes the next
+  value. In this case, it increments it by one.
 
 ## Testbench
 
-The following is a simple testbench for the counter which shows its
-behaviour for different values of `clear` and `incr`.
+The following is a simple testbench for the counter which shows its behavior for
+different values of `clear` and `incr`.
 
-The purpose of a testbench is to set values for the inputs of a
-circuit and check what values this causes the outputs to take over
-time.
+The purpose of a testbench is to set values for the inputs of a circuit and check what
+values this causes the outputs to take over time.
 
 ```ocaml
 module Simulator = Cyclesim.With_interface(I)(O)
@@ -92,7 +87,7 @@ module Simulator = Cyclesim.With_interface(I)(O)
       Stdio.printf "dout='%s'\n" (Bits.to_string !(outputs.dout));
       Cyclesim.cycle sim
     in
-    (* run the counter for 6 clock cycles *)
+    (* Run the counter for 6 clock cycles. *)
     step ~clear:0 ~incr:0;
     step ~clear:0 ~incr:1;
     step ~clear:0 ~incr:1;
@@ -116,16 +111,14 @@ dout='00000000'
 
 ### With a wire
 
-The following implementation shows what is actually happening within the
-`reg_fb` function. First, a wire is created that can be read when we
-construct a register. It is assigned after we have the register
-output.
+The following implementation shows what is actually happening within the `reg_fb`
+function. First, a wire is created that can be read when we construct a register. It is
+assigned after we have the register output.
 
-Wires allow us to describe cyclic logic structures in Hardcaml. Note
-that all such cycles in a hardware design *must* pass through a
-sequential element such as a register or memory. Cyclic paths that do
-not are called combinational loops, and Hardcaml will detect and raise
-an error if one is found.
+Wires allow us to describe cyclic logic structures in Hardcaml. Note that all such cycles
+in a hardware design *must* pass through a sequential element such as a register or
+memory. Cyclic paths that do not are called combinational loops, and Hardcaml will detect
+and raise an error if one is found.
 
 ```ocaml
 # let counter_with_wire (i : _ I.t) =
@@ -153,9 +146,9 @@ dout='00000000'
 
 We can also describe the counter with the [Always DSL](./always.md).
 
-Note that we could have encoded the clear and increment logic when we
-constructed the `Always.Variable.reg`. The Always fragment would then
-have only consisted of an assignment to `dout`.
+Note that we could have encoded the clear and increment logic when we constructed the
+`Always.Variable.reg`. The Always fragment would then have only consisted of an assignment
+to `dout`.
 
 ```ocaml
 # let counter_with_always (i : _ I.t) =

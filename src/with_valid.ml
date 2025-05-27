@@ -71,6 +71,20 @@ module Fields = struct
   module M (X : T1) = struct
     module type S = S with type 'a value := 'a X.t
   end
+
+  module Include = struct
+    module type S = sig
+      type 'a value
+
+      module With_valid : S with type 'a value := 'a value
+    end
+
+    module type F = functor (X : Interface.Pre) -> S with type 'a value := 'a X.t
+
+    module Make (X : Interface.Pre) = struct
+      module With_valid = Make (X)
+    end
+  end
 end
 
 module Wrap = struct
@@ -126,6 +140,20 @@ module Wrap = struct
     type nonrec 'a t = ('a, 'a X.t) t2
 
     module type S = S with type 'a value := 'a X.t
+  end
+
+  module Include = struct
+    module type S = sig
+      type 'a value
+
+      module With_valid : S with type 'a value := 'a value
+    end
+
+    module type F = functor (X : Interface.Pre) -> S with type 'a value := 'a X.t
+
+    module Make (X : Interface.Pre) = struct
+      module With_valid = Make (X)
+    end
   end
 end
 

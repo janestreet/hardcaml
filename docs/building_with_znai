@@ -1,0 +1,5 @@
+znai --deploy top-dir --doc-id site-name
+
+Serve the site-name directory as internal links are relative to it and then open
+
+site-name/index.html
