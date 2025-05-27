@@ -332,7 +332,7 @@ let%expect_test "test depth" =
 let%expect_test "test instantiation" =
   Signal.Type.sexp_of_signal_recursive
     ~depth:2
-    (Map.find_exn
+    (Instantiation.output
        (Instantiation.create
           ()
           ~name:"module_name"

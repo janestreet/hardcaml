@@ -1,4 +1,4 @@
-# High performance simulation backends
+# 7.1 High Performance Simulation Backends
 
 <!--
 ```ocaml
@@ -62,7 +62,7 @@ let circuit = Circuit.create_exn ~name:"adder" [ baz ]
 ```
 
 After creating the Verilator-based Cyclesim object, the simulation
-works as would any cyclesim simulator.
+works as would any Cyclesim simulator.
 
 ```ocaml
 # let cycle sim foo bar =
@@ -100,12 +100,12 @@ Cyclesim, Hardcaml Verilator, or Hardcaml C.
 
 ## Compilation options
 
-Some verilator configuration options are exposed via [`Hardcaml_verilator.Config`]. In
+Some Verilator configuration options are exposed via [`Hardcaml_verilator.Config`]. In
 particular, it is possible to split the generated C++ code into much smaller chunks and
 use many more gcc processes which can drastically improve compilation time. See the config
 module for some presets.
 
-The code supports both version 4 and 5 of verilator - set the config value
+The code supports both version 4 and 5 of Verilator - set the config value
 [verilator_version] appropriately.
 
 # `Hardcaml_c`

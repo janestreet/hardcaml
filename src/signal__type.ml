@@ -781,8 +781,7 @@ let has_name t = not (List.is_empty (names t))
 let `New new_id, `Reset _ = Uid.generator ()
 let default_wave_format = Wave_format.Bit_or Binary
 
-let make_id width =
-  if width <= 0 then raise_s [%message "Width of signals must be >= 0" (width : int)];
+let make_id_allow_zero_width width =
   { s_id = new_id ()
   ; s_width = width
   ; s_metadata =
@@ -794,6 +793,11 @@ let make_id width =
         ; wave_format = default_wave_format
         })
   }
+;;
+
+let make_id width =
+  if width <= 0 then raise_s [%message "Width of signals must be >= 0" (width : int)];
+  make_id_allow_zero_width width
 ;;
 
 let get_metadata t =

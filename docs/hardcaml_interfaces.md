@@ -1,33 +1,82 @@
-# Hardcaml Interfaces
+# 5.1 Hardcaml Interfaces
 
 <!--
 ```ocaml
+# open Base
+# open Hardcaml
 # Hardcaml.Caller_id.set_mode Disabled
 - : unit = ()
 ```
 -->
 
 Abstractly, Hardcaml
-[interfaces](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Interface/index.html)
-are made up of a polymorphic type and
-a set of functions conforming to the module type `Interface.S`. The
-type always represents a set of hardware signals, and the related
-functions provide a way to label each element in the set with a name
-and bit width.
+[interfaces](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Interface/index.html) are
+made up of a polymorphic type (with a single polymorphic variable) and a set of functions
+which can manipulate that type:
 
-More concretely, they are almost always made up of a record type where
-each field corresponds to some hardware signal. This is then used to
-describe the input and output ports of some hardware circuit.
+```
+type 'a t [@@deriving sexp_of]
 
-[`ppx_hardcaml`](https://github.com/janestreet/ppx_hardcaml)
-annotates an OCaml record that has type declarations
-and automatically generates all the boilerplate code required for
-interfaces. The record type should have a single polymorphic type, and
-each field should be of that type.
+val iter : 'a t -> f:('a -> unit) -> unit
+val iter2 : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
+val map : 'a t -> f:('a -> 'b) -> 'b t
+val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
+val to_list : 'a t -> 'a list
+```
 
-Some simple [setup](installing_with_opam.md) is required to use
-hardcaml interfaces, namely installing `ppx_hardcaml` and
-adding it as a preprocessor.
+In addition they contain a field
+
+```
+  val port_names_and_widths : (string * int) t
+```
+
+which specifies for each `'a` contained in `'a t` a string name which can be used to label
+the value and the bit width of it's representation as hardware.
+
+Most commonly an interface will be of type `Signal.t t` where it will represent a set of
+Hardcaml signals within a hardware design, or `Bits.t t` where it is used to interact with
+a Hardcaml simulator.
+
+Interfaces actually contain many more convenience functions though they can all be
+derived from the functions shown above.
+
+## Record interfaces
+
+The most common form of interface is a record. Below we implement an interface by hand for
+a record containing two fields: `foo` and `bar`.
+
+```ocaml
+module Explicit_interface_record_implementation = struct
+  module T = struct 
+    type 'a t =
+      { foo : 'a 
+      ; bar : 'a 
+      }
+    [@@deriving sexp_of]
+
+    let map t ~f = { foo = f t.foo; bar = f t.bar }
+    let map2 s t ~f = { foo = f s.foo t.foo; bar = f s.bar t.bar }
+    let iter t ~f = f t.foo; f t.bar
+    let iter2 s t ~f = f s.foo t.foo; f s.bar t.bar
+    let to_list t = [ t.foo; t.bar ]
+
+    let port_names_and_widths = { foo = "FOO_FOO", 32; bar = "BAR_BAR", 1 }
+  end
+  include T
+  include Hardcaml.Interface.Make(T)
+end;;
+```
+
+In the `port_names_and_widths` value we gave a 32 bit width to foo, and a 1 bit width to
+bar. Note also the names we specified were not the same as the record field name (although
+much of the time it makes most sense if they are).
+
+To reduce the amount of boilerplate code to write we provide a ppx called
+[`ppx_hardcaml`](https://github.com/janestreet/ppx_hardcaml) which can generate the above
+code for you from the type definition.
+
+The type definition derives Hardcaml and various annotations exist to customize the names
+and widths of each field.  Note that each field in the record must be of type `'a`.
 
 ```ocaml
 module Simple_interface = struct
@@ -40,153 +89,60 @@ module Simple_interface = struct
 end
 ```
 
-Notice that both `sexp_of` and `hardcaml` must be specified in the
-`[@deriving]` specification.
+Some simple [setup](installing_with_opam.md) is required to use Hardcaml interfaces,
+namely installing `ppx_hardcaml` and adding it as a preprocessor in the build system.
 
-The ppx supports nesting, arrays, lists and various tools to manage
-port naming.
+## Using interfaces
 
-## Nesting
+Lets say `Simple_interface` defined the outputs of some hardware module. Generally we
+would write something like:
+
+<!---
+```ocaml
+# open Signal
+# let outputs = Simple_interface.Of_signal.of_unsigned_int 0
+val outputs : t Simple_interface.t =
+  {Simple_interface.foo = (const (width 32) (value 0x00000000));
+   bar = (const (width 1) (value 0b0))}
+```
+-->
 
 ```ocaml
-module Nested_interfaces = struct
-  type 'a t =
-    { clock : 'a
-    ; clear : 'a
-    ; hello : 'a Simple_interface.t
-    ; world : 'a Simple_interface.t
-    }
-  [@@deriving hardcaml]
-end
+let circuit =
+    Circuit.create_exn ~name:"test"
+      [ output "foo" outputs.foo; output "bar" outputs.bar ]
 ```
 
-Nesting can go as deep as required.
-
-Enumerations are a special type of interface with a slightly different set of generated
-functions but which can also be nested.
-
-## Arrays and lists
-
-For arrays and lists, the lengths must be specified with an attribute.
+Instead we can write:
 
 ```ocaml
-open Base
-module Array_and_list_interfaces = struct
-  type 'a t =
-    { my_array : 'a array [@length 2]
-    ; my_list : 'a list [@length 10] [@bits 10]
-    }
-  [@@deriving hardcaml]
-end
+let circuit =
+    Circuit.create_exn ~name:"test"
+      Simple_interface.(map2 port_names outputs ~f:Signal.output |> to_list)
 ```
 
-Arrays of nested interfaces are also supported.
+Now lets say we have built a simulator over this module and want access to the output ports
 
-## Simple naming
-
-By default, the field name is used to derive a port name. Port names
-will be used during RTL generation. This can be modified with
-attributes.
+<!--
+```ocaml
+# let sim =
+  let module Sim = Cyclesim.With_interface(Interface.Empty)(Simple_interface) in
+  Sim.create (fun _ -> outputs)
+val sim :
+  (Bits.t ref Interface.Empty.t, Bits.t ref Simple_interface.t) Cyclesim.t =
+  <abstr>
+```
+-->
 
 ```ocaml
-module Unmodified_port_names = struct
-  type 'a t =
-    { a : 'a
-    ; b : 'a
-    ; c : 'a
-    }
-  [@@deriving hardcaml]
-end
+let outputs =
+    Simple_interface.(map port_names ~f:(Cyclesim.out_port sim ))
 ```
 
-```ocaml
-module Modified_port_names = struct
-  type 'a t =
-    { a : 'a[@rtlname "aaa"]
-    ; b : 'a[@rtlprefix "x_"]
-    ; c : 'a[@rtlsuffix "_x"]
-    }
-  [@@deriving hardcaml]
-end
-```
+## Other types of interface
 
-```ocaml
-# Unmodified_port_names.port_names;;
-- : string Unmodified_port_names.t =
-{Unmodified_port_names.a = "a"; b = "b"; c = "c"}
-# Modified_port_names.port_names;;
-- : string Modified_port_names.t =
-{Modified_port_names.a = "aaa"; b = "x_b"; c = "c_x"}
-```
+There are various use cases for interfaces where the outer type is not a record. `Enums`
+are one example and will be described later.
 
-`rtlprefix`, `rtlsuffix` and `rtlmangle` attributes may also be used with nested
-interfaces, though `rtlname` will not work.
-
-## Global attributes
-
-The naming attributes can be specified for all fields as follows:
-
-```ocaml
-module Global_suffix = struct
-  type 'a t =
-    { a : 'a
-    ; b : 'a
-    ; c : 'a
-    }
-  [@@deriving hardcaml ~rtlsuffix:"_i"]
-end
-```
-## Mangling
-
-Mangling is used with nested interfaces.  Consider the nested example given previously.
-
-```ocaml
-# Nested_interfaces.port_names;;
-- : string Nested_interfaces.t =
-{Nested_interfaces.clock = "clock"; clear = "clear";
- hello = {Simple_interface.foo = "foo"; bar = "bar"};
- world = {Simple_interface.foo = "foo"; bar = "bar"}}
-```
-
-The port names of the nested fields for `hello` and `world` clash and
-would eventually lead to a circuit error.
-
-If we specify the rtlmangle option, the port names will be
-differentiated by prefixing the field name from the outer interface.
-
-```ocaml
-module Nested_interfaces_mangled = struct
-  type 'a t =
-    { clock : 'a
-    ; clear : 'a
-    ; hello : 'a Simple_interface.t
-    ; world : 'a Simple_interface.t
-    }
-  [@@deriving hardcaml ~rtlmangle:true]
-end
-```
-
-```ocaml
-# Nested_interfaces_mangled.port_names;;
-- : string Nested_interfaces_mangled.t =
-{Nested_interfaces_mangled.clock = "clock"; clear = "clear";
- hello = {Simple_interface.foo = "hello_foo"; bar = "hello_bar"};
- world = {Simple_interface.foo = "world_foo"; bar = "world_bar"}}
-```
-
-## Comments
-
-There are several benefits to using interfaces over working with raw
-simulations:
-
-- A nice [Simulation](simulation.md) that allows access to record
-  fields directly instead of referring to port names via strings.
-- Allows the creation of [module Hierarchies](module_hierarchy.md)
-  within your RTL design.
-
-There are currently some limitations on Hardcaml interfaces created
-in this manner:
-
-- They are unidirectional - groups of inputs or outputs need to be specified separately.
-- When declaring an interface, the concrete bit widths must be known. Functorization is required
-  if they need to be configurable.
+`Scalar`s are another where we abstract a Hardcaml value by restricting access to it's
+implementation. They often come with a specialized API for manipulating the value.

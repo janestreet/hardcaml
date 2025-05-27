@@ -1,0 +1,5 @@
+(library
+ (name hardcaml_docs)
+ (libraries base hardcaml hardcaml_waveterm stdio)
+ (preprocess
+  (pps ppx_jane ppx_hardcaml)))

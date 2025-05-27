@@ -2,52 +2,64 @@
 
 Welcome to [Hardcaml](https://github.com/janestreet/hardcaml)!
 
-# Getting Started
+_I have written this by hand for sharing in the github repo, as our indexes are built automagically.  There could be errors._
 
-Introducing the [key modules](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/index.html)
-and concepts in Hardcaml.
+Each section explains different aspects of hardware design using Hardcaml, with
+sub-sections containing multiple examples written in Verilog, VHDL, and Hardcaml for
+comparison.
 
-* [Introduction](introduction.md)
-* [Installing](installing_with_opam.md) the open source package
-* [Combinational logic](combinational_logic.md)
-* [Sequential logic](sequential_logic.md)
-* [Naming](naming.md)
-* [Always API](always.md)
-* [Instantiation](instantiation.md)
-* [Circuits](circuits.md)
-* [Generating RTL](rtl_generation.md)
-* [Simulation](simulation.md)
-* [Waveforms](waveforms.md)
-
-See the [serial multiplier](serial_multiplier_example.md) for an example of using
-many of these features.
-
-# Using Hardcaml
-
-Some more advanced concepts useful for designing and testing larger,
-more complex hardware designs.
-
-* [Hardcaml interfaces](hardcaml_interfaces.md)
-* [Module hierarchies](module_hierarchy.md)
-* [Simulating with interfaces](simulating_with_interfaces.md)
-* [Writing state machines](state_machine_always_api.md)
-* [Enums in Hardcaml](enums.md)
-* [Interactive waveforms](waveterm_interactive_viewer.md)
-<!--
-* [Step testbenches](step_testbench.md)
--->
-
-# Examples
-
-* [Simple counter](counter_example.md)
-* [Serial multiplier](serial_multiplier_example.md)
-* [Calculating Fibonacci numbers](fibonacci_example.md)
-
-# Libraries
-
-* [Accelerated Simulation Backends](accelerating_simulations.md)
-<!--
-* [Verification tools](verification.md)
-* [Converting from Verilog](hardcaml_of_verilog.md)
-* [Xilinx library integration](hardcaml_xilinx)
--->
+1. [Introduction](introduction.md)
+   * 1.1 [Why Hardcaml](why.md)
+   * 1.2 [Installing the opensource release](installing_with_opam.md)
+   * 1.3 [Quick overview](quick_overview.md)
+2. [Designing Circuits](designing_circuits.md)
+   * 2.1 [Combinational Logic](combinational_logic.md)
+       - 2.1.1 [ROM](rom.md)
+       - 2.1.2 [Mux4](mux4.md)
+       - 2.1.3 [Priority Encoder](priority_encoder.md)
+       - 2.1.4 [Parity](parity.md)
+       - 2.1.5 [ALU](alu.md)
+   * 2.2 [Sequential Logic](sequential_logic.md)
+       - 2.2.1 [JK Flip Flop](jk_flip_flop.md)
+       - 2.2.2 [T Flip Flop](t_flip_flop.md)
+       - 2.2.3 [D Flip Flop](d_flip_flop.md)
+       - 2.2.4 [Ring Counter](ring_counter.md)
+       - 2.2.5 [Mobius Counter](mobius_counter.md)
+       - 2.2.6 [Modulo N Counter](modulo_n_counter.md)
+       - 2.2.7 [Gray Counter](gray_counter.md)
+       - 2.2.8 [Bidirectional Shift Register](bidirectional_shift_reg.md)
+       - 2.2.9 [Single Port RAM](single_port_ram.md)
+       - 2.2.10 [Synchronous FIFO](sync_fifo.md)
+   * 2.3 [Circuits](circuits.md)
+   * 2.4 [RTL Generation](rtl_generation.md)
+3. [Simulating Circuits](simulating_circuits.md)
+   * 3.1 [Simulating with Cyclesim](simulation.md)
+   * 3.2 [Waveforms](waveforms.md)
+   * 3.3 [Interactive Viewer](waveterm_interactive_viewer.md)
+4. [More On Circuit Design](more_design.md)
+   * 4.1 [Naming](naming.md)
+   * 4.2 [Always DSL](always.md)
+       - 4.2.1 [BCD Conversion](binary_coded_decimal.md)
+       - 4.2.2 [Cylon Eye](cylon_eye.md)
+   * 4.3 [Designing State Machines](state_machine_always_api.md)
+       - 4.3.1 [Sequence Detector](sequence_detector.md)
+       - 4.3.1 [Double Dabble](double_dabble.md)
+   * 4.4 [Instantiation](instantiation.md)
+   * 4.5 [Working With Structural](structural.md)
+5. [Using Interfaces](using_interfaces.md)
+   * 5.1 [Hardcaml Interfaces](hardcaml_interfaces.md)
+   * 5.2 [Interfaces with `ppx_hardcaml`](interface_ppx.md)
+   * 5.3 [Module Interfaces](module_interface.md)
+   * 5.4 [Simulating with Interfaes](simulating_with_interfaces.md)
+   * 5.5 [Enums in Hardcaml](enums.md)
+       - 5.5.1 [Typed ALU](typed_alu.md)
+   * 5.6 [Scopes](scopes.md)
+   * 5.7 [Module Hierarchies](module_hierarchy.md)
+   * 5.8 [Naming with `ppx_hardcaml`](ppx_naming.md)
+6. [Examples](examples.md)
+   * 6.1 [Counter](counter_example.md)
+   * 6.2 [Serial multiplier](serial_multiplier_example.md)
+   * 6.3 [Fibonacci numbers](fibonacci_example.md)
+   * 6.4 [FFT](fft.md)
+   * 6.5 [Binary Search](binary_search.md)
+   * 6.6 [Quicksort](quicksort.md)

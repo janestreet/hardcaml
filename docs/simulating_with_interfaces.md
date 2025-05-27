@@ -1,21 +1,22 @@
-# Simulating with interfaces
+# 5.4 Simulating with Interfaces
 
 <!--
 ```ocaml
+# open Base 
+# open Hardcaml
+# open Signal
 # Hardcaml.Caller_id.set_mode Disabled
 - : unit = ()
 ```
 -->
 
 With standard Hardcaml [simulations](simulation.md) we are forced to manage input and
-output ports manually using the
-strings. [Interfaces](hardcaml_interfaces.md) allow us to automate
-much of this work and are particularly useful as circuits get more
-complex.
+output ports manually using the strings. [Interfaces](hardcaml_interfaces.md) allow us to
+automate much of this work and are particularly useful as circuits get more complex.
 
-The following is a common pattern for specifying a hardware circuit.
-It consists of an input and output interface, and a function over
-these interfaces which constructs the logic.
+The following is a common pattern for specifying a hardware circuit. It consists of an
+input and output interface, and a function over these interfaces which constructs the
+logic.
 
 ```ocaml
 open Base
@@ -51,10 +52,9 @@ let create (i : Signal.t I.t) : Signal.t O.t =
 
 To simulate this, we can use the
 [`Cyclesim.With_interface`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Cyclesim/With_interface/index.html)
-functor. This will automatically create a circuit with the input and output
-ports labelled, build a simulator, and then construct input and output
-records for driving the simulator. All this and we never have to worry
-about the underlying string names of ports.
+functor. This will automatically create a circuit with the input and output ports
+labeled, build a simulator, and then construct input and output records for driving the
+simulator. All this and we never have to worry about the underlying string names of ports.
 
 ```ocaml
 # let create_sim () =
@@ -64,10 +64,10 @@ about the underlying string names of ports.
 val create_sim : unit -> (Bits.t ref I.t, Bits.t ref O.t) Cyclesim.t = <fun>
 ```
 
-Notice the type signature of `(_, _) Cyclesim.t`. The parametric type
-arguments to [`Cyclesim.t`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Cyclesim/index.html)
-encode the types returned when retrieving the
-inputs and output values from the simulator object.
+Notice the type signature of `(_, _) Cyclesim.t`. The parametric type arguments to
+[`Cyclesim.t`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Cyclesim/index.html)
+encode the types returned when retrieving the inputs and output values from the simulator
+object.
 
 Driving the inputs and reading outputs can be performed via the
 convenience of record fields.

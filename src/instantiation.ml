@@ -1,7 +1,15 @@
 open Base
 
+type t =
+  { signal : Signal.t
+  ; outputs : Signal.t Map.M(String).t
+  }
+
 let module_name_special_chars = String.to_list "_$"
 let instance_name_special_chars = String.to_list "_$.[]"
+let instantiation_signal t = t.signal
+let outputs t = t.outputs
+let output t name = Map.find_exn t.outputs name
 
 let validate_module_or_instantiation_name ~special_chars name =
   let is_special c = List.mem special_chars c ~equal:Char.equal in
@@ -46,33 +54,35 @@ let create
   Option.iter
     instance
     ~f:(validate_module_or_instantiation_name ~special_chars:instance_name_special_chars);
-  if List.is_empty outputs
-  then Map.empty (module String)
-  else (
-    let width = List.fold outputs ~init:0 ~f:(fun a (_, i) -> a + i) in
-    let outputs, _ =
-      List.fold outputs ~init:([], 0) ~f:(fun (o, a) (n, w) -> (n, (w, a)) :: o, a + w)
-    in
-    let one_output = List.length outputs = 1 in
-    let signal =
-      Signal.Type.Inst
-        { signal_id = Signal.Type.make_id width
-        ; instantiation =
-            { inst_name = name
-            ; inst_instance =
-                (match instance with
-                 | None -> "the_" ^ name
-                 | Some i -> i)
-            ; inst_generics = parameters
-            ; inst_inputs = inputs
-            ; inst_outputs = outputs
-            ; inst_lib = lib
-            ; inst_arch = arch
-            }
-        }
-    in
-    List.iter attributes ~f:(fun attribute ->
-      ignore (Signal.add_attribute signal attribute : Signal.t));
+  let width = List.fold outputs ~init:0 ~f:(fun a (_, i) -> a + i) in
+  let outputs, _ =
+    List.fold outputs ~init:([], 0) ~f:(fun (o, a) (n, w) -> (n, (w, a)) :: o, a + w)
+  in
+  let one_output = List.length outputs = 1 in
+  let signal =
+    (* When there are no output ports, this is a zero width signal.
+
+       I wonder if there might be some confusion with [Signal.Empty]? We have tried to
+       discourage this for a while in the api (make_id will raise). *)
+    Signal.Type.Inst
+      { signal_id = Signal.Type.make_id_allow_zero_width width
+      ; instantiation =
+          { inst_name = name
+          ; inst_instance =
+              (match instance with
+               | None -> "the_" ^ name
+               | Some i -> i)
+          ; inst_generics = parameters
+          ; inst_inputs = inputs
+          ; inst_outputs = outputs
+          ; inst_lib = lib
+          ; inst_arch = arch
+          }
+      }
+  in
+  List.iter attributes ~f:(fun attribute ->
+    ignore (Signal.add_attribute signal attribute : Signal.t));
+  let outputs =
     List.map outputs ~f:(fun (name, (width, offset)) ->
       ( name
       , (* We need to create a distinct output signal - if there is only one output then
@@ -81,7 +91,9 @@ let create
         if one_output
         then Signal.wireof signal
         else Signal.select signal ~high:(offset + width - 1) ~low:offset ))
-    |> Map.of_alist_exn (module String))
+    |> Map.of_alist_exn (module String)
+  in
+  { signal; outputs }
 ;;
 
 module With_interface (I : Interface.S) (O : Interface.S) = struct
@@ -103,7 +115,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
         ~inputs
         ~outputs:O.Names_and_widths.port_names_and_widths
     in
-    O.Unsafe_assoc_by_port_name.of_alist (Map.to_alist t)
+    O.Unsafe_assoc_by_port_name.of_alist (Map.to_alist (outputs t))
   ;;
 end
 

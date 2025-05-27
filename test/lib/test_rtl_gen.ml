@@ -421,7 +421,7 @@ let%expect_test "Module name rules apply to instantiations also" =
       Instantiation.create ~name:"a^b" ~inputs:[ "a", input ] ~outputs:[ "b", 1 ] ()
     in
     let circuit =
-      Circuit.create_exn ~name:"foo" [ output "out" (Map.find_exn outputs "b") ]
+      Circuit.create_exn ~name:"foo" [ output "out" (Instantiation.output outputs "b") ]
     in
     Rtl.print Verilog circuit);
   [%expect

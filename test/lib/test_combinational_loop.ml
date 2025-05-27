@@ -315,7 +315,7 @@ let%expect_test "no loop in memory - q to write port" =
 let%expect_test "looping instantiation" =
   let w = wire 1 in
   let x = Instantiation.create () ~name:"foo" ~inputs:[ "a", w ] ~outputs:[ "b", 1 ] in
-  let b = Map.find_exn x "b" in
+  let b = Instantiation.output x "b" in
   w <-- b;
   test [ b ];
   [%expect {| (Ok ()) |}]

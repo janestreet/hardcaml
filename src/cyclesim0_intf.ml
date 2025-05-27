@@ -23,7 +23,9 @@ module type Private = sig
     -> cycle_at_clock_edge:task
     -> cycle_after_clock_edge:task
     -> traced:traced
+    -> lookup_node_by_id:(Signal.Type.Uid.t -> node option)
     -> lookup_node:(traced_internal_signal -> node option)
+    -> lookup_reg_by_id:(Signal.Type.Uid.t -> reg option)
     -> lookup_reg:(traced_internal_signal -> reg option)
     -> lookup_mem:(traced_internal_signal -> memory option)
     -> unit
@@ -99,7 +101,9 @@ module type Cyclesim0 = sig
     ; cycle_at_clock_edge : task
     ; cycle_after_clock_edge : task
     ; traced : Traced.t
+    ; lookup_node_by_id : Signal.Type.Uid.t -> Node.t option
     ; lookup_node : Traced.internal_signal -> Node.t option
+    ; lookup_reg_by_id : Signal.Type.Uid.t -> Reg.t option
     ; lookup_reg : Traced.internal_signal -> Reg.t option
     ; lookup_mem : Traced.internal_signal -> Memory.t option
     ; circuit : Circuit.t option

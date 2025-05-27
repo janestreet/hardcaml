@@ -1,16 +1,18 @@
-# Circuits
+# 2.3 Circuits
 
 <!--
 ```ocaml
 # Hardcaml.Caller_id.set_mode Disabled
 - : unit = ()
+# open Hardcaml
+# open Signal
 ```
 -->
 
-A Hardcaml [`Circuit.t`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Circuit/index.html)
-encodes both the RTL logic for a hardware
-design along with named input and output ports. Circuits can be
-converted into various different forms:
+A Hardcaml
+[`Circuit.t`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Circuit/index.html) encodes
+both the RTL logic for a hardware design along with named input and output ports. Circuits
+can be converted into various different forms:
 
 * Verilog or VHDL
 * Simulation models
@@ -21,27 +23,21 @@ converted into various different forms:
 Circuits are created from a list of outputs and a module name.
 
 ```ocaml
-# open Hardcaml
 # let circuit =
-    let open Signal in
-    let foo = Signal.input "foo" 8 in
-    let bar = Signal.input "bar" 8 in
-    let baz = Signal.output "baz" (foo +: bar) in
+    let foo = input "foo" 8 in
+    let bar = input "bar" 8 in
+    let baz = output "baz" (foo +: bar) in
     Circuit.create_exn ~name:"adder" [ baz ]
 val circuit : Circuit.t = <abstr>
 ```
 
-When generating Verilog or VHDL the module name will be used in the
+When generating Verilog or VHDL `name` will be used as the module or entity name in the
 RTL design.
 
-The list of outputs is recursively searched to find all circuit
-inputs, and thus includes all logic between the given outputs and
-found inputs.
+When generating a circuit, combinational loops are by default detected and will cause an
+exception.
 
-When generating a circuit, combinational loops are by default detected
-and will cause an exception.
-
-# Inputs and outputs
+## Inputs and outputs
 
 To create a circuit we must label the inputs and outputs.
 
@@ -57,39 +53,32 @@ Outputs are specified by giving a name and a signal.
 let output_b = Signal.output "b" (some_logic input_a)
 ```
 
-When generating Verilog or VHDL, inputs and outputs correspond to
-module (or entity) ports.
+When generating Verilog or VHDL, inputs and outputs correspond to module (or entity)
+ports.
 
-For simulation, inputs are set by a testbench, and outputs are
-calculated by the simulation models and read by a testbench.
+For simulation, inputs are set by a testbench, and outputs are calculated by the
+simulation models and read by a testbench.
 
-# Instantiation
+The names given for inputs and outputs are special in that Hardcaml will never try to
+change them. If it decides they are not valid for some reason an error is raised.
 
-Circuits may instantiate other circuits. Within a Hardcaml design, one
-may write
+## What gets included
 
-```ocaml
-# open Base
-# open Hardcaml
-# let an_instantiation =
-   Instantiation.create ()
-     ~name:"some_subcircuit"
-     ~inputs:[ "a", Signal.vdd; "b", Signal.of_string "111" ]
-     ~outputs:[ "c", 8 ]
-val an_instantiation : Signal.t Base.Map.M(Base.String).t = <abstr>
-# Map.find_exn an_instantiation "c"
-- : Signal.t = (wire (width 8) (data_in instantiation))
-```
+Circuits are defined by their output ports. Hardcaml traverses the design from the outputs
+and discovers all internal nodes and input ports which are connected to the outputs.
 
-The given name corresponds to the module name of the instantiated
-circuit. `inputs` provide a port name and the signal to which it is
-connected. `outputs` also provide a port name and must specify the
-width of the output port. The returned value is a map that can be
-queried to access the output ports.
+This can sometimes be confusing - why is some part of my design not getting included? The
+answer almost always is that it is not connected to an output.
 
-Sub-circuits can be Hardcaml circuits or written in some other RTL
-design language like Verilog.
+## Config
 
-In later (advanced) sections we will show how to use
-circuits and [instantiations](instantiation.md)
-to support [hierarchical](module_hierarchy.md) Hardcaml designs.
+There are a few configuration options used when generating circuits.
+
+- `detect_combinational_loops` automatically check the circuit for combinational loops and
+  raise if found.
+- `normalize_uids` rewrite internal unique identifiers - helps to make the output rtl more
+  stable to changes.
+
+Both are true by default and generally should be kept as is.
+
+There are a few other options but they are mainly used internally by Hardcaml.

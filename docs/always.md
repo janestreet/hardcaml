@@ -1,4 +1,4 @@
-# Always DSL
+# 4.2 Always DSL
 
 <!--
 ```ocaml
@@ -40,13 +40,13 @@ clock signal provided within a `Reg_spec.t` type.
 - : (width:int -> Always.Variable.t) Signal.with_register_spec = <fun>
 ```
 
-A `wire` is one whose value is updated combinatorially, meaning that
+A `wire` is one whose value is updated combinationally, meaning that
 the new value is visible at the same clock cycle as when it is
 assigned. The new value _will not_ persist to the next cycle. If no
 such assignment exists, the variable will possess the `default` value.
 
 ```ocaml
-# (* Creates a wire register, that is, the value of the wire *)
+# (* Creates a wire register, that is, the value of the wire. *)
   Always.Variable.wire
 - : default:Signal.t -> Always.Variable.t = <fun>
 ```
@@ -96,7 +96,7 @@ let something =
       d <-- gnd;
     ];
 
-    (* [when_] is like [if_], with an empty [else] *)
+    (* [when_] is like [if_], with an empty [else]. *)
     when_ c.value [
       e <--. 1;
     ];
@@ -118,8 +118,8 @@ Two things going on here:
 - Notice that `compile` returns a unit. This is because variable
   declarations create unassigned wires, and the compile function assigns them
   to the appropriate multiplexers.
-- Notice that the always DSL is just a list of `Always.t`. This
-  means we can play with various metaprogramming and abstraction
+- Notice that the Always DSL is just a list of `Always.t`. This
+  means we can play with various meta-programming and abstraction
   tricks within these program blocks.
 
 ## Example
@@ -138,7 +138,7 @@ let create =
   (* [wire] and [register] variable declarations. *)
   let c_wire = Always.Variable.wire ~default:(Signal.zero 8) in
   let c_reg = Always.Variable.reg ~enable:Signal.vdd r_sync ~width:8 in
-  (* The program block with a call to [compile] *)
+  (* The program block with a call to [compile]. *)
   Always.(compile [
     if_ (a ==: b) [
       c_wire <-- (sll a ~by:1);
@@ -148,7 +148,7 @@ let create =
       c_reg  <-- (a +: b);
     ]
   ]);
-  (* the [c_wire.value] are assigned appropriately by the Always
+  (* The [c_wire.value] are assigned appropriately by the Always
   compiler. *)
   output "c_wire" c_wire.value, output "c_reg" c_reg.value
 ;;
@@ -158,13 +158,11 @@ let create =
 
 The semantics are similar to Verilog, with a few caveats:
 
-- Assignments are non-blocking. Hardcaml does not support blocking
-  assignments.
-- In Verilog, an always block can describe either registers or
-  combinational logic, but not both. With the Always DSL, both can be
-  defined in a single block.
-- Hardcaml always blocks do not require a sensitivity list - the clocks
-  driving the registers are bound to the register variable themselves.
+- Assignments are non-blocking. Hardcaml does not support blocking assignments.
+- In Verilog, an Always block can describe either registers or combinational logic, but
+  not both. With the Always DSL, both can be defined in a single block.
+- Hardcaml Always blocks do not require a sensitivity list - the clocks driving the
+  registers are bound to the register variable themselves.
 
 ## How values update
 

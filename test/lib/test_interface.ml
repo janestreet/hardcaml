@@ -20,7 +20,7 @@ let%expect_test "[equal]" =
 
 (* Functors are applying correctly wrt [Of_bits] and [Of_signal]. *)
 let%expect_test "bits and signals" =
-  let test (module C : I.Comb) = print_s [%sexp (C.of_int 10 : C.t)] in
+  let test (module C : I.Comb) = print_s [%sexp (C.of_unsigned_int 10 : C.t)] in
   test (module I.Of_bits);
   [%expect
     {|
@@ -245,19 +245,19 @@ let%expect_test "[wires]" =
 ;;
 
 let%expect_test "[of_int], [of_ints]" =
-  print_s [%sexp (I.Of_bits.of_int 0 : Bits.t I.t)];
+  print_s [%sexp (I.Of_bits.zero () : Bits.t I.t)];
   [%expect
     {|
     ((x 0000)
      (y 00000000))
     |}];
-  print_s [%sexp (I.Of_bits.of_int (-1) : Bits.t I.t)];
+  print_s [%sexp (I.Of_bits.of_signed_int (-1) : Bits.t I.t)];
   [%expect
     {|
     ((x 1111)
      (y 11111111))
     |}];
-  print_s [%sexp (I.Of_bits.of_ints { x = 3; y = 6 } : Bits.t I.t)];
+  print_s [%sexp (I.Of_bits.of_unsigned_ints { x = 3; y = 6 } : Bits.t I.t)];
   [%expect
     {|
     ((x 0011)
@@ -363,7 +363,7 @@ let%expect_test "[of_interface_list], [to_interface_list]" =
 ;;
 
 let%expect_test "[mux]" =
-  let data = List.init 4 ~f:I.Of_bits.of_int in
+  let data = List.init 4 ~f:I.Of_bits.of_unsigned_int in
   let results =
     List.init 4 ~f:(fun sel -> I.Of_bits.mux (Bits.of_int_trunc ~width:2 sel) data)
   in
@@ -380,7 +380,10 @@ let%expect_test "[mux]" =
 ;;
 
 let%expect_test "concat" =
-  print_s [%sexp (I.Of_bits.(concat [ of_int 0; of_int (-1); of_int 0 ]) : Bits.t I.t)];
+  print_s
+    [%sexp
+      (I.Of_bits.(concat [ of_unsigned_int 0; of_signed_int (-1); of_unsigned_int 0 ])
+       : Bits.t I.t)];
   [%expect
     {|
     ((x 000011110000)
@@ -391,7 +394,7 @@ let%expect_test "concat" =
 ;;
 
 let%expect_test "apply_names" =
-  print_s [%sexp (I.Of_signal.of_int 0 |> I.Of_signal.apply_names : Signal.t I.t)];
+  print_s [%sexp (I.Of_signal.zero () |> I.Of_signal.apply_names : Signal.t I.t)];
   [%expect
     {|
     ((x (
@@ -406,7 +409,7 @@ let%expect_test "apply_names" =
        (value 0b00000000))))
     |}];
   print_s
-    [%sexp (I.Of_signal.of_int 0 |> I.Of_signal.apply_names ~prefix:"_" : Signal.t I.t)];
+    [%sexp (I.Of_signal.zero () |> I.Of_signal.apply_names ~prefix:"_" : Signal.t I.t)];
   [%expect
     {|
     ((x (
@@ -421,7 +424,7 @@ let%expect_test "apply_names" =
        (value 0b00000000))))
     |}];
   print_s
-    [%sexp (I.Of_signal.of_int 0 |> I.Of_signal.apply_names ~suffix:"_" : Signal.t I.t)];
+    [%sexp (I.Of_signal.zero () |> I.Of_signal.apply_names ~suffix:"_" : Signal.t I.t)];
   [%expect
     {|
     ((x (
@@ -442,10 +445,10 @@ let%expect_test "apply_names" =
 ;;
 
 let%expect_test "assert_widths" =
-  require_does_not_raise (fun () -> I.Of_signal.of_int 0 |> I.Of_signal.assert_widths);
+  require_does_not_raise (fun () -> I.Of_signal.zero () |> I.Of_signal.assert_widths);
   [%expect {| |}];
   require_does_raise (fun () ->
-    I.Of_signal.of_int 0 |> I.map ~f:Signal.ue |> I.Of_signal.assert_widths);
+    I.Of_signal.zero () |> I.map ~f:Signal.ue |> I.Of_signal.assert_widths);
   [%expect
     {|
     ("Port width mismatch in interface"
@@ -456,8 +459,8 @@ let%expect_test "assert_widths" =
 ;;
 
 let priority_sel_tests =
-  let x = I.Of_bits.of_ints { x = 1; y = 2 } in
-  let y = I.Of_bits.of_ints { x = 3; y = 4 } in
+  let x = I.Of_bits.of_unsigned_ints { x = 1; y = 2 } in
+  let y = I.Of_bits.of_unsigned_ints { x = 3; y = 4 } in
   (* tests for 0, 1, and 2 case selects *)
   [| [| [] |]
    ; [| [ { With_valid.valid = Bits.gnd; value = x } ]
@@ -524,7 +527,7 @@ let%expect_test "priority_select" =
 ;;
 
 let%expect_test "priority_select_with_default" =
-  let default = I.Of_bits.of_ints { x = 5; y = 6 } in
+  let default = I.Of_bits.of_unsigned_ints { x = 5; y = 6 } in
   require_does_raise (fun () ->
     ignore
       (I.Of_bits.(priority_select_with_default ~default priority_sel_tests.(0).(0))

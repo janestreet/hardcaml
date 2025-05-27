@@ -370,7 +370,11 @@ module type Signal__type = sig
   (** Creates a new signal uid. *)
   val new_id : unit -> Uid.t
 
-  (** Constructs a signal_id type. *)
+  (** Constructs a signal_id type with given width. Allows zero width which can be used
+      for instantiations with no outputs. *)
+  val make_id_allow_zero_width : int -> signal_id
+
+  (** Constructs a signal_id type with given [width>0]. *)
   val make_id : int -> signal_id
 
   (** Create a constant *)

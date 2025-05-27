@@ -1,4 +1,4 @@
-# Designing State Machines with the Always DSL
+# 4.3 Designing State Machines
 
 <!--
 ```ocaml
@@ -35,7 +35,7 @@ A state machine is constructed with the following function:
 The value returned can be used within an *Always block*.
 Let's look at an example.
 
-## Defining the State type
+## Defining the state type
 
 ```ocaml
 module States = struct
@@ -165,9 +165,9 @@ Always DSL in action.
 
 As mentioned above, the
 [Always DSL](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Always/index.html)
-is simply an `Always.t list`. The gives room for several creative behaviours.
+is simply an `Always.t list`. The gives room for several creative behaviors.
 
-## Function Abstractions
+## Function abstractions
 
 Since we are really just generating `Always.t` lists from OCaml code,
 we can simply split out some parts of the DSL into different
@@ -216,7 +216,7 @@ variables in functions are really more like "static variables" in C), this
 "function abstraction" is a powerful way of making repetitive /
 complicated state machines much more comprehensible.
 
-## (Advanced) "High-order" Blocks
+## (Advanced) "High-order" blocks
 
 What if we want to create functional blocks that are only executed
 under a set of non-trivial preconditions?
