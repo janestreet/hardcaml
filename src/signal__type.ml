@@ -4,6 +4,7 @@ module type Uid = Signal__type_intf.Uid
 module type Type = Signal__type_intf.Type
 module type Uid_set = Signal__type_intf.Uid_set
 module type Uid_map = Signal__type_intf.Uid_map
+module type With_info = Signal__type_intf.With_info
 
 module Uid = struct
   module I = Int
@@ -1125,3 +1126,17 @@ let map_dependant t ~f =
     let driver = Option.map driver ~f in
     Wire { signal_id; driver }
 ;;
+
+module For_testing = struct
+  let uid_of_int = Fn.id
+end
+
+module Make_default_info (S : sig
+    type t
+  end) : With_info with type t := S.t and type info = unit = struct
+  type info = unit
+
+  let default_info = ()
+  let info _ = default_info
+  let set_info t ~info:_ = t
+end

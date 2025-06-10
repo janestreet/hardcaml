@@ -69,6 +69,7 @@ end
 
 type t =
   { name : string
+  ; caller_id : Caller_id.t option
   ; config : Config.t
   ; inputs : Signal.t list
   ; outputs : Signal.t list
@@ -209,6 +210,7 @@ let create_exn ?(config = Config.default) ~name outputs =
   check_port_names_are_well_formed name inputs outputs;
   (* construct the circuit *)
   { name
+  ; caller_id = Caller_id.get ()
   ; config
   ; inputs
   ; outputs

@@ -36,6 +36,7 @@ more-on-circuit-design
     double_dabble {path: "../double_dabble.mdx"}
     instantiation {path: "../instantiation.mdx"}
     structural {path: "../structural.mdx"}
+    conversion-to-rtl {path: "../conversion_to_rtl.mdx}
 using-interfaces
     hardcaml_interfaces {path:"../hardcaml_interfaces.mdx"}
     interfaces_with_ppx_hardcaml {path:"../interface_ppx.mdx"}

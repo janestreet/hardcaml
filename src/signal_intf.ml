@@ -68,6 +68,7 @@ end
 
 module type Logic = sig
   type t
+  type info
 
   (** Combinational logic API with constant propogation optimizations. *)
   include Comb.S with type t := t
@@ -104,6 +105,23 @@ module type Regs = sig
       The internal registers are shared between calls. When called multiple times with a
       maximum value of [n] exactly [n] registers are created. *)
   val prev : (t -> (int -> t) Staged.t) with_register_spec
+end
+
+module type Memory_prim = sig
+  type t
+
+  (** Underlying function for constructing various memory primitives. Should not be used
+      by client code. Instead, use the functions defined in [Memories]. *)
+  val multiport_memory_prim
+    :  ?name:string
+    -> ?attributes:Rtl_attribute.t list
+    -> ?initialize_to:Bits.t array
+    -> int
+    -> remove_unused_write_ports:bool
+    -> data_width:int
+    -> write_ports:t Write_port.t array
+    -> read_addresses:t array
+    -> t array
 end
 
 module type Memories = sig
@@ -166,10 +184,32 @@ module type Memories = sig
     -> t
 end
 
+module type Underlying_representation = sig
+  type t
+  type info
+
+  (** Return the underlying representation for the signal. *)
+  val to_rep : t -> Signal__type.t * info
+
+  (** Construct a signal from the underlying representation and the information tracked by
+      this signal. *)
+  val from_rep : Signal__type.t -> info -> t
+
+  (** Update the information attached to this signal. *)
+  val update_rep : t -> info:info -> t
+end
+
 module type S = sig
   (** Signal type for constructing logic designs. *)
 
   type t
+
+  include Signal__type.With_info with type t := t
+
+  (** Check if the provided signals are consistent where the definition of consistency is
+      defined by the underlying signal type. If signals are inconsistent, returns a pair
+      of them as evidence. *)
+  val are_consistent : t list -> (t * t) option
 
   (** {1 Naming}
 
@@ -224,7 +264,7 @@ module type S = sig
       simplified. You can avoid this by using the operations from the [Unoptimized]
       module. *)
 
-  include Logic with type t := t
+  include Logic with type t := t and type info := info
 
   (** {1 Registers}
 
@@ -248,17 +288,33 @@ module type S = sig
 
   include Memories with type t := t
 
+  (** {1 Signal representations}
+
+      Operate on the underlying representation of the signal type. This is useful if you
+      need to operate on the underlying [Signal.Type] that represents the [Signal.S] that
+      you are working with or to reflect on the extra information attached to the specific
+      [Signal.S] (like clock domains for [Clocked.t]). *)
+
+  include Underlying_representation with type t := t and type info := info
+
   (** Pretty printer. *)
   val pp : Formatter.t -> t -> unit
 
   (**/**)
 
-  (* Apply a name to a signal using the hardcaml ppx [%hw] extension *)
+  (*_ Apply a name to a signal using the hardcaml ppx [%hw] extension *)
   val __ppx_auto_name : loc:[%call_pos] -> t -> string -> t
+
+  module Expert : sig
+    (*_ Exported for internal use. *)
+    include Memory_prim with type t := t
+  end
 end
 
 module type Signal = sig
   type t = Signal__type.t
+
+  module type S = S
 
   module Type = Signal__type
   include S with type t := Signal__type.t

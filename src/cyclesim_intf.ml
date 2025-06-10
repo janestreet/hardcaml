@@ -104,6 +104,7 @@ module type Cyclesim = sig
     val create
       :  ?config:Config.t
       -> ?circuit_config:Circuit.Config.t
+      -> ?name:string
       -> Circuit.With_interface(I)(O).create
       -> t
 

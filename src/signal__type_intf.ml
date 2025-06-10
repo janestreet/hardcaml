@@ -39,6 +39,23 @@ module type Uid_map = sig
   type 'v t = 'v Map.M(Uid).t
 end
 
+(** Information attached to the signals. *)
+module type With_info = sig
+  type t
+
+  (** Information tracked by the signal. *)
+  type info
+
+  (** Default type for information. *)
+  val default_info : info
+
+  (** Get the information attached to a signal. *)
+  val info : t -> info
+
+  (** Set the information attached to a signal. *)
+  val set_info : t -> info:info -> t
+end
+
 module type Is_a = sig
   type t
   type signal_op
@@ -307,7 +324,13 @@ module type Signal__type = sig
   module Uid_set : Uid_set with module Uid := Uid
   module Uid_map : Uid_map with module Uid := Uid
 
+  module type With_info = With_info
   module type Deps = Deps with type t := t
+
+  (** Default implementation of [With_info] that uses unit types. *)
+  module Make_default_info (S : sig
+      type t
+    end) : With_info with type t := S.t and type info = unit
 
   (** Construction of custom dependencies. *)
   module Make_deps (Fold : sig
@@ -348,6 +371,9 @@ module type Signal__type = sig
 
   (** Returns the list of names assigned to the signal. *)
   val names : t -> string list
+
+  (** Returns the caller id of the signal if one exists. *)
+  val caller_id : t -> Caller_id.t option
 
   (** Return the (binary) string representing a constants value. *)
   val const_value : t -> Bits.t
@@ -411,4 +437,8 @@ module type Signal__type = sig
   (** This function creates a copy of the signal with [f] applied to each of the signal's
       dependants *)
   val map_dependant : t -> f:(t -> t) -> t
+
+  module For_testing : sig
+    val uid_of_int : int -> Uid.t
+  end
 end

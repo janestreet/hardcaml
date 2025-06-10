@@ -55,7 +55,7 @@ end architecture;
 <!-- $MDX file=./lib/combinational_examples.ml,part=priority_encoder_1 -->
 ```ocaml
   let priority_encoder_1 ~sel ~a ~b ~c ~d =
-    let out = Always.Variable.wire ~default:(zero 8) in
+    let out = Always.Variable.wire ~default:(zero 8) () in
     Always.(
       compile
         [ if_ sel.:(3) [ out <-- d ]

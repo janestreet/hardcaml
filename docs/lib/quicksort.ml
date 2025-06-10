@@ -412,8 +412,8 @@ module Make (Config : Config) = struct
     let%hw.Partition_with_valids.Of_always write_partition =
       Partition_with_valids.Of_always.wire zero
     in
-    let%hw_var push = Always.Variable.wire ~default:gnd in
-    let%hw_var pop = Always.Variable.wire ~default:gnd in
+    let%hw_var push = Always.Variable.wire ~default:gnd () in
+    let%hw_var pop = Always.Variable.wire ~default:gnd () in
     let%hw.Call_stack.O.Of_signal stack =
       Call_stack.create
         scope
@@ -423,10 +423,10 @@ module Make (Config : Config) = struct
         ; pop = pop.value
         }
     in
-    let read_address = Always.Variable.wire ~default:(zero log_size) in
-    let write_address = Always.Variable.wire ~default:(zero log_size) in
-    let write_enable = Always.Variable.wire ~default:gnd in
-    let write_data = Always.Variable.wire ~default:(zero data_size) in
+    let read_address = Always.Variable.wire ~default:(zero log_size) () in
+    let write_address = Always.Variable.wire ~default:(zero log_size) () in
+    let write_enable = Always.Variable.wire ~default:gnd () in
+    let write_data = Always.Variable.wire ~default:(zero data_size) () in
     let%hw_var i_idx = Clocking.Var.reg i.clocking ~width:log_size in
     let%hw_var j_idx = Clocking.Var.reg i.clocking ~width:log_size in
     let%hw_var j_idx_prev = Clocking.Var.reg i.clocking ~width:log_size in

@@ -146,3 +146,139 @@ are one example and will be described later.
 
 `Scalar`s are another where we abstract a Hardcaml value by restricting access to it's
 implementation. They often come with a specialized API for manipulating the value.
+
+# Complete Interface API
+
+<!--
+```ocaml
+# open Simple_interface
+```
+-->
+
+## Map and Iter
+
+`map` and `iter` functions are provided with up to 5 arguments.
+
+```ocaml
+# map5
+- : 'a Simple_interface.t ->
+    'b Simple_interface.t ->
+    'c Simple_interface.t ->
+    'd Simple_interface.t ->
+    'e Simple_interface.t ->
+    f:('a -> 'b -> 'c -> 'd -> 'e -> 'f) -> 'f Simple_interface.t
+= <fun>
+```
+
+## Zip
+
+Between 2 and 5 interfaces can be combined using zip.  The result is an interface of tuples.
+
+```ocaml
+# zip port_names port_widths
+- : (string * int) Simple_interface.t = {foo = ("foo", 32); bar = ("bar", 1)}
+```
+
+## Fold and Scan
+
+`fold` passes each field of an interface, along with an accumulator, to the given function
+`f`. For example we can compute the total width of an interface as follows.
+
+```ocaml
+# fold port_widths ~init:0 ~f:(fun total width -> total + width)
+- : int = 33
+```
+
+(note - this is also provided by the value `sum_of_port_widths`).
+
+`scan` is similar except it returns an interface. The function `f` returns the next value
+of the accumulator and the value of the result field. We can compute the offset of each
+field in an interface as follows.
+
+```ocaml
+# scan port_widths ~init:0 ~f:(fun acc width -> acc + width, acc)
+- : int Simple_interface.t = {foo = 0; bar = 32}
+```
+
+(note - this is also provide by the function `offsets`).
+
+`fold2` and `scan2` are also defined.
+
+## Association lists and Tags
+
+An interface can be converted to and from an association list with `to_alist` and
+`of_alist`. Note that we do not choose to use the string name of fields as keys - rather
+we define and abstract type `tag` and value `tags` which uniquely represent each fields in
+an interface.
+
+## Lists of Interfaces
+
+`of_interface_list` and `to_interface_list` convert between a list of interfaces and
+interface of lists.  The signatures should make the operation clearer.
+
+```ocaml
+# of_interface_list
+- : 'a Simple_interface.t list -> 'a list Simple_interface.t = <fun>
+# to_interface_list
+- : 'a list Simple_interface.t -> 'a Simple_interface.t list = <fun>
+```
+
+## Misc functions
+
+`port_names  : string t` and `port_widths : int t` provide direct access to the names and widths of fields in an interface.
+
+`const c` sets each field to the value `c`.
+
+## Of\_signal and Of\_bits
+
+Both these modules implement the signature `Interface.Comb`. They provides functions
+specialized to the types `Signal.t t` and `Bits.t t` respectively.
+
+### Converting from Ints
+
+`of_unsigned_int`, `of_signed_int` and `of_int_trunc` set each field to the given value by
+converting from a given integer. 
+
+`of_unsigned_ints`, `of_signed_ints` and `of_ints_trunc` also convert from integers but each
+field may be specified individually.
+
+### Pack and Unpack
+
+`pack` flattens an interface into a single vector by concatenating all the fields.  `unpack` reverses the operation.
+
+### Muxs
+
+`mux2` selects between 2 interfaces and `mux` selects between an arbitrary number of interfaces.
+
+### Selection
+
+`priority_select`, `priority_select_with_default` and `onehot_select` all work the same
+way as the corresponding versions on normal signals, expect they operate on all fields at
+once.
+
+
+### Of\_signal specifics
+
+A few further functions apply only to the `Signal.t t` type.
+
+`wires` creates an interface of wires.
+
+`assign a b` performs wire assignment - `a` should be an interface of wires.
+`reg` and `pipeline` apply registers (or a pipeline of registers) to the given interface.
+
+`inputs` and `outputs` create the input and output ports for circuits.
+
+`apply_names` will apply names to each field based on `port_names` and a given prefix and suffix.
+
+
+## Of\_always
+
+`Of_always` operates on interfaces of type `Always.Variable.t t`.
+
+`value` converts an interface of variables to an interface of signals.
+
+`assign` assigns variables with values. It results in an always statement.
+
+`reg` and `wire` define interfaces of variables.
+
+`apply_names` will apply names to each field based on `port_names` and a given prefix and suffix.

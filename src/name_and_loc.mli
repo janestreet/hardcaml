@@ -6,4 +6,4 @@ type t =
   { name : string
   ; loc : Source_code_position.t
   }
-[@@deriving sexp_of]
+[@@deriving hash, compare, equal, sexp_of]

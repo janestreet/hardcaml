@@ -115,7 +115,12 @@ let combine = Cyclesim_combine.combine
 
 (* compilation *)
 
-let create = Cyclesim_compile.create
+let create' ?config circuit =
+  let sim = Cyclesim_compile.create ?config circuit in
+  Cyclesim_coverage.maybe_wrap sim circuit
+;;
+
+let create ?config circuit = create' ?config circuit
 
 (* interfaces *)
 
@@ -135,7 +140,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
     Private.coerce sim ~to_input ~to_output
   ;;
 
-  let create ?config ?circuit_config create_fn =
+  let create ?config ?circuit_config ?(name = "simulator") create_fn =
     let circuit_config =
       (* Because the circuit will only be used for simulations, we can disable a couple of
          passes we would otherwise want - combinational loop checks (will be done during
@@ -145,7 +150,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
       | None -> Circuit.Config.default_for_simulations
       | Some config -> config
     in
-    let circuit = C.create_exn ~config:circuit_config ~name:"simulator" create_fn in
+    let circuit = C.create_exn ~config:circuit_config ~name create_fn in
     let sim = create ?config circuit in
     coerce sim
   ;;

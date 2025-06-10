@@ -256,7 +256,7 @@ struct
       |> concat_lsb)
   ;;
 
-  let multiport_memory_prim
+  let checked_multiport_memory_prim
     ?name
     ?attributes
     ?initialize_to
@@ -297,7 +297,7 @@ struct
     let base_port = write_ports.(0) in
     let data_width = width base_port.write_data in
     let address_width = width base_port.write_address in
-    multiport_memory_prim
+    checked_multiport_memory_prim
       ?name
       ?attributes
       ?initialize_to
@@ -529,7 +529,7 @@ struct
     then raise_s [%message "Rom must have 1 or more read addresses"];
     if Array.length initialize_to = 0
     then raise_s [%message "Rom must have 1 or more initialization values"];
-    multiport_memory_prim
+    checked_multiport_memory_prim
       ~initialize_to
       (Array.length initialize_to)
       ~remove_unused_write_ports:true

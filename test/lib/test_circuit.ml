@@ -10,6 +10,7 @@ let%expect_test "[sexp_of_t]" =
   [%expect
     {|
     ((name name)
+     (caller_id ())
      (config (
        (detect_combinational_loops true)
        (normalize_uids             true)
@@ -33,6 +34,7 @@ let%expect_test "[sexp_of_t] with an output" =
   [%expect
     {|
     ((name name)
+     (caller_id ())
      (config (
        (detect_combinational_loops true)
        (normalize_uids             true)
@@ -66,6 +68,7 @@ let%expect_test "[sexp_of_t] with an input" =
   [%expect
     {|
     ((name name)
+     (caller_id ())
      (config (
        (detect_combinational_loops true)
        (normalize_uids             true)
@@ -99,6 +102,7 @@ let%expect_test "[sexp_of_t] with an operator" =
   [%expect
     {|
     ((name name)
+     (caller_id ())
      (config (
        (detect_combinational_loops true)
        (normalize_uids             true)
@@ -218,6 +222,7 @@ let%expect_test "phantom inputs" =
   [%expect
     {|
     ((name test)
+     (caller_id ())
      (config (
        (detect_combinational_loops true)
        (normalize_uids             true)
@@ -247,6 +252,7 @@ let%expect_test "phantom inputs" =
   [%expect
     {|
     ((name test)
+     (caller_id ())
      (config (
        (detect_combinational_loops true)
        (normalize_uids             true)

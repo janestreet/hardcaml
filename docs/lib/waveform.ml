@@ -45,83 +45,17 @@ let testbench sim =
 (* $MDX part-begin=vcd *)
 let test () =
   let sim = Simulator.create create in
-  let sim = Vcd.wrap Stdio.stdout sim in
-  testbench sim
+  let filename = "/tmp/waves.vcd" in
+  let oc = Out_channel.open_text filename in
+  let sim = Vcd.wrap oc sim in
+  testbench sim;
+  (* Closing the out channel will ensure the file is flushed to disk *)
+  Out_channel.close oc;
+  Stdio.print_endline ("Saved waves to " ^ filename)
 ;;
 
 let%expect_test "vcd generation" =
   test ();
-  [%expect
-    {|
-    $date
-      ...
-    $end
-    $version
-      hardcaml-cyclesim
-    $end
-    $comment
-      Hardware design in ocaml
-    $end
-    $timescale 1ns $end
-    $scope module inputs $end
-    $var wire 1 ! -clock $end
-    $var wire 1 " -reset $end
-    $var wire 1 $ clear $end
-    $var wire 1 # incr $end
-    $upscope $end
-    $scope module outputs $end
-    $var wire 8 & dout $end
-    $upscope $end
-    $scope module various $end
-    $upscope $end
-    $enddefinitions $end
-    $dumpvars
-    x!
-    x"
-    x$
-    x#
-    bxxxxxxxx &
-    $end
-    #0
-    1!
-    0"
-    0#
-    0$
-    b00000000 &
-    #5
-    0!
-    #10
-    1!
-    0"
-    1#
-    #15
-    0!
-    #20
-    1!
-    0"
-    b00000001 &
-    #25
-    0!
-    #30
-    1!
-    0"
-    0#
-    1$
-    b00000010 &
-    #35
-    0!
-    #40
-    1!
-    0"
-    0$
-    b00000000 &
-    #45
-    0!
-    #50
-    1!
-    0"
-    #55
-    0!
-    |}]
+  [%expect {| Saved waves to /tmp/waves.vcd |}]
 ;;
 (* $MDX part-end *)

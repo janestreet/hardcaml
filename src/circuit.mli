@@ -61,6 +61,9 @@ val signal_graph : t -> Signal_graph.t
 (** return circuit name *)
 val name : t -> string
 
+(** returns the caller id of the circuit if one exists *)
+val caller_id : t -> Caller_id.t option
+
 (** Return the config the circuit was built with. *)
 val config : t -> Config.t
 

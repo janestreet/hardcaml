@@ -14,7 +14,7 @@ To access the latest packages or the most up-to-date version you may want
 to try the Jane Street bleeding edge opam repository.
 
 ```
-opam repo add janestreet-bleeding https://ocaml.janestreet.com/opam-repository
+opam repo add janestreet-bleeding https://github.com/janestreet/opam-repository.git
 ```
 
 # Basic Usage

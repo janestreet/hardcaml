@@ -30,7 +30,7 @@ module T = struct
 
   let t_of_sexp sexp =
     let for_sexp = For_sexp.t_of_sexp sexp in
-    let t = Stdlib.Bytes.make (Bytes.length for_sexp.data) '\000' in
+    let t = Stdlib.Bytes.make (Bytes.length for_sexp.data + offset_for_data) '\000' in
     Bytes.unsafe_set_int64 t 0 (Int64.of_int for_sexp.width);
     Bytes.blito ~src:for_sexp.data ~dst:t ~dst_pos:offset_for_data ();
     t

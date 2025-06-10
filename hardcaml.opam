@@ -14,6 +14,7 @@ depends: [
   "base"
   "bignum"
   "bin_prot"
+  "core"
   "core_kernel"
   "jane_rope"
   "ppx_jane"

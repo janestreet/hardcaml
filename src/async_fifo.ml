@@ -57,7 +57,7 @@ module Make (M : S) = struct
       let write_data = Signal.wire M.width in
       let write_address = Signal.wire address_width in
       let read_address = Signal.wire address_width in
-      let write_enable = Always.Variable.wire ~default:Signal.gnd in
+      let write_enable = Always.Variable.wire ~default:Signal.gnd () in
       let multiport_mem =
         Signal.multiport_memory
           ~name

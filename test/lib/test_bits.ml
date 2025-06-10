@@ -160,6 +160,13 @@ let test_sexp_of_bit_string (module M : Hardcaml.Comb.S) =
             ~_:(Or_error.try_with (fun () -> M.of_bit_string s) : M.t Or_error.t)])
 ;;
 
+let%expect_test "[Constant] sexp_of_t roundtrips" =
+  let const = Constant.of_binary_string "10010101" in
+  let sexp = Constant.sexp_of_t const in
+  let const' = Constant.t_of_sexp sexp in
+  [%test_result: Constant.t] const' ~expect:const
+;;
+
 let%expect_test "[Bits_list.of_bit_string]" =
   test_sexp_of_bit_string (module Bits_list.Int_comb);
   [%expect

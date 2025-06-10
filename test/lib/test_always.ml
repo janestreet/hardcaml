@@ -5,7 +5,7 @@ open Hardcaml_waveterm_cyclesim
 
 let%expect_test "guarded assignment width mistmatch" =
   require_does_raise (fun () ->
-    let w = Variable.wire ~default:vdd in
+    let w = Variable.wire ~default:vdd () in
     compile [ w <-- zero 2 ]);
   [%expect
     {|
@@ -102,7 +102,7 @@ let%expect_test "test statemachine encodings" =
       State_machine.create (module State) reg_spec ~encoding ~enable:vdd
     in
     let decoded =
-      Array.init (List.length State.all) ~f:(fun _ -> Variable.wire ~default:gnd)
+      Array.init (List.length State.all) ~f:(fun _ -> Variable.wire ~default:gnd ())
     in
     let enable_decoded state = decoded.(State.Variants.to_rank state) <--. 1 in
     compile

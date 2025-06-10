@@ -4,11 +4,14 @@ module Type = Signal__type
 
 type t = Type.t
 
+module type S = S
+
 open Type
 
 let names = Type.names
 let names_and_locs = Type.names_and_locs
 let uid = Type.uid
+let are_consistent _ = None
 
 let add_attribute signal attribute =
   match signal_id signal with
@@ -476,38 +479,41 @@ let prev ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
   Staged.stage f
 ;;
 
+module Memory_prim = struct
+  let multiport_memory_prim
+    ?name
+    ?(attributes = [])
+    ?initialize_to
+    size
+    ~remove_unused_write_ports
+    ~data_width
+    ~(write_ports : _ Write_port.t array)
+    ~read_addresses
+    =
+    let write_ports =
+      if remove_unused_write_ports
+      then Array.filter write_ports ~f:(fun { write_enable; _ } -> is_gnd write_enable)
+      else write_ports
+    in
+    let memory =
+      add_attributes
+        (Multiport_mem
+           { signal_id = make_id data_width
+           ; size
+           ; write_ports
+           ; initialize_to = Option.map initialize_to ~f:Array.copy
+           })
+        attributes
+    in
+    Option.iter name ~f:(fun name -> ignore (memory -- name : t));
+    Array.map read_addresses ~f:(fun read_address ->
+      Mem_read_port { signal_id = make_id data_width; memory; read_address })
+  ;;
+end
+
 include Multiport_memory.Make (struct
     include Const_prop.Comb
-
-    let multiport_memory_prim
-      ?name
-      ?(attributes = [])
-      ?initialize_to
-      size
-      ~remove_unused_write_ports
-      ~data_width
-      ~(write_ports : _ Write_port.t array)
-      ~read_addresses
-      =
-      let write_ports =
-        if remove_unused_write_ports
-        then Array.filter write_ports ~f:(fun { write_enable; _ } -> is_gnd write_enable)
-        else write_ports
-      in
-      let memory =
-        add_attributes
-          (Multiport_mem
-             { signal_id = make_id data_width
-             ; size
-             ; write_ports
-             ; initialize_to = Option.map initialize_to ~f:Array.copy
-             })
-          attributes
-      in
-      Option.iter name ~f:(fun name -> ignore (memory -- name : t));
-      Array.map read_addresses ~f:(fun read_address ->
-        Mem_read_port { signal_id = make_id data_width; memory; read_address })
-    ;;
+    include Memory_prim
   end)
 
 let memory size ~write_port ~read_address =
@@ -539,10 +545,21 @@ let ram_wbr ?name ?attributes ~write_port ~(read_port : _ Read_port.t) size =
   0)
 ;;
 
+include Signal__type.Make_default_info (struct
+    type nonrec t = t
+  end)
+
 let __ppx_auto_name = ( -- )
 
 (* Pretty printer *)
 let pp fmt t = Stdlib.Format.fprintf fmt "%s" ([%sexp (t : t)] |> Sexp.to_string_hum)
+let to_rep t = t, ()
+let from_rep t () = t
+let update_rep t ~info:() = t
+
+module Expert = struct
+  include Memory_prim
+end
 
 module (* Install pretty printer in top level *) _ = Pretty_printer.Register (struct
     type nonrec t = t

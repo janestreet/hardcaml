@@ -48,13 +48,13 @@ such assignment exists, the variable will possess the `default` value.
 ```ocaml
 # (* Creates a wire register, that is, the value of the wire. *)
   Always.Variable.wire
-- : default:Signal.t -> Always.Variable.t = <fun>
+- : default:Signal.t -> unit -> Always.Variable.t = <fun>
 ```
 
 Both kinds of variable will return the same type, namely an `Always.Variable.t`
 
 ```ocaml
-# let foo = Always.Variable.wire ~default:Signal.gnd ;;
+# let foo = Always.Variable.wire ~default:Signal.gnd () ;;
 val foo : Always.Variable.t =
   {Hardcaml.Always.Variable.value = (wire (width 1)); internal = <abstr>}
 ```
@@ -82,9 +82,9 @@ let something =
   let open Signal in
   let a = input "a" 1 in
   let b = input "b" 1 in
-  let c = Always.Variable.wire ~default:gnd in
-  let d = Always.Variable.wire ~default:gnd in
-  let e = Always.Variable.wire ~default:gnd in
+  let c = Always.Variable.wire ~default:gnd () in
+  let d = Always.Variable.wire ~default:gnd () in
+  let e = Always.Variable.wire ~default:gnd () in
   Always.(compile [
     (* Assignments. *)
     c <-- (a ^: b );
@@ -136,7 +136,7 @@ let r_sync = Signal.Reg_spec.create ~clock ~clear ()
 let create =
   let open Signal in
   (* [wire] and [register] variable declarations. *)
-  let c_wire = Always.Variable.wire ~default:(Signal.zero 8) in
+  let c_wire = Always.Variable.wire ~default:(Signal.zero 8) () in
   let c_reg = Always.Variable.reg ~enable:Signal.vdd r_sync ~width:8 in
   (* The program block with a call to [compile]. *)
   Always.(compile [

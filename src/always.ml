@@ -25,7 +25,7 @@ module Variable = struct
 
   include (val Comparator.make ~compare ~sexp_of_t)
 
-  let wire ~default =
+  let wire ~default () =
     let wire = Signal.wire (Signal.width default) in
     { value = wire; internal = { assigns_to_wire = wire; default } }
   ;;
@@ -41,8 +41,8 @@ module Variable = struct
     then (
       (* use a wire - need to derive the default value *)
       match reset_to with
-      | None -> wire ~default:(Signal.zero width)
-      | Some default -> wire ~default)
+      | None -> wire ~default:(Signal.zero width) ()
+      | Some default -> wire ~default ())
     else (
       let r = reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~width in
       (* delay the output by the pipeline length, minus 1 *)

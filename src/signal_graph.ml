@@ -2,6 +2,10 @@
 
 open Base
 
+module Normalized_signal_uid = struct
+  include Signal.Type.Uid
+end
+
 let uid = Signal.uid
 let deps = (module Signal.Type.Deps : Signal.Type.Deps)
 
@@ -199,18 +203,26 @@ let rewrite t ~f ~f_upto =
   signal_graph, new_signal_by_old_uid
 ;;
 
-let normalize_uids t =
+let normalized_uids_generator () =
   (* uid generation (note; 1L and up, 0L reserved for empty) *)
-  let fresh_id =
-    let `New new_id, _ = Signal.Type.Uid.generator () in
-    new_id
-  in
+  let `New new_id, _ = Signal.Type.Uid.generator () in
+  new_id
+;;
+
+let normalize_uids t =
+  let fresh_id = normalized_uids_generator () in
   let rewrite_uid ~fresh_id signal =
     let open Signal in
     let update_id id = { id with Type.s_id = fresh_id () } in
     Signal.Type.map_signal_id signal ~f:update_id
   in
   rewrite t ~f:(rewrite_uid ~fresh_id) ~f_upto:Fn.id |> fst
+;;
+
+let compute_normalized_uids t =
+  let fresh_id = normalized_uids_generator () in
+  let create_fresh_id norm_ids signal = (fresh_id (), signal) :: norm_ids in
+  depth_first_search t ~init:[] ~f_before:create_fresh_id
 ;;
 
 let fan_out_map t =

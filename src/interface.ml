@@ -474,7 +474,9 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
             ~width)
     ;;
 
-    let wire f = map port_widths ~f:(fun width -> Always.Variable.wire ~default:(f width))
+    let wire f =
+      map port_widths ~f:(fun width -> Always.Variable.wire ~default:(f width) ())
+    ;;
 
     let apply_names ?prefix ?suffix ?naming_op t =
       ignore (Of_signal.apply_names ?prefix ?suffix ?naming_op (value t) : Signal.t t)
