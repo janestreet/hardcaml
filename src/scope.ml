@@ -16,7 +16,7 @@ module Naming_scheme = struct
     | Full_path
     | Local_path
     | No_path
-  [@@deriving equal, sexp_of]
+  [@@deriving equal ~localize, sexp_of]
 end
 
 type t =
@@ -97,6 +97,12 @@ let instance (scope : t) = List.hd scope.path
 
 let naming ?sep scope ?(loc = Stdlib.Lexing.dummy_pos) s n =
   Signal.( -- ) ~loc s (name ?sep scope n)
+;;
+
+let naming_clocked ?sep scope ?(loc = Stdlib.Lexing.dummy_pos) (s : Clocked_signal.t) n
+  : Clocked_signal.t
+  =
+  Clocked_signal.map ~f:(fun s -> naming ?sep scope ~loc s n) s
 ;;
 
 let make_ltl_ap scope name signal =

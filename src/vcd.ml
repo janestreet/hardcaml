@@ -66,7 +66,7 @@ module Var = struct
       | Want
       | Wire
       | Wor
-    [@@deriving sexp_of, compare, hash]
+    [@@deriving sexp_of, compare ~localize, hash]
 
     let to_string t = sexp_of_t t |> Sexp.to_string |> String.lowercase
   end
@@ -129,7 +129,7 @@ module Var = struct
     ; width : int
     ; wave_format : Vcd_wave_format.t [@compare.ignore]
     }
-  [@@deriving sexp_of, fields ~getters, compare, hash]
+  [@@deriving sexp_of, fields ~getters, compare ~localize, hash]
 
   let create ?(typ = Type.Wire) ?(wave_format = Wave_format.Binary) ~name ~id ~width () =
     { typ

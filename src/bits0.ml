@@ -30,7 +30,7 @@ module T = struct
 
   let t_of_sexp sexp =
     let for_sexp = For_sexp.t_of_sexp sexp in
-    let t = Stdlib.Bytes.make (Bytes.length for_sexp.data) '\000' in
+    let t = Stdlib.Bytes.make (Bytes.length for_sexp.data + offset_for_data) '\000' in
     Bytes.unsafe_set_int64 t 0 (Int64.of_int for_sexp.width);
     Bytes.blito ~src:for_sexp.data ~dst:t ~dst_pos:offset_for_data ();
     t
@@ -43,7 +43,7 @@ module T = struct
     Bytes.unsafe_get_int64 t ((i lsl shift_bytes_to_words) + offset_for_data)
   ;;
 
-  let compare a b =
+  let%template[@mode local] compare a b =
     let width_compare = Int.compare (width a) (width b) in
     if width_compare <> 0
     then width_compare
@@ -57,12 +57,14 @@ module T = struct
           in
           if word_compare <> 0 then word_compare else backwards (i - 1))
       in
-      backwards (words a - 1))
+      backwards (words a - 1) [@nontail])
   ;;
+
+  let%template compare = [%eta2 compare [@mode local]]
 end
 
 include T
-module Comparable = Comparable.Make (T)
+module%template Comparable = Comparable.Make [@mode local] (T)
 
 let width_mask = 0b11_1111
 let bytes_of_width width = words_of_width width lsl shift_bytes_to_words

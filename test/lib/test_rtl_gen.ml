@@ -576,3 +576,43 @@ let%expect_test "initial value of resisters with comment (only in Verilog)" =
     endmodule
     |}]
 ;;
+
+let%expect_test "detects system verilog keyword" =
+  let circuit =
+    Circuit.create_exn ~name:"test" [ output "q" (wireof (input "d" 1) -- "virtual") ]
+  in
+  Rtl.print Verilog circuit;
+  [%expect
+    {|
+    module test (
+        d,
+        q
+    );
+
+        input d;
+        output q;
+
+        wire virtual;
+        assign virtual = d;
+        assign q = virtual;
+
+    endmodule
+    |}];
+  Rtl.print Systemverilog circuit;
+  [%expect
+    {|
+    module test (
+        d,
+        q
+    );
+
+        input d;
+        output q;
+
+        wire virtual_0;
+        assign virtual_0 = d;
+        assign q = virtual_0;
+
+    endmodule
+    |}]
+;;

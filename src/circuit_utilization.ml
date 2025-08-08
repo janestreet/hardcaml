@@ -111,11 +111,12 @@ module Memory = struct
       ; depth : int
       ; total_bits : int
       }
-    [@@deriving sexp_of, compare]
+    [@@deriving sexp_of, compare ~localize]
   end
 
   include T
-  include Comparable.Make (T)
+
+  include%template Comparable.Make [@mode local] (T)
 end
 
 module Memories = struct
@@ -182,7 +183,7 @@ end = struct
   let add ?(u = none) s =
     let name =
       match (s : Signal.t) with
-      | Inst { instantiation; _ } -> instantiation.inst_name
+      | Inst { instantiation; _ } -> instantiation.circuit_name
       | _ -> "<not an instantiation>"
     in
     Some (Instantiation.Instantiation name :: u)

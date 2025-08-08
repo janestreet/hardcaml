@@ -148,7 +148,9 @@ module Write_port = struct
     ; address : 'a [@bits 4]
     ; data : 'a Dcomplex.t
     }
-  [@@deriving hardcaml]
+  (* We use ~rtlmangle:false here to improve the readability of the printed waveform.
+     This is fine to do here since this is a small module used only for demonstration. *)
+  [@@deriving hardcaml ~rtlmangle:false]
 end
 
 module I = struct
@@ -159,7 +161,7 @@ module I = struct
     ; write : 'a Write_port.t [@rtlprefix "i$"]
     ; read_address : 'a [@bits 4]
     }
-  [@@deriving hardcaml]
+  [@@deriving hardcaml ~rtlmangle:false]
 end
 
 module O = struct
@@ -167,7 +169,7 @@ module O = struct
     { done_ : 'a
     ; data_out : 'a Dcomplex.t [@rtlprefix "o$"]
     }
-  [@@deriving hardcaml]
+  [@@deriving hardcaml ~rtlmangle:false]
 end
 
 (* $MDX part-begin=loop_controller *)
@@ -175,7 +177,7 @@ module State = struct
   type t =
     | Start
     | Loop
-  [@@deriving sexp_of, compare, enumerate]
+  [@@deriving sexp_of, compare ~localize, enumerate]
 end
 
 let loop_controller (i : _ I.t) =

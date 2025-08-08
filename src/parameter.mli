@@ -20,7 +20,7 @@ module Value : sig
     | Array of t list
   [@@deriving sexp, variants]
 
-  include Equal.S with type t := t
+  include%template Equal.S [@mode local] with type t := t
 end
 
 type t =
@@ -29,7 +29,7 @@ type t =
   }
 [@@deriving sexp_of]
 
-include Equal.S with type t := t
+include%template Equal.S [@mode local] with type t := t
 
 val create : name:string -> value:Value.t -> t
 val find_name : t list -> Parameter_name.t -> Value.t Option.t

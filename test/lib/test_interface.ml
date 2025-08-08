@@ -594,7 +594,7 @@ type 'a t =
   ; bar : 'a Another_module.t
   ; baz : 'a Another_module.t
   }
-[@@deriving hardcaml]
+[@@deriving hardcaml ~rtlmangle:false]
 
 let%expect_test "all names are 'value'." =
   print_s [%message (port_names : string t)];

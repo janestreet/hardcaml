@@ -6,7 +6,7 @@ module Value = struct
       | Int of int
       | String of string
       | Bool of bool
-    [@@deriving sexp_of, compare, equal, hash]
+    [@@deriving sexp_of, compare ~localize, equal ~localize, hash]
   end
 
   include T
@@ -20,7 +20,7 @@ module Applies_to = struct
       | Regs
       | Memories
       | Instantiations
-    [@@deriving sexp_of, compare, equal, hash]
+    [@@deriving sexp_of, compare ~localize, equal ~localize, hash]
   end
 
   include T
@@ -33,7 +33,7 @@ module T = struct
     ; value : Value.t option
     ; applies_to : Applies_to.t list
     }
-  [@@deriving sexp_of, compare, equal, hash]
+  [@@deriving sexp_of, compare ~localize, equal ~localize, hash]
 end
 
 include T
@@ -110,6 +110,10 @@ module Vivado = struct
 
   let extract_reset b =
     create "extract_reset" ~applies_to:[ Regs ] ~value:(true_or_false_string b)
+  ;;
+
+  let critical_sig_opt b =
+    create "critical_sig_opt" ~applies_to:[ Regs ] ~value:(true_or_false_string b)
   ;;
 
   module Ram_style = struct

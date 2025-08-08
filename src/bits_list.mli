@@ -5,7 +5,7 @@
 open Base
 
 module type T = sig
-  type t [@@deriving equal, sexp]
+  type t [@@deriving equal ~localize, sexp]
 
   (** Only constants are valid (ie the type [t] does not represent a notion of inputs).
       This allows more compact sexp printing. *)
@@ -46,7 +46,7 @@ module X : sig
     | F
     | T
     | X
-  [@@deriving compare, equal, sexp_of]
+  [@@deriving compare ~localize, equal ~localize, sexp_of]
 
   include T with type t := t
 end

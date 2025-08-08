@@ -59,7 +59,7 @@ end
 module type Gates = sig
   type t [@@deriving sexp_of]
 
-  include Equal.S with type t := t
+  include%template Equal.S [@mode local] with type t := t
 
   (** the empty signal *)
   val empty : t
@@ -76,6 +76,9 @@ module type Gates = sig
 
   (** concatenates a list of signals *)
   val concat_msb : t list -> t
+
+  val gnd : t
+  val vdd : t
 
   (** select a range of bits *)
   val select : t -> high:int -> low:int -> t
@@ -212,6 +215,14 @@ module type Constructors = sig
   (** convert a [bool] to [vdd] or [gnd] *)
   val of_bool : bool -> t
 
+  (** convert a string to a series of 8-bit characters and concatenate them into a signal,
+      with the first character of the string being in the least-significant bits *)
+  val of_ascii_string_lsb : string -> t
+
+  (** convert a string to a series of 8-bit characters and concatenate them into a signal,
+      with the first character of the string being in the most-significant bits *)
+  val of_ascii_string_msb : string -> t
+
   (** create random constant vector of given width *)
   val random : width:int -> t
 
@@ -229,7 +240,8 @@ end
 module type S = sig
   type t [@@deriving sexp_of]
 
-  include Equal.S with type t := t
+  include%template Equal.S [@mode local] with type t := t
+
   include Constructors with type t := t
 
   (** the empty signal *)
@@ -528,6 +540,14 @@ module type S = sig
 
   (** Convert signal to a [char]. The signal must be 8 bits wide. *)
   val to_char : t -> char
+
+  (** Convert into a string, with the first character being from the least-significant
+      bits of the signal. The signal width must be a multiple of 8 bits. *)
+  val to_ascii_string_lsb : t -> string
+
+  (** Convert into a string, with the first character being from the most-significant bits
+      of the signal. The signal width must be a multiple of 8 bits. *)
+  val to_ascii_string_msb : t -> string
 
   (** create binary string from signal *)
   val to_bstr : t -> string

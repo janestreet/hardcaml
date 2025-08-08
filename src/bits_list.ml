@@ -4,7 +4,7 @@ open Base
    simple, but slow. *)
 
 module type T = sig
-  type t [@@deriving equal, sexp]
+  type t [@@deriving equal ~localize, sexp]
 
   val constant_only : bool
   val optimise_muxs : bool
@@ -25,7 +25,7 @@ module type Comb = sig
 end
 
 module Make_gates (T : T) = struct
-  type t = T.t list [@@deriving equal, sexp]
+  type t = T.t list [@@deriving equal ~localize, sexp]
 
   let empty = []
   let is_empty = List.is_empty
@@ -49,6 +49,8 @@ module Make_gates (T : T) = struct
     |> Constant.of_bit_list
   ;;
 
+  let gnd = [ T.gnd ]
+  let vdd = [ T.vdd ]
   let concat_msb l = List.concat l
 
   let select s ~high:h ~low:l =
@@ -112,7 +114,7 @@ module Make_gates (T : T) = struct
 end
 
 module Int = struct
-  type t = int [@@deriving compare, equal, sexp]
+  type t = int [@@deriving compare ~localize, equal ~localize, sexp]
 
   let optimise_muxs = true
   let constant_only = true
@@ -137,7 +139,7 @@ module Int = struct
 end
 
 module Bool = struct
-  type t = bool [@@deriving compare, equal, sexp]
+  type t = bool [@@deriving compare ~localize, equal ~localize, sexp]
 
   let optimise_muxs = true
   let constant_only = true
@@ -165,7 +167,7 @@ module X = struct
     | F
     | T
     | X
-  [@@deriving compare, equal, sexp]
+  [@@deriving compare ~localize, equal ~localize, sexp]
 
   let optimise_muxs = false
   let constant_only = true

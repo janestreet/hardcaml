@@ -1,6 +1,6 @@
 open Base
 open Hardcaml
-module Clocking = Types.Clocking
+module Clocking = Clocking
 
 module type Data = sig
   include Interface.S

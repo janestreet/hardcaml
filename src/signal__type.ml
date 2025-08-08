@@ -4,49 +4,9 @@ module type Uid = Signal__type_intf.Uid
 module type Type = Signal__type_intf.Type
 module type Uid_set = Signal__type_intf.Uid_set
 module type Uid_map = Signal__type_intf.Uid_map
+module type With_info = Signal__type_intf.With_info
 
-module Uid = struct
-  module I = Int
-
-  module T = struct
-    type t = I.t [@@deriving compare, sexp_of]
-
-    (* We need a hash function compatible with native code and javascript. Currently the
-       only type which allows this is [Int64]. So we perform a conversion to int64 here,
-       and reach out directly to the (unboxed) hash_fold function in base to implement it.
-       This allows zero alloc operation even in fast-build mode. *)
-
-    external fold_int64
-      :  Base.Hash.state
-      -> (int64[@unboxed])
-      -> Base.Hash.state
-      = "Base_internalhash_fold_int64" "Base_internalhash_fold_int64_unboxed"
-    [@@noalloc]
-
-    let hash_fold_t state t = fold_int64 state (Int64.of_int_exn t)
-    let hash t = Hash.get_hash_value (hash_fold_t (Hash.alloc ()) t)
-  end
-
-  include T
-  include Comparator.Make (T)
-
-  let zero = I.of_int 0
-  let one = I.of_int 1
-  let equal = [%compare.equal: t]
-  let to_int t = I.to_int_exn t
-  let to_string t = I.to_string t
-
-  let generator () =
-    let id = ref one in
-    let new_id () =
-      let x = !id in
-      (id := I.(!id + one));
-      x
-    in
-    let reset_id () = id := one in
-    `New new_id, `Reset reset_id
-  ;;
-end
+module Uid = Uid_builder.Make ()
 
 type signal_op =
   | Signal_add
@@ -58,7 +18,7 @@ type signal_op =
   | Signal_xor
   | Signal_eq
   | Signal_lt
-[@@deriving sexp_of, compare, equal, hash]
+[@@deriving sexp_of, compare ~localize, equal ~localize, hash]
 
 type signal_metadata =
   { mutable names_and_locs : Name_and_loc.t list
@@ -66,6 +26,7 @@ type signal_metadata =
   ; mutable comment : string option
   ; caller_id : Caller_id.t option
   ; mutable wave_format : Wave_format.t
+  ; mutable coverage : Coverage_metadata.t option
   }
 [@@deriving sexp_of]
 
@@ -181,16 +142,37 @@ and 'a register =
   ; initialize_to : 'a option
   }
 
-and instantiation =
-  { inst_name : string (* name of circuit *)
-  ; inst_instance : string (* instantiation label *)
-  ; inst_generics : Parameter.t list
-      (* [ Parameter.create ~name:"ram_type" ~value:(String "auto") ] *)
-  ; inst_inputs : (string * t) list (* name and input signal *)
-  ; inst_outputs : (string * (int * int)) list (* name, width and low index of output *)
-  ; inst_lib : string
-  ; inst_arch : string
+and instantiation_input =
+  { name : string
+  ; input_signal : t
   }
+
+and instantiation_output =
+  { name : string
+  ; output_width : int
+  ; output_low_index : int
+  }
+
+and vhdl_instance =
+  { library_name : string
+  ; architecture_name : string
+  }
+
+and instantiation =
+  { circuit_name : string
+  ; instance_label : string
+  ; parameters : Parameter.t list
+  ; inputs : instantiation_input list
+  ; outputs : instantiation_output list
+  ; vhdl_instance : vhdl_instance
+  }
+
+let equal_instantiation_output
+  { name = n1; output_width = w1; output_low_index = l1 }
+  { name = n2; output_width = w2; output_low_index = l2 }
+  =
+  [%equal: string * int * int] (n1, w1, l1) (n2, w2, l2)
+;;
 
 module Uid_map = Map.M (Uid)
 
@@ -266,8 +248,9 @@ module Deps = Make_deps (struct
         let arg = f init read_address in
         let arg = f arg memory in
         arg
-      | Inst { instantiation = { inst_inputs; _ }; _ } ->
-        List.fold ~init inst_inputs ~f:(fun arg (_, s) -> f arg s)
+      | Inst { instantiation = { inputs; _ }; _ } ->
+        List.fold ~init inputs ~f:(fun arg { name = _; input_signal } ->
+          f arg input_signal)
       | Op2 { arg_a; arg_b; _ } ->
         let arg = f init arg_a in
         let arg = f arg arg_b in
@@ -290,6 +273,9 @@ module Deps = Make_deps (struct
     ;;
   end)
 
+[%%template
+[@@@alloc.default a @ m = (heap_global, stack_local)]
+
 let signal_id s =
   match s with
   | Empty -> None
@@ -304,14 +290,16 @@ let signal_id s =
   | Mux { signal_id; _ }
   | Cases { signal_id; _ }
   | Cat { signal_id; _ }
-  | Not { signal_id; _ } -> Some signal_id
+  | Not { signal_id; _ } -> Some signal_id [@exclave_if_stack a]
 ;;
 
 let uid s =
-  match signal_id s with
+  match[@exclave_if_stack a] (signal_id [@alloc a]) s with
   | None -> Uid.zero
   | Some s -> s.s_id
-;;
+;;]
+
+let%template[@mode local] uid = (uid [@alloc stack])
 
 let width s =
   match signal_id s with
@@ -323,6 +311,12 @@ let caller_id s =
   let%bind.Option s = signal_id s in
   let%bind.Option m = s.s_metadata in
   m.caller_id
+;;
+
+let coverage_metadata s =
+  let%bind.Option s = signal_id s in
+  let%bind.Option m = s.s_metadata in
+  m.coverage
 ;;
 
 let names_and_locs s =
@@ -355,11 +349,11 @@ let structural_compare
         | Multiport_mem { size = mem_size0; _ }, Multiport_mem { size = mem_size1; _ } ->
           mem_size0 = mem_size1
         | Inst { instantiation = i0; _ }, Inst { instantiation = i1; _ } ->
-          String.equal i0.inst_name i1.inst_name
+          String.equal i0.circuit_name i1.circuit_name
           (*i0.inst_instance=i1.inst_instance &&*)
           (* inst_inputs=??? *)
-          && [%equal: Parameter.t list] i0.inst_generics i1.inst_generics
-          && [%equal: (string * (int * int)) list] i0.inst_outputs i1.inst_outputs
+          && [%equal: Parameter.t list] i0.parameters i1.parameters
+          && [%equal: instantiation_output list] i0.outputs i1.outputs
         | Op2 { op = o0; _ }, Op2 { op = o1; _ } -> equal_signal_op o0 o1
         | Empty, Empty
         | Reg _, Reg _
@@ -516,20 +510,27 @@ let rec sexp_of_instantiation_recursive ?show_uids ?show_locs ~depth inst =
     sexp_of_signal_recursive ?show_uids ?show_locs ~depth:(depth - 1) s
   in
   let name =
-    if String.is_empty inst.inst_lib
-    then inst.inst_name
-    else inst.inst_lib ^ "." ^ inst.inst_name
+    if String.is_empty inst.vhdl_instance.library_name
+    then inst.circuit_name
+    else inst.vhdl_instance.library_name ^ "." ^ inst.circuit_name
   in
   let name =
-    if String.is_empty inst.inst_arch then name else name ^ "(" ^ inst.inst_arch ^ ")"
+    if String.is_empty inst.vhdl_instance.architecture_name
+    then name
+    else name ^ "(" ^ inst.vhdl_instance.architecture_name ^ ")"
   in
-  let name = name ^ "{" ^ inst.inst_instance ^ "}" in
-  let sexp_of_output_width (w, _) = [%sexp (w : int)] in
+  let name = name ^ "{" ^ inst.instance_label ^ "}" in
+  let sexp_of_inst_input { name; input_signal } =
+    [%sexp ((name, input_signal) : string * next)]
+  in
+  let sexp_of_inst_output { name; output_width; output_low_index = _ } =
+    [%sexp ((name, output_width) : string * int)]
+  in
   [%message
     name
-      ~parameters:(inst.inst_generics : Parameter.t list)
-      ~inputs:(inst.inst_inputs : (string * next) list)
-      ~outputs:(inst.inst_outputs : (string * output_width) list)]
+      ~parameters:(inst.parameters : Parameter.t list)
+      ~inputs:(inst.inputs : inst_input list)
+      ~outputs:(inst.outputs : inst_output list)]
 
 and sexp_of_register_recursive ?show_uids ?show_locs ~depth (reg : t register) =
   let sexp_of_next s =
@@ -791,6 +792,7 @@ let make_id_allow_zero_width width =
         ; comment = None
         ; caller_id = Some caller_id
         ; wave_format = default_wave_format
+        ; coverage = None
         })
   }
 ;;
@@ -814,6 +816,7 @@ let get_or_alloc_metadata t =
       ; comment = None
       ; caller_id = None
       ; wave_format = default_wave_format
+      ; coverage = None
       }
     in
     t.s_metadata <- Some metadata;
@@ -902,6 +905,10 @@ let set_wave_format t wave_format =
 let get_wave_format t =
   Option.value_map (get_metadata t) ~default:default_wave_format ~f:(fun m ->
     m.wave_format)
+;;
+
+let update_coverage_metadata t ~f =
+  change_metadata t ~f:(fun metadata -> metadata.coverage <- Some (f metadata.coverage))
 ;;
 
 let is_vdd = function
@@ -1099,29 +1106,31 @@ let map_dependant t ~f =
   | Inst
       { signal_id
       ; instantiation =
-          { inst_name
-          ; inst_instance
-          ; inst_generics
-          ; inst_inputs
-          ; inst_outputs
-          ; inst_lib
-          ; inst_arch
-          }
+          { circuit_name; instance_label; parameters; inputs; outputs; vhdl_instance }
       } ->
-    let inst_inputs = List.map inst_inputs ~f:(fun (name, signal) -> name, f signal) in
+    let inputs =
+      List.map inputs ~f:(fun { name; input_signal } ->
+        { name; input_signal = f input_signal })
+    in
     Inst
       { signal_id
       ; instantiation =
-          { inst_name : string
-          ; inst_instance : string
-          ; inst_generics : Parameter.t list
-          ; inst_inputs
-          ; inst_outputs : (string * (int * int)) list
-          ; inst_lib : string
-          ; inst_arch : string
-          }
+          { circuit_name; instance_label; parameters; inputs; outputs; vhdl_instance }
       }
   | Wire { signal_id; driver } ->
     let driver = Option.map driver ~f in
     Wire { signal_id; driver }
 ;;
+
+module For_testing = struct
+  let uid_of_int x = Uid.For_testing.of_int x
+end
+
+module Make_default_info (S : sig
+    type t
+  end) : With_info with type t := S.t and type info = unit = struct
+  type info = unit
+
+  let info _ = ()
+  let set_info t ~info:() = t
+end

@@ -203,9 +203,9 @@ let%expect_test "verilog with normalization" =
             the_blah
             ( .a(a),
               .b(b),
-              .e(_15[8:6]),
+              .c(_15[2:0]),
               .d(_15[5:3]),
-              .c(_15[2:0]) );
+              .e(_15[8:6]) );
         assign _16 = _15[2:0];
         assign _18 = _16 | _17;
         assign _20 = _18 | _19;

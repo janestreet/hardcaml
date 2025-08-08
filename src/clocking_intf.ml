@@ -1,9 +1,8 @@
-module type S = sig
-  type 'a t =
-    { clock : 'a
-    ; clear : 'a
-    }
-  [@@deriving hardcaml]
+module type Functions = sig
+  module Signal : Signal.S
+  module Always : Always.S with module Signal := Signal
+
+  type 'a t
 
   val add_clear : Signal.t t -> Signal.t -> Signal.t t
   val to_spec : Signal.t t -> Signal.Reg_spec.t
@@ -14,6 +13,14 @@ module type S = sig
     -> ?enable:Signal.t
     -> ?clear:Signal.t
     -> ?clear_to:Signal.t
+    -> Signal.t
+    -> Signal.t
+
+  val cut_through_reg
+    :  Signal.t t
+    -> ?clear:Signal.t
+    -> ?clear_to:Signal.t
+    -> enable:Signal.t
     -> Signal.t
     -> Signal.t
 
@@ -29,7 +36,24 @@ module type S = sig
     -> Signal.t
     -> Signal.t
 
+  val pipeline_no_clear
+    :  ?attributes:Rtl_attribute.t list
+    -> ?enable:Signal.t
+    -> Signal.t t
+    -> n:int
+    -> Signal.t
+    -> Signal.t
+
   val reg_fb
+    :  ?enable:Signal.t
+    -> ?clear:Signal.t
+    -> ?clear_to:Signal.t
+    -> Signal.t t
+    -> width:int
+    -> f:(Signal.t -> Signal.t)
+    -> Signal.t
+
+  val reg_fb_no_clear
     :  ?enable:Signal.t
     -> ?clear:Signal.t
     -> ?clear_to:Signal.t
@@ -40,6 +64,14 @@ module type S = sig
 
   module Var : sig
     val reg
+      :  ?enable:Signal.t
+      -> ?clear:Signal.t
+      -> ?clear_to:Signal.t
+      -> Signal.t t
+      -> width:int
+      -> Always.Variable.t
+
+    val cut_through_reg
       :  ?enable:Signal.t
       -> ?clear:Signal.t
       -> ?clear_to:Signal.t
@@ -78,6 +110,38 @@ module type S = sig
       -> Signal.t t
       -> Signal.t
       -> Signal.t
+  end
+end
+
+module type S = sig
+  type 'a t =
+    { clock : 'a
+    ; clear : 'a
+    }
+  [@@deriving hardcaml]
+
+  include
+    Functions
+    with module Signal := Signal
+     and module Always := Always
+     and type 'a t := 'a t
+
+  module Clocked : sig
+    type nonrec 'a t = 'a t =
+      { clock : 'a
+      ; clear : 'a
+      }
+
+    (** Interface is included here with the type reexported intentionally. This is so that
+        users can write [module Clocking = Clocking.Clocked] at the top of modules that
+        just use the Clocked_signal.t versions of the functions above. *)
+    include Interface.S with type 'a t := 'a t
+
+    include
+      Functions
+      with module Signal := Clocked_signal
+       and module Always := Always.Clocked
+      with type 'a t := 'a t
   end
 end
 

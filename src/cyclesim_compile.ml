@@ -418,20 +418,20 @@ let compile_comb
          ~size_in_words)
   | Inst { instantiation = i; _ } ->
     (match
-       Combinational_ops_database.find combinational_ops_database ~name:i.inst_name
+       Combinational_ops_database.find combinational_ops_database ~name:i.circuit_name
      with
      | None ->
        raise_s
          [%message
-           "Instantiation not supported in simulation" ~name:(i.inst_name : string)]
+           "Instantiation not supported in simulation" ~name:(i.circuit_name : string)]
      | Some op ->
        let f = Combinational_op.create_fn op in
        let inputs =
-         List.map i.inst_inputs ~f:(fun (_, signal) ->
+         List.map i.inputs ~f:(fun { name = _; input_signal = signal } ->
            Bits.Mutable.create (Signal.width signal))
        in
        let copy_inputs =
-         List.map2_exn i.inst_inputs inputs ~f:(fun (_, signal) bits ->
+         List.map2_exn i.inputs inputs ~f:(fun { name = _; input_signal = signal } bits ->
            let src_address = find_address signal in
            let size_in_words = num_words signal in
            fun () ->
@@ -440,7 +440,10 @@ let compile_comb
              done)
        in
        let outputs =
-         List.map i.inst_outputs ~f:(fun (_, (bits, _)) -> Bits.Mutable.create bits)
+         List.map
+           i.outputs
+           ~f:(fun { name = _; output_width = bits; output_low_index = _ } ->
+             Bits.Mutable.create bits)
        in
        let target = Bits.Mutable.create dst_width in
        let copy_output =
@@ -450,10 +453,13 @@ let compile_comb
              Cyclesim_ops.set64 t (dst_address + i) (Bits.Mutable.get_int64 target i)
            done
        in
+       (* The reversed order is is needed because of the msb first concat below. *)
+       let outputs_in_reverse_order = List.rev outputs in
+       let f = Staged.unstage (f ~inputs ~outputs) in
        let inst () =
          List.iter copy_inputs ~f:(fun f -> f ());
-         f inputs outputs;
-         Bits.Mutable.concat target (List.rev outputs);
+         f ();
+         Bits.Mutable.concat target outputs_in_reverse_order;
          copy_output ()
        in
        Some inst)
@@ -609,6 +615,7 @@ let lookup_mem runtime (map : Read_map.t) (traced : Cyclesim0.Traced.internal_si
 ;;
 
 let create_cyclesim
+  circuit
   (offsets : offsets)
   (map : Read_map.t)
   (traced : Cyclesim0.Traced.t)
@@ -682,6 +689,7 @@ let create_cyclesim
     List.map ports ~f:(fun ({ name; address = _; width = _ }, bits) -> name, bits)
   in
   Cyclesim0.Private.create
+    ?circuit
     ~in_ports:(get_ports in_ports)
     ~out_ports_before_clock_edge:(get_ports out_ports_before)
     ~out_ports_after_clock_edge:(get_ports out_ports_after)
@@ -840,6 +848,7 @@ let create ?(config = Cyclesim0.Config.default) circuit =
   Option.iter config.random_initializer ~f:(fun random_initializer ->
     initialize_state ~runtime ~random_initializer ~allocation);
   create_cyclesim
+    (if config.store_circuit then Some circuit else None)
     offsets
     map
     traced

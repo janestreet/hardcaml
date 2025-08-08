@@ -216,7 +216,7 @@ let%expect_test "hierarchy fold" =
   let result =
     Hierarchy.fold circ db ~init:[] ~f:(fun all circuit inst ->
       let circuit = Option.map circuit ~f:Circuit.name in
-      let inst = Option.map inst ~f:(fun i -> i.inst_name) in
+      let inst = Option.map inst ~f:(fun i -> i.circuit_name) in
       (circuit, inst) :: all)
   in
   print_s [%message (result : (string option * string option) list)];

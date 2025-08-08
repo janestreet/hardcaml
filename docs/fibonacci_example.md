@@ -67,8 +67,8 @@ state `S_counting` and the result will be output in the state `S_write_result`.
 let create (i : _ I.t) =
   let r_sync = Signal.Reg_spec.create ~clock:i.clock ~clear:i.clear () in
   let sm = Always.State_machine.create (module States) ~enable:vdd r_sync in
-  let done_ = Always.Variable.wire ~default:gnd in
-  let result = Always.Variable.wire ~default:(zero 32) in
+  let done_ = Always.Variable.wire ~default:gnd () in
+  let result = Always.Variable.wire ~default:(zero 32) () in
   let f0 = Always.Variable.reg ~width:32 ~enable:Signal.vdd r_sync in
   let f1 = Always.Variable.reg ~width:32 ~enable:Signal.vdd r_sync in
   let remaining = Always.Variable.reg ~width:8 ~enable:Signal.vdd r_sync in

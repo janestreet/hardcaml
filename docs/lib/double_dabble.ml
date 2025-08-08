@@ -47,7 +47,7 @@ struct
       | Start
       | Double
       | Dabble
-    [@@deriving sexp_of, compare, enumerate]
+    [@@deriving sexp_of, compare ~localize, enumerate]
   end
 
   let create ~clock ~start ~binary_in =

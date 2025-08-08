@@ -36,7 +36,7 @@ module Naming_scheme : sig
     | Full_path
     | Local_path
     | No_path
-  [@@deriving equal, sexp_of]
+  [@@deriving equal ~localize, sexp_of]
 end
 
 type t [@@deriving sexp_of]
@@ -108,6 +108,15 @@ val naming
   -> Signal.t
   -> string
   -> Signal.t
+
+(** Similar to [naming], but on a clocked signal instead. *)
+val naming_clocked
+  :  ?sep:string
+  -> t
+  -> ?loc:Stdlib.Lexing.position
+  -> Clocked_signal.t
+  -> string
+  -> Clocked_signal.t
 
 (** Creates an atomic proposition for use in an LTL formula, naming the AP with the
     scope's name and the provided string argument *)

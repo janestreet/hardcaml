@@ -9,9 +9,9 @@ module Collision_mode : sig
   type t =
     | Read_before_write
     | Write_before_read
-  [@@deriving sexp_of, compare]
+  [@@deriving sexp_of, compare ~localize]
 
-  include Comparable.S with type t := t
+  include%template Comparable.S [@mode local] with type t := t
 end
 
 val create

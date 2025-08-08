@@ -5,7 +5,7 @@
 open Base
 
 module type Cases = sig
-  type t [@@deriving sexp_of, compare, enumerate]
+  type t [@@deriving sexp_of, compare ~localize, enumerate]
 
   val port_name : string
 end

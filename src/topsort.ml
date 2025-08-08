@@ -16,7 +16,7 @@ module Edge = struct
     { from : 'a
     ; to_ : 'a
     }
-  [@@deriving compare, sexp_of]
+  [@@deriving compare ~localize, sexp_of]
 
   let map t ~f = { from = f t.from; to_ = f t.to_ }
 end

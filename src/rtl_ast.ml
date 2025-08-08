@@ -3,12 +3,12 @@ open Base
 type range =
   | Vector of { width : int }
   | Bit
-[@@deriving sexp_of, equal]
+[@@deriving sexp_of, equal ~localize]
 
 type reg_or_wire =
   | Reg
   | Wire
-[@@deriving equal, sexp_of]
+[@@deriving equal ~localize, sexp_of]
 
 type var =
   { name : Rope.t
@@ -17,7 +17,7 @@ type var =
   ; attributes : Rtl_attribute.t list
   ; comment : string option
   }
-[@@deriving sexp_of, equal]
+[@@deriving sexp_of, equal ~localize]
 
 type output =
   { output : var
@@ -516,7 +516,7 @@ let map_parameters_for_compatibility
   (parameters : Parameter.t list)
   =
   match lang, Rtl_compatibility.force_std_logic_generics_to_bits backend with
-  | Rtl_language.Verilog, true ->
+  | (Rtl_language.Verilog | Systemverilog), true ->
     List.map parameters ~f:(function
       | { name; value = Std_logic v | Std_ulogic v } ->
         let v =
@@ -529,7 +529,7 @@ let map_parameters_for_compatibility
         in
         { Parameter.name; value = Bit v }
       | p -> p)
-  | Verilog, false | Vhdl, (true | false) -> parameters
+  | (Verilog | Systemverilog), false | Vhdl, (true | false) -> parameters
 ;;
 
 let create_statement ~(rtl_config : Rtl_config.t) ~language var_map (signal : Signal.t) =
@@ -675,22 +675,24 @@ let create_statement ~(rtl_config : Rtl_config.t) ~language var_map (signal : Si
     Assignment (Const { lhs = (find "Const.lhs" signal).write; constant })
   | Inst { signal_id = _; instantiation } ->
     let input_ports =
-      List.map instantiation.inst_inputs ~f:(fun (port_name, signal) ->
+      List.map instantiation.inputs ~f:(fun { name = port_name; input_signal = signal } ->
         { port_name; connection = (find ("Inst.input_port: " ^ port_name) signal).read })
     in
     let output_ports =
-      List.map instantiation.inst_outputs ~f:(fun (port_name, (width, low)) ->
-        { port_name
-        ; connection = (find ("Inst.output_port: " ^ port_name) signal).read
-        ; high = low + width - 1
-        ; low
-        })
+      List.map
+        instantiation.outputs
+        ~f:(fun { name = port_name; output_width; output_low_index = low } ->
+          { port_name
+          ; connection = (find ("Inst.output_port: " ^ port_name) signal).read
+          ; high = low + output_width - 1
+          ; low
+          })
     in
     Instantiation
-      { name = instantiation.inst_name
+      { name = instantiation.circuit_name
       ; instance = find_instance_name var_map signal
       ; parameters =
-          map_parameters_for_compatibility language rtl_config instantiation.inst_generics
+          map_parameters_for_compatibility language rtl_config instantiation.parameters
       ; input_ports
       ; output_ports
       ; attributes = Signal.attributes signal
@@ -786,7 +788,7 @@ let of_circuit ~blackbox ~(language : Rtl_language.t) ~(config : Rtl_config.t) c
 module Signals_name_map = struct
   module Uid_with_index = struct
     module T = struct
-      type t = Signal.Type.Uid.t * int [@@deriving compare, sexp_of]
+      type t = Signal.Type.Uid.t * int [@@deriving compare ~localize, sexp_of]
     end
 
     include T
@@ -794,7 +796,7 @@ module Signals_name_map = struct
   end
 
   type t_rtl_ast = t
-  type t = string Map.M(Uid_with_index).t [@@deriving equal, sexp_of]
+  type t = string Map.M(Uid_with_index).t [@@deriving equal ~localize, sexp_of]
 
   let create (t : t_rtl_ast) =
     let empty = Map.empty (module Uid_with_index) in

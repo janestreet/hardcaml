@@ -131,20 +131,19 @@ interfaces, though `rtlname` will not work.
 `rtlprefix` and `rtlsuffix` can be applied to nested interfaces and will apply the given
 prefix or suffix to each field within the nested interface.
 
-In addition we can write `rtlmangle`.  This will use the field name of the nested interface as the prefix.
+By default, we automatically mangle nested interface names by prefixing them with the
+field name and a `$` separator, to avoid name clashes.
 
 ```ocaml
 # Nested_interfaces.port_names;;
 - : string Nested_interfaces.t =
 {Nested_interfaces.clock = "clock"; clear = "clear";
- hello = {Simple_interface.foo = "foo"; bar = "bar"};
- world = {Simple_interface.foo = "foo"; bar = "bar"}}
+ hello = {Simple_interface.foo = "hello$foo"; bar = "hello$bar"};
+ world = {Simple_interface.foo = "world$foo"; bar = "world$bar"}}
 ```
 
-The names of the nested fields for `hello` and `world` clash and could eventually lead to
-a circuit error.
-
-By adding rtlmangle the port names will be differentiated by the field name.
+This functionality can be disabled with `~rtlmangle:false`, or customized by specifying a
+different separator.
 
 ```ocaml
 module Nested_interfaces_mangled = struct
@@ -154,7 +153,7 @@ module Nested_interfaces_mangled = struct
     ; hello : 'a Simple_interface.t
     ; world : 'a Simple_interface.t
     }
-  [@@deriving hardcaml ~rtlmangle:true]
+  [@@deriving hardcaml ~rtlmangle:"_"]
 end
 ```
 

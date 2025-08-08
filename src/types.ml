@@ -1,14 +1,20 @@
 open! Base
 module Clocking = Clocking
 module Cross_product = Cross_product.Make
-
-module type Value_arg = Value.Arg
-
 module Pair = Pair
 module With_valid = With_valid
+
+let value = Value.value
+
+module type Value_arg = Value.Arg
+module type Value = Value.S
+
 module Value = Value.Make
 
+let scalar = Scalar.scalar
+
 module type Scalar = Scalar.S
+module type Scalar_untyped = Scalar.S_untyped
 
 module Scalar = Scalar.Make
 

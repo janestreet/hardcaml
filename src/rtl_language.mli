@@ -2,6 +2,7 @@ open! Base
 
 type t =
   | Verilog
+  | Systemverilog
   | Vhdl
 [@@deriving sexp_of]
 

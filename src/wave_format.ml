@@ -12,16 +12,18 @@ type t =
   | Map of (Bits.t, string) List.Assoc.t
 [@@deriving sexp_of]
 
-let rec equal a b =
+let%template[@mode local] rec equal a b =
   match a, b with
   | Binary, Binary | Bit, Bit | Hex, Hex | Int, Int | Unsigned_int, Unsigned_int -> true
-  | Bit_or a, Bit_or b -> equal a b
-  | Index a, Index b -> [%compare.equal: string list] a b
+  | Bit_or a, Bit_or b -> (equal [@mode local]) a b
+  | Index a, Index b -> [%compare_local.equal: string list] a b
   | Custom f, Custom g -> phys_equal f g
-  | Map m, Map n -> List.equal [%equal: Bits.t * string] m n
+  | Map m, Map n -> [%equal_local: (Bits.t * string) list] m n
   | (Bit | Bit_or _ | Binary | Hex | Unsigned_int | Int | Index _ | Custom _ | Map _), _
     -> false
 ;;
+
+let%template equal = [%eta2 equal [@mode local]]
 
 let rec to_string t =
   match t with

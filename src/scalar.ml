@@ -47,3 +47,13 @@ module Make (X : Value.Arg) = struct
     x
   ;;
 end
+
+let scalar ?(name = "scalar") port_width =
+  let module M =
+    Make (struct
+      let port_name = name
+      let port_width = port_width
+    end)
+  in
+  (module M : S_untyped)
+;;

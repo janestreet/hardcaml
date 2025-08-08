@@ -6,7 +6,7 @@ module type Language = sig
   val reserved_words : string list
 end
 
-module Verilog = struct
+module Verilog_base = struct
   let is_valid_first_char c = Char.is_alpha c || Char.equal c '_'
   let is_valid_other_char c = Char.is_alphanum c || Char.equal c '_' || Char.equal c '$'
   let replace_with = '_'
@@ -21,7 +21,18 @@ module Verilog = struct
   ;;
 
   let case_sensitive = true
+end
+
+module Verilog = struct
+  include Verilog_base
+
   let reserved_words = Reserved_words.verilog
+end
+
+module Systemverilog = struct
+  include Verilog_base
+
+  let reserved_words = Reserved_words.systemverilog
 end
 
 module Vhdl = struct
@@ -145,7 +156,7 @@ let mangle_instantiation_name
   =
   match signal with
   | Signal.Type.Inst { instantiation; _ } ->
-    let legal_name = Lang.legalize instantiation.inst_instance in
+    let legal_name = Lang.legalize instantiation.instance_label in
     Mangler.mangle mangler legal_name
   | _ ->
     raise_s
@@ -173,5 +184,6 @@ let mangle_multiport_mem_name
 
 let of_language = function
   | Rtl_language.Verilog -> create (module Verilog)
+  | Systemverilog -> create (module Systemverilog)
   | Vhdl -> create (module Vhdl)
 ;;

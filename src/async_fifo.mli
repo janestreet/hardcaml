@@ -59,10 +59,27 @@ module Make (M : S) : sig
     -> Signal.t I.t
     -> Signal.t O.t
 
+  val create_clocked
+    :  ?use_negedge_sync_chain:bool
+         (** Whether to use the negative edge in the synchronization chain (default is
+             false). *)
+    -> ?sync_stages:int
+         (** The number of synchronization stages to use for the gray coded registers
+             (default is 2). *)
+    -> ?scope:Scope.t
+    -> Clocked_signal.t I.t
+    -> Clocked_signal.t O.t
+
   (** Create an async FIFO that [O.valid] goes high after [delay] clocks of a [o.valid]
       low start. This is useful for packet buffering across clock domains where you don't
       want the output [valid] to de-assert. *)
   val create_with_delay : ?delay:Int.t -> Scope.t -> Signal.t I.t -> Signal.t O.t
+
+  val create_with_delay_clocked
+    :  ?delay:Int.t
+    -> Scope.t
+    -> Clocked_signal.t I.t
+    -> Clocked_signal.t O.t
 
   val hierarchical_with_delay
     :  ?name:string

@@ -412,3 +412,20 @@ let cases
     set64 t (dst_address + i) (get64 t (src_address + i))
   done
 ;;
+
+module Jit_exports = struct
+  external hardcaml_bits_sub_inner_address
+    :  unit
+    -> nativeint
+    = "hardcaml_bits_sub_inner_address"
+
+  external hardcaml_bits_umul_i_address
+    :  unit
+    -> nativeint
+    = "hardcaml_bits_umul_i_address"
+
+  external hardcaml_bits_smul_i_address
+    :  unit
+    -> nativeint
+    = "hardcaml_bits_smul_i_address"
+end

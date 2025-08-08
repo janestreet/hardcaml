@@ -33,7 +33,7 @@ let command =
     ~summary:"multiply by constant logic"
     (let open Command.Let_syntax in
      let%map_open () = return ()
-     and flags = Hardcaml_xilinx_reports.Command.Command_flags.flags
+     and flags = Hardcaml_xilinx_reports.Command.Command_flags.flags ()
      and bits = flag "bits" (required int) ~doc:"BITS Number of input bits"
      and multiply_by =
        flag "multiply-by" (required int) ~doc:"N Multiply input by this value"

@@ -1,7 +1,7 @@
 open Base
 
 module type Pre_partial = sig
-  type 'a t [@@deriving sexp_of]
+  type 'a t [@@deriving equal ~localize, sexp_of]
 
   val iter : 'a t -> f:('a -> unit) -> unit
   val iter2 : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
@@ -146,6 +146,8 @@ module type Names_and_widths = sig
 end
 
 module type Of_signal_functions = sig
+  module Signal : Signal.S
+
   type t
 
   (** Create a wire for each field. If [named] is true then wires are given the RTL field
@@ -164,6 +166,17 @@ module type Of_signal_functions = sig
     -> ?clear:Signal.t
     -> ?clear_to:t
     -> Signal.Reg_spec.t
+    -> t
+    -> t
+
+  (** Defines a cut through register over values in this interface. *)
+  val cut_through_reg
+    :  ?initialize_to:t
+    -> ?reset_to:t
+    -> ?clear:Signal.t
+    -> ?clear_to:t
+    -> Signal.Reg_spec.t
+    -> enable:Signal.t
     -> t
     -> t
 
@@ -204,7 +217,8 @@ end
 
 module type S = sig
   include Pre
-  include Equal.S1 with type 'a t := 'a t
+
+  include%template Equal.S1 [@mode local] with type 'a t := 'a t
 
   (** RTL names specified in the interface definition - commonly also the OCaml field
       name. *)
@@ -216,7 +230,7 @@ module type S = sig
   (** [const x] sets each port to [x] *)
   val const : 'a -> 'a t
 
-  type tag [@@deriving equal]
+  type tag [@@deriving equal ~localize]
 
   val tags : tag t
 
@@ -297,7 +311,30 @@ module type S = sig
 
   module Of_signal : sig
     include Comb with type comb = Signal.t
-    include Of_signal_functions with type t := t
+    include Of_signal_functions with type t := t and module Signal := Signal
+  end
+
+  module Of_clocked_signal : sig
+    type 'a interface := 'a t
+
+    include Comb with type comb = Clocked_signal.t
+    include Of_signal_functions with type t := t and module Signal := Clocked_signal
+
+    val wires
+      :  ?named:bool (** default is [false]. *)
+      -> [ `From of t | `Domains of Clock_domain.Runtime.t interface ]
+      -> t
+
+    val inputs : Clock_domain.Runtime.t interface -> t
+
+    (** Apply name to field of the interface. Add [prefix] and [suffix] if specified. *)
+    val apply_names
+      :  ?prefix:string (** Default is [""] *)
+      -> ?suffix:string (** Default is [""] *)
+      -> ?naming_op:(?loc:Stdlib.Lexing.position -> Signal.t -> string -> Signal.t)
+           (** Default is [Signal.(--)] *)
+      -> t
+      -> t
   end
 
   (** Helper functions to ease usage of the Always API when working with interfaces. *)
@@ -312,6 +349,16 @@ module type S = sig
 
     (** Creates a interface container with register variables. *)
     val reg
+      :  ?enable:Signal.t
+      -> ?initialize_to:Signal.t t
+      -> ?reset_to:Signal.t t
+      -> ?clear:Signal.t
+      -> ?clear_to:Signal.t t
+      -> Signal.Reg_spec.t
+      -> Always.Variable.t t
+
+    (** Creates a interface container of cut through register variables. *)
+    val cut_through_reg
       :  ?enable:Signal.t
       -> ?initialize_to:Signal.t t
       -> ?reset_to:Signal.t t
@@ -375,7 +422,7 @@ end
 module type S_Of_signal = sig
   module Of_signal : sig
     include Comb_monomorphic with type comb := Signal.t
-    include Of_signal_functions with type t := t
+    include Of_signal_functions with type t := t and module Signal := Signal
   end
 
   include S_monomorphic with type t := Of_signal.t and type a := Signal.t
@@ -404,6 +451,12 @@ module type Interface = sig
     val ast : Ast.t
   end
 
+  module type S_with_clock_domains = sig
+    include S
+
+    val domains : Clock_domain.t t
+  end
+
   (** Type of functions representing the implementation of a circuit from an input to
       output interface. *)
   module Create_fn (I : S) (O : S) : sig
@@ -425,7 +478,7 @@ module type Interface = sig
   module Make_interface_with_conversion
       (Repr : S)
       (M : sig
-         type 'a t [@@deriving sexp_of]
+         type 'a t [@@deriving equal ~localize, sexp_of]
 
          val t_of_repr : 'a Repr.t -> 'a t
          val repr_of_t : 'a t -> 'a Repr.t

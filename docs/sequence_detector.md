@@ -106,7 +106,7 @@ end architecture;
       | S1
       | S10
       | S101
-    [@@deriving sexp_of, compare, enumerate]
+    [@@deriving sexp_of, compare ~localize, enumerate]
   end
 
   let create ~clock ~clear ~d =
@@ -219,7 +219,7 @@ states required is determined by the sequence length we need to match against.
   let create ~sequence ~clock ~clear ~d =
     let sequence_length = Bits.width sequence in
     let module State = struct
-      type t = int [@@deriving compare, sexp_of]
+      type t = int [@@deriving compare ~localize, sexp_of]
 
       (* Valid states are integers in the range [0..sequence_length-1]. *)
       let all = List.init sequence_length ~f:Fn.id

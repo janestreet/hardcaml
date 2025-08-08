@@ -296,3 +296,19 @@ CAMLprim value hardcaml_bits_packed_smul_bc(value *args, int n_args) {
   (void)n_args;
   return hardcaml_bits_packed_smul(args[0], args[1], args[2], args[3], args[4], args[5]);
 }
+
+/* exports for jitted code */
+CAMLprim value hardcaml_bits_sub_inner_address(value unit) {
+  (void)unit;
+  return caml_copy_nativeint((intnat)hardcaml_bits_sub_inner);
+}
+
+CAMLprim value hardcaml_bits_umul_i_address(value unit) {
+  (void)unit;
+  return caml_copy_nativeint((intnat)hardcaml_bits_umul_i);
+}
+
+CAMLprim value hardcaml_bits_smul_i_address(value unit) {
+  (void)unit;
+  return caml_copy_nativeint((intnat)hardcaml_bits_smul_i);
+}

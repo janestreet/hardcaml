@@ -2,12 +2,20 @@ open Base
 
 module type S = Clocking_intf.S
 
-module Make () = struct
+module type Clocking_interface = sig
   type 'a t =
     { clock : 'a
     ; clear : 'a
     }
   [@@deriving hardcaml]
+end
+
+module Generate_functions
+    (Clocking_interface : Clocking_interface)
+    (Signal : Signal.S)
+    (Always : Always.S with module Signal := Signal) =
+struct
+  open Clocking_interface
 
   let add_clear t clear = { t with clear = Signal.( |: ) t.clear clear }
   let to_spec t = Signal.Reg_spec.create ~clock:t.clock ~clear:t.clear ()
@@ -19,8 +27,20 @@ module Make () = struct
     Signal.reg_fb ?enable ?clear ?clear_to (to_spec t) ~width ~f
   ;;
 
+  let reg_fb_no_clear ?enable ?clear ?clear_to t ~width ~f =
+    Signal.reg_fb ?enable ?clear ?clear_to (to_spec_no_clear t) ~width ~f
+  ;;
+
   let pipeline ?attributes ?enable ?clear ?clear_to t ~n d =
     Signal.pipeline ?attributes ?clear ?enable ?clear_to (to_spec t) ~n d
+  ;;
+
+  let pipeline_no_clear ?attributes ?enable t ~n d =
+    Signal.pipeline ?attributes ?enable (to_spec_no_clear t) ~n d
+  ;;
+
+  let cut_through_reg t ?clear ?clear_to ~enable d =
+    Signal.cut_through_reg ?clear ?clear_to (to_spec t) ~enable d
   ;;
 
   module Cdc = struct
@@ -66,10 +86,33 @@ module Make () = struct
       Always.Variable.reg ?enable ?clear ?clear_to (to_spec clocking) ~width
     ;;
 
+    let cut_through_reg ?enable ?clear ?clear_to clocking ~width =
+      Always.Variable.cut_through_reg ?enable ?clear ?clear_to (to_spec clocking) ~width
+    ;;
+
     let reg_with_int_default ?enable ?clear clocking ~width ~clear_to =
       let clear_to = Signal.of_int_trunc ~width clear_to in
       reg ?enable ?clear ~clear_to clocking ~width
     ;;
+  end
+end
+
+module Generate_interface () = struct
+  type 'a t =
+    { clock : 'a
+    ; clear : 'a
+    }
+  [@@deriving hardcaml ~rtlmangle:false]
+end
+
+module Make () = struct
+  module Intf = Generate_interface ()
+  include Intf
+  include Generate_functions (Intf) (Signal) (Always)
+
+  module Clocked = struct
+    include Intf
+    include Generate_functions (Intf) (Clocked_signal) (Always.Clocked)
   end
 end
 

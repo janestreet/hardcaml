@@ -1,4 +1,1 @@
-(** Synchronous FIFO implementions with optional [showahead] functionality and pipelining
-    stages. *)
-
-include Fifo_intf.S
+include Fifo_intf.Fifo (** @inline *)

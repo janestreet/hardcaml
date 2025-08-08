@@ -41,6 +41,30 @@ module type Comments = sig
   val comment : t -> string option
 end
 
+module type Coverage = sig
+  open Coverage_prim
+
+  type t
+
+  (** Attach a waiver for mux coverage. Raises if the signal is not a mux. *)
+  val add_mux_waiver_exn : t -> int Waiver.t -> t
+
+  (** Attach a waiver for cases coverage. Raises if the signal is not a cases signal. *)
+  val add_cases_waiver_exn : t -> Case.t Waiver.t -> t
+
+  (** Attach a waiver for register coverage. Raises if the signal is not a register or it
+      is an always state register. *)
+  val add_register_waiver_exn : t -> Toggle.t Waiver.t -> t
+
+  (** Attach a state waiver to an always state register. Raises if the signal is not an
+      always state register. *)
+  val add_always_state_waiver_exn : t -> string Waiver.t -> t
+
+  (** Attach as transition wavier to an always state register. Raises if the signal is not
+      an always state register. *)
+  val add_always_state_transition_waiver_exn : t -> string Transition.t Waiver.t -> t
+end
+
 module type Ports = sig
   type t
 
@@ -68,12 +92,19 @@ end
 
 module type Logic = sig
   type t
+  type info
 
   (** Combinational logic API with constant propogation optimizations. *)
   include Comb.S with type t := t
 
   (** Combinational logic API without constant propogation optimizations. *)
   module Unoptimized : Comb.S with type t := t
+
+  (** Create the signal from bits. *)
+  val of_bits : Bits.t -> t
+
+  (** Convert the signal to bits. Raises if the signal is not a constant. *)
+  val to_bits : t -> Bits.t
 end
 
 module type Regs = sig
@@ -97,6 +128,22 @@ module type Regs = sig
       RTL attributes will also be applied to each register created. *)
   val pipeline : ?attributes:Rtl_attribute.t list -> (n:int -> t -> t) with_register_spec
 
+  (** A register which forwards its input value to the output during cycles in which it is
+      enabled.
+
+      Implemented as a register with a mux on the output. Note that the cut through
+      bevahiour will also occur if enable is high during a clear (or even reset)
+      operation. *)
+  val cut_through_reg
+    :  ?initialize_to:t
+    -> ?reset_to:t
+    -> ?clear:t
+    -> ?clear_to:t
+    -> Reg_spec.t
+    -> enable:t
+    -> t
+    -> t
+
   (** [Staged.unstage (prev spec ?enable d)] returns a function [prev n] which provides
       [d] registered [n] times (ie the value of [d] [n] cycles in the past). [n=0] means
       the current (combinational value).
@@ -104,6 +151,23 @@ module type Regs = sig
       The internal registers are shared between calls. When called multiple times with a
       maximum value of [n] exactly [n] registers are created. *)
   val prev : (t -> (int -> t) Staged.t) with_register_spec
+end
+
+module type Memory_prim = sig
+  type t
+
+  (** Underlying function for constructing various memory primitives. Should not be used
+      by client code. Instead, use the functions defined in [Memories]. *)
+  val multiport_memory_prim
+    :  ?name:string
+    -> ?attributes:Rtl_attribute.t list
+    -> ?initialize_to:Bits.t array
+    -> int
+    -> remove_unused_write_ports:bool
+    -> data_width:int
+    -> write_ports:t Write_port.t array
+    -> read_addresses:t array
+    -> t array
 end
 
 module type Memories = sig
@@ -166,10 +230,27 @@ module type Memories = sig
     -> t
 end
 
+module type Underlying_representation = sig
+  type t
+  type info
+
+  (** Return the underlying representation for the signal. *)
+  val to_rep : t -> Signal__type.t * info
+
+  (** Construct a signal from the underlying representation and the information tracked by
+      this signal. *)
+  val from_rep : Signal__type.t -> info -> t
+
+  (** Update the information attached to this signal. *)
+  val update_rep : t -> info:info -> t
+end
+
 module type S = sig
   (** Signal type for constructing logic designs. *)
 
   type t
+
+  include Signal__type.With_info with type t := t
 
   (** {1 Naming}
 
@@ -192,6 +273,7 @@ module type S = sig
       information to downstream tooling (specifically Verilator). *)
 
   include Comments with type t := t
+  include Coverage with type t := t
 
   (** {1 Circuit Input and Output Ports}
 
@@ -224,7 +306,7 @@ module type S = sig
       simplified. You can avoid this by using the operations from the [Unoptimized]
       module. *)
 
-  include Logic with type t := t
+  include Logic with type t := t and type info := info
 
   (** {1 Registers}
 
@@ -248,21 +330,38 @@ module type S = sig
 
   include Memories with type t := t
 
+  (** {1 Signal representations}
+
+      Operate on the underlying representation of the signal type. This is useful if you
+      need to operate on the underlying [Signal.Type] that represents the [Signal.S] that
+      you are working with or to reflect on the extra information attached to the specific
+      [Signal.S] (like clock domains for [Clocked.t]). *)
+
+  include Underlying_representation with type t := t and type info := info
+
   (** Pretty printer. *)
   val pp : Formatter.t -> t -> unit
 
   (**/**)
 
-  (* Apply a name to a signal using the hardcaml ppx [%hw] extension *)
+  (*_ Apply a name to a signal using the hardcaml ppx [%hw] extension *)
   val __ppx_auto_name : ?loc:Stdlib.Lexing.position -> t -> string -> t
+
+  module Expert : sig
+    (*_ Exported for internal use. *)
+    include Memory_prim with type t := t
+  end
 end
 
 module type Signal = sig
   type t = Signal__type.t
 
+  module type S = S
+
   module Type = Signal__type
   include S with type t := Signal__type.t
 
   (** Returns the unique id of the signal. *)
-  val uid : t -> Type.Uid.t
+  val%template uid : t -> Type.Uid.t
+  [@@mode m = (local, global)]
 end

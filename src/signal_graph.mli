@@ -8,6 +8,15 @@
 
 open Base
 
+module Normalized_signal_uid : sig
+  type t = private Signal.Type.Uid.t
+  [@@deriving compare ~localize, hash, sexp_of, to_string]
+
+  include Comparator.S with type t := t
+
+  include%template Equal.S [@mode local] with type t := t
+end
+
 type t [@@deriving sexp_of]
 
 (** Create a [Signal_graph.t] from a list of signals (commonly, circuit outputs). *)
@@ -69,6 +78,10 @@ val rewrite
 (** [normalize_uids t] creates a copy of [t] that is identical to [t] except the uids are
     numbered starting at 1. *)
 val normalize_uids : t -> t
+
+(** Creates a mapping from current uids to normalized uids (starting from 1), without
+    modifying the current graph. *)
+val compute_normalized_uids : t -> (Normalized_signal_uid.t * Signal.t) list
 
 (** Fan-out of each signal in the signal graph. The fan-out of a signal is the set of
     signals it drives. *)

@@ -153,7 +153,7 @@ module State = struct
   type t =
     | Start
     | Loop
-  [@@deriving sexp_of, compare, enumerate]
+  [@@deriving sexp_of, compare ~localize, enumerate]
 end
 
 let loop_controller (i : _ I.t) =

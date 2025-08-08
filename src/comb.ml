@@ -16,8 +16,8 @@ module Make_primitives (Gates : Gates) = struct
   include Gates
 
   (* utils *)
-  let vdd = of_constant (Constant.of_int ~width:1 1)
-  let gnd = of_constant (Constant.of_int ~width:1 0)
+  let vdd = of_constant (Constant.of_int ~width:1 1) -- "vdd"
+  let gnd = of_constant (Constant.of_int ~width:1 0) -- "gnd"
 
   let bits_lsb x =
     let w = width x in
@@ -142,9 +142,8 @@ type nonrec ('a, 'b) with_valid2 = ('a, 'b) with_valid2 =
 type nonrec 'a with_valid = 'a with_valid
 
 module Make (Prims : Primitives) = struct
-  type t = Prims.t
+  type t = Prims.t [@@deriving equal ~localize]
 
-  let equal = Prims.equal
   let empty = Prims.empty
   let is_empty = Prims.is_empty
   let ( -- ) ?(loc = Stdlib.Lexing.dummy_pos) a b = Prims.( -- ) ~loc a b
@@ -227,7 +226,7 @@ module Make (Prims : Primitives) = struct
     if Int.( < ) x Int.zero
     then raise_s [%message "[of_unsigned_int] input value is less than 0" (x : Int.t)];
     let max_value =
-      if width >= Int.num_bits - 1
+      if width >= Int.(num_bits |> to_int_exn) - 1
       then Int.max_value
       else Int.((Int.one lsl width) - Int.one)
     in
@@ -250,7 +249,7 @@ module Make (Prims : Primitives) = struct
     x
     =
     let max_value, min_value =
-      if width >= Int.num_bits
+      if width >= Int.(num_bits |> to_int_exn)
       then Int.max_value, Int.min_value
       else (
         let width = width - 1 in
@@ -321,6 +320,18 @@ module Make (Prims : Primitives) = struct
 
   let of_char c = of_int_trunc ~width:8 (Char.to_int c)
 
+  let of_ascii_string_msb s =
+    if String.is_empty s
+    then
+      raise_s
+        [%message.omit_nil
+          "[of_ascii_string] got empty string"
+            ~loc:(Caller_id.get () : Caller_id.t option)];
+    s |> String.to_list |> List.map ~f:of_char |> Prims.concat_msb
+  ;;
+
+  let of_ascii_string_lsb s = String.rev s |> of_ascii_string_msb
+
   let[@cold] raise_concat_empty s =
     raise_s
       [%message.omit_nil
@@ -345,8 +356,8 @@ module Make (Prims : Primitives) = struct
 
   let concat_lsb s = concat_msb (List.rev s)
   let ( @: ) a b = concat_msb [ a; b ]
-  let vdd = of_bit_string "1" -- "vdd"
-  let gnd = of_bit_string "0" -- "gnd"
+  let vdd = Prims.vdd
+  let gnd = Prims.gnd
   let is_vdd t = equal t vdd
   let is_gnd t = equal t gnd
 
@@ -1355,22 +1366,26 @@ module Make (Prims : Primitives) = struct
   let to_int32 = to_int32_trunc
 
   let to_signed_int32 =
-    to_signed ~num_bits:Int32.num_bits ~to_int_type_trunc:to_int32_trunc
+    to_signed ~num_bits:Int32.(num_bits |> to_int_trunc) ~to_int_type_trunc:to_int32_trunc
   ;;
 
   let to_unsigned_int32 =
-    to_unsigned ~num_bits:(Int32.num_bits - 1) ~to_int_type_trunc:to_int32_trunc
+    to_unsigned
+      ~num_bits:(Int32.(num_bits |> to_int_trunc) - 1)
+      ~to_int_type_trunc:to_int32_trunc
   ;;
 
   let to_int64_trunc c = to_constant c |> Constant.to_int64
   let to_int64 = to_int64_trunc
 
   let to_signed_int64 =
-    to_signed ~num_bits:Int64.num_bits ~to_int_type_trunc:to_int64_trunc
+    to_signed ~num_bits:Int64.(num_bits |> to_int_trunc) ~to_int_type_trunc:to_int64_trunc
   ;;
 
   let to_unsigned_int64 =
-    to_unsigned ~num_bits:(Int64.num_bits - 1) ~to_int_type_trunc:to_int64_trunc
+    to_unsigned
+      ~num_bits:(Int64.(num_bits |> to_int_trunc) - 1)
+      ~to_int_type_trunc:to_int64_trunc
   ;;
 
   let to_char x =
@@ -1379,6 +1394,19 @@ module Make (Prims : Primitives) = struct
     then raise_s [%message "[to_char] signal must be 8 bits wide" (actual_width : int)];
     Char.of_int_exn (to_int_trunc x)
   ;;
+
+  let to_ascii_string_lsb x =
+    let actual_width = width x in
+    if actual_width % 8 <> 0
+    then
+      raise_s
+        [%message
+          "[to_ascii_string] signal must be a multiple of 8 bits wide"
+            (actual_width : int)];
+    x |> split_lsb ~exact:true ~part_width:8 |> List.map ~f:to_char |> String.of_char_list
+  ;;
+
+  let to_ascii_string_msb x = to_ascii_string_lsb x |> String.rev
 
   module With_zero_width = struct
     type non_zero_width = t [@@deriving sexp_of]

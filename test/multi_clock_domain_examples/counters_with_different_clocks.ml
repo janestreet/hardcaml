@@ -1,6 +1,7 @@
 open! Core
 open Hardcaml
 open Signal
+open Hardcaml_event_driven_sim.Two_state_simulator
 
 module I = struct
   type 'a t =
@@ -68,28 +69,22 @@ let run_cyclesim_test circuit =
 ;;
 
 let run_event_sim_test circuit =
-  let module Event_sim =
-    Hardcaml_event_driven_sim.Make (Hardcaml_event_driven_sim.Two_state_logic)
-  in
-  let module Sim_interface = Event_sim.With_interface (I) (O) in
+  let module Sim_interface = With_interface (I) (O) in
   let waves, { Sim_interface.simulator = sim; _ } =
-    Sim_interface.with_waveterm
-      ~config:Hardcaml_event_driven_sim.Config.trace_all
-      circuit
-      (fun input _output ->
-         let open Hardcaml_event_driven_sim.Two_state_logic in
-         let open Event_sim.Event_simulator in
-         let input = I.map input ~f:(fun v -> v.signal) in
-         [ Sim_interface.create_clock input.I.clock ~time:1 ~initial_delay:0
-         ; Async.create_process (fun () ->
-             Async.forever (fun () ->
-               input.I.enable <-- of_bool true;
-               let%bind.Async.Deferred () = Async.delay 2 in
-               input.I.enable <-- of_bool false;
-               Async.delay 2))
-         ])
+    Sim_interface.with_waveterm ~config:Config.trace_all circuit (fun input _output ->
+      let open Logic in
+      let open Simulator in
+      let input = I.map input ~f:(fun v -> v.signal) in
+      [ Sim_interface.create_clock input.I.clock ~time:1 ~initial_delay:0
+      ; Async.create_process (fun () ->
+          Async.forever (fun () ->
+            input.I.enable <-- of_bool true;
+            let%bind.Async.Deferred () = Async.delay 2 in
+            input.I.enable <-- of_bool false;
+            Async.delay 2))
+      ])
   in
-  Event_sim.Event_simulator.run ~time_limit:20 sim;
+  Simulator.run ~time_limit:20 sim;
   Hardcaml_event_driven_sim.Waveterm.Waveform.expect waves ~wave_width:1 ~display_width:82
 ;;
 

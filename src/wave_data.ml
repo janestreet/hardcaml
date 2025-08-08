@@ -22,7 +22,7 @@ type t =
       (* ; set : Bytes.t -> int -> Bits.t -> unit [@compare.ignore] *)
   ; setter_index : int
   }
-[@@deriving sexp_of, compare, fields ~getters, equal]
+[@@deriving sexp_of, compare ~localize, fields ~getters, equal ~localize]
 
 let get64u = Bytes.unsafe_get_int64
 let set64u = Bytes.unsafe_set_int64

@@ -35,7 +35,7 @@ An additional syntax allows the naming of `Always.Variable`s.
 
 ```ocaml
 # let create scope =
-    let%hw_var x = Always.Variable.wire ~default:gnd in
+    let%hw_var x = Always.Variable.wire ~default:gnd () in
     x.value;;
 val create : Scope.t -> t = <fun>
 # create (Scope.create ())
@@ -84,11 +84,12 @@ This can be applied to specialized Hardcaml types and in particular is implement
 
 <!--
 ```ocaml
-# module State = struct type t = A [@@deriving sexp_of, compare, enumerate] end;;
+# module State = struct type t = A [@@deriving sexp_of, compare ~localize, enumerate] end;;
 module State :
   sig
     type t = A
     val sexp_of_t : t -> Sexp.t
+    val compare__local : local_ t -> local_ t -> int
     val compare : t -> t -> int
     val all : t list
   end
@@ -129,10 +130,10 @@ We can use `%hw_var` and `%hw.Module.Path` with this form also, however, all com
 must be of the appropriate, and same, type (ie `Signal.t` or `Always.Variable.t` or
 `Some_interface.t`).
 
-# Lists and Arrays
+# Lists, Arrays, and Iarrays
 
-The final supported form allows arrays and lists to be named. As might be expected, it
-applies the name along with an index for each element.
+The final supported form allows lists, arrays, and iarrays to be named. As might be
+expected, it applies the name along with an index for each element.
 
 ```ocaml
 # let create scope x =
@@ -145,8 +146,10 @@ val create : Scope.t -> t list -> t list = <fun>
  (const (names (foo$1)) (width 3) (value 0b101))]
 ```
 
-`%hw_list` is used for lists of signals.  `%hw_array` is similarly for arrays.
+`%hw_list` is used for lists of signals.  `%hw_array` and `%hw_iarray` is similarly for
+arrays and iarrays respectively.
 
-`%hw_var_list` and `%hw_var_array` expect the list/array to contain `Always.Variable.t`s.
+`%hw_var_list`, `%hw_var_array` and `%hw_var_iarray` expect the list/array/iarray to
+contain `Always.Variable.t`s.
 
 These forms may also include a module path for use with interfaces and so on.

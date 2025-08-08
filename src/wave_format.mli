@@ -15,7 +15,7 @@ type t =
 [@@deriving sexp_of]
 
 (** [Custom] constructors are compared for physical equality. *)
-include Equal.S with type t := t
+include%template Equal.S [@mode local] with type t := t
 
 (** Convert [Bits.t] to a string representation depending on the required format.
 

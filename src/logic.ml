@@ -14,11 +14,11 @@ module Std_logic = struct
     | L
     | H
     | Don't_care
-  [@@deriving compare, enumerate, sexp, variants]
+  [@@deriving compare ~localize, enumerate, sexp, variants]
 
   let optimise_muxs = false
   let constant_only = true
-  let equal = [%compare.equal: t]
+  let%template equal = [%compare_local.equal: t] [@@mode __ = (global, local)]
 
   let to_char = function
     | U -> 'U'
@@ -89,11 +89,11 @@ module Four_state = struct
     | Z
     | L0
     | L1
-  [@@deriving compare, enumerate, sexp, variants]
+  [@@deriving compare ~localize, enumerate, sexp, variants]
 
   let optimise_muxs = false
   let constant_only = true
-  let equal = [%compare.equal: t]
+  let%template equal = [%compare_local.equal: t] [@@mode __ = (global, local)]
 
   let to_char = function
     | X -> 'x'

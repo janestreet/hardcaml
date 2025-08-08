@@ -60,7 +60,7 @@ module Priority_encoder = struct
 
   (* $MDX part-begin=priority_encoder_1 *)
   let priority_encoder_1 ~sel ~a ~b ~c ~d =
-    let out = Always.Variable.wire ~default:(zero 8) in
+    let out = Always.Variable.wire ~default:(zero 8) () in
     Always.(
       compile
         [ if_ sel.:(3) [ out <-- d ]
@@ -185,7 +185,7 @@ module Alu = struct
         | Not
         | Less
         | Equal
-      [@@deriving sexp_of, compare, enumerate]
+      [@@deriving sexp_of, compare ~localize, enumerate]
     end
 
     include Hardcaml.Enum.Make_enums (Enum)

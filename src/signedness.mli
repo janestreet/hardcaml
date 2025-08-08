@@ -3,4 +3,4 @@ open! Base
 type t =
   | Signed
   | Unsigned
-[@@deriving sexp_of, equal]
+[@@deriving sexp_of, equal ~localize]

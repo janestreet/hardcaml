@@ -85,7 +85,7 @@ let add scope name assertion =
 module Always = struct
   let add scope name assertion =
     check_assertion_width name assertion;
-    let assertion_var = Always.Variable.wire ~default:(Signal.one 1) in
+    let assertion_var = Always.Variable.wire ~default:(Signal.one 1) () in
     add scope name (Always.Variable.value assertion_var);
     Always.( <-- ) assertion_var assertion
   ;;

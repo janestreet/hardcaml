@@ -9,6 +9,8 @@ module Port_list = Cyclesim0.Port_list
 module Private = struct
   include Cyclesim0.Private
   module Traced_nodes = Cyclesim0.Traced_nodes
+
+  let eq () = Type_equal.T
 end
 
 module Traced = Cyclesim0.Traced
@@ -42,6 +44,31 @@ let cycle ?(n = 1) sim =
     cycle_at_clock_edge sim;
     cycle_after_clock_edge sim
   done
+;;
+
+let raise_after_timeout ?message ?(here = Stdlib.Lexing.dummy_pos) sim ~timeout =
+  let cycle' = ref 0 in
+  Private.modify
+    sim
+    [ (Side.Before, Reset, fun () -> cycle' := 0)
+    ; ( Side.Before
+      , Before_clock_edge
+      , fun () ->
+          let cycle = !cycle' in
+          Int.incr cycle';
+          if cycle = timeout
+          then
+            raise_s
+              [%message.omit_nil
+                "Cyclesim timed out"
+                  ~_:(message : string option)
+                  (timeout : int)
+                  ~timeout_set_at:(here : Source_code_position.t)] )
+    ]
+;;
+
+let with_timeout ?message ?(here = Stdlib.Lexing.dummy_pos) ~timeout ~f sim =
+  f (raise_after_timeout ?message ~here ~timeout sim)
 ;;
 
 let in_port (sim : _ Cyclesim0.t) name =
@@ -115,7 +142,12 @@ let combine = Cyclesim_combine.combine
 
 (* compilation *)
 
-let create = Cyclesim_compile.create
+let create' ?config circuit =
+  let sim = Cyclesim_compile.create ?config circuit in
+  Cyclesim_coverage.For_cyclesim.maybe_wrap sim circuit
+;;
+
+let create ?config circuit = create' ?config circuit
 
 (* interfaces *)
 
@@ -135,7 +167,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
     Private.coerce sim ~to_input ~to_output
   ;;
 
-  let create ?config ?circuit_config create_fn =
+  let create ?config ?circuit_config ?(name = "simulator") create_fn =
     let circuit_config =
       (* Because the circuit will only be used for simulations, we can disable a couple of
          passes we would otherwise want - combinational loop checks (will be done during
@@ -145,7 +177,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
       | None -> Circuit.Config.default_for_simulations
       | Some config -> config
     in
-    let circuit = C.create_exn ~config:circuit_config ~name:"simulator" create_fn in
+    let circuit = C.create_exn ~config:circuit_config ~name create_fn in
     let sim = create ?config circuit in
     coerce sim
   ;;

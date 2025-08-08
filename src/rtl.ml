@@ -49,6 +49,7 @@ module Circuit_instance = struct
       let ast = Lazy.force ast in
       match language with
       | Verilog -> Rtl_verilog_of_ast.to_rope ast
+      | Systemverilog -> Rtl_verilog_of_ast.to_rope ast
       | Vhdl -> Rtl_vhdl_of_ast.to_rope ast
     in
     let rtl = lazy (to_rope ast) in
@@ -100,7 +101,7 @@ module Hierarchical_circuits = struct
             List.filter_map
               (Circuit.instantiations circuit |> List.rev)
               ~f:(fun inst ->
-                match Circuit_database.find database ~mangled_name:inst.inst_name with
+                match Circuit_database.find database ~mangled_name:inst.circuit_name with
                 | None -> None
                 | Some circuit ->
                   maybe_create

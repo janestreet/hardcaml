@@ -33,19 +33,25 @@ module Middle = struct
       { o : 'a Inner.O.t array [@length 2]
       ; x : 'a
       }
-    [@@deriving hardcaml]
+    [@@deriving hardcaml ~rtlmangle:false]
   end
 
   module Inner_inst = Hierarchy.In_scope (Inner.I) (Inner.O)
 
   let create ?(with_hierarchical_here = false) scope (i : _ I.t) =
     let ( -- ) = Scope.naming scope in
-    let (o1 : _ Inner.O.t) = Inner_inst.create ~scope ~name:"inner" Inner.create i in
+    let (o1 : _ Inner.O.t) =
+      Inner_inst.hierarchical
+        ~how_to_instantiate:Inlined_in_scope
+        ~scope
+        ~name:"inner"
+        Inner.create
+        i
+    in
     let (o2 : _ Inner.O.t) =
       let keep_hierarchy = Rtl_attribute.Vivado.keep_hierarchy true in
       if with_hierarchical_here
-      then
-        Inner_inst.hierarchical_here ~attributes:[ keep_hierarchy ] ~scope Inner.create i
+      then Inner_inst.hierarchical ~attributes:[ keep_hierarchy ] ~scope Inner.create i
       else
         Inner_inst.hierarchical
           ~attributes:[ keep_hierarchy ]
@@ -264,8 +270,8 @@ let%expect_test "hierarchical" =
             inner_1
             ( .a(_8),
               .b(_5),
-              .d(_11[1:1]),
-              .c(_11[0:0]) );
+              .c(_11[0:0]),
+              .d(_11[1:1]) );
         assign _13 = _11[0:0];
         assign _5 = b;
         assign _8 = a;
@@ -313,11 +319,11 @@ let%expect_test "hierarchical" =
             the_middle
             ( .a(_8),
               .b(_6),
-              .x(_10[4:4]),
-              .d1(_10[3:3]),
-              .c1(_10[2:2]),
+              .c0(_10[0:0]),
               .d0(_10[1:1]),
-              .c0(_10[0:0]) );
+              .c1(_10[2:2]),
+              .d1(_10[3:3]),
+              .x(_10[4:4]) );
         assign _15 = _10[0:0];
         assign c0 = _15;
         assign d0 = _14;
@@ -384,8 +390,8 @@ let%expect_test "hierarchical" =
             inner_1
             ( .a(_8),
               .b(_5),
-              .d(_11[1:1]),
-              .c(_11[0:0]) );
+              .c(_11[0:0]),
+              .d(_11[1:1]) );
         assign _13 = _11[0:0];
         assign _5 = b;
         assign _8 = a;
@@ -433,11 +439,11 @@ let%expect_test "hierarchical" =
             the_middle
             ( .a(_8),
               .b(_6),
-              .x(_10[4:4]),
-              .d1(_10[3:3]),
-              .c1(_10[2:2]),
+              .c0(_10[0:0]),
               .d0(_10[1:1]),
-              .c0(_10[0:0]) );
+              .c1(_10[2:2]),
+              .d1(_10[3:3]),
+              .x(_10[4:4]) );
         assign _15 = _10[0:0];
         assign c0 = _15;
         assign d0 = _14;
@@ -504,8 +510,8 @@ let%expect_test "hierarchical" =
             inner_1
             ( .a(_8),
               .b(_5),
-              .d(_11[1:1]),
-              .c(_11[0:0]) );
+              .c(_11[0:0]),
+              .d(_11[1:1]) );
         assign _13 = _11[0:0];
         assign _5 = b;
         assign _8 = a;
@@ -553,11 +559,11 @@ let%expect_test "hierarchical" =
             the_middle
             ( .a(_8),
               .b(_6),
-              .x(_10[4:4]),
-              .d1(_10[3:3]),
-              .c1(_10[2:2]),
+              .c0(_10[0:0]),
               .d0(_10[1:1]),
-              .c0(_10[0:0]) );
+              .c1(_10[2:2]),
+              .d1(_10[3:3]),
+              .x(_10[4:4]) );
         assign _15 = _10[0:0];
         assign c0 = _15;
         assign d0 = _14;
@@ -590,7 +596,7 @@ module Floating_outer = struct
       { foo : 'a
       ; inner : 'a Floating_inner.I.t
       }
-    [@@deriving hardcaml]
+    [@@deriving hardcaml ~rtlmangle:false]
   end
 
   module O = Floating_inner.O

@@ -24,7 +24,9 @@ end
 module Instantiation_sexp = struct
   type t = Signal.Type.instantiation
 
-  let sexp_of_t (t : t) = [%message "" (t.inst_name : string) (t.inst_instance : string)]
+  let sexp_of_t (t : t) =
+    [%message "" (t.circuit_name : string) (t.instance_label : string)]
+  ;;
 end
 
 module Port_checks = struct
@@ -69,6 +71,7 @@ end
 
 type t =
   { name : string
+  ; caller_id : Caller_id.t option
   ; config : Config.t
   ; inputs : Signal.t list
   ; outputs : Signal.t list
@@ -209,6 +212,7 @@ let create_exn ?(config = Config.default) ~name outputs =
   check_port_names_are_well_formed name inputs outputs;
   (* construct the circuit *)
   { name
+  ; caller_id = Caller_id.get ()
   ; config
   ; inputs
   ; outputs
@@ -224,13 +228,12 @@ let set_phantom_inputs circuit phantom_inputs =
      that have the same name as an output. *)
   let module Port = struct
     module T = struct
-      type t = string * int [@@deriving sexp_of]
-
-      let compare (n0, _) (n1, _) = String.compare n0 n1
+      type t = string * (int[@compare.ignore]) [@@deriving compare ~localize, sexp_of]
     end
 
     include T
-    include Comparable.Make (T)
+
+    include%template Comparable.Make [@mode local] (T)
 
     let of_signal port =
       let name =

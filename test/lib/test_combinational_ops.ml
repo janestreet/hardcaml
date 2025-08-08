@@ -2,58 +2,58 @@ open! Import
 
 let%expect_test "no outputs" =
   require_does_raise (fun () ->
-    Combinational_op.create
+    Combinational_op.create_mutable
       ()
       ~name:"no_outputs"
       ~input_widths:[]
       ~output_widths:[]
-      ~create_fn:(fun _ _ -> ()));
+      ~create_fn:(fun ~inputs:_ ~outputs:_ -> Staged.stage Fn.id));
   [%expect {| "[Combinational_op]s require at least one output" |}]
 ;;
 
 let%expect_test "no inputs" =
   require_does_not_raise (fun () ->
     ignore
-      (Combinational_op.create
+      (Combinational_op.create_mutable
          ()
          ~name:"no_inputs"
          ~input_widths:[]
          ~output_widths:[ 1 ]
-         ~create_fn:(fun _ _ -> ())
+         ~create_fn:(fun ~inputs:_ ~outputs:_ -> Staged.stage Fn.id)
        : Combinational_op.t));
   [%expect {| |}]
 ;;
 
 let%expect_test "bad output width" =
   require_does_raise (fun () ->
-    Combinational_op.create
+    Combinational_op.create_mutable
       ()
       ~name:"bad_width"
       ~input_widths:[ 1 ]
       ~output_widths:[ 0 ]
-      ~create_fn:(fun _ _ -> ()));
+      ~create_fn:(fun ~inputs:_ ~outputs:_ -> Staged.stage Fn.id));
   [%expect {| ("[Combinational_op] output width <=0" (width 0)) |}]
 ;;
 
 let%expect_test "bad input width" =
   require_does_raise (fun () ->
-    Combinational_op.create
+    Combinational_op.create_mutable
       ()
       ~name:"bad_width"
       ~input_widths:[ 0 ]
       ~output_widths:[ 1 ]
-      ~create_fn:(fun _ _ -> ()));
+      ~create_fn:(fun ~inputs:_ ~outputs:_ -> Staged.stage Fn.id));
   [%expect {| ("[Combinational_op] input width <=0" (width 0)) |}]
 ;;
 
 let%expect_test "names must be unique in database" =
   let op =
-    Combinational_op.create
+    Combinational_op.create_mutable
       ()
       ~name:"foo"
       ~input_widths:[ 1 ]
       ~output_widths:[ 1 ]
-      ~create_fn:(fun _ _ -> ())
+      ~create_fn:(fun ~inputs:_ ~outputs:_ -> Staged.stage Fn.id)
   in
   let database = Combinational_ops_database.create () in
   Combinational_ops_database.insert database op;
@@ -75,24 +75,24 @@ let create_op_functional () =
     ~name:"add_sub"
     ~input_widths:[ num_bits; num_bits ]
     ~output_widths:[ num_bits; num_bits ]
-    ~create_fn:
-      (Combinational_op.create_fn_of_bits (function
-        | [ a; b ] -> Bits.[ a +: b; a -: b ]
-        | _ -> raise_s [%message "invalid arguments"]))
+    ~create_fn:(function
+    | [ a; b ] -> Bits.[ a +: b; a -: b ]
+    | _ -> raise_s [%message "invalid arguments"])
 ;;
 
 let create_op_mutable () =
-  Combinational_op.create
+  Combinational_op.create_mutable
     ()
     ~name:"add_sub_mutable"
     ~input_widths:[ num_bits; num_bits ]
     ~output_widths:[ num_bits; num_bits ]
-    ~create_fn:(fun i o ->
-      match i, o with
-      | [ a; b ], [ c; d ] ->
-        Bits.Mutable.( +: ) c a b;
-        Bits.Mutable.( -: ) d a b
-      | _ -> raise_s [%message "invalid arguments"])
+    ~create_fn:(fun ~inputs ~outputs ->
+      Staged.stage (fun () ->
+        match inputs, outputs with
+        | [ a; b ], [ c; d ] ->
+          Bits.Mutable.( +: ) c a b;
+          Bits.Mutable.( -: ) d a b
+        | _ -> raise_s [%message "invalid arguments"]))
 ;;
 
 let%expect_test "sexp_of" =
@@ -156,8 +156,8 @@ let%expect_test "internal representation" =
             the_add_sub
             ( .i0(a),
               .i1(b),
-              .o1(_5[15:8]),
-              .o0(_5[7:0]) );
+              .o0(_5[7:0]),
+              .o1(_5[15:8]) );
         assign _7 = _5[7:0];
         assign c = _7;
         assign d = _6;
@@ -191,8 +191,8 @@ let%expect_test "internal representation (mutable)" =
             the_add_sub_mutable
             ( .i0(a),
               .i1(b),
-              .o1(_5[15:8]),
-              .o0(_5[7:0]) );
+              .o0(_5[7:0]),
+              .o1(_5[15:8]) );
         assign _7 = _5[7:0];
         assign c = _7;
         assign d = _6;
@@ -201,19 +201,13 @@ let%expect_test "internal representation (mutable)" =
     |}]
 ;;
 
-let sim_functional ~database circuit =
+let create_sim ~database circuit =
   Cyclesim.create
     ~config:{ Cyclesim.Config.default with combinational_ops_database = database }
     circuit
 ;;
 
-let sim_imperative ~database circuit =
-  Cyclesim.create
-    ~config:{ Cyclesim.Config.default with combinational_ops_database = database }
-    circuit
-;;
-
-let testbench ~create_circuit ~create_sim =
+let testbench ~create_circuit =
   let database, circuit = create_circuit () in
   let sim = create_sim ~database circuit in
   let a, b = Cyclesim.in_port sim "a", Cyclesim.in_port sim "b" in
@@ -230,10 +224,8 @@ let testbench ~create_circuit ~create_sim =
 (* Check all variants are the same - functional / imperative simulation and [Bits] /
    [Bits.Mutable] operation implementations - including those derived automatically *)
 let%expect_test "functional sim / bits" =
-  let o1 = testbench ~create_circuit ~create_sim:sim_functional in
-  let o2 = testbench ~create_circuit ~create_sim:sim_imperative in
-  let o3 = testbench ~create_circuit:create_circuit_mutable ~create_sim:sim_functional in
-  let o4 = testbench ~create_circuit:create_circuit_mutable ~create_sim:sim_imperative in
+  let o1 = testbench ~create_circuit in
+  let o2 = testbench ~create_circuit:create_circuit_mutable in
   let equal o o' =
     List.equal
       (fun (_, _, c1, c2) (_, _, c1', c2') -> Bits.equal c1 c1' && Bits.equal c2 c2')
@@ -241,8 +233,6 @@ let%expect_test "functional sim / bits" =
       o'
   in
   require (equal o1 o2);
-  require (equal o1 o3);
-  require (equal o1 o4);
   let sexp_of_result (a, b, c, d) =
     [%message "" (a : Bits.t) (b : Bits.t) (c : Bits.t) (d : Bits.t)]
   in
@@ -314,5 +304,169 @@ let%expect_test "functional sim / bits" =
        (b 00000011)
        (c 00000110)
        (d 00000000))))
+    |}]
+;;
+
+let%expect_test "instantiate with wrong input width" =
+  let op =
+    Combinational_op.create_mutable
+      ()
+      ~name:"invalid_inputs_width"
+      ~input_widths:[ 3 ]
+      ~output_widths:[ 1 ]
+      ~create_fn:(fun ~inputs:_ ~outputs:_ -> Staged.stage Fn.id)
+  in
+  require_does_raise (fun () -> Combinational_op.instantiate op ~inputs:[ Signal.wire 4 ]);
+  [%expect
+    {|
+    ("[Combinational_op.instantiate] input signal is wrong width"
+     (t.name         invalid_inputs_width)
+     (expected_width 3)
+     (input_signal (wire (width 4))))
+    |}]
+;;
+
+let%expect_test "outputs of ops with different widths" =
+  let test w1 w2 =
+    let op =
+      Combinational_op.create_mutable
+        ()
+        ~name:"port_widths"
+        ~input_widths:[ 3; 2 ]
+        ~output_widths:[ w1; w2 ]
+        ~create_fn:(fun ~inputs ~outputs ->
+          let a, b, c, d =
+            match inputs, outputs with
+            | [ a; b ], [ c; d ] -> a, b, c, d
+            | _ -> raise_s [%message "invalid arguments"]
+          in
+          Staged.stage (fun () ->
+            Bits.Mutable.copy_bits
+              ~dst:c
+              ~src:
+                (Bits.of_unsigned_int
+                   ~width:(Bits.Mutable.width c)
+                   (Bits.Mutable.width a));
+            Bits.Mutable.copy_bits
+              ~dst:d
+              ~src:
+                (Bits.of_unsigned_int
+                   ~width:(Bits.Mutable.width d)
+                   (Bits.Mutable.width b));
+            print_s
+              [%message
+                (Bits.Mutable.to_bits c : Bits.t)
+                  (Bits.Mutable.to_bits d : Bits.t)
+                  (Bits.Mutable.width a : int)
+                  (Bits.Mutable.width b : int)
+                  (Bits.Mutable.width c : int)
+                  (Bits.Mutable.width d : int)]))
+    in
+    let database = Combinational_ops_database.create () in
+    Combinational_ops_database.insert database op;
+    let open Signal in
+    let a, b = input "a" 3, input "b" 2 in
+    let outputs = Combinational_op.instantiate op ~inputs:[ a; b ] in
+    let outputs = List.map2_exn [ "c"; "d" ] outputs ~f:output in
+    let circuit = Circuit.create_exn ~name:"top" outputs in
+    let sim = create_sim ~database circuit in
+    let c, d = Cyclesim.out_port sim "c", Cyclesim.out_port sim "d" in
+    Cyclesim.cycle sim;
+    print_s [%message (c : Bits.t ref) (d : Bits.t ref)]
+  in
+  test 4 4;
+  [%expect
+    {|
+    (("Bits.Mutable.to_bits c" 0011)
+     ("Bits.Mutable.to_bits d" 0010)
+     ("Bits.Mutable.width a"   3)
+     ("Bits.Mutable.width b"   2)
+     ("Bits.Mutable.width c"   4)
+     ("Bits.Mutable.width d"   4))
+    ((c 0011)
+     (d 0010))
+    |}];
+  test 3 4;
+  [%expect
+    {|
+    (("Bits.Mutable.to_bits c" 011)
+     ("Bits.Mutable.to_bits d" 0010)
+     ("Bits.Mutable.width a"   3)
+     ("Bits.Mutable.width b"   2)
+     ("Bits.Mutable.width c"   3)
+     ("Bits.Mutable.width d"   4))
+    ((c 011)
+     (d 0010))
+    |}];
+  test 7 5;
+  [%expect
+    {|
+    (("Bits.Mutable.to_bits c" 0000011)
+     ("Bits.Mutable.to_bits d" 00010)
+     ("Bits.Mutable.width a"   3)
+     ("Bits.Mutable.width b"   2)
+     ("Bits.Mutable.width c"   7)
+     ("Bits.Mutable.width d"   5))
+    ((c 0000011)
+     (d 00010))
+    |}]
+;;
+
+module I = struct
+  type 'a t =
+    { a : 'a [@bits 4]
+    ; b : 'a [@bits 5]
+    ; c : 'a [@bits 6]
+    }
+  [@@deriving hardcaml]
+end
+
+module O = struct
+  type 'a t =
+    { x : 'a [@bits 6]
+    ; y : 'a [@bits 5]
+    ; z : 'a [@bits 4]
+    }
+  [@@deriving hardcaml]
+end
+
+let create ~database (i : _ I.t) =
+  let module Op = Combinational_op.With_interface (I) (O) in
+  let op =
+    Op.create
+      ~name:"interfaces"
+      ~create_fn:(fun { a; b; c } -> { x = c; y = b; z = a })
+      ()
+  in
+  Combinational_ops_database.insert database op;
+  Op.instantiate op i
+;;
+
+let%expect_test "with interface" =
+  let database = Combinational_ops_database.create () in
+  let create = create ~database in
+  let module Sim = Cyclesim.With_interface (I) (O) in
+  let sim =
+    Sim.create
+      ~config:{ Cyclesim.Config.default with combinational_ops_database = database }
+      create
+  in
+  let inputs = Cyclesim.inputs sim in
+  let outputs = Cyclesim.outputs sim in
+  let open Bits in
+  inputs.a <--. 3;
+  inputs.b <--. 4;
+  inputs.c <--. 5;
+  Cyclesim.cycle sim;
+  print_s
+    [%message
+      (outputs.x : Bits.Hex.t ref)
+        (outputs.y : Bits.Hex.t ref)
+        (outputs.z : Bits.Hex.t ref)];
+  [%expect
+    {|
+    ((outputs.x 6'h05)
+     (outputs.y 5'h04)
+     (outputs.z 4'h3))
     |}]
 ;;

@@ -5,7 +5,7 @@ open Base
 (** Specification of attributes which may be attached to various objects within a RTL
     design. Such attributes are used to provide implementation hints to down stream CAD
     tools and do not affect any functionality within Hardcaml. *)
-type t [@@deriving compare, equal, hash, sexp_of]
+type t [@@deriving compare ~localize, equal ~localize, hash, sexp_of]
 
 include Comparator.S with type t := t
 
@@ -15,7 +15,7 @@ module Value : sig
     | Int of int
     | String of string
     | Bool of bool
-  [@@deriving compare, equal, sexp_of]
+  [@@deriving compare ~localize, equal ~localize, sexp_of]
 end
 
 module Applies_to : sig
@@ -24,7 +24,7 @@ module Applies_to : sig
     | Regs
     | Memories
     | Instantiations
-  [@@deriving compare, equal, sexp_of]
+  [@@deriving compare ~localize, equal ~localize, sexp_of]
 end
 
 (** Create a new attribute. [applies_to], if specified, constrains what type of signal the
@@ -92,6 +92,17 @@ module Vivado : sig
 
   (** See [extract_enable] *)
   val extract_reset : bool -> t
+
+  (** CRITICAL_SIG_OPT is used to optimize sequential loops by restructuring logic in the
+      feedback path, so that timing-critical signals travel through the smallest number of
+      logic levels. The attribute should be placed on sequential objects such as
+      registers, that drive critical paths to their own inputs.
+
+      The optimization improves critical path timing, but at the expense of increased
+      logic utilization as it involves Shannon decomposition. You must mark the sequential
+      elements (registers) with a loop which have reasonable logic levels. It can cause
+      resource overhead due to logic replication. *)
+  val critical_sig_opt : bool -> t
 
   module Ram_style : sig
     val block : t

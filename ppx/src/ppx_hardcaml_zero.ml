@@ -15,11 +15,12 @@ type options_t =
   ; rtlmangle : expression option
   ; ast : bool
   ; derive_from_map2 : bool
+  ; pre : bool
   }
 
 let parse_rtlmangle expr ~loc =
   match expr with
-  | [%expr true] -> Some [%expr "_"]
+  | [%expr true] -> Some [%expr "$"]
   | [%expr false] -> None
   | e -> Some e
 ;;
@@ -121,16 +122,16 @@ let get_doc ~loc label_declaration =
 let mk_rtlident ~loc name prefix suffix =
   match prefix, suffix with
   | None, None -> [%expr [%e name]]
-  | Some pre, None -> [%expr Ppx_hardcaml_runtime.concat [ [%e pre]; [%e name] ]]
-  | None, Some suf -> [%expr Ppx_hardcaml_runtime.concat [ [%e name]; [%e suf] ]]
+  | Some pre, None -> [%expr Ppx_hardcaml_runtime0.concat [ [%e pre]; [%e name] ]]
+  | None, Some suf -> [%expr Ppx_hardcaml_runtime0.concat [ [%e name]; [%e suf] ]]
   | Some pre, Some suf ->
-    [%expr Ppx_hardcaml_runtime.concat [ [%e pre]; [%e name]; [%e suf] ]] [@metaloc loc]
+    [%expr Ppx_hardcaml_runtime0.concat [ [%e pre]; [%e name]; [%e suf] ]] [@metaloc loc]
 ;;
 
 let mangle_name ~loc name mangle =
   match mangle with
   | Some separator ->
-    [%expr Ppx_hardcaml_runtime.concat [ [%e name]; [%e separator]; _n ]]
+    [%expr Ppx_hardcaml_runtime0.concat [ [%e name]; [%e separator]; _n ]]
   | None -> [%expr _n]
 ;;
 
@@ -142,15 +143,15 @@ let expand_array_init ~loc vname label_declaration =
   let nbits = get_bits ~loc label_declaration in
   let length = get_length ~loc label_declaration in
   [%expr
-    Ppx_hardcaml_runtime.Array.init [%e length] ~f:(fun _i ->
-      ( Ppx_hardcaml_runtime.concat [ [%e vname]; Ppx_hardcaml_runtime.Int.to_string _i ]
+    Ppx_hardcaml_runtime0.Array.init [%e length] ~f:(fun _i ->
+      ( Ppx_hardcaml_runtime0.concat [ [%e vname]; Ppx_hardcaml_runtime0.Int.to_string _i ]
       , [%e nbits] ))]
 ;;
 
 let expand_array_init_str ~loc vname mapid mid label_declaration =
   let length = get_length ~loc label_declaration in
   [%expr
-    Ppx_hardcaml_runtime.Array.init [%e length] ~f:(fun _i ->
+    Ppx_hardcaml_runtime0.Array.init [%e length] ~f:(fun _i ->
       [%e mapid] [%e pexp_ident ~loc mid] ~f:(fun (_n, _b) -> [%e vname], _b))]
 ;;
 
@@ -185,8 +186,8 @@ let expand_port_names_and_widths_label_array
     let mid = { txt = Ldot (mname, "port_names_and_widths"); loc } in
     let mangled =
       [%expr
-        Ppx_hardcaml_runtime.concat
-          [ [%e mangle_name ~loc name mangle]; Ppx_hardcaml_runtime.Int.to_string _i ]]
+        Ppx_hardcaml_runtime0.concat
+          [ [%e mangle_name ~loc name mangle]; Ppx_hardcaml_runtime0.Int.to_string _i ]]
     in
     let rtlident = mk_rtlident ~loc mangled prefix suffix in
     let mapid = pexp_ident ~loc (Located.mk ~loc (Ldot (mname, "map"))) in
@@ -200,7 +201,7 @@ let expand_port_names_and_widths_label_array
       deriver
 ;;
 
-let expand_port_names_and_widths_label_list
+let expand_port_names_and_widths_label
   var
   loc
   label_declaration
@@ -209,6 +210,7 @@ let expand_port_names_and_widths_label_list
   suffix
   mangle
   desc
+  ~of_array
   =
   let ainit =
     expand_port_names_and_widths_label_array
@@ -221,7 +223,9 @@ let expand_port_names_and_widths_label_list
       mangle
       desc
   in
-  [%expr Ppx_hardcaml_runtime.Array.to_list [%e ainit]]
+  match of_array with
+  | None -> ainit
+  | Some of_array -> [%expr [%e of_array] [%e ainit]]
 ;;
 
 let expand_port_names_and_widths_expresion
@@ -250,7 +254,8 @@ let expand_port_names_and_widths_expresion
     [%expr [%e mapid] [%e pexp_ident ~loc mid] ~f:(fun (_n, _b) -> [%e rtlident], _b)]
   (* 'a list, 'a Module.t list *)
   | Ptyp_constr ({ txt = Lident "list"; _ }, [ { ptyp_desc; _ } ]) ->
-    expand_port_names_and_widths_label_list
+    expand_port_names_and_widths_label
+      ~of_array:(Some [%expr Ppx_hardcaml_runtime0.Array.to_list])
       var
       loc
       label_declaration
@@ -261,7 +266,19 @@ let expand_port_names_and_widths_expresion
       ptyp_desc
   (* 'a array, 'a Module.t array *)
   | Ptyp_constr ({ txt = Lident "array"; _ }, [ { ptyp_desc; _ } ]) ->
-    expand_port_names_and_widths_label_array
+    expand_port_names_and_widths_label
+      ~of_array:None
+      var
+      loc
+      label_declaration
+      rtlname
+      rtlprefix
+      rtlsuffix
+      rtlmangle
+      ptyp_desc
+  | Ptyp_constr ({ txt = Lident "iarray"; _ }, [ { ptyp_desc; _ } ]) ->
+    expand_port_names_and_widths_label
+      ~of_array:(Some [%expr Ppx_hardcaml_runtime0.Iarray.of_array])
       var
       loc
       label_declaration
@@ -339,32 +356,44 @@ module Iter_or_map = struct
 
   let option_map2_exn t loc =
     match t with
-    | Iter -> [%expr Ppx_hardcaml_runtime.option_iter2_exn]
-    | Map -> [%expr Ppx_hardcaml_runtime.option_map2_exn]
+    | Iter -> [%expr Ppx_hardcaml_runtime0.option_iter2_exn]
+    | Map -> [%expr Ppx_hardcaml_runtime0.option_map2_exn]
   ;;
 
   let array_map t loc =
     match t with
-    | Iter -> [%expr Ppx_hardcaml_runtime.Array.iter]
-    | Map -> [%expr Ppx_hardcaml_runtime.Array.map]
+    | Iter -> [%expr Ppx_hardcaml_runtime0.Array.iter]
+    | Map -> [%expr Ppx_hardcaml_runtime0.Array.map]
   ;;
 
   let array_init t loc =
     match t with
-    | Iter -> [%expr Ppx_hardcaml_runtime.Array.for_]
-    | Map -> [%expr Ppx_hardcaml_runtime.Array.init]
+    | Iter -> [%expr Ppx_hardcaml_runtime0.Array.for_]
+    | Map -> [%expr Ppx_hardcaml_runtime0.Array.init]
+  ;;
+
+  let iarray_map t loc =
+    match t with
+    | Iter -> [%expr Ppx_hardcaml_runtime0.Iarray.iter]
+    | Map -> [%expr Ppx_hardcaml_runtime0.Iarray.map]
+  ;;
+
+  let iarray_init t loc =
+    match t with
+    | Iter -> [%expr Ppx_hardcaml_runtime0.Iarray.for_]
+    | Map -> [%expr Ppx_hardcaml_runtime0.Iarray.init]
   ;;
 
   let list_map t loc =
     match t with
-    | Iter -> [%expr Ppx_hardcaml_runtime.List.iter]
-    | Map -> [%expr Ppx_hardcaml_runtime.List.map]
+    | Iter -> [%expr Ppx_hardcaml_runtime0.List.iter]
+    | Map -> [%expr Ppx_hardcaml_runtime0.List.map]
   ;;
 
   let list_map2_exn t loc =
     match t with
-    | Iter -> [%expr Ppx_hardcaml_runtime.List.iter2_exn]
-    | Map -> [%expr Ppx_hardcaml_runtime.List.map2_exn]
+    | Iter -> [%expr Ppx_hardcaml_runtime0.List.iter2_exn]
+    | Map -> [%expr Ppx_hardcaml_runtime0.List.map2_exn]
   ;;
 end
 
@@ -409,6 +438,27 @@ let expand_map_label_array iter_or_map var loc ident typ =
       deriver
 ;;
 
+let expand_map_label_iarray iter_or_map var loc ident typ =
+  match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ with
+  (* 'a *)
+  | Ptyp_var (v, _) when String.equal v var ->
+    [%expr [%e Iter_or_map.iarray_map iter_or_map loc] [%e ident] ~f]
+  (* 'a Module.t *)
+  | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]) when is_ptyp_var_with_name v var ->
+    let mapid =
+      pexp_ident ~loc (Located.mk ~loc (Ldot (mname, Iter_or_map.name iter_or_map)))
+    in
+    [%expr
+      [%e Iter_or_map.iarray_map iter_or_map loc] [%e ident] ~f:(fun _e ->
+        [%e mapid] _e ~f)]
+  (* Default *)
+  | _ ->
+    raise_errorf
+      ~loc
+      "[%s] expand_map_label_list: only supports abstract record labels"
+      deriver
+;;
+
 module Record_field = struct
   type t =
     { label_declaration : label_declaration
@@ -435,6 +485,9 @@ let expand_map_label_expression (iter_or_map : Iter_or_map.t) var loc ptyp_desc 
   (* 'a array, 'a Module.t array *)
   | Ptyp_constr ({ txt = Lident "array"; _ }, [ { ptyp_desc; _ } ]) ->
     expand_map_label_array iter_or_map var loc ident ptyp_desc
+  (* 'a iarray, 'a Module.t iarray *)
+  | Ptyp_constr ({ txt = Lident "iarray"; _ }, [ { ptyp_desc; _ } ]) ->
+    expand_map_label_iarray iter_or_map var loc ident ptyp_desc
   (* Default *)
   | _ ->
     raise_errorf
@@ -489,30 +542,43 @@ let expand_map2_label_list iter_or_map var loc ident0 ident1 typ =
       deriver
 ;;
 
-let expand_map2_label_array iter_or_map var loc ident0 ident1 typ =
+let expand_map2_label_array_or_iarray
+  iter_or_map
+  var
+  loc
+  ident0
+  ident1
+  typ
+  ~which_array_module
+  =
+  let array_init, array_get, array_len =
+    match which_array_module with
+    | `Array ->
+      ( Iter_or_map.array_init iter_or_map loc
+      , [%expr Ppx_hardcaml_runtime0.Array.get]
+      , [%expr Ppx_hardcaml_runtime0.Array.length] )
+    | `Iarray ->
+      ( Iter_or_map.iarray_init iter_or_map loc
+      , [%expr Ppx_hardcaml_runtime0.Iarray.get]
+      , [%expr Ppx_hardcaml_runtime0.Iarray.length] )
+  in
   match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ with
   (* 'a *)
   | Ptyp_var (v, _) when String.equal v var ->
     [%expr
-      [%e Iter_or_map.array_init iter_or_map loc]
-        (Array.length [%e ident0])
-        ~f:(fun _i ->
-          f
-            (Ppx_hardcaml_runtime.Array.get [%e ident0] _i)
-            (Ppx_hardcaml_runtime.Array.get [%e ident1] _i))]
+      [%e array_init]
+        ([%e array_len] [%e ident0])
+        ~f:(fun _i -> f ([%e array_get] [%e ident0] _i) ([%e array_get] [%e ident1] _i))]
   (* 'a Module.t *)
   | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]) when is_ptyp_var_with_name v var ->
     let mapid =
       pexp_ident ~loc (Located.mk ~loc (Ldot (mname, Iter_or_map.name2 iter_or_map)))
     in
     [%expr
-      [%e Iter_or_map.array_init iter_or_map loc]
-        (Array.length [%e ident0])
+      [%e array_init]
+        ([%e array_len] [%e ident0])
         ~f:(fun _i ->
-          [%e mapid]
-            (Ppx_hardcaml_runtime.Array.get [%e ident0] _i)
-            (Ppx_hardcaml_runtime.Array.get [%e ident1] _i)
-            ~f)]
+          [%e mapid] ([%e array_get] [%e ident0] _i) ([%e array_get] [%e ident1] _i) ~f)]
   (* Default *)
   | _ ->
     raise_errorf
@@ -543,7 +609,24 @@ let expand_map2_label_expression
     expand_map2_label_list iter_or_map var loc ident0 ident1 ptyp_desc
   (* 'a array, 'a Module.t array *)
   | Ptyp_constr ({ txt = Lident "array"; _ }, [ { ptyp_desc; _ } ]) ->
-    expand_map2_label_array iter_or_map var loc ident0 ident1 ptyp_desc
+    expand_map2_label_array_or_iarray
+      ~which_array_module:`Array
+      iter_or_map
+      var
+      loc
+      ident0
+      ident1
+      ptyp_desc
+  (* 'a iarray, 'a Module.t iarray *)
+  | Ptyp_constr ({ txt = Lident "iarray"; _ }, [ { ptyp_desc; _ } ]) ->
+    expand_map2_label_array_or_iarray
+      ~which_array_module:`Iarray
+      iter_or_map
+      var
+      loc
+      ident0
+      ident1
+      ptyp_desc
   (* Default *)
   | _ ->
     raise_errorf
@@ -588,8 +671,8 @@ let expand_to_list_label_list var loc ident typ =
   | Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]) when is_ptyp_var_with_name v var ->
     let to_list_id = pexp_ident ~loc (Located.mk ~loc (Ldot (mname, "to_list"))) in
     [%expr
-      Ppx_hardcaml_runtime.List.concat
-        (Ppx_hardcaml_runtime.List.map [%e ident] ~f:(fun _e -> [%e to_list_id] _e))]
+      Ppx_hardcaml_runtime0.List.concat
+        (Ppx_hardcaml_runtime0.List.map [%e ident] ~f:(fun _e -> [%e to_list_id] _e))]
   (* Default *)
   | _ ->
     raise_errorf
@@ -602,7 +685,15 @@ let expand_to_list_label_array var loc ident desc =
   expand_to_list_label_list
     var
     loc
-    [%expr Ppx_hardcaml_runtime.Array.to_list [%e ident]]
+    [%expr Ppx_hardcaml_runtime0.Array.to_list [%e ident]]
+    desc
+;;
+
+let expand_to_list_label_iarray var loc ident desc =
+  expand_to_list_label_list
+    var
+    loc
+    [%expr Ppx_hardcaml_runtime0.Iarray.to_list [%e ident]]
     desc
 ;;
 
@@ -625,6 +716,9 @@ let expand_to_list_label_expression var loc ptyp_desc ident =
   (* 'a array, 'a Module.t array *)
   | Ptyp_constr ({ txt = Lident "array"; _ }, [ { ptyp_desc; _ } ]) ->
     expand_to_list_label_array var loc ident ptyp_desc
+  (* 'a iarray, 'a Module.t iarray *)
+  | Ptyp_constr ({ txt = Lident "iarray"; _ }, [ { ptyp_desc; _ } ]) ->
+    expand_to_list_label_iarray var loc ident ptyp_desc
   (* Default *)
   | _ ->
     raise_errorf
@@ -715,6 +809,14 @@ let expand_ast_label
           ( { txt = Lident "array"; _ }
           , [ { ptyp_desc = Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]); _ } ] )
         when is_ptyp_var_with_name v var -> module_ mname, sequence [%expr Array]
+      (* 'a iarray *)
+      | Ptyp_constr ({ txt = Lident "iarray"; _ }, [ v ]) when is_ptyp_var_with_name v var
+        -> signal (), sequence [%expr Iarray]
+      (* 'a Module.t iarray *)
+      | Ptyp_constr
+          ( { txt = Lident "iarray"; _ }
+          , [ { ptyp_desc = Ptyp_constr ({ txt = Ldot (mname, _); _ }, [ v ]); _ } ] )
+        when is_ptyp_var_with_name v var -> module_ mname, sequence [%expr Iarray]
       (* Default *)
       | _ ->
         raise_errorf
@@ -797,7 +899,7 @@ let str_of_type ~options ({ ptype_loc = loc; _ } as type_decl) =
     let str_to_list_labels = List.map labels ~f:(expand_to_list_label var) in
     let str_to_list_args = build_expr_list str_to_list_labels in
     let str_to_list =
-      [%expr fun x -> Ppx_hardcaml_runtime.List.concat [%e str_to_list_args]]
+      [%expr fun x -> Ppx_hardcaml_runtime0.List.concat [%e str_to_list_args]]
     in
     let str_ast_labels () = List.map labels ~f:(expand_ast_label options var) in
     let str_ast () = build_expr_list (str_ast_labels ()) in
@@ -823,38 +925,57 @@ let str_of_type ~options ({ ptype_loc = loc; _ } as type_decl) =
            if options.ast
            then [ value_binding ~loc ~pat:(pvar ~loc "ast") ~expr:(str_ast ()) ]
            else [])
-    ; (if options.derive_from_map2
-       then
-         [%stri
-           include Ppx_hardcaml_runtime.Derive_interface_from_map2 (struct
-               type nonrec 'a t = 'a t
-
-               let sexp_of_t = sexp_of_t
-               let port_names_and_widths = port_names_and_widths
-               let map2 = map2
-             end)]
-       else
-         [%stri
-           include Ppx_hardcaml_runtime.Interface.Make (struct
-               type nonrec 'a t = 'a t
-
-               let sexp_of_t = sexp_of_t
-               let port_names_and_widths = port_names_and_widths
-               let iter = iter
-               let iter2 = iter2
-               let map = map
-               let map2 = map2
-               let to_list = to_list
-             end)])
     ]
+    @
+    if options.pre
+    then
+      if options.derive_from_map2
+      then
+        (* [derive_from_map2] also generates the interface, so doesn't work here. *)
+        raise_errorf
+          ~loc
+          "[%s] cannot specify 'pre' and 'derive_from_map2' together"
+          deriver
+      else []
+    else
+      [ (if options.derive_from_map2
+         then
+           [%stri
+             include Ppx_hardcaml_runtime.Derive_interface_from_map2 (struct
+                 type nonrec 'a t = 'a t
+
+                 let equal = equal
+                 let equal__local = equal__local
+                 let sexp_of_t = sexp_of_t
+                 let port_names_and_widths = port_names_and_widths
+                 let map2 = map2
+               end)]
+         else
+           [%stri
+             include Ppx_hardcaml_runtime.Interface.Make (struct
+                 type nonrec 'a t = 'a t
+
+                 let equal = equal
+                 let equal__local = equal__local
+                 let sexp_of_t = sexp_of_t
+                 let port_names_and_widths = port_names_and_widths
+                 let iter = iter
+                 let iter2 = iter2
+                 let map = map
+                 let map2 = map2
+                 let to_list = to_list
+               end)])
+      ]
   | _ -> raise_errorf ~loc "[%s] str_of_type: only supports record types" deriver
 ;;
 
-let sig_of_type ~ast ({ ptype_loc = loc; _ } as type_decl) =
+let sig_of_type ~ast ~pre ({ ptype_loc = loc; _ } as type_decl) =
   match type_decl.ptype_kind, type_decl.ptype_params with
   | Ptype_record _, [ ({ ptyp_desc = Ptyp_var _; _ }, _) ] ->
     let intf = [%sigi: include Ppx_hardcaml_runtime.Interface.S with type 'a t := 'a t] in
-    if ast
+    if pre
+    then []
+    else if ast
     then [ intf; [%sigi: val ast : Ppx_hardcaml_runtime.Interface.Ast.t] ]
     else [ intf ]
   | _, _ -> raise_errorf ~loc "[%s] sig_of_type: only supports record types" deriver
@@ -1001,8 +1122,8 @@ let name_intf_expression ~module_of_type_of_expression_being_named ~loc =
   [%expr [%e evar ~loc ppx_auto_name] thing_to_name (Hardcaml.Scope.name scope name)]
 ;;
 
-let hardcaml_signal = Longident.parse "Hardcaml.Signal"
-let always_variable = Longident.parse "Hardcaml.Always.Variable"
+let hardcaml_signal = Longident.parse "Signal"
+let always_variable = Longident.parse "Always.Variable"
 
 let hardcaml_name () =
   declare_let_binding_extension
@@ -1017,30 +1138,34 @@ let hardcaml_name () =
           [%e name_intf_expression ~module_of_type_of_expression_being_named ~loc]])
 ;;
 
-let hardcaml_name_list () =
+let hardcaml_name_collection ~name ~mapi_function =
   declare_let_binding_extension
-    ~name:"hw_list"
+    ~name:("hw_" ^ name)
     ~generate_naming_function:(fun ~arg ~loc ~name ->
       let module_of_type_of_expression_being_named =
         Option.value_map arg ~default:hardcaml_signal ~f:(fun { loc = _; txt } -> txt)
       in
       [%expr
-        List.mapi ~f:(fun idx thing_to_name ->
-          let name = [%e estring ~loc name] ^ "$" ^ Int.to_string idx in
+        [%e mapi_function loc] ~f:(fun idx thing_to_name ->
+          let name =
+            [%e estring ~loc name] ^ "$" ^ Ppx_hardcaml_runtime0.Int.to_string idx
+          in
           [%e name_intf_expression ~module_of_type_of_expression_being_named ~loc])])
 ;;
 
+let hardcaml_name_list () =
+  hardcaml_name_collection ~name:"list" ~mapi_function:(fun loc ->
+    [%expr Ppx_hardcaml_runtime0.List.mapi])
+;;
+
 let hardcaml_name_array () =
-  declare_let_binding_extension
-    ~name:"hw_array"
-    ~generate_naming_function:(fun ~arg ~loc ~name ->
-      let module_of_type_of_expression_being_named =
-        Option.value_map arg ~default:hardcaml_signal ~f:(fun { loc = _; txt } -> txt)
-      in
-      [%expr
-        Array.mapi ~f:(fun idx thing_to_name ->
-          let name = [%e estring ~loc name] ^ "$" ^ Int.to_string idx in
-          [%e name_intf_expression ~module_of_type_of_expression_being_named ~loc])])
+  hardcaml_name_collection ~name:"array" ~mapi_function:(fun loc ->
+    [%expr Ppx_hardcaml_runtime0.Array.mapi])
+;;
+
+let hardcaml_name_iarray () =
+  hardcaml_name_collection ~name:"iarray" ~mapi_function:(fun loc ->
+    [%expr Ppx_hardcaml_runtime0.Iarray.mapi])
 ;;
 
 let raise_hw_var_doesn't_support_intfs ~loc ~hw_var_variant =
@@ -1064,40 +1189,43 @@ let hardcaml_name_var () =
       match arg with
       | None ->
         [%expr
-          fun (thing_to_name : Hardcaml.Always.Variable.t) ->
+          fun (thing_to_name : Always.Variable.t) ->
             let name = [%e estring ~loc name] in
             [%e name_always_variable_expr ~loc]]
       | Some _ -> raise_hw_var_doesn't_support_intfs ~loc ~hw_var_variant:"")
 ;;
 
-let hardcaml_name_var_list () =
+let hardcaml_name_var_collection ~name ~mapi_function =
   declare_let_binding_extension
-    ~name:"hw_var_list"
+    ~name:("hw_var_" ^ name)
     ~generate_naming_function:(fun ~arg ~loc ~name ->
       match arg with
       | None ->
         [%expr
-          List.mapi ~f:(fun idx (thing_to_name : Hardcaml.Always.Variable.t) ->
-            let name = [%e estring ~loc name] ^ "$" ^ Int.to_string idx in
+          [%e mapi_function loc] ~f:(fun idx (thing_to_name : Always.Variable.t) ->
+            let name =
+              [%e estring ~loc name] ^ "$" ^ Ppx_hardcaml_runtime0.Int.to_string idx
+            in
             [%e name_always_variable_expr ~loc])]
-      | Some _ -> raise_hw_var_doesn't_support_intfs ~loc ~hw_var_variant:"_list")
+      | Some _ -> raise_hw_var_doesn't_support_intfs ~loc ~hw_var_variant:("_" ^ name))
+;;
+
+let hardcaml_name_var_list () =
+  hardcaml_name_var_collection ~name:"list" ~mapi_function:(fun loc ->
+    [%expr Ppx_hardcaml_runtime0.List.mapi])
 ;;
 
 let hardcaml_name_var_array () =
-  declare_let_binding_extension
-    ~name:"hw_var_array"
-    ~generate_naming_function:(fun ~arg ~loc ~name ->
-      match arg with
-      | None ->
-        [%expr
-          Array.mapi ~f:(fun idx (thing_to_name : Hardcaml.Always.Variable.t) ->
-            let name = [%e estring ~loc name] ^ "$" ^ Int.to_string idx in
-            [%e name_always_variable_expr ~loc])]
-      | Some _ -> raise_hw_var_doesn't_support_intfs ~loc ~hw_var_variant:"_array")
+  hardcaml_name_var_collection ~name:"array" ~mapi_function:(fun loc ->
+    [%expr Ppx_hardcaml_runtime0.Array.mapi])
+;;
+
+let hardcaml_name_var_iarray () =
+  hardcaml_name_var_collection ~name:"iarray" ~mapi_function:(fun loc ->
+    [%expr Ppx_hardcaml_runtime0.Iarray.mapi])
 ;;
 
 let () =
-  let get_bool_option ~loc option = Option.bind option ~f:(parse_rtlmangle ~loc) in
   let hardcaml_internal =
     Deriving.add
       "hardcaml_internal"
@@ -1109,7 +1237,8 @@ let () =
              +> arg "rtlsuffix" Ast_pattern.__
              +> arg "rtlmangle" Ast_pattern.__
              +> flag "ast"
-             +> flag "derive_from_map2")
+             +> flag "derive_from_map2"
+             +> flag "pre")
            (fun ~loc
              ~path:_
              (_, type_declarations)
@@ -1117,26 +1246,31 @@ let () =
              rtlsuffix
              rtlmangle
              ast
-             derive_from_map2 ->
+             derive_from_map2
+             pre ->
              let options =
                { rtlprefix
                ; rtlsuffix
-               ; rtlmangle = get_bool_option ~loc rtlmangle
+               ; rtlmangle =
+                   parse_rtlmangle ~loc (Option.value rtlmangle ~default:[%expr true])
                ; ast
                ; derive_from_map2
+               ; pre
                }
              in
              List.concat_map type_declarations ~f:(fun decl -> str_of_type ~options decl)))
       ~sig_type_decl:
         (Deriving.Generator.make
-           Deriving.Args.(empty +> flag "ast")
-           (fun ~loc:_ ~path:_ (_, type_declarations) ast ->
-             List.concat_map type_declarations ~f:(sig_of_type ~ast)))
+           Deriving.Args.(empty +> flag "ast" +> flag "pre")
+           (fun ~loc:_ ~path:_ (_, type_declarations) ast pre ->
+             List.concat_map type_declarations ~f:(sig_of_type ~ast ~pre)))
   in
   (* Ordering of the derivers of the alias below matters. Empirically, the
      derivers are expanded in reverse order of the list.
   *)
-  Deriving.add_alias deriver [ hardcaml_internal; Ppx_sexp_conv.sexp_of ]
+  Deriving.add_alias
+    deriver
+    [ hardcaml_internal; Ppx_sexp_conv.sexp_of; Ppx_compare.equal_local ]
   |> Deriving.ignore;
   Driver.register_transformation
     "hardcaml_naming"
@@ -1144,8 +1278,10 @@ let () =
       [ Context_free.Rule.extension (hardcaml_name ())
       ; Context_free.Rule.extension (hardcaml_name_list ())
       ; Context_free.Rule.extension (hardcaml_name_array ())
+      ; Context_free.Rule.extension (hardcaml_name_iarray ())
       ; Context_free.Rule.extension (hardcaml_name_var ())
       ; Context_free.Rule.extension (hardcaml_name_var_list ())
       ; Context_free.Rule.extension (hardcaml_name_var_array ())
+      ; Context_free.Rule.extension (hardcaml_name_var_iarray ())
       ]
 ;;

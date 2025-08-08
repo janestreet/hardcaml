@@ -65,7 +65,7 @@ module type Structural = sig
 
       They may be converted into standard hardcaml circuits for code generation. *)
   module Structural_rtl_component : sig
-    type t [@@deriving compare, sexp_of]
+    type t [@@deriving compare ~localize, sexp_of]
 
     include Comparator.S with type t := t
 

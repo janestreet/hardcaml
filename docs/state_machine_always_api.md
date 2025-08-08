@@ -22,7 +22,8 @@ A state machine is constructed with the following function:
 # open Hardcaml
 # open Signal
 # Always.State_machine.create
-- : ?encoding:Always.State_machine.Encoding.t ->
+- : here:[%call_pos] ->
+    ?encoding:Always.State_machine.Encoding.t ->
     ?auto_wave_format:bool ->
     ?attributes:Hardcaml.Rtl_attribute.t list ->
     ?enable:t ->
@@ -43,7 +44,7 @@ module States = struct
     | Wait_for_start
     | Process_something
     | Process_something_else
-  [@@deriving sexp_of, compare, enumerate]
+  [@@deriving sexp_of, compare ~localize, enumerate]
 end
 ```
 
@@ -73,7 +74,7 @@ let outputs =
   let sm =
     Always.State_machine.create (module States) ~enable:vdd r_sync
   in
-  let done_ = Always.Variable.wire ~default:gnd in
+  let done_ = Always.Variable.wire ~default:gnd () in
   Always.(compile [
     sm.switch [
       Wait_for_start, [
@@ -188,7 +189,7 @@ let foo_branch (o_value : Hardcaml.Always.Variable.t) =
 
 let main : Always.t list =
   let cond = Signal.input "cond" 1 in
-  let o_value = Always.Variable.wire ~default:(Signal.zero 32) in
+  let o_value = Always.Variable.wire ~default:(Signal.zero 32) () in
   Always.[
     if_ cond [
       (* [proc] turns a [Always.t list] to an [Always.t], without
@@ -243,8 +244,8 @@ let handshake stream callback =
 ;;
 
 let main (stream_a : stream) (stream_b : stream) =
-  let foo = Always.Variable.wire ~default:Signal.gnd in
-  let bar = Always.Variable.wire ~default:Signal.gnd in
+  let foo = Always.Variable.wire ~default:Signal.gnd () in
+  let bar = Always.Variable.wire ~default:Signal.gnd () in
   Always.compile [
     handshake stream_a (fun data ->
       Always.[

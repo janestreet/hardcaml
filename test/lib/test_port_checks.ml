@@ -111,7 +111,7 @@ let%expect_test "output width does not match" =
 
 module%test Wrong_length_list = struct
   module O = struct
-    type 'a t = { l : 'a list [@length 2] } [@@deriving hardcaml]
+    type 'a t = { l : 'a list [@length 2] } [@@deriving hardcaml ~rtlmangle:false]
   end
 
   let create _ = { O.l = List.init 3 ~f:(fun _ -> Signal.vdd) }

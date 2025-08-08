@@ -1,5 +1,4 @@
 open Base
-open Signal
 
 let gray_inc_mux_inputs (type a) (module Comb : Comb.S with type t = a) width ~by : a list
   =
@@ -14,9 +13,14 @@ module type S = sig
 end
 
 module Make (M : S) = struct
+  open Clocked_design
+  open Signal
+
   let address_width = M.log2_depth
   let fifo_capacity = 1 lsl address_width
   let gray_inc ~by x = mux x (gray_inc_mux_inputs (module Signal) address_width ~by)
+  let read_dom = Clock_domain.create "read"
+  let write_dom = Clock_domain.create "write"
 
   module I = struct
     type 'a t =
@@ -29,6 +33,17 @@ module Make (M : S) = struct
       ; read_enable : 'a
       }
     [@@deriving hardcaml]
+
+    let domains =
+      { clock_write = write_dom
+      ; reset_write = write_dom
+      ; write_enable = write_dom
+      ; data_in = write_dom
+      ; clock_read = read_dom
+      ; reset_read = read_dom
+      ; read_enable = read_dom
+      }
+    ;;
   end
 
   module O = struct
@@ -39,11 +54,16 @@ module Make (M : S) = struct
       ; almost_empty : 'a
       }
     [@@deriving hardcaml]
+
+    let domains =
+      { full = write_dom; data_out = read_dom; valid = read_dom; almost_empty = read_dom }
+    ;;
   end
 
   module Async_distributed_ram = struct
     type t =
       { clock_write : Signal.t
+      ; clock_read : Signal.t
       ; multiport_mem : Signal.t
       ; mutable is_written : bool
       ; mutable is_read : bool
@@ -53,11 +73,13 @@ module Make (M : S) = struct
       ; read_address : Signal.t
       }
 
-    let create ~name ~clock_write =
-      let write_data = Signal.wire M.width in
-      let write_address = Signal.wire address_width in
-      let read_address = Signal.wire address_width in
-      let write_enable = Always.Variable.wire ~default:Signal.gnd in
+    let create_clocked ~name ~clock_write ~clock_read =
+      let read_dom = Signal.get_domain clock_read in
+      let write_dom = Signal.get_domain clock_write in
+      let write_data = Signal.wire M.width ~dom:write_dom in
+      let write_address = Signal.wire address_width ~dom:write_dom in
+      let read_address = Signal.wire address_width ~dom:read_dom in
+      let write_enable = Always.Variable.wire ~dom:write_dom ~default:Signal.gnd in
       let multiport_mem =
         Signal.multiport_memory
           ~name
@@ -74,6 +96,7 @@ module Make (M : S) = struct
       in
       let multiport_mem = multiport_mem.(0) in
       { clock_write
+      ; clock_read
       ; write_address
       ; write_enable
       ; write_data
@@ -85,11 +108,12 @@ module Make (M : S) = struct
     ;;
 
     let read t ~address =
+      let read_dom = Signal.get_domain t.clock_read in
       assert (width address = address_width);
       if t.is_read then raise_s [%message "Async_ram has already previously been read"];
       t.is_read <- true;
       t.read_address <-- address;
-      t.multiport_mem
+      t.multiport_mem |> Clocked_signal.Unsafe.set_domain ~dom:read_dom
     ;;
 
     let write t ~address ~data =
@@ -109,7 +133,7 @@ module Make (M : S) = struct
     ; raddr_wd_ffs : Always.Variable.t array
     }
 
-  let create_internal
+  let create_internal_clocked
     ?(use_synchronous_clear_semantics = false)
     ?(use_negedge_sync_chain = false)
     ?(sync_stages = 2)
@@ -124,7 +148,7 @@ module Make (M : S) = struct
         [%message "[sync_stages] must be even when using negedge!" (sync_stages : int)];
     let ( -- ) =
       match scope with
-      | Some scope -> Scope.naming scope
+      | Some scope -> Scope.naming_clocked scope
       | None -> ( -- )
     in
     let reg_spec ~clock ~reset =
@@ -233,9 +257,10 @@ module Make (M : S) = struct
       current |: one_ahead |: two_ahead_if_possible
     in
     let ram =
-      Async_distributed_ram.create
+      Async_distributed_ram.create_clocked
         ~name:(Option.value_map scope ~default:"ram" ~f:(fun s -> Scope.name s "ram"))
         ~clock_write:i.clock_write
+        ~clock_read:i.clock_read
     in
     let raddr_rd_next =
       let read_enable =
@@ -243,12 +268,16 @@ module Make (M : S) = struct
       in
       mux2 (read_enable &: vld) (gray_inc ~by:1 raddr_rd.value) raddr_rd.value
     in
+    let read_dom = Signal.get_domain i.clock_read in
+    let write_dom = Signal.get_domain i.clock_write in
     Always.(
       compile
         [ (* @(posedge clk_read) *)
           Array.init (Array.length waddr_rd_ffs) ~f:(fun idx ->
             if idx = 0
-            then waddr_rd_ffs.(idx) <-- waddr_wd.value
+            then
+              waddr_rd_ffs.(idx)
+              <-- Clocked_signal.Unsafe.set_domain ~dom:read_dom waddr_wd.value
             else waddr_rd_ffs.(idx) <-- waddr_rd_ffs.(idx - 1).value)
           |> Array.to_list
           |> proc
@@ -259,7 +288,9 @@ module Make (M : S) = struct
              proc
                [ Array.init (Array.length raddr_wd_ffs) ~f:(fun idx ->
                    if idx = 0
-                   then raddr_wd_ffs.(idx) <-- raddr_rd.value
+                   then
+                     raddr_wd_ffs.(idx)
+                     <-- Clocked_signal.Unsafe.set_domain ~dom:write_dom raddr_rd.value
                    else raddr_wd_ffs.(idx) <-- raddr_wd_ffs.(idx - 1).value)
                  |> Array.to_list
                  |> proc
@@ -280,11 +311,12 @@ module Make (M : S) = struct
     { O.full; data_out = data_out.value; valid = vld; almost_empty }
   ;;
 
-  let create = create_internal ~use_synchronous_clear_semantics:false
+  let create_clocked = create_internal_clocked ~use_synchronous_clear_semantics:false
 
-  let create_with_delay ?(delay = 0) scope (i : _ I.t) =
-    let ( -- ) = Scope.naming scope in
-    let async_fifo_has_valid_value = wire 1 in
+  let create_with_delay_clocked ?(delay = 0) scope (i : _ I.t) =
+    let read_dom = Signal.get_domain i.clock_read in
+    let ( -- ) = Scope.naming_clocked scope in
+    let async_fifo_has_valid_value = wire ~dom:read_dom 1 in
     (* If delay is 0 we don't count, otherwise start a counter each time we see valid low
        on the FIFO output, and only set it back to 0 when the FIFO valid goes low again *)
     let delay_val =
@@ -293,7 +325,7 @@ module Make (M : S) = struct
       else (
         let min_bits = Bits.num_bits_to_represent delay in
         let spec = Reg_spec.create () ~clock:i.clock_read ~reset:i.reset_read in
-        let delay_cnt_wire = wire min_bits in
+        let delay_cnt_wire = wire ~dom:read_dom min_bits in
         let delay_cnt =
           reg_fb spec ~enable:vdd ~width:min_bits ~f:(fun d ->
             mux2
@@ -305,7 +337,7 @@ module Make (M : S) = struct
         delay_cnt ==:. delay)
     in
     let async_fifo =
-      create
+      create_clocked
         ~scope
         { i with
           read_enable = (i.read_enable &: delay_val) -- "read_en"
@@ -321,28 +353,98 @@ module Make (M : S) = struct
     }
   ;;
 
+  module H = Hierarchy.In_clocked_scope (I) (O)
+
+  let make_create_or_hierarchical_basic
+    ~how_to_instantiate
+    ~use_synchronous_clear_semantics
+    ?name
+    ?use_negedge_sync_chain
+    ?sync_stages
+    ?scope
+    input
+    =
+    let scope =
+      match scope with
+      | None -> Scope.create ()
+      | Some scope -> scope
+    in
+    H.hierarchical
+      ?name
+      ~how_to_instantiate
+      ~caller_signal_type:Signal
+      ~scope
+      (fun scope (input : _ I.t) ->
+        create_internal_clocked
+          ~use_synchronous_clear_semantics
+          ?use_negedge_sync_chain
+          ?sync_stages
+          ~scope
+          input)
+      input
+  ;;
+
+  let make_create_or_hierarchical_delayed ?name ~how_to_instantiate ~delay ~scope input =
+    H.hierarchical
+      ?name
+      ~how_to_instantiate
+      ~caller_signal_type:Signal
+      ~scope
+      (create_with_delay_clocked ?delay)
+      input
+  ;;
+
+  let create_with_delay ?delay scope (i : _ I.t) =
+    make_create_or_hierarchical_delayed ~delay ~how_to_instantiate:Inlined ~scope i
+  ;;
+
   (* The tcl scripts that constrain the name of this module depend on the module name
      being [hardcaml_async_fifo*]. *)
   let base_name = "hardcaml_async_fifo"
 
+  let create =
+    make_create_or_hierarchical_basic
+      ~name:base_name (* We're inlining, the exact name here doesn't really matter *)
+      ~use_synchronous_clear_semantics:false
+      ~how_to_instantiate:Inlined
+  ;;
+
   let hierarchical ?(name = base_name) ?use_negedge_sync_chain ?sync_stages scope i =
-    let module H = Hierarchy.In_scope (I) (O) in
-    H.hierarchical
+    make_create_or_hierarchical_basic
+      ~how_to_instantiate:Hierarchical_or_inlined_by_scope
+      ~use_synchronous_clear_semantics:false
       ~name
+      ?use_negedge_sync_chain
+      ?sync_stages
       ~scope
-      (fun scope -> create ?use_negedge_sync_chain ?sync_stages ~scope)
       i
   ;;
 
   let hierarchical_with_delay ?(name = [%string "%{base_name}_with_delay"]) ?delay scope i
     =
-    let module H = Hierarchy.In_scope (I) (O) in
-    H.hierarchical ~name ~scope (create_with_delay ?delay) i
+    make_create_or_hierarchical_delayed
+      ~name
+      ~how_to_instantiate:Inlined_in_scope
+      ~delay
+      ~scope
+      i
   ;;
 
   module For_testing = struct
-    let create_with_synchronous_clear_semantics_for_simulation_only =
-      create_internal ~use_synchronous_clear_semantics:true
+    let create_with_synchronous_clear_semantics_for_simulation_only
+      ?use_negedge_sync_chain
+      ?sync_stages
+      ?scope
+      input
+      : _ O.t
+      =
+      make_create_or_hierarchical_basic
+        ~how_to_instantiate:Inlined
+        ~use_synchronous_clear_semantics:true
+        ?use_negedge_sync_chain
+        ?sync_stages
+        ?scope
+        input
     ;;
   end
 end

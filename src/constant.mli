@@ -2,7 +2,7 @@
 
 open Base
 
-type t = Bits0.t [@@deriving compare, sexp, bin_io]
+type t = Bits0.t [@@deriving compare ~localize, equal ~localize, sexp, bin_io]
 
 (* The empty constant. Contains no bits. *)
 val empty : t

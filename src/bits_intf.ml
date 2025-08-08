@@ -1,7 +1,7 @@
 open Base
 
 module type Bits = sig
-  type t = private Constant.t [@@deriving compare, sexp_of]
+  type t = private Constant.t [@@deriving compare ~localize, sexp_of]
 
   include Comb.S with type t := t
   include Comparator.S with type t := t
@@ -52,6 +52,7 @@ module type Bits = sig
       (** Create a [t] of given width, initially set to [0]. *)
       val create : int -> t
 
+      val unsafe_copy : src:t -> dst:t -> unit
       val copy : src:t -> dst:t -> unit
       val copy_bits : src:bits -> dst:t -> unit
 
@@ -99,7 +100,7 @@ module type Bits = sig
   val pp : Formatter.t -> t -> unit
 
   module type To_sexp_and_string := sig
-    type nonrec t = t [@@deriving compare, sexp_of, to_string]
+    type nonrec t = t [@@deriving compare ~localize, sexp_of, to_string]
   end
 
   module Binary : To_sexp_and_string

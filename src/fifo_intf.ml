@@ -19,6 +19,11 @@ module T = struct
     }
   [@@deriving hardcaml]
 
+  (* [app] is used to lift the various fifo creation functions into a clocked domain. *)
+  let app create ~clock ~clear ~wr ~d ~rd ~f =
+    create ~clock:(f clock) ~clear:(f clear) ~wr:(f wr) ~d:(f d) ~rd:(f rd)
+  ;;
+
   type 'a create_params =
     ?nearly_empty:int (** default is [1] **)
     -> ?nearly_full:int (** default is [depth-1] **)
@@ -28,15 +33,15 @@ module T = struct
     -> ?scope:Scope.t (* to override naming prefix *)
     -> 'a
 
-  type create_fifo =
+  type 'signal create_fifo =
     (unit
      -> capacity:int
-     -> clock:Signal.t
-     -> clear:Signal.t
-     -> wr:Signal.t
-     -> d:Signal.t
-     -> rd:Signal.t
-     -> Signal.t t)
+     -> clock:'signal
+     -> clear:'signal
+     -> wr:'signal
+     -> d:'signal
+     -> rd:'signal
+     -> 'signal t)
       create_params
 end
 
@@ -68,7 +73,9 @@ module Kinded_fifo = struct
     -> (Signal.t, [ `Showahead ]) t
 end
 
-module type S = sig
+(** Synchronous FIFO implementions with optional [showahead] functionality and pipelining
+    stages. *)
+module type Fifo = sig
   include module type of T with type 'a t = 'a T.t
   module Kinded_fifo = Kinded_fifo
 
@@ -105,7 +112,7 @@ module type S = sig
   val create
     :  ?read_latency:int
     -> ?showahead:bool (** default is [false] *)
-    -> T.create_fifo
+    -> Signal.t create_fifo
 
   (** {3 Functions to derive fifo architectures from other architecetures.} *)
 
@@ -118,17 +125,17 @@ module type S = sig
   (** Adds an extra output register to the non-showahead fifo. This delays the output, but
       ensures there is no logic data on the fifo output. Adds an extra cycle of latency (2
       cycles from write to empty low). *)
-  val create_classic_with_extra_reg : T.create_fifo
+  val create_classic_with_extra_reg : Signal.t create_fifo
 
   (** Constructs a showahead fifo from a non-showahead fifo. Only modifies the control
       flags. Has 2 cycles of latency. *)
-  val create_showahead_from_classic : create_fifo
+  val create_showahead_from_classic : Signal.t create_fifo
 
   (** Constructs a fifo similarly to [create_showahead_from_classic] and ensures the
       output data is registered. Has 3 cycles of latency, but is slightly faster than
       [create ~showahead:true] - it seems to only be limited by the underlying RAM
       frequency. *)
-  val create_showahead_with_extra_reg : create_fifo
+  val create_showahead_with_extra_reg : Signal.t create_fifo
 
   type 'a showahead_with_extra_reg =
     { fifo : 'a t
@@ -156,7 +163,41 @@ module type S = sig
 
       Latency on this FIFO will be [read_latency+1] cycles per read, but allows use of
       much larger FIFOs. *)
-  val create_showahead_with_read_latency : read_latency:int -> create_fifo
+  val create_showahead_with_read_latency : read_latency:int -> Signal.t create_fifo
+
+  (** Clocked versions of the different FIFO architectures. The runtime domain of the
+      clock signal should match all other input signals. The outputs will also be put into
+      that domain.
+
+      Functionally they are identical to the unclocked versions. *)
+  module Clocked : sig
+    val create
+      :  ?read_latency:int
+      -> ?showahead:bool (** default is [false] *)
+      -> Clocked_signal.t create_fifo
+
+    val create_classic_with_extra_reg : Clocked_signal.t create_fifo
+    val create_showahead_from_classic : Clocked_signal.t create_fifo
+    val create_showahead_with_extra_reg : Clocked_signal.t create_fifo
+
+    val create_showahead_with_extra_reg_wrapper
+      :  ?nearly_empty:int
+      -> ?nearly_full:int
+      -> ?scope:Scope.t
+      -> Clocked_signal.t t
+      -> overflow_check:bool
+      -> underflow_check:bool
+      -> capacity:int
+      -> clock:Clocked_signal.t
+      -> clear:Clocked_signal.t
+      -> wr:Clocked_signal.t
+      -> rd:Clocked_signal.t
+      -> Clocked_signal.t showahead_with_extra_reg
+
+    val create_showahead_with_read_latency
+      :  read_latency:int
+      -> Clocked_signal.t create_fifo
+  end
 
   module type Config = Config
 

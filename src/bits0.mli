@@ -12,13 +12,11 @@
     an ocaml array of [Int64]s. *)
 open Base
 
-type t = private Bytes.t [@@deriving sexp, bin_io]
-
-(** Comparison of two [Bits.t]. First the widths are compared and if they are same the
+(** Comparison of two [Bits.t]: first the widths are compared and if they are same the
     unsigned numerical value is compared. *)
-val compare : t -> t -> int
+type t = private Bytes.t [@@deriving bin_io, compare ~localize, sexp]
 
-module Comparable : Comparable.S with type t := t
+module%template Comparable : Comparable.S [@mode local] with type t := t
 
 val bits_per_word : int
 val log_bits_per_word : int

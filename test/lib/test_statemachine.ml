@@ -12,7 +12,7 @@ module State = struct
     | B
     | C
     | D
-  [@@deriving compare, enumerate, sexp_of]
+  [@@deriving compare ~localize, enumerate, sexp_of]
 end
 
 module I = struct

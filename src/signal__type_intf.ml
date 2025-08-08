@@ -12,18 +12,7 @@
 open Base
 
 (** Uids unqiuely label every hardcaml node with an integer value. *)
-module type Uid = sig
-  type t [@@deriving compare, hash, sexp_of]
-
-  include Comparator.S with type t := t
-  include Equal.S with type t := t
-
-  val zero : t
-  val one : t
-  val to_int : t -> int
-  val to_string : t -> string
-  val generator : unit -> [ `New of unit -> t ] * [ `Reset of unit -> unit ]
-end
+module type Uid = Uid_builder.S
 
 module type Uid_set = sig
   module Uid : Uid
@@ -37,6 +26,20 @@ module type Uid_map = sig
   module Uid : Uid
 
   type 'v t = 'v Map.M(Uid).t
+end
+
+(** Information attached to the signals. *)
+module type With_info = sig
+  type t
+
+  (** Information tracked by the signal. *)
+  type info
+
+  (** Get the information attached to a signal. *)
+  val info : t -> info
+
+  (** Set the information attached to a signal. *)
+  val set_info : t -> info:info -> t
 end
 
 module type Is_a = sig
@@ -139,7 +142,7 @@ module type Type = sig
     | Signal_xor
     | Signal_eq
     | Signal_lt
-  [@@deriving sexp_of, compare, equal, hash]
+  [@@deriving sexp_of, compare ~localize, equal ~localize, hash]
 
   type signal_metadata =
     { mutable names_and_locs : Name_and_loc.t list
@@ -147,6 +150,7 @@ module type Type = sig
     ; mutable comment : string option
     ; caller_id : Caller_id.t option
     ; mutable wave_format : Wave_format.t
+    ; mutable coverage : Coverage_metadata.t option
     }
   [@@deriving sexp_of]
 
@@ -265,15 +269,29 @@ module type Type = sig
     ; initialize_to : 'a option (** initial value (not supported by all tools) *)
     }
 
+  and instantiation_input =
+    { name : string
+    ; input_signal : t
+    }
+
+  and instantiation_output =
+    { name : string
+    ; output_width : int
+    ; output_low_index : int
+    }
+
+  and vhdl_instance =
+    { library_name : string
+    ; architecture_name : string
+    }
+
   and instantiation =
-    { inst_name : string (** name of circuit *)
-    ; inst_instance : string (** instantiation label *)
-    ; inst_generics : Parameter.t list (** [Parameter.int ...] *)
-    ; inst_inputs : (string * t) list (** name and input signal *)
-    ; inst_outputs : (string * (int * int)) list
-    (** name, width and low index of output *)
-    ; inst_lib : string
-    ; inst_arch : string
+    { circuit_name : string
+    ; instance_label : string
+    ; parameters : Parameter.t list
+    ; inputs : instantiation_input list
+    ; outputs : instantiation_output list
+    ; vhdl_instance : vhdl_instance
     }
 end
 
@@ -307,7 +325,13 @@ module type Signal__type = sig
   module Uid_set : Uid_set with module Uid := Uid
   module Uid_map : Uid_map with module Uid := Uid
 
+  module type With_info = With_info
   module type Deps = Deps with type t := t
+
+  (** Default implementation of [With_info] that uses unit types. *)
+  module Make_default_info (S : sig
+      type t
+    end) : With_info with type t := S.t and type info = unit
 
   (** Construction of custom dependencies. *)
   module Make_deps (Fold : sig
@@ -338,7 +362,8 @@ module type Signal__type = sig
   val signal_id : t -> signal_id option
 
   (** Returns the unique id of the signal. *)
-  val uid : t -> Uid.t
+  val%template uid : t -> Uid.t
+  [@@mode m = (local, global)]
 
   (** Width in bits of [t]. *)
   val width : t -> int
@@ -348,6 +373,12 @@ module type Signal__type = sig
 
   (** Returns the list of names assigned to the signal. *)
   val names : t -> string list
+
+  (** Returns the caller id of the signal if one exists. *)
+  val caller_id : t -> Caller_id.t option
+
+  (** Returns coverage metadata for the signal if it exists. *)
+  val coverage_metadata : t -> Coverage_metadata.t option
 
   (** Return the (binary) string representing a constants value. *)
   val const_value : t -> Bits.t
@@ -404,6 +435,11 @@ module type Signal__type = sig
   val set_wave_format : t -> Wave_format.t -> unit
   val get_wave_format : t -> Wave_format.t
 
+  val update_coverage_metadata
+    :  t
+    -> f:(Coverage_metadata.t option -> Coverage_metadata.t)
+    -> unit
+
   (** This function creates a copy of the signal with [f] applied to the signal's signal
       id (if applicable) *)
   val map_signal_id : t -> f:(signal_id -> signal_id) -> t
@@ -411,4 +447,8 @@ module type Signal__type = sig
   (** This function creates a copy of the signal with [f] applied to each of the signal's
       dependants *)
   val map_dependant : t -> f:(t -> t) -> t
+
+  module For_testing : sig
+    val uid_of_int : int -> Uid.t
+  end
 end

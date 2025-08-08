@@ -6,11 +6,12 @@ module Collision_mode = struct
     type t =
       | Read_before_write
       | Write_before_read
-    [@@deriving sexp_of, compare]
+    [@@deriving sexp_of, compare ~localize]
   end
 
   include T
-  include Comparable.Make (T)
+
+  include%template Comparable.Make [@mode local] (T)
 end
 
 let if_write_before_read_mode ~collision_mode (r : _ Read_port.t array) =
@@ -69,7 +70,7 @@ module Dual_port = struct
         ; port_a : 'a Port.t
         ; port_b : 'a Port.t
         }
-      [@@deriving hardcaml ~rtlmangle:true]
+      [@@deriving hardcaml ~rtlmangle:"_"]
     end
 
     module O = struct

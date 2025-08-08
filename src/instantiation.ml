@@ -56,8 +56,13 @@ let create
     ~f:(validate_module_or_instantiation_name ~special_chars:instance_name_special_chars);
   let width = List.fold outputs ~init:0 ~f:(fun a (_, i) -> a + i) in
   let outputs, _ =
-    List.fold outputs ~init:([], 0) ~f:(fun (o, a) (n, w) -> (n, (w, a)) :: o, a + w)
+    List.fold outputs ~init:([], 0) ~f:(fun (o, a) (n, w) ->
+      ( ({ name = n; output_width = w; output_low_index = a }
+         : Signal.Type.instantiation_output)
+        :: o
+      , a + w ))
   in
+  let outputs = List.rev outputs in
   let one_output = List.length outputs = 1 in
   let signal =
     (* When there are no output ports, this is a zero width signal.
@@ -67,23 +72,26 @@ let create
     Signal.Type.Inst
       { signal_id = Signal.Type.make_id_allow_zero_width width
       ; instantiation =
-          { inst_name = name
-          ; inst_instance =
+          { circuit_name = name
+          ; instance_label =
               (match instance with
                | None -> "the_" ^ name
                | Some i -> i)
-          ; inst_generics = parameters
-          ; inst_inputs = inputs
-          ; inst_outputs = outputs
-          ; inst_lib = lib
-          ; inst_arch = arch
+          ; parameters
+          ; inputs =
+              List.map
+                inputs
+                ~f:(fun (name, input_signal) : Signal.Type.instantiation_input ->
+                  { name; input_signal })
+          ; outputs
+          ; vhdl_instance = { library_name = lib; architecture_name = arch }
           }
       }
   in
   List.iter attributes ~f:(fun attribute ->
     ignore (Signal.add_attribute signal attribute : Signal.t));
   let outputs =
-    List.map outputs ~f:(fun (name, (width, offset)) ->
+    List.map outputs ~f:(fun { name; output_width = width; output_low_index = offset } ->
       ( name
       , (* We need to create a distinct output signal - if there is only one output then
            the instantiation and the output signal share a uid which confuses the logic

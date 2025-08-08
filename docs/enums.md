@@ -19,7 +19,7 @@ module Simple_enum_example = struct
     type t =
       | Foo
       | Bar
-    [@@deriving sexp_of, compare, enumerate]
+    [@@deriving sexp_of, compare ~localize, enumerate]
   end
 
   include Hardcaml.Enum.Make_enums(Enum)
@@ -37,7 +37,7 @@ module Foo = struct
   type t =
     | Foo_a
     | Foo_b
-  [@@deriving sexp_of, compare, enumerate]
+  [@@deriving sexp_of, compare ~localize, enumerate]
 end
 
 module Bar = struct
@@ -45,7 +45,7 @@ module Bar = struct
     | Bar_a
     | Bar_b
     | Bar_c
-  [@@deriving sexp_of, compare, enumerate]
+  [@@deriving sexp_of, compare ~localize, enumerate]
 end
 
 module Hello = struct
@@ -53,7 +53,7 @@ module Hello = struct
     type t =
       | Foo of Foo.t
       | Bar of Bar.t
-    [@@deriving sexp_of, compare, enumerate]
+    [@@deriving sexp_of, compare ~localize, enumerate]
   end
 
   include Hardcaml.Enum.Make_enums(Enum)

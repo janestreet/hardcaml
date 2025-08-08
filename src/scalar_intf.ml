@@ -31,4 +31,6 @@ module type Scalar = sig
   module type S_untyped = S_untyped
 
   module Make (X : Value.Arg) : S_untyped
+
+  val scalar : ?name:string -> int -> (module S_untyped)
 end
