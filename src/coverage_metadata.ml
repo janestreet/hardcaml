@@ -1,4 +1,4 @@
-open Core
+open! Core0
 open Coverage_prim
 
 module Kind = struct
@@ -7,7 +7,7 @@ module Kind = struct
     | If of Always_metadata.If.t
     | Switch_mux of Always_metadata.Switch_mux.t
     | Switch_cases of Always_metadata.Switch_cases.t
-  [@@deriving sexp_of]
+  [@@deriving bin_io, sexp_of]
 end
 
 module Waiver = struct
@@ -19,7 +19,7 @@ module Waiver = struct
         { state : string Waiver.t
         ; transition : string Transition.t Waiver.t
         }
-  [@@deriving sexp_of]
+  [@@deriving bin_io, sexp_of]
 
   let to_string t =
     let maybe_to_string w ~f = if Waiver.is_none w then "" else Waiver.to_string w ~f in
@@ -76,7 +76,7 @@ type t =
   { waiver : Waiver.t option
   ; kind : Kind.t option
   }
-[@@deriving sexp_of]
+[@@deriving bin_io, sexp_of]
 
 let or_default t_opt = Option.value t_opt ~default:{ waiver = None; kind = None }
 

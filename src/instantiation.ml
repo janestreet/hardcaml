@@ -1,9 +1,11 @@
-open Base
+open! Core0
 
 type t =
   { signal : Signal.t
   ; outputs : Signal.t Map.M(String).t
   }
+
+type output_map = Signal.t Map.M(String).t
 
 let module_name_special_chars = String.to_list "_$"
 let instance_name_special_chars = String.to_list "_$.[]"
@@ -57,8 +59,7 @@ let create
   let width = List.fold outputs ~init:0 ~f:(fun a (_, i) -> a + i) in
   let outputs, _ =
     List.fold outputs ~init:([], 0) ~f:(fun (o, a) (n, w) ->
-      ( ({ name = n; output_width = w; output_low_index = a }
-         : Signal.Type.instantiation_output)
+      ( ({ name = n; output_width = w; output_low_index = a } : Signal.Type.Inst.Output.t)
         :: o
       , a + w ))
   in
@@ -70,7 +71,7 @@ let create
        I wonder if there might be some confusion with [Signal.Empty]? We have tried to
        discourage this for a while in the api (make_id will raise). *)
     Signal.Type.Inst
-      { signal_id = Signal.Type.make_id_allow_zero_width width
+      { info = Signal.Type.make_id_allow_zero_width width
       ; instantiation =
           { circuit_name = name
           ; instance_label =
@@ -79,10 +80,8 @@ let create
                | Some i -> i)
           ; parameters
           ; inputs =
-              List.map
-                inputs
-                ~f:(fun (name, input_signal) : Signal.Type.instantiation_input ->
-                  { name; input_signal })
+              List.map inputs ~f:(fun (name, input_signal) : _ Signal.Type.Inst.Input.t ->
+                { name; input_signal })
           ; outputs
           ; vhdl_instance = { library_name = lib; architecture_name = arch }
           }

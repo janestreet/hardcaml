@@ -1,6 +1,6 @@
 [@@@ocaml.flambda_o3]
 
-open Base
+open! Core0
 
 let bits_per_word = 64
 let log_bits_per_word = 6

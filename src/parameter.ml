@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module Value = struct
   type t =
@@ -13,14 +13,14 @@ module Value = struct
     | Std_ulogic_vector of Logic.Std_logic_vector.t
     | String of string
     | Array of t list
-  [@@deriving equal ~localize, sexp, variants]
+  [@@deriving bin_io, equal ~localize, sexp, variants]
 end
 
 type t =
   { name : Parameter_name.t
   ; value : Value.t
   }
-[@@deriving equal ~localize, sexp_of]
+[@@deriving bin_io, equal ~localize, sexp_of]
 
 let sexp_of_t { name; value } =
   [%message "" ~_:(name : Parameter_name.t) ~_:(value : Value.t)]

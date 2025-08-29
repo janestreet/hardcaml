@@ -1,6 +1,6 @@
 [@@@ocaml.flambda_o3]
 
-open Base
+open! Core0
 
 let check_cache = true
 

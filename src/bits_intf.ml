@@ -1,7 +1,7 @@
-open Base
+open! Core0
 
 module type Bits = sig
-  type t = private Constant.t [@@deriving compare ~localize, sexp_of]
+  type t = private Constant.t [@@deriving bin_io, compare ~localize, sexp_of]
 
   include Comb.S with type t := t
   include Comparator.S with type t := t

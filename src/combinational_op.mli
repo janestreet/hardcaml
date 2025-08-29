@@ -1,6 +1,6 @@
 (** A custom combinational operation that can be inserted into a simulation. *)
 
-open Base
+open! Core0
 
 (** Implementation of the custom operation using [Bits.Mutable.t] *)
 type create_mutable_fn =

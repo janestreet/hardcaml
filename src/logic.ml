@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Std_logic = Logic_intf.Std_logic
 module type Four_state = Logic_intf.Four_state
@@ -14,7 +14,7 @@ module Std_logic = struct
     | L
     | H
     | Don't_care
-  [@@deriving compare ~localize, enumerate, sexp, variants]
+  [@@deriving bin_io, compare ~localize, enumerate, sexp, variants]
 
   let optimise_muxs = false
   let constant_only = true
@@ -89,7 +89,7 @@ module Four_state = struct
     | Z
     | L0
     | L1
-  [@@deriving compare ~localize, enumerate, sexp, variants]
+  [@@deriving bin_io, compare ~localize, enumerate, sexp, variants]
 
   let optimise_muxs = false
   let constant_only = true
@@ -143,6 +143,6 @@ module Four_state = struct
   let ( ~: ) a = of_x (Bits_list.X.( ~: ) (to_x a))
 end
 
-module Std_logic_vector = Bits_list.Make (Std_logic)
+module Std_logic_vector = Bits_list.Make_binable (Std_logic)
 module Bit_vector = Bits_list.Int_comb
-module Four_state_vector = Bits_list.Make (Four_state)
+module Four_state_vector = Bits_list.Make_binable (Four_state)

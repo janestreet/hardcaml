@@ -1,28 +1,13 @@
-open Base
+open! Core0
 
 (* Bits API built using lists to represent vectors. Allows any bit precision and is
    simple, but slow. *)
 
-module type T = sig
-  type t [@@deriving equal ~localize, sexp]
-
-  val constant_only : bool
-  val optimise_muxs : bool
-  val vdd : t
-  val gnd : t
-  val ( &: ) : t -> t -> t
-  val ( |: ) : t -> t -> t
-  val ( ^: ) : t -> t -> t
-  val ( ~: ) : t -> t
-  val to_char : t -> char
-  val of_char : char -> t
-end
-
-module type Comb = sig
-  include Comb.S
-
-  val t_of_sexp : Sexp.t -> t
-end
+module type S = Comb.S
+module type T = Bits_list_intf.T
+module type T_binable = Bits_list_intf.T_binable
+module type Comb = Bits_list_intf.Comb
+module type Comb_binable = Bits_list_intf.Comb_binable
 
 module Make_gates (T : T) = struct
   type t = T.t list [@@deriving equal ~localize, sexp]
@@ -114,7 +99,7 @@ module Make_gates (T : T) = struct
 end
 
 module Int = struct
-  type t = int [@@deriving compare ~localize, equal ~localize, sexp]
+  type t = int [@@deriving bin_io, compare ~localize, equal ~localize, sexp]
 
   let optimise_muxs = true
   let constant_only = true
@@ -139,7 +124,7 @@ module Int = struct
 end
 
 module Bool = struct
-  type t = bool [@@deriving compare ~localize, equal ~localize, sexp]
+  type t = bool [@@deriving bin_io, compare ~localize, equal ~localize, sexp]
 
   let optimise_muxs = true
   let constant_only = true
@@ -167,7 +152,7 @@ module X = struct
     | F
     | T
     | X
-  [@@deriving compare ~localize, equal ~localize, sexp]
+  [@@deriving bin_io, compare ~localize, equal ~localize, sexp]
 
   let optimise_muxs = false
   let constant_only = true
@@ -240,11 +225,17 @@ module Make (T : T) = struct
   ;;
 end
 
-module Int_comb = Make (Int)
-module Bool_comb = Make (Bool)
+module Make_binable (T : T_binable) = struct
+  type t = T.t list [@@deriving bin_io]
+
+  include (Make (T) : Comb with type t := t)
+end
+
+module Int_comb = Make_binable (Int)
+module Bool_comb = Make_binable (Bool)
 
 module X_comb = struct
-  include Make (X)
+  include Make_binable (X)
 
   let of_bit_string s =
     String.to_list s

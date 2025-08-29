@@ -1,4 +1,4 @@
-open Base
+open! Core0
 open Coverage_prim
 
 module Mux = struct

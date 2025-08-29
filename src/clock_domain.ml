@@ -1,4 +1,4 @@
-open! Base
+open! Core0
 
 module Exact = struct
   module Uid = Uid_builder.Make ()

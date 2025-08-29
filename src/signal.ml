@@ -1,4 +1,4 @@
-open Base
+open! Core0
 module Type = Signal__type
 
 type t = Type.t
@@ -15,7 +15,7 @@ let from_rep t () = t
 let update_rep t ~info:() = t
 
 let add_attribute signal attribute =
-  match signal_id signal with
+  match info signal with
   | None ->
     raise_s
       [%message
@@ -31,7 +31,7 @@ let add_attributes signal attributes =
 ;;
 
 let set_comment signal comment =
-  match signal_id signal with
+  match info signal with
   | None ->
     raise_s [%message "attempt to add comment to an empty signal" ~to_:(comment : string)]
   | Some _ ->
@@ -40,7 +40,7 @@ let set_comment signal comment =
 ;;
 
 let unset_comment signal =
-  match signal_id signal with
+  match info signal with
   | None -> raise_s [%message "attempt to remove comment from an empty signal"]
   | Some _ ->
     Type.unset_comment signal;
@@ -50,13 +50,13 @@ let unset_comment signal =
 let set_names s names = Type.set_names s names
 
 let attributes s =
-  match signal_id s with
+  match info s with
   | None -> []
   | Some _ -> Type.get_attributes s
 ;;
 
 let comment s =
-  match signal_id s with
+  match info s with
   | None -> raise_s [%message "cannot get [comment] from the empty signal"]
   | Some _ -> Type.get_comment s
 ;;
@@ -181,7 +181,7 @@ module Base = struct
   ;;
 
   let ( -- ) ?(loc = Stdlib.Lexing.dummy_pos) signal name =
-    match signal_id signal with
+    match info signal with
     | None ->
       raise_s
         [%message "attempt to set the name of the empty signal" ~to_:(name : string)]
@@ -192,30 +192,27 @@ module Base = struct
 
   let vdd = of_constant (Constant.of_int ~width:1 1) -- "vdd"
   let gnd = of_constant (Constant.of_int ~width:1 0) -- "gnd"
-  let op2 op len arg_a arg_b = Op2 { signal_id = make_id len; op; arg_a; arg_b }
+  let op2 op len arg_a arg_b = Op2 { info = make_id len; op; arg_a; arg_b }
 
   let concat_msb a =
     match a with
     | [ a ] -> a
     | _ ->
       let len = List.fold a ~init:0 ~f:(fun acc a -> acc + width a) in
-      Cat { signal_id = make_id len; args = a }
+      Cat { info = make_id len; args = a }
   ;;
 
-  let select arg ~high ~low =
-    Select { signal_id = make_id (high - low + 1); arg; high; low }
-  ;;
-
-  let ( +: ) a b = op2 Signal_add (width a) a b
-  let ( -: ) a b = op2 Signal_sub (width a) a b
-  let ( *: ) a b = op2 Signal_mulu (width a + width b) a b
-  let ( *+ ) a b = op2 Signal_muls (width a + width b) a b
-  let ( &: ) a b = op2 Signal_and (width a) a b
-  let ( |: ) a b = op2 Signal_or (width a) a b
-  let ( ^: ) a b = op2 Signal_xor (width a) a b
-  let ( ~: ) a = Not { signal_id = make_id (width a); arg = a }
-  let ( ==: ) a b = op2 Signal_eq 1 a b
-  let ( <: ) a b = op2 Signal_lt 1 a b
+  let select arg ~high ~low = Select { info = make_id (high - low + 1); arg; high; low }
+  let ( +: ) a b = op2 Add (width a) a b
+  let ( -: ) a b = op2 Sub (width a) a b
+  let ( *: ) a b = op2 Mulu (width a + width b) a b
+  let ( *+ ) a b = op2 Muls (width a + width b) a b
+  let ( &: ) a b = op2 And (width a) a b
+  let ( |: ) a b = op2 Or (width a) a b
+  let ( ^: ) a b = op2 Xor (width a) a b
+  let ( ~: ) a = Not { info = make_id (width a); arg = a }
+  let ( ==: ) a b = op2 Eq 1 a b
+  let ( <: ) a b = op2 Lt 1 a b
 
   let mux select cases =
     (* We are a bit more lax about this in [Comb], but RTL generation requires 2 cases
@@ -223,7 +220,7 @@ module Base = struct
     if List.length cases < 2
     then raise_s [%message "[Signal.mux] requires a minimum of 2 cases"];
     match cases with
-    | first_case :: _ -> Mux { signal_id = make_id (width first_case); select; cases }
+    | first_case :: _ -> Mux { info = make_id (width first_case); select; cases }
     | [] -> raise_s [%message "Mux with no cases"]
   ;;
 
@@ -233,7 +230,7 @@ module Base = struct
       then raise_s [%message "[cases] the match value must be a constant."]);
     match cases with
     | (_, first_case) :: _ ->
-      Cases { signal_id = make_id (width first_case); select; cases; default }
+      Cases { info = make_id (width first_case); select; cases; default }
     | [] -> raise_s [%message "[cases] no cases specified"]
   ;;
 end
@@ -268,7 +265,7 @@ let assign a b =
 let ( <-- ) = assign
 
 let wire w =
-  let wire = Wire { signal_id = make_id w; driver = None } in
+  let wire = Wire { info = make_id w; driver = None } in
   wire
 ;;
 
@@ -338,7 +335,7 @@ let reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
       ~clear
       d
   in
-  Reg { signal_id = make_id (width d); register = spec; d }
+  Reg { info = make_id (width d); register = spec; d }
 ;;
 
 include Signal_builders.Registers (struct
@@ -375,7 +372,7 @@ module Memory_prim = struct
     let memory =
       add_attributes
         (Multiport_mem
-           { signal_id = make_id data_width
+           { info = make_id data_width
            ; size
            ; write_ports
            ; initialize_to = Option.map initialize_to ~f:Array.copy
@@ -384,7 +381,7 @@ module Memory_prim = struct
     in
     Option.iter name ~f:(fun name -> ignore (memory -- name : t));
     Array.map read_addresses ~f:(fun read_address ->
-      Mem_read_port { signal_id = make_id data_width; memory; read_address })
+      Mem_read_port { info = make_id data_width; memory; read_address })
   ;;
 end
 

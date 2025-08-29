@@ -1,7 +1,7 @@
 (** [Clocked_signal.t] is similar to a [Signal.t], but with clock domain info attached to
     it. *)
 
-open Base
+open! Core0
 
 type t
 

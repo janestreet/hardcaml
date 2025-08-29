@@ -28,7 +28,7 @@
    NOTE: It would be nice if many of the rules below could be encoded into the
    type system, but I dont know how or if it's possible. *)
 
-open Base
+open! Core0
 
 type name = string
 type id = int
@@ -195,6 +195,8 @@ exception No_circuit
 exception Circuit_already_started
 exception Circuit_already_exists of string
 exception IO_name_already_exists of string
+
+type structural_rtl_component_set = Set.M(Structural_rtl_component).t
 
 let signal_is_empty = function
   | Empty -> true

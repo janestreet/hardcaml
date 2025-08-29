@@ -1,4 +1,4 @@
-open! Base
+open! Core0
 
 module T = struct
   type 'a t =

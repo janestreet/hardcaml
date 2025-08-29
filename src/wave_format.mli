@@ -1,6 +1,6 @@
 (** How to display the value of a signal. Generally used in waveforms. *)
 
-open Base
+open! Core0
 
 type t =
   | Binary (** Binary. *)
@@ -12,7 +12,7 @@ type t =
   | Index of string list (** Use data as index into given list of strings. *)
   | Custom of (Bits.t -> string) (** User defined formatting. *)
   | Map of (Bits.t, string) List.Assoc.t (** Map from Bits.t to string. *)
-[@@deriving sexp_of]
+[@@deriving bin_io, sexp_of]
 
 (** [Custom] constructors are compared for physical equality. *)
 include%template Equal.S [@mode local] with type t := t

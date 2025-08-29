@@ -3,7 +3,7 @@
     They track a circuit database of instantiated modules, and a scheme for managing the
     naming of signals within the design. *)
 
-open Base
+open! Core0
 
 module Path : sig
   type t [@@deriving sexp_of]

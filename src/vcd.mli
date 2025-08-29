@@ -16,7 +16,7 @@
         - ...
     v} *)
 
-open Base
+open! Core0
 open Stdio
 
 (** Timescales.

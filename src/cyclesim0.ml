@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module Port_list = struct
   type t = (string * Bits.t ref) list [@@deriving sexp_of]

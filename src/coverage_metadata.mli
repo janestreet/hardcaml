@@ -8,7 +8,7 @@ module Kind : sig
     | If of Always_metadata.If.t
     | Switch_mux of Always_metadata.Switch_mux.t
     | Switch_cases of Always_metadata.Switch_cases.t
-  [@@deriving sexp_of]
+  [@@deriving bin_io, sexp_of]
 end
 
 module Waiver : sig
@@ -20,7 +20,7 @@ module Waiver : sig
         { state : string Waiver.t
         ; transition : string Transition.t Waiver.t
         }
-  [@@deriving sexp_of, to_string]
+  [@@deriving bin_io, sexp_of, to_string]
 
   val is_none : t -> bool
 end
@@ -29,7 +29,7 @@ type t =
   { waiver : Waiver.t option
   ; kind : Kind.t option
   }
-[@@deriving sexp_of]
+[@@deriving bin_io, sexp_of]
 
 (** Kinds *)
 

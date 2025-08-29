@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type S = Scalar_intf.S
 module type S_untyped = Scalar_intf.S_untyped

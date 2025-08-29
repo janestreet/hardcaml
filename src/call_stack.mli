@@ -1,10 +1,17 @@
-open Base
+open! Core0
 
 module Slot : sig
-  type t = Stdlib.Printexc.Slot.t [@@deriving sexp_of, compare, equal, hash]
+  type t' =
+    { filename : string
+    ; line_number : int
+    ; start_char : int
+    ; defname : string
+    }
 
+  type t = t' option [@@deriving bin_io, sexp_of, compare, equal, hash]
+
+  val create : Stdlib.Printexc.Slot.t -> t
   val format : t -> string
-  val format_location : Stdlib.Printexc.location -> string
 end
 
-type t = Slot.t list [@@deriving sexp_of, compare, equal, hash]
+type t = Slot.t list [@@deriving bin_io, sexp_of, compare, equal, hash]

@@ -10,7 +10,7 @@
 
     It is represented with [Bytes.t] because that is a more efficient memory layout than
     an ocaml array of [Int64]s. *)
-open Base
+open! Core0
 
 (** Comparison of two [Bits.t]: first the widths are compared and if they are same the
     unsigned numerical value is compared. *)

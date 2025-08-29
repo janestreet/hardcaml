@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Arg = Value_intf.Arg
 module type S = Value_intf.S

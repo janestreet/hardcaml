@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 (** An enumerated type (generally a variant type with no arguments) which should derive
     [compare, enumerate, sexp_of, variants]. *)

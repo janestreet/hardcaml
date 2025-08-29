@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 type range =
   | Vector of { width : int }
@@ -332,7 +332,7 @@ let find_multiport_memory var_map signal =
   | _ -> raise_s [%message "[Rtl_ast] expecting multiport memory declaration"]
 ;;
 
-let always_of_reg var_map (register : _ Signal.Type.register) ~q ~d =
+let always_of_reg var_map (register : _ Signal.Type.Reg.Register.t) ~q ~d =
   let find = find_logic var_map in
   let q_of d : always = Assignment { lhs = (find q).write; rhs = (find d).read } in
   let enabled =
@@ -448,8 +448,8 @@ let create_phantom_inputs ~rtl_name circuit =
 ;;
 
 let is_mux2 = function
-  | Signal.Type.Mux { signal_id = _; select; cases = [ _; _ ] }
-    when Signal.width select = 1 -> true
+  | Signal.Type.Mux { info = _; select; cases = [ _; _ ] } when Signal.width select = 1 ->
+    true
   | _ -> false
 ;;
 
@@ -568,7 +568,7 @@ let create_statement ~(rtl_config : Rtl_config.t) ~language var_map (signal : Si
          { lhs = (find "Cat.lhs" signal).write
          ; args = List.map args ~f:(fun arg -> (find "Cat.arg" arg).read)
          })
-  | Op2 { op = Signal_muls; arg_a; arg_b; _ } ->
+  | Op2 { op = Muls; arg_a; arg_b; _ } ->
     Assignment
       (Binop
          { lhs = (find "Op2.lhs" signal).write
@@ -579,15 +579,15 @@ let create_statement ~(rtl_config : Rtl_config.t) ~language var_map (signal : Si
   | Op2 { op; arg_a; arg_b; _ } ->
     let op =
       match op with
-      | Signal_add -> Add
-      | Signal_sub -> Sub
-      | Signal_mulu -> Mulu
-      | Signal_muls -> assert false
-      | Signal_and -> And
-      | Signal_or -> Or
-      | Signal_xor -> Xor
-      | Signal_eq -> Eq
-      | Signal_lt -> Lt
+      | Add -> Add
+      | Sub -> Sub
+      | Mulu -> Mulu
+      | Muls -> assert false
+      | And -> And
+      | Or -> Or
+      | Xor -> Xor
+      | Eq -> Eq
+      | Lt -> Lt
     in
     Assignment
       (Binop
@@ -673,7 +673,7 @@ let create_statement ~(rtl_config : Rtl_config.t) ~language var_map (signal : Si
   | Reg { register; d; _ } -> always_of_reg var_map register ~q:signal ~d
   | Const { constant; _ } ->
     Assignment (Const { lhs = (find "Const.lhs" signal).write; constant })
-  | Inst { signal_id = _; instantiation } ->
+  | Inst { info = _; instantiation } ->
     let input_ports =
       List.map instantiation.inputs ~f:(fun { name = port_name; input_signal = signal } ->
         { port_name; connection = (find ("Inst.input_port: " ^ port_name) signal).read })

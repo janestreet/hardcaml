@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module Path = struct
   type t = string list [@@deriving sexp_of]

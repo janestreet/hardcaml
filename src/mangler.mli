@@ -1,6 +1,6 @@
 (** Map a set of names to a set of unique names. *)
 
-open Base
+open! Core0
 
 (** A mangler is a mapping from strings to the next available integer which should be
     added to the name to make it unique. *)

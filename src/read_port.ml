@@ -1,11 +1,11 @@
-open! Base
+open! Core0
 
 type 'a t =
   { read_clock : 'a
   ; read_address : 'a
   ; read_enable : 'a
   }
-[@@deriving sexp_of]
+[@@deriving bin_io, sexp_of]
 
 let iter t ~f =
   f t.read_clock;

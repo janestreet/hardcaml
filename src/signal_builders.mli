@@ -1,4 +1,4 @@
-open! Base
+open! Core0
 
 (** Functors to construct methods needed for a [Signal.S] interface to be completed. *)
 

@@ -1,36 +1,41 @@
-open Base
+open Core
 module Printexc = Stdlib.Printexc
 
 module Slot = struct
-  type location = Printexc.location
-  type t = Printexc.Slot.t
+  type t' =
+    { filename : string
+    ; line_number : int
+    ; start_char : int
+    ; defname : string
+    }
+  [@@deriving bin_io, compare, sexp_of, equal, hash]
 
-  let format_location (l : location) =
-    Printf.sprintf "%s:%i:%i" l.filename l.line_number l.start_char
+  type t = t' option [@@deriving bin_io, compare, sexp_of, equal, hash]
+
+  let create (s : Printexc.Slot.t) =
+    let l = Printexc.Slot.location s in
+    Option.map l ~f:(fun l ->
+      { filename = l.filename
+      ; line_number = l.line_number
+      ; start_char = l.start_char
+      ; defname = Option.value ~default:"?" (Printexc.Slot.name s)
+      })
   ;;
 
-  let format_loc t =
-    Option.value_map (Printexc.Slot.location t) ~f:format_location ~default:""
+  let format_location (l : t') =
+    [%string "%{l.filename}:%{l.line_number#Int}:%{l.start_char#Int}"]
   ;;
 
   let format t =
-    let name = Option.value (Printexc.Slot.name t) ~default:"" in
-    Printf.sprintf "%s$%s" name (format_loc t)
+    Option.value_map ~default:"?" t ~f:(fun t ->
+      [%string "%{t.defname}$%{format_location t}"])
   ;;
 
-  let sexp_of_t t = [%sexp (format_loc t : string)]
-
-  let compare t1 t2 =
-    let flatten t =
-      Option.map (Printexc.Slot.location t) ~f:(fun loc ->
-        loc.filename, loc.line_number, loc.start_char)
-    in
-    [%compare: (string * int * int) option] (flatten t1) (flatten t2)
+  let sexp_of_t =
+    Option.value_map
+      ~default:[%sexp ("" : string)]
+      ~f:(fun t -> [%sexp (format_location t : string)])
   ;;
-
-  let equal t1 t2 = compare t1 t2 = 0
-  let hash_fold_t state t = String.hash_fold_t state (format t)
-  let hash t = String.hash (format t)
 end
 
-type t = Slot.t list [@@deriving sexp_of, compare, equal, hash]
+type t = Slot.t list [@@deriving bin_io, sexp_of, compare, equal, hash]

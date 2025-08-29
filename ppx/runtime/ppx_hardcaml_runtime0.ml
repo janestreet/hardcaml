@@ -1,4 +1,4 @@
-open Base
+open Core
 
 module Array = struct
   include Array

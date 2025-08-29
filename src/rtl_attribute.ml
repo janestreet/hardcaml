@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module Value = struct
   module T = struct
@@ -6,7 +6,7 @@ module Value = struct
       | Int of int
       | String of string
       | Bool of bool
-    [@@deriving sexp_of, compare ~localize, equal ~localize, hash]
+    [@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]
   end
 
   include T
@@ -20,7 +20,7 @@ module Applies_to = struct
       | Regs
       | Memories
       | Instantiations
-    [@@deriving sexp_of, compare ~localize, equal ~localize, hash]
+    [@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]
   end
 
   include T
@@ -33,7 +33,7 @@ module T = struct
     ; value : Value.t option
     ; applies_to : Applies_to.t list
     }
-  [@@deriving sexp_of, compare ~localize, equal ~localize, hash]
+  [@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]
 end
 
 include T
@@ -115,6 +115,8 @@ module Vivado = struct
   let critical_sig_opt b =
     create "critical_sig_opt" ~applies_to:[ Regs ] ~value:(true_or_false_string b)
   ;;
+
+  let cascade_height x = create "CASCADE_HEIGHT" ~applies_to:[ Memories ] ~value:(Int x)
 
   module Ram_style = struct
     let block = create "RAM_STYLE" ~applies_to:[ Memories ] ~value:(String "block")

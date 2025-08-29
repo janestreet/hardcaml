@@ -2,7 +2,7 @@
    much better inlining and code gen, though we still lack cross module inlining. *)
 [@@@ocaml.flambda_o3]
 
-open Base
+open! Core0
 module Config = Cyclesim0.Config
 
 module Node = struct
@@ -290,17 +290,17 @@ let compile_comb
   let find_address signal = (find_exn signal).address in
   let dst_width = Signal.width dst_signal in
   match dst_signal with
-  | Op2 { arg_a; arg_b; op = Signal_add; _ } ->
+  | Op2 { arg_a; arg_b; op = Add; _ } ->
     let src_address_a = find_address arg_a in
     let src_address_b = find_address arg_b in
     let width_in_bits = dst_width in
     Some (Cyclesim_ops.add t ~dst_address ~src_address_a ~src_address_b ~width_in_bits)
-  | Op2 { arg_a; arg_b; op = Signal_sub; _ } ->
+  | Op2 { arg_a; arg_b; op = Sub; _ } ->
     let src_address_a = find_address arg_a in
     let src_address_b = find_address arg_b in
     let width_in_bits = dst_width in
     Some (Cyclesim_ops.sub t ~dst_address ~src_address_a ~src_address_b ~width_in_bits)
-  | Op2 { arg_a; arg_b; op = Signal_mulu; _ } ->
+  | Op2 { arg_a; arg_b; op = Mulu; _ } ->
     let arg_a = Map.find_exn map (Signal.uid arg_a) in
     let arg_b = Map.find_exn map (Signal.uid arg_b) in
     let src_address_a, width_in_bits_a = arg_a.address, Signal.width arg_a.signal in
@@ -313,7 +313,7 @@ let compile_comb
          ~src_address_b
          ~width_in_bits_a
          ~width_in_bits_b)
-  | Op2 { arg_a; arg_b; op = Signal_muls; _ } ->
+  | Op2 { arg_a; arg_b; op = Muls; _ } ->
     let arg_a = Map.find_exn map (Signal.uid arg_a) in
     let arg_b = Map.find_exn map (Signal.uid arg_b) in
     let src_address_a, width_in_bits_a = arg_a.address, Signal.width arg_a.signal in
@@ -326,27 +326,27 @@ let compile_comb
          ~src_address_b
          ~width_in_bits_a
          ~width_in_bits_b)
-  | Op2 { arg_a; arg_b; op = Signal_and; _ } ->
+  | Op2 { arg_a; arg_b; op = And; _ } ->
     let src_address_a = find_address arg_a in
     let src_address_b = find_address arg_b in
     let width_in_bits = dst_width in
     Some (Cyclesim_ops.and_ t ~dst_address ~src_address_a ~src_address_b ~width_in_bits)
-  | Op2 { arg_a; arg_b; op = Signal_or; _ } ->
+  | Op2 { arg_a; arg_b; op = Or; _ } ->
     let src_address_a = find_address arg_a in
     let src_address_b = find_address arg_b in
     let width_in_bits = dst_width in
     Some (Cyclesim_ops.or_ t ~dst_address ~src_address_a ~src_address_b ~width_in_bits)
-  | Op2 { arg_a; arg_b; op = Signal_xor; _ } ->
+  | Op2 { arg_a; arg_b; op = Xor; _ } ->
     let src_address_a = find_address arg_a in
     let src_address_b = find_address arg_b in
     let width_in_bits = dst_width in
     Some (Cyclesim_ops.xor t ~dst_address ~src_address_a ~src_address_b ~width_in_bits)
-  | Op2 { arg_a; arg_b; op = Signal_eq; _ } ->
+  | Op2 { arg_a; arg_b; op = Eq; _ } ->
     let { Node.address = src_address_a; signal = arg_a } = find_exn arg_a in
     let src_address_b = find_address arg_b in
     let width_in_bits = Signal.width arg_a in
     Some (Cyclesim_ops.eq t ~dst_address ~src_address_a ~src_address_b ~width_in_bits)
-  | Op2 { arg_a; arg_b; op = Signal_lt; _ } ->
+  | Op2 { arg_a; arg_b; op = Lt; _ } ->
     let { Node.address = src_address_a; signal = arg_a } = find_exn arg_a in
     let src_address_b = find_address arg_b in
     let width_in_bits = Signal.width arg_a in

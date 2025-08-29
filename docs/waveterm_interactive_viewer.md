@@ -25,21 +25,71 @@ The following function is used to run the viewer.
 
 # Using the Waveform Viewer
 
-* `q/escape` quits
-* `left/right` or `ctrl+mouse-wheel` scroll waveform horizontally
-* `up/down` or `mouse-wheel` scroll waveform vertically
-* `-/=` decrease/increase waveform scale
-* `e/b` will find the next/prev transition on the highlighted signal
-* `s/S` save or load the current waveform configuration
-* `h/j/k/l` move the cursor
-* `9/(` - increase/decrease the signals pane size 
-* `0/)` - increase/decrease the values pane size
-* `_/+` - increase/decrease the waves pane size
+```ocaml
+# Hardcaml_waveterm_interactive.print_key_help ();;
+              Escape    quit
+                  Up    scroll up
+                Down    scroll down
+             Ctrl Up    scroll up fast
+           Ctrl Down    scroll down fast
+                   ?    show help
+                   =    cursor centered zoom in
+                   -    cursor centered zoom out
+               Alt =    cursor centered zoom in fast
+               Alt -    cursor centered zoom out fast
+                   9    expand signals window
+                   (    shrink signals window
+                   0    expand values window
+                   )    shrink values window
+                Home    scroll wave to beginning
+                 End    scroll wave to end
+           Ctrl Home    scroll to first signal
+            Ctrl End    scroll to last signal
+                Left    scroll left
+               Right    scroll right
+           Ctrl Left    scroll left fast
+          Ctrl Right    scroll right fast
+                   k    move cursor up
+                   j    move cursor down
+                   h    move cursor left
+                   l    move cursor right
+                   K    move cursor up fast
+                   J    move cursor down fast
+                   H    move cursor left fast
+                   L    move cursor right fast
+                   g    center on cursor
+                   G    set cursor to first wave on screen
+                   1    select cursor 1
+                   2    select cursor 2
+                   3    select cursor 3
+                   4    select cursor 4
+                   5    select cursor 5
+               Alt 1    select cursor 1 and center
+               Alt 2    select cursor 2 and center
+               Alt 3    select cursor 3 and center
+               Alt 4    select cursor 4 and center
+               Alt 5    select cursor 5 and center
+                   r    remove selected cursor
+               Enter    maybe toggle module
+                   s    save ui state
+                   S    load ui state
+                   e    search for transition forward
+                   b    search for transition backward
+                   f    cycle wave format
+                   F    reset wave format
+                   c    cycle colour
+                   C    toggle bold
+- : unit = ()
+```
 
-Left clicking on the waveform will position a cursor and show the value of signals at that
-cycle in the values window.
+Left clicking on the waveform will position the active cursor and show the value of
+signals at that cycle in the values window. Cycle deltas between different cursors is
+shown in the wave view title.
 
 All windows also have scroll bars that can be clicked on.
+
+A `.hardcamlwavetermrc` can be present in the current directory, your home directory or
+found via the `HARDCAMLWAVETERMRC` environment variable to configure key bindings.
 
 # Interactive Waveforms from Expect Tests
 

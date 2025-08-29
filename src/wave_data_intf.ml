@@ -1,6 +1,6 @@
 (** A dynamically-sized array, similar to std::vector in C++. *)
 
-open Base
+open! Core0
 
 module type Data = sig
   type t [@@deriving sexp_of, compare ~localize, equal ~localize]

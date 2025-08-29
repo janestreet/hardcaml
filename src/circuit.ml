@@ -1,9 +1,9 @@
-(* A f!circuit is defined by transitively following the dependencies of its outputs,
-   stopping at unassigned wires or constants.  [Signal_graph.inputs] does this.
-   All such unassigned wires are circuit inputs.  As a consequence, all other wires
-   in a circuit are assigned, and hence cannot be changed. *)
+(* A circuit is defined by transitively following the dependencies of its outputs,
+   stopping at unassigned wires or constants. [Signal_graph.inputs] does this. All such
+   unassigned wires are circuit inputs. As a consequence, all other wires in a circuit are
+   assigned, and hence cannot be changed. *)
 
-open Base
+open! Core0
 module Uid_set = Signal.Type.Uid_set
 
 module Signal_map = struct
@@ -22,7 +22,7 @@ module Signal_map = struct
 end
 
 module Instantiation_sexp = struct
-  type t = Signal.Type.instantiation
+  type t = Signal.t Signal.Type.Inst.Instantiation.t
 
   let sexp_of_t (t : t) =
     [%message "" (t.circuit_name : string) (t.instance_label : string)]
@@ -233,7 +233,7 @@ let set_phantom_inputs circuit phantom_inputs =
 
     include T
 
-    include%template Comparable.Make [@mode local] (T)
+    include%template Comparable.Make_plain [@mode local] (T)
 
     let of_signal port =
       let name =

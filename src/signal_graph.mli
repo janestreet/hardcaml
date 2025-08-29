@@ -6,7 +6,7 @@
     will stop when it reaches any signal in the given list (which is also /not/ included
     as part of the search). *)
 
-open Base
+open! Core0
 
 module Normalized_signal_uid : sig
   type t = private Signal.Type.Uid.t

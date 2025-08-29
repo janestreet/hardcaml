@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 let gray_inc_mux_inputs (type a) (module Comb : Comb.S with type t = a) width ~by : a list
   =

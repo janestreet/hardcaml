@@ -3,7 +3,7 @@
     The major change here is that the output order respects the input order as far as
     possible. This is important for simulation schedules. *)
 
-open Base
+open! Core0
 
 module Edge : sig
   type 'a t =

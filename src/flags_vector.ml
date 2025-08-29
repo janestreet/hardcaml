@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Cases = Flags_vector_intf.Cases
 module type S = Flags_vector_intf.S

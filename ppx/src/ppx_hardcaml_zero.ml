@@ -983,9 +983,9 @@ let sig_of_type ~ast ~pre ({ ptype_loc = loc; _ } as type_decl) =
 
 let declare_let_binding_extension ~name ~generate_naming_function =
   let pattern =
-    (* Matches let bindings. The __' also captures the location of the [rec] flag, if
-       present. The second __ captures the bindings, and the final __ captures the [rhs]
-       of the let binding. *)
+    (* Matches let bindings. The __' also captures the location of the [mutable] and [rec]
+       flags, if present. The third __ captures the bindings, and the final __ captures
+       the [rhs] of the let binding. *)
     Ast_pattern.(single_expr_payload (pexp_let __' __ __))
   in
   Extension.declare_with_path_arg

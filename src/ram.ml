@@ -1,4 +1,4 @@
-open Base
+open! Core0
 open Signal
 
 module Collision_mode = struct
@@ -11,7 +11,7 @@ module Collision_mode = struct
 
   include T
 
-  include%template Comparable.Make [@mode local] (T)
+  include%template Comparable.Make_plain [@mode local] (T)
 end
 
 let if_write_before_read_mode ~collision_mode (r : _ Read_port.t array) =

@@ -64,7 +64,7 @@ val the_instantiation : Instantiation.t = <abstr>
 
 ```ocaml
 # Instantiation.outputs the_instantiation
-- : Signal.t Base.Map.M(Base.String).t = <abstr>
+- : Instantiation.output_map = <abstr>
 ```
 
 ## Parameters

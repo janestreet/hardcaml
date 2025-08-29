@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Std_logic = sig
   type t =
@@ -11,7 +11,7 @@ module type Std_logic = sig
     | L (** Weak - prefer 0 *)
     | H (** Weak - prefer 1 *)
     | Don't_care (** Dont care *)
-  [@@deriving compare ~localize, enumerate, sexp, variants]
+  [@@deriving bin_io, compare ~localize, enumerate, sexp, variants]
 
   include%template Equal.S [@mode local] with type t := t
 
@@ -32,7 +32,7 @@ module type Four_state = sig
     | Z
     | L0
     | L1
-  [@@deriving compare ~localize, enumerate, sexp, variants]
+  [@@deriving bin_io, compare ~localize, enumerate, sexp, variants]
 
   include%template Equal.S [@mode local] with type t := t
 
@@ -49,7 +49,7 @@ module type Logic = sig
 
   module Std_logic : Std_logic
   module Four_state : Four_state
-  module Std_logic_vector : Bits_list.Comb with type t = Std_logic.t list
-  module Bit_vector : Bits_list.Comb with type t = int list
-  module Four_state_vector : Bits_list.Comb with type t = Four_state.t list
+  module Std_logic_vector : Bits_list.Comb_binable with type t = Std_logic.t list
+  module Bit_vector : Bits_list.Comb_binable with type t = int list
+  module Four_state_vector : Bits_list.Comb_binable with type t = Four_state.t list
 end

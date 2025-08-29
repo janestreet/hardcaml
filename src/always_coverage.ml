@@ -1,4 +1,4 @@
-open Base
+open! Core0
 include Always_coverage_intf
 module Type = Signal.Type
 

@@ -3,7 +3,7 @@
     Circuit instantiations are considered equal, and coverage is merged, when they are
     structurally equal. *)
 
-open Base
+open! Core0
 
 module Instance : sig
   type t = { call_stack : Call_stack.t }

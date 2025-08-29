@@ -294,7 +294,8 @@ opt for special APIs for getting/setting them in simulations:
 # Hello.Binary.sim_set_raw
 - : Bits.t ref Hello.Binary.t -> Bits.t -> unit = <fun>
 # Hello.Binary.sim_get
-- : Bits.t ref Hello.Binary.t -> Hello.Enum.t Or_error.t = <fun>
+- : Bits.t ref Hello.Binary.t -> Hello.Enum.t Hardcaml__.Core0.Or_error.t =
+<fun>
 # Hello.Binary.sim_get_raw
 - : Bits.t ref Hello.Binary.t -> Bits.t = <fun>
 ```

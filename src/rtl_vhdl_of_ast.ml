@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 (* Type of a VHDL attribute. *)
 module Attribute_type = struct

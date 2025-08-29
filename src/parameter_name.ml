@@ -1,6 +1,6 @@
-open Base
+open! Core0
 
-type t = string [@@deriving compare ~localize, sexp]
+type t = string [@@deriving bin_io, compare ~localize, sexp]
 
 let%template equal = [%compare_local.equal: t] [@@mode __ = (global, local)]
 let of_string n = n

@@ -1,7 +1,7 @@
 (** A database which holds a collecton of custom combinational operations for use with
     [Cyclesim] based simulators. *)
 
-open Base
+open! Core0
 
 type t [@@deriving sexp_of]
 

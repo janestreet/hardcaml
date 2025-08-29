@@ -458,7 +458,7 @@ The functions provided try to do sane things with zero width vectors.
 
 ```ocaml
 # With_zero_width.(concat_msb [ None; ones 2; zero 0; zero 1; Some (of_string "1101") ])
-- : With_zero_width.t = Base.Option.Some 1101101
+- : With_zero_width.t = Some 1101101
 ```
 
 ## TypedMath

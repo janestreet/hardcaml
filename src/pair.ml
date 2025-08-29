@@ -1,4 +1,4 @@
-open! Base
+open! Core0
 include Pair_intf.T
 module M = Pair_intf.M
 

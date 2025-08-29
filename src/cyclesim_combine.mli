@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module Combine_error : sig
   type t =

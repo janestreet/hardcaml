@@ -1,4 +1,4 @@
-open Base
+open! Core0
 module Ast = Interface.Ast
 
 type ('a, 'b) with_valid2 = ('a, 'b) Comb_intf.with_valid2
@@ -11,7 +11,7 @@ module Make_enums (Cases : Enum_intf.Cases) = struct
   module Cases = struct
     include Cases
 
-    include%template Comparable.Make [@mode local] (Cases)
+    include%template Comparable.Make_plain [@mode local] (Cases)
   end
 
   let to_rank =

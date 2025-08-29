@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 (** Uses a [valid] bit to indicate the validity of a [value]. Conceptually similar to an
     [Option.t]. *)

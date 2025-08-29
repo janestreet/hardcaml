@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module Total_bits = struct
   type t =
@@ -116,7 +116,7 @@ module Memory = struct
 
   include T
 
-  include%template Comparable.Make [@mode local] (T)
+  include%template Comparable.Make_plain [@mode local] (T)
 end
 
 module Memories = struct
@@ -313,36 +313,36 @@ let rec create ?database circuit =
           concatenation = Total_bits.add ?u:utilization.concatenation signal
         }
       | Op2 { op; _ } ->
-        (match (op : Signal.Type.signal_op) with
-         | Signal_add ->
+        (match (op : Signal.Type.Op.t) with
+         | Add ->
            { utilization with
              adders = Total_and_max_bits.add ?u:utilization.adders signal
            }
-         | Signal_sub ->
+         | Sub ->
            { utilization with
              subtractors = Total_and_max_bits.add ?u:utilization.subtractors signal
            }
-         | Signal_mulu ->
+         | Mulu ->
            { utilization with
              unsigned_multipliers =
                Total_and_max_bits.add ?u:utilization.unsigned_multipliers signal
            }
-         | Signal_muls ->
+         | Muls ->
            { utilization with
              signed_multipliers =
                Total_and_max_bits.add ?u:utilization.signed_multipliers signal
            }
-         | Signal_and ->
+         | And ->
            { utilization with and_gates = Total_bits.add ?u:utilization.and_gates signal }
-         | Signal_or ->
+         | Or ->
            { utilization with or_gates = Total_bits.add ?u:utilization.or_gates signal }
-         | Signal_xor ->
+         | Xor ->
            { utilization with xor_gates = Total_bits.add ?u:utilization.xor_gates signal }
-         | Signal_eq ->
+         | Eq ->
            { utilization with
              equals = Total_and_max_bits.add ?u:utilization.equals signal
            }
-         | Signal_lt ->
+         | Lt ->
            { utilization with
              comparators = Total_and_max_bits.add ?u:utilization.comparators signal
            }))

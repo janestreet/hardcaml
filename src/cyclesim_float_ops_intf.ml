@@ -1,4 +1,4 @@
-open! Base
+open! Core0
 
 module type Real = sig
   val database : Combinational_ops_database.t

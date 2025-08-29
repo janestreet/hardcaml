@@ -1,6 +1,6 @@
 (** [Clock_domain] contains functions to work with clock domains. *)
 
-open Base
+open! Core0
 
 (** An exact non-constant known clock domain. *)
 module Exact : sig

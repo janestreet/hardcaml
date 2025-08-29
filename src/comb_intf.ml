@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 (** Various functions that build a tree-structured circuit take an optional
     [branching_factor] argument that controls the number of branches at each level of the

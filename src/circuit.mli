@@ -1,6 +1,6 @@
 (** Creation and manipulation of hardware circuits *)
 
-open Base
+open! Core0
 
 (** circuit data structure *)
 type t [@@deriving sexp_of]
@@ -92,7 +92,7 @@ val signal_map : t -> Signal.t Signal.Type.Uid_map.t
 val structural_compare : ?check_names:bool -> t -> t -> bool
 
 (** returns the list of instantiations in this circuit *)
-val instantiations : t -> Signal.Type.instantiation list
+val instantiations : t -> Signal.t Signal.Type.Inst.Instantiation.t list
 
 module With_interface (I : Interface.S) (O : Interface.S) : sig
   type create = Interface.Create_fn(I)(O).t

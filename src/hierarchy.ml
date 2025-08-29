@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 let fold circuit database ~init ~f =
   let rec fold arg (circuit : Circuit.t) inst =

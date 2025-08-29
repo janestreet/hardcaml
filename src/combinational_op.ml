@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 type create_mutable_fn =
   inputs:Bits.Mutable.t list -> outputs:Bits.Mutable.t list -> (unit -> unit) Staged.t

@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 let verbose_exe_coverage =
   lazy (Sys.getenv "HARDCAML_CYCLESIM_COVERAGE_VERBOSE" |> Option.is_some)

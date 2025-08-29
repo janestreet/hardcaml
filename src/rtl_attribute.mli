@@ -1,11 +1,11 @@
-open Base
+open! Core0
 
 (** RTL attribute specification. Only relevant to downstream tooling. *)
 
 (** Specification of attributes which may be attached to various objects within a RTL
     design. Such attributes are used to provide implementation hints to down stream CAD
     tools and do not affect any functionality within Hardcaml. *)
-type t [@@deriving compare ~localize, equal ~localize, hash, sexp_of]
+type t [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp_of]
 
 include Comparator.S with type t := t
 
@@ -15,7 +15,7 @@ module Value : sig
     | Int of int
     | String of string
     | Bool of bool
-  [@@deriving compare ~localize, equal ~localize, sexp_of]
+  [@@deriving bin_io, compare ~localize, equal ~localize, sexp_of]
 end
 
 module Applies_to : sig
@@ -24,7 +24,7 @@ module Applies_to : sig
     | Regs
     | Memories
     | Instantiations
-  [@@deriving compare ~localize, equal ~localize, sexp_of]
+  [@@deriving bin_io, compare ~localize, equal ~localize, sexp_of]
 end
 
 (** Create a new attribute. [applies_to], if specified, constrains what type of signal the
@@ -103,6 +103,8 @@ module Vivado : sig
       elements (registers) with a loop which have reasonable logic levels. It can cause
       resource overhead due to logic replication. *)
   val critical_sig_opt : bool -> t
+
+  val cascade_height : int -> t
 
   module Ram_style : sig
     val block : t

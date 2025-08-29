@@ -1,4 +1,4 @@
-open Base
+open! Core0
 include Always_prim_intf
 
 module Make (Signal : Signal.S) = struct

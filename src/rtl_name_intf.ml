@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Language = sig
   val legalize : string -> string

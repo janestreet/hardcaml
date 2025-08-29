@@ -1,4 +1,4 @@
-open Base
+open! Core0
 open Coverage_prim
 
 type 'a coverage =
@@ -137,7 +137,8 @@ end = struct
   type 'a t = 'a
 
   let sexp_of_t sexp_of_a t =
-    if Base.Exported_for_specific_uses.am_testing
+    if (* controlled by environment variable TESTING_FRAMEWORK *)
+       am_running_test
     then sexp_of_string "<elided-in-tests>"
     else sexp_of_a t
   ;;
@@ -149,10 +150,14 @@ let filter_call_stack call_stack =
     String.substr_index filename ~pattern:"test" |> Option.is_some
   in
   List.take_while call_stack ~f:(fun slot ->
-    match Stdlib.Printexc.Slot.location slot with
+    match slot with
     | None -> false
     | Some loc ->
-      (not (List.mem ~equal:String.equal skipped_bottom_modules loc.filename))
+      (not
+         (List.mem
+            ~equal:String.equal
+            skipped_bottom_modules
+            loc.Call_stack.Slot.filename))
       && not (is_test_file loc.filename))
 ;;
 

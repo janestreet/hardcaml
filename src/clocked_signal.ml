@@ -1,4 +1,4 @@
-open! Base
+open! Core0
 
 type info = Clock_domain.Runtime.t [@@deriving sexp_of, equal ~localize]
 

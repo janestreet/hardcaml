@@ -1,7 +1,7 @@
 (** Allow a hardcaml circuit to be defined as a hierarchy of modules, rather than just a
     single flat module. *)
 
-open Base
+open! Core0
 
 (** Fold through every circuit and instantiation in a hierarchical design.
 
@@ -11,7 +11,7 @@ val fold
   :  Circuit.t
   -> Circuit_database.t
   -> init:'a
-  -> f:('a -> Circuit.t option -> Signal.Type.instantiation option -> 'a)
+  -> f:('a -> Circuit.t option -> Signal.t Signal.Type.Inst.Instantiation.t option -> 'a)
   -> 'a
 
 val print : Circuit.t -> Circuit_database.t -> unit

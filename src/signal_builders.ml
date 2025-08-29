@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module Const_prop (Unoptimized : sig
     include Comb.S

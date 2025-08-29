@@ -1,6 +1,6 @@
 (** Specify whether to configure the hardware for simulation or synthesis. *)
 
-open Base
+open! Core0
 
 type t =
   | Simulation

@@ -1,4 +1,4 @@
-open Base
+open! Core0
 open Signal
 include Fifo_intf.T
 module Kinded_fifo = Fifo_intf.Kinded_fifo

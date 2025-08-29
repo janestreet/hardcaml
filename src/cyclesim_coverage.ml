@@ -1,9 +1,4 @@
-open Base
-
-include struct
-  open Core
-  module Out_channel = Out_channel
-end
+open! Core0
 
 module Global_config = struct
   include Coverage_global_config

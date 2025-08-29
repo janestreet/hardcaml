@@ -1,4 +1,4 @@
-open Core
+open! Core0
 
 val write
   :  Out_channel.t

@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 type ('a, 'b) t2 = ('a, 'b) Comb.with_valid2 =
   { valid : 'a

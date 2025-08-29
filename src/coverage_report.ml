@@ -1,4 +1,4 @@
-open Core
+open! Core0
 open Coverage_prim
 
 module Config = struct

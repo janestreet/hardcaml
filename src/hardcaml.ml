@@ -62,6 +62,7 @@ module Signal_graph = Signal_graph
 (** {1 Misc types} *)
 
 module Architecture = Architecture
+module Binable_circuit = Binable_circuit
 module Build_mode = Build_mode
 module Clocking = Clocking
 module Edge = Edge
@@ -94,10 +95,10 @@ module Tools_config = Tools_config
 
 (* These are exposed for code that does [@@deriving hardcaml]. *)
 
-let sexp_of_array = Base.sexp_of_array
-let sexp_of_list = Base.sexp_of_list
-let equal_list = Base.equal_list
-let equal_list__local = Base.equal_list__local
+let sexp_of_array = Core.sexp_of_array
+let sexp_of_list = Core.sexp_of_list
+let equal_list = Core.equal_list
+let equal_list__local = Core.equal_list__local
 
 (** {1 Private interface}
 

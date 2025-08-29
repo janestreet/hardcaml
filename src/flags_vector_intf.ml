@@ -2,7 +2,7 @@
 
     From software, the interface can be controlled using normal flags. *)
 
-open Base
+open! Core0
 
 module type Cases = sig
   type t [@@deriving sexp_of, compare ~localize, enumerate]

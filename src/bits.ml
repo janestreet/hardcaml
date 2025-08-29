@@ -1,8 +1,8 @@
 [@@@ocaml.flambda_o3]
 
-open Base
+open! Core0
 
-type t = Bits0.t
+type t = Bits0.t [@@deriving bin_io]
 
 let number_of_data_bytes (t : t) = Bits0.number_of_data_bytes t
 let unsafe_get_int64 = Bits0.unsafe_get_int64

@@ -1,6 +1,6 @@
 (* generic rtl writing for vhdl/verilog *)
 
-open Base
+open! Core0
 include Rtl_intf
 module Out_channel = Stdio.Out_channel
 module Language = Rtl_language

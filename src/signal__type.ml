@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Uid = Signal__type_intf.Uid
 module type Type = Signal__type_intf.Type
@@ -8,96 +8,336 @@ module type With_info = Signal__type_intf.With_info
 
 module Uid = Uid_builder.Make ()
 
-type signal_op =
-  | Signal_add
-  | Signal_sub
-  | Signal_mulu
-  | Signal_muls
-  | Signal_and
-  | Signal_or
-  | Signal_xor
-  | Signal_eq
-  | Signal_lt
-[@@deriving sexp_of, compare ~localize, equal ~localize, hash]
+module Op = struct
+  type t =
+    | Add
+    | Sub
+    | Mulu
+    | Muls
+    | And
+    | Or
+    | Xor
+    | Eq
+    | Lt
+  [@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]
+end
 
-type signal_metadata =
-  { mutable names_and_locs : Name_and_loc.t list
-  ; mutable attributes : Rtl_attribute.t list
-  ; mutable comment : string option
-  ; caller_id : Caller_id.t option
-  ; mutable wave_format : Wave_format.t
-  ; mutable coverage : Coverage_metadata.t option
-  }
-[@@deriving sexp_of]
+module Metadata = struct
+  type t =
+    { mutable names_and_locs : Name_and_loc.t list
+    ; mutable attributes : Rtl_attribute.t list
+    ; mutable comment : string option
+    ; caller_id : Caller_id.t option
+    ; mutable wave_format : Wave_format.t
+    ; mutable coverage : Coverage_metadata.t option
+    }
+  [@@deriving bin_io, sexp_of]
+end
 
-type signal_id =
-  { s_id : Uid.t
-  ; s_width : int
-  ; mutable s_metadata : signal_metadata option
-  }
-[@@deriving sexp_of]
+module Info = struct
+  type t =
+    { uid : Uid.t
+    ; width : int
+    ; mutable metadata : Metadata.t option
+    }
+  [@@deriving bin_io, sexp_of]
+end
+
+module Const = struct
+  type t =
+    { info : Info.t
+    ; constant : Bits.t
+    }
+  [@@deriving bin_io, sexp_of]
+end
+
+module Op2 = struct
+  type 'signal t =
+    { info : Info.t
+    ; op : Op.t
+    ; arg_a : 'signal
+    ; arg_b : 'signal
+    }
+  [@@deriving bin_io, sexp_of]
+
+  let map { info; op; arg_a; arg_b } ~f =
+    let arg_a = f arg_a in
+    let arg_b = f arg_b in
+    { info : Info.t; op : Op.t; arg_a; arg_b }
+  ;;
+end
+
+module Mux = struct
+  type 'signal t =
+    { info : Info.t
+    ; select : 'signal
+    ; cases : 'signal list
+    }
+  [@@deriving bin_io, sexp_of]
+
+  let map { info; select; cases } ~f =
+    let select = f select in
+    let cases = List.map cases ~f in
+    { info : Info.t; select; cases }
+  ;;
+end
+
+module Cases = struct
+  type 'signal t =
+    { info : Info.t
+    ; select : 'signal
+    ; cases : ('signal * 'signal) list
+    ; default : 'signal
+    }
+  [@@deriving bin_io, sexp_of]
+
+  let map { info; select; cases; default } ~f =
+    let select = f select in
+    let cases = List.map cases ~f:(fun (match_value, data) -> f match_value, f data) in
+    let default = f default in
+    { info : Info.t; select; cases; default }
+  ;;
+end
+
+module Cat = struct
+  type 'signal t =
+    { info : Info.t
+    ; args : 'signal list
+    }
+  [@@deriving bin_io, sexp_of]
+
+  let map { info; args } ~f =
+    let args = List.map args ~f in
+    { info : Info.t; args }
+  ;;
+end
+
+module Not = struct
+  type 'signal t =
+    { info : Info.t
+    ; arg : 'signal
+    }
+  [@@deriving bin_io, sexp_of]
+
+  let map { info; arg } ~f =
+    let arg = f arg in
+    { info : Info.t; arg }
+  ;;
+end
+
+module Wire = struct
+  type 'signal t =
+    { info : Info.t
+    ; mutable driver : 'signal option
+    }
+  [@@deriving bin_io, sexp_of]
+
+  let map { info; driver } ~f =
+    let driver = Option.map driver ~f in
+    { info : Info.t; driver }
+  ;;
+end
+
+module Select = struct
+  type 'signal t =
+    { info : Info.t
+    ; arg : 'signal
+    ; high : int
+    ; low : int
+    }
+  [@@deriving bin_io, sexp_of]
+
+  let map { info; arg; high; low } ~f =
+    let arg = f arg in
+    { info : Info.t; arg; high : int; low : int }
+  ;;
+end
+
+module Reg = struct
+  module Clock_spec = struct
+    type 'signal t =
+      { clock : 'signal
+      ; clock_edge : Edge.t
+      }
+    [@@deriving bin_io, sexp_of]
+
+    let map { clock; clock_edge } ~f =
+      let clock = f clock in
+      { clock; clock_edge : Edge.t }
+    ;;
+  end
+
+  module Reset_spec = struct
+    type 'signal t =
+      { reset : 'signal
+      ; reset_edge : Edge.t
+      ; reset_to : 'signal
+      }
+    [@@deriving bin_io, sexp_of]
+
+    let map { reset; reset_edge; reset_to } ~f =
+      let reset = f reset in
+      let reset_to = f reset_to in
+      { reset; reset_edge : Edge.t; reset_to }
+    ;;
+  end
+
+  module Clear_spec = struct
+    type 'signal t =
+      { clear : 'signal
+      ; clear_to : 'signal
+      }
+    [@@deriving bin_io, sexp_of]
+
+    let map { clear; clear_to } ~f =
+      let clear = f clear in
+      let clear_to = f clear_to in
+      { clear; clear_to }
+    ;;
+  end
+
+  module Register = struct
+    type 'signal t =
+      { clock : 'signal Clock_spec.t
+      ; reset : 'signal Reset_spec.t option
+      ; clear : 'signal Clear_spec.t option
+      ; enable : 'signal option
+      ; initialize_to : 'signal option
+      }
+    [@@deriving bin_io, sexp_of]
+
+    let map { clock; reset; clear; enable; initialize_to } ~f =
+      let clock = Clock_spec.map clock ~f in
+      let reset = Option.map reset ~f:(Reset_spec.map ~f) in
+      let clear = Option.map clear ~f:(Clear_spec.map ~f) in
+      let initialize_to = Option.map initialize_to ~f in
+      let enable = Option.map enable ~f in
+      { clock; reset; clear; enable; initialize_to }
+    ;;
+  end
+
+  type 'signal t =
+    { info : Info.t
+    ; register : 'signal Register.t
+    ; d : 'signal
+    }
+  [@@deriving bin_io, sexp_of]
+
+  let map { info; register; d } ~f =
+    let d = f d in
+    let register = Register.map register ~f in
+    { info : Info.t; register; d }
+  ;;
+end
+
+module Multiport_mem = struct
+  type 'signal t =
+    { info : Info.t
+    ; size : int
+    ; write_ports : 'signal Write_port.t array
+    ; initialize_to : Bits.t array option
+    }
+  [@@deriving bin_io, sexp_of]
+
+  let map { info; size; write_ports; initialize_to } ~f =
+    let write_ports = Array.map write_ports ~f:(Write_port.map ~f) in
+    { info : Info.t; size : int; write_ports; initialize_to : Bits.t array option }
+  ;;
+end
+
+module Mem_read_port = struct
+  type 'signal t =
+    { info : Info.t
+    ; memory : 'signal
+    ; read_address : 'signal
+    }
+  [@@deriving bin_io, sexp_of]
+
+  let map { info; memory; read_address } ~f =
+    let read_address = f read_address in
+    let memory = f memory in
+    { info : Info.t; memory; read_address }
+  ;;
+end
+
+module Inst = struct
+  module Input = struct
+    type 'signal t =
+      { name : string
+      ; input_signal : 'signal
+      }
+    [@@deriving bin_io, sexp_of]
+
+    let map { name; input_signal } ~f = { name; input_signal = f input_signal }
+  end
+
+  module Output = struct
+    type t =
+      { name : string
+      ; output_width : int
+      ; output_low_index : int
+      }
+    [@@deriving bin_io, sexp_of, equal]
+  end
+
+  module Vhdl_instance = struct
+    type t =
+      { library_name : string
+      ; architecture_name : string
+      }
+    [@@deriving bin_io, sexp_of]
+  end
+
+  module Instantiation = struct
+    type 'signal t =
+      { circuit_name : string
+      ; instance_label : string
+      ; parameters : Parameter.t list
+      ; inputs : 'signal Input.t list
+      ; outputs : Output.t list
+      ; vhdl_instance : Vhdl_instance.t
+      }
+    [@@deriving bin_io, sexp_of]
+
+    let map
+      { circuit_name; instance_label; parameters; inputs; outputs; vhdl_instance }
+      ~f
+      =
+      { circuit_name
+      ; instance_label
+      ; parameters
+      ; inputs = List.map inputs ~f:(Input.map ~f)
+      ; outputs
+      ; vhdl_instance
+      }
+    ;;
+  end
+
+  type 'signal t =
+    { info : Info.t
+    ; instantiation : 'signal Instantiation.t
+    }
+  [@@deriving bin_io, sexp_of]
+
+  let map { info; instantiation } ~f =
+    { info : Info.t; instantiation = Instantiation.map instantiation ~f }
+  ;;
+end
 
 type t =
   | Empty
-  | Const of
-      { signal_id : signal_id
-      ; constant : Bits.t
-      }
-  | Op2 of
-      { signal_id : signal_id
-      ; op : signal_op
-      ; arg_a : t
-      ; arg_b : t
-      }
-  | Mux of
-      { signal_id : signal_id
-      ; select : t
-      ; cases : t list
-      }
-  | Cases of
-      { signal_id : signal_id
-      ; select : t
-      ; cases : (t * t) list
-      ; default : t
-      }
-  | Cat of
-      { signal_id : signal_id
-      ; args : t list
-      }
-  | Not of
-      { signal_id : signal_id
-      ; arg : t
-      }
-  | Wire of
-      { signal_id : signal_id
-      ; mutable driver : t option
-      }
-  | Select of
-      { signal_id : signal_id
-      ; arg : t
-      ; high : int
-      ; low : int
-      }
-  | Reg of
-      { signal_id : signal_id
-      ; register : t register
-      ; d : t
-      }
-  | Multiport_mem of
-      { signal_id : signal_id
-      ; size : int
-      ; write_ports : t Write_port.t array
-      ; initialize_to : Bits.t array option
-      }
-  | Mem_read_port of
-      { signal_id : signal_id
-      ; memory : t
-      ; read_address : t
-      }
-  | Inst of
-      { signal_id : signal_id
-      ; instantiation : instantiation
-      }
+  | Const of Const.t
+  | Op2 of t Op2.t
+  | Mux of t Mux.t
+  | Cases of t Cases.t
+  | Cat of t Cat.t
+  | Not of t Not.t
+  | Wire of t Wire.t
+  | Select of t Select.t
+  | Reg of t Reg.t
+  | Multiport_mem of t Multiport_mem.t
+  | Mem_read_port of t Mem_read_port.t
+  | Inst of t Inst.t
 
 (* These types are used to define a particular type of register as per the following
    template, where each part is optional:
@@ -118,62 +358,6 @@ and reg_spec =
   ; clear : t option
   }
 
-and 'a clock_spec =
-  { clock : 'a
-  ; clock_edge : Edge.t
-  }
-
-and 'a reset_spec =
-  { reset : 'a
-  ; reset_edge : Edge.t
-  ; reset_to : 'a
-  }
-
-and 'a clear_spec =
-  { clear : 'a
-  ; clear_to : 'a
-  }
-
-and 'a register =
-  { clock : 'a clock_spec
-  ; reset : 'a reset_spec option
-  ; clear : 'a clear_spec option
-  ; enable : 'a option
-  ; initialize_to : 'a option
-  }
-
-and instantiation_input =
-  { name : string
-  ; input_signal : t
-  }
-
-and instantiation_output =
-  { name : string
-  ; output_width : int
-  ; output_low_index : int
-  }
-
-and vhdl_instance =
-  { library_name : string
-  ; architecture_name : string
-  }
-
-and instantiation =
-  { circuit_name : string
-  ; instance_label : string
-  ; parameters : Parameter.t list
-  ; inputs : instantiation_input list
-  ; outputs : instantiation_output list
-  ; vhdl_instance : vhdl_instance
-  }
-
-let equal_instantiation_output
-  { name = n1; output_width = w1; output_low_index = l1 }
-  { name = n2; output_width = w2; output_low_index = l2 }
-  =
-  [%equal: string * int * int] (n1, w1, l1) (n2, w2, l2)
-;;
-
 module Uid_map = Map.M (Uid)
 
 module Uid_set = struct
@@ -185,10 +369,10 @@ end
 module type Printable =
   Signal__type_intf.Printable
   with type t := t
-   and type register := t register
+   and type register := t Reg.Register.t
    and type reg_spec := reg_spec
 
-module type Is_a = Signal__type_intf.Is_a with type t := t and type signal_op := signal_op
+module type Is_a = Signal__type_intf.Is_a with type t := t and type signal_op := Op.t
 module type Deps = Signal__type_intf.Deps with type t := t
 
 module Make_deps (Fold : sig
@@ -276,54 +460,54 @@ module Deps = Make_deps (struct
 [%%template
 [@@@alloc.default a @ m = (heap_global, stack_local)]
 
-let signal_id s =
+let info s =
   match s with
   | Empty -> None
-  | Const { signal_id; _ }
-  | Select { signal_id; _ }
-  | Reg { signal_id; _ }
-  | Multiport_mem { signal_id; _ }
-  | Mem_read_port { signal_id; _ }
-  | Wire { signal_id; _ }
-  | Inst { signal_id; _ }
-  | Op2 { signal_id; _ }
-  | Mux { signal_id; _ }
-  | Cases { signal_id; _ }
-  | Cat { signal_id; _ }
-  | Not { signal_id; _ } -> Some signal_id [@exclave_if_stack a]
+  | Const { info; _ }
+  | Select { info; _ }
+  | Reg { info; _ }
+  | Multiport_mem { info; _ }
+  | Mem_read_port { info; _ }
+  | Wire { info; _ }
+  | Inst { info; _ }
+  | Op2 { info; _ }
+  | Mux { info; _ }
+  | Cases { info; _ }
+  | Cat { info; _ }
+  | Not { info; _ } -> Some info [@exclave_if_stack a]
 ;;
 
 let uid s =
-  match[@exclave_if_stack a] (signal_id [@alloc a]) s with
+  match[@exclave_if_stack a] (info [@alloc a]) s with
   | None -> Uid.zero
-  | Some s -> s.s_id
+  | Some s -> s.uid
 ;;]
 
 let%template[@mode local] uid = (uid [@alloc stack])
 
 let width s =
-  match signal_id s with
+  match info s with
   | None -> 0
-  | Some s -> s.s_width
+  | Some s -> s.width
 ;;
 
 let caller_id s =
-  let%bind.Option s = signal_id s in
-  let%bind.Option m = s.s_metadata in
+  let%bind.Option s = info s in
+  let%bind.Option m = s.metadata in
   m.caller_id
 ;;
 
 let coverage_metadata s =
-  let%bind.Option s = signal_id s in
-  let%bind.Option m = s.s_metadata in
+  let%bind.Option s = info s in
+  let%bind.Option m = s.metadata in
   m.coverage
 ;;
 
 let names_and_locs s =
-  match signal_id s with
+  match info s with
   | None -> raise_s [%message "cannot get [names] from the empty signal"]
   | Some s ->
-    Option.value_map ~default:[] s.s_metadata ~f:(fun metadata -> metadata.names_and_locs)
+    Option.value_map ~default:[] s.metadata ~f:(fun metadata -> metadata.names_and_locs)
 ;;
 
 let names s : string list = List.map (names_and_locs s) ~f:(fun s -> s.name)
@@ -353,8 +537,8 @@ let structural_compare
           (*i0.inst_instance=i1.inst_instance &&*)
           (* inst_inputs=??? *)
           && [%equal: Parameter.t list] i0.parameters i1.parameters
-          && [%equal: instantiation_output list] i0.outputs i1.outputs
-        | Op2 { op = o0; _ }, Op2 { op = o1; _ } -> equal_signal_op o0 o1
+          && [%equal: Inst.Output.t list] i0.outputs i1.outputs
+        | Op2 { op = o0; _ }, Op2 { op = o1; _ } -> Op.equal o0 o1
         | Empty, Empty
         | Reg _, Reg _
         | Mem_read_port _, Mem_read_port _
@@ -409,8 +593,8 @@ let structural_compare
       in
       let attributes_are_the_same () =
         let attributes_set a =
-          let%bind.Option signal_id = signal_id a in
-          let%map.Option metadata = signal_id.s_metadata in
+          let%bind.Option info = info a in
+          let%map.Option metadata = info.metadata in
           let attributes = metadata.attributes in
           Set.of_list (module Rtl_attribute) attributes
         in
@@ -454,7 +638,7 @@ let is_wire = function
 ;;
 
 let is_op2 op = function
-  | Op2 { op = o; _ } -> equal_signal_op o op
+  | Op2 { op = o; _ } -> Op.equal o op
   | _ -> false
 ;;
 
@@ -494,18 +678,23 @@ let is_mem_read_port = function
 ;;
 
 let string_of_op = function
-  | Signal_add -> "add"
-  | Signal_sub -> "sub"
-  | Signal_mulu -> "mulu"
-  | Signal_muls -> "muls"
-  | Signal_and -> "and"
-  | Signal_or -> "or"
-  | Signal_xor -> "xor"
-  | Signal_eq -> "eq"
-  | Signal_lt -> "lt"
+  | Op.Add -> "add"
+  | Sub -> "sub"
+  | Mulu -> "mulu"
+  | Muls -> "muls"
+  | And -> "and"
+  | Or -> "or"
+  | Xor -> "xor"
+  | Eq -> "eq"
+  | Lt -> "lt"
 ;;
 
-let rec sexp_of_instantiation_recursive ?show_uids ?show_locs ~depth inst =
+let rec sexp_of_instantiation_recursive
+  ?show_uids
+  ?show_locs
+  ~depth
+  (inst : t Inst.Instantiation.t)
+  =
   let sexp_of_next s =
     sexp_of_signal_recursive ?show_uids ?show_locs ~depth:(depth - 1) s
   in
@@ -520,10 +709,10 @@ let rec sexp_of_instantiation_recursive ?show_uids ?show_locs ~depth inst =
     else name ^ "(" ^ inst.vhdl_instance.architecture_name ^ ")"
   in
   let name = name ^ "{" ^ inst.instance_label ^ "}" in
-  let sexp_of_inst_input { name; input_signal } =
+  let sexp_of_inst_input ({ name; input_signal } : t Inst.Input.t) =
     [%sexp ((name, input_signal) : string * next)]
   in
-  let sexp_of_inst_output { name; output_width; output_low_index = _ } =
+  let sexp_of_inst_output ({ name; output_width; output_low_index = _ } : Inst.Output.t) =
     [%sexp ((name, output_width) : string * int)]
   in
   [%message
@@ -532,7 +721,7 @@ let rec sexp_of_instantiation_recursive ?show_uids ?show_locs ~depth inst =
       ~inputs:(inst.inputs : inst_input list)
       ~outputs:(inst.outputs : inst_output list)]
 
-and sexp_of_register_recursive ?show_uids ?show_locs ~depth (reg : t register) =
+and sexp_of_register_recursive ?show_uids ?show_locs ~depth (reg : t Reg.Register.t) =
   let sexp_of_next s =
     sexp_of_signal_recursive ?show_uids ?show_locs ~depth:(depth - 1) s
   in
@@ -782,12 +971,12 @@ let has_name t = not (List.is_empty (names t))
 let `New new_id, `Reset _ = Uid.generator ()
 let default_wave_format = Wave_format.Bit_or Binary
 
-let make_id_allow_zero_width width =
-  { s_id = new_id ()
-  ; s_width = width
-  ; s_metadata =
+let make_id_allow_zero_width width : Info.t =
+  { uid = new_id ()
+  ; width
+  ; metadata =
       Option.map (Caller_id.get () ~skip:[]) ~f:(fun caller_id ->
-        { names_and_locs = []
+        { Metadata.names_and_locs = []
         ; attributes = []
         ; comment = None
         ; caller_id = Some caller_id
@@ -803,15 +992,15 @@ let make_id width =
 ;;
 
 let get_metadata t =
-  let%bind.Option s = signal_id t in
-  s.s_metadata
+  let%bind.Option s = info t in
+  s.metadata
 ;;
 
-let get_or_alloc_metadata t =
-  match t.s_metadata with
+let get_or_alloc_metadata (t : Info.t) =
+  match t.metadata with
   | None ->
     let metadata =
-      { names_and_locs = []
+      { Metadata.names_and_locs = []
       ; attributes = []
       ; comment = None
       ; caller_id = None
@@ -819,13 +1008,13 @@ let get_or_alloc_metadata t =
       ; coverage = None
       }
     in
-    t.s_metadata <- Some metadata;
+    t.metadata <- Some metadata;
     metadata
   | Some metadata -> metadata
 ;;
 
 let change_metadata t ~f =
-  Option.iter (signal_id t) ~f:(fun t ->
+  Option.iter (info t) ~f:(fun t ->
     let metadata = get_or_alloc_metadata t in
     f metadata)
 ;;
@@ -921,7 +1110,7 @@ let is_gnd = function
   | _ -> false
 ;;
 
-let of_bits constant = Const { signal_id = make_id (Bits.width constant); constant }
+let of_bits constant = Const { info = make_id (Bits.width constant); constant }
 
 let has_initializer = function
   | Reg { register = { initialize_to = Some _; _ }; _ } -> true
@@ -930,26 +1119,9 @@ let has_initializer = function
 ;;
 
 module Register = struct
-  type 'a t = 'a register
+  type 'a t = 'a Reg.Register.t
 
-  let map { clock = { clock; clock_edge }; reset; clear; initialize_to; enable } ~f =
-    let clock = f clock in
-    let reset =
-      Option.map reset ~f:(fun { reset; reset_edge; reset_to } ->
-        let reset = f reset in
-        let reset_to = f reset_to in
-        { reset; reset_edge; reset_to })
-    in
-    let clear =
-      Option.map clear ~f:(fun { clear; clear_to } ->
-        let clear = f clear in
-        let clear_to = f clear_to in
-        { clear; clear_to })
-    in
-    let initialize_to = Option.map initialize_to ~f in
-    let enable = Option.map enable ~f in
-    { clock = { clock; clock_edge }; reset; clear; initialize_to; enable }
-  ;;
+  let map = Reg.Register.map
 
   (* error checking *)
   let assert_width signal w msg =
@@ -991,7 +1163,7 @@ module Register = struct
              * then raise_s [%message "Register reset_to is not constant" (reset_to : t)]; *)
             reset_to
         in
-        { reset; reset_edge = spec.reset_edge; reset_to })
+        { Reg.Reset_spec.reset; reset_edge = spec.reset_edge; reset_to })
     in
     (* override the clear if required. *)
     let clear =
@@ -1011,7 +1183,7 @@ module Register = struct
             assert_width clear_to (width d) "clear_to is invalid";
             clear_to
         in
-        { clear; clear_to })
+        { Reg.Clear_spec.clear; clear_to })
     in
     let enable =
       match enable with
@@ -1024,7 +1196,7 @@ module Register = struct
       assert_width initialize_to (width d) "initial value is invalid";
       if not (is_const initialize_to)
       then raise_s [%message "Register initializer is not constant" (initialize_to : t)]);
-    { clock = { clock = spec.clock; clock_edge = spec.clock_edge }
+    { Reg.Register.clock = { clock = spec.clock; clock_edge = spec.clock_edge }
     ; reset
     ; clear
     ; initialize_to
@@ -1033,98 +1205,42 @@ module Register = struct
   ;;
 end
 
-let map_signal_id t ~f =
+let map_info t ~f =
   match t with
   | Empty -> Empty
-  | Const { signal_id; constant } -> Const { signal_id = f signal_id; constant }
-  | Op2 { signal_id; op; arg_a; arg_b } ->
-    Op2 { signal_id = f signal_id; op; arg_a; arg_b }
-  | Mux { signal_id; select; cases } -> Mux { signal_id = f signal_id; select; cases }
-  | Cases { signal_id; select; cases; default } ->
-    Cases { signal_id = f signal_id; select; cases; default }
-  | Cat { signal_id; args } -> Cat { signal_id = f signal_id; args }
-  | Not { signal_id; arg } -> Not { signal_id = f signal_id; arg }
-  | Select { signal_id; arg; high; low } ->
-    Select { signal_id = f signal_id; arg; high; low }
-  | Reg { signal_id; register; d } -> Reg { signal_id = f signal_id; register; d }
-  | Multiport_mem { signal_id; size; write_ports; initialize_to } ->
-    Multiport_mem { signal_id = f signal_id; size; write_ports; initialize_to }
-  | Mem_read_port { signal_id; memory; read_address } ->
-    Mem_read_port { signal_id = f signal_id; memory; read_address }
-  | Inst { signal_id; instantiation } -> Inst { signal_id = f signal_id; instantiation }
-  | Wire { signal_id; driver } -> Wire { signal_id = f signal_id; driver }
+  | Const { info; constant } -> Const { info = f info; constant }
+  | Op2 { info; op; arg_a; arg_b } -> Op2 { info = f info; op; arg_a; arg_b }
+  | Mux { info; select; cases } -> Mux { info = f info; select; cases }
+  | Cases { info; select; cases; default } ->
+    Cases { info = f info; select; cases; default }
+  | Cat { info; args } -> Cat { info = f info; args }
+  | Not { info; arg } -> Not { info = f info; arg }
+  | Select { info; arg; high; low } -> Select { info = f info; arg; high; low }
+  | Reg { info; register; d } -> Reg { info = f info; register; d }
+  | Multiport_mem { info; size; write_ports; initialize_to } ->
+    Multiport_mem { info = f info; size; write_ports; initialize_to }
+  | Mem_read_port { info; memory; read_address } ->
+    Mem_read_port { info = f info; memory; read_address }
+  | Inst { info; instantiation } -> Inst { info = f info; instantiation }
+  | Wire { info; driver } -> Wire { info = f info; driver }
 ;;
 
 let map_dependant t ~f =
   match t with
   | Empty -> Empty
-  | Const { constant; signal_id } -> Const { signal_id; constant : Bits.t }
-  | Op2 { signal_id; op; arg_a; arg_b } ->
-    let arg_a = f arg_a in
-    let arg_b = f arg_b in
-    Op2 { signal_id; op : signal_op; arg_a; arg_b }
-  | Mux { signal_id; select; cases } ->
-    let select = f select in
-    let cases = List.map cases ~f in
-    Mux { signal_id; select; cases }
-  | Cases { signal_id; select; cases; default } ->
-    let select = f select in
-    let cases = List.map cases ~f:(fun (match_value, data) -> f match_value, f data) in
-    let default = f default in
-    Cases { signal_id; select; cases; default }
-  | Cat { signal_id; args } ->
-    let args = List.map args ~f in
-    Cat { signal_id; args }
-  | Not { signal_id; arg } ->
-    let arg = f arg in
-    Not { signal_id; arg }
-  | Select { signal_id; arg; high; low } ->
-    let arg = f arg in
-    Select { signal_id; arg; high : int; low : int }
-  | Reg { signal_id; register; d } ->
-    let d = f d in
-    let register = Register.map register ~f in
-    Reg { signal_id; register; d }
-  | Multiport_mem { signal_id; size; write_ports; initialize_to } ->
-    let rewrite_write_port
-      ({ Write_port.write_clock; write_address; write_data; write_enable } :
-        _ Write_port.t)
-      =
-      let write_clock = f write_clock in
-      let write_address = f write_address in
-      let write_data = f write_data in
-      let write_enable = f write_enable in
-      { Write_port.write_clock; write_address; write_enable; write_data }
-    in
-    let write_ports = Array.map write_ports ~f:rewrite_write_port in
-    Multiport_mem
-      { signal_id; size : int; write_ports; initialize_to : Bits.t array option }
-  | Mem_read_port { signal_id; memory; read_address } ->
-    let read_address = f read_address in
-    let memory = f memory in
-    Mem_read_port { signal_id; memory; read_address }
-  | Inst
-      { signal_id
-      ; instantiation =
-          { circuit_name; instance_label; parameters; inputs; outputs; vhdl_instance }
-      } ->
-    let inputs =
-      List.map inputs ~f:(fun { name; input_signal } ->
-        { name; input_signal = f input_signal })
-    in
-    Inst
-      { signal_id
-      ; instantiation =
-          { circuit_name; instance_label; parameters; inputs; outputs; vhdl_instance }
-      }
-  | Wire { signal_id; driver } ->
-    let driver = Option.map driver ~f in
-    Wire { signal_id; driver }
+  | Const { constant; info } -> Const { info; constant : Bits.t }
+  | Op2 op2 -> Op2 (Op2.map op2 ~f)
+  | Mux mux -> Mux (Mux.map mux ~f)
+  | Cases cases -> Cases (Cases.map cases ~f)
+  | Cat cat -> Cat (Cat.map cat ~f)
+  | Not not_ -> Not (Not.map not_ ~f)
+  | Select select -> Select (Select.map select ~f)
+  | Reg reg -> Reg (Reg.map reg ~f)
+  | Multiport_mem mem -> Multiport_mem (Multiport_mem.map mem ~f)
+  | Mem_read_port mem_read -> Mem_read_port (Mem_read_port.map mem_read ~f)
+  | Inst inst -> Inst (Inst.map inst ~f)
+  | Wire wire -> Wire (Wire.map wire ~f)
 ;;
-
-module For_testing = struct
-  let uid_of_int x = Uid.For_testing.of_int x
-end
 
 module Make_default_info (S : sig
     type t

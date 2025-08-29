@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Pre_partial = sig
   type 'a t [@@deriving equal ~localize, sexp_of]

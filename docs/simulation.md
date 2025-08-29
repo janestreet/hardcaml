@@ -48,9 +48,9 @@ constructed the circuit.
 
 ```ocaml
 # let x = Cyclesim.in_port simulator "x"
-val x : Bits.t ref = {Base.Ref.contents = 0}
+val x : Bits.t ref = {Hardcaml__.Core0.contents = 0}
 # let y = Cyclesim.out_port simulator "y"
-val y : Bits.t ref = {Base.Ref.contents = 0}
+val y : Bits.t ref = {Hardcaml__.Core0.contents = 0}
 ```
 
 Note that looking up a non-existent port will produce an exception

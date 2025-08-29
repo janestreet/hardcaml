@@ -1,6 +1,6 @@
 [@@@ocaml.flambda_o3]
 
-open Base
+open! Core0
 open Cyclesim
 module Out_channel = Stdio.Out_channel
 

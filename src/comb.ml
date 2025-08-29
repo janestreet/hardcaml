@@ -1,6 +1,6 @@
 [@@@ocaml.flambda_o3]
 
-open Base
+open! Core0
 include Comb_intf
 
 module Gen_cases_from_mux (Comb : Comb_intf.Gen_cases_from_mux) = struct
@@ -218,7 +218,7 @@ module Make (Prims : Primitives) = struct
 
   let of_unsigned
     (type a)
-    (module Int : Int.S with type t = a)
+    (module Int : Base.Int.S with type t = a)
     (f : width:int -> a -> t)
     ~width
     x
@@ -243,7 +243,7 @@ module Make (Prims : Primitives) = struct
 
   let of_signed
     (type a)
-    (module Int : Int.S with type t = a)
+    (module Int : Base.Int.S with type t = a)
     (f : width:int -> a -> t)
     ~width
     x

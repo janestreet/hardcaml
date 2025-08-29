@@ -1,4 +1,4 @@
-open Base
+open! Core0
 module Printexc = Stdlib.Printexc
 
 module Mode = struct
@@ -28,6 +28,7 @@ type t =
   | Top_of_stack of Call_stack.Slot.t
   | Coverage_filtered_trace of Call_stack.t
   | Full_trace of Call_stack.t
+[@@deriving bin_io]
 
 let sexp_of_t (t : t) =
   match t with
@@ -90,7 +91,7 @@ let top skip =
         then top (pos + 1)
         else Some slot)
   in
-  top 0 |> Option.map ~f:(fun s -> Top_of_stack s)
+  top 0 |> Option.map ~f:(fun s -> Top_of_stack (Call_stack.Slot.create s))
 ;;
 
 let coverage_filtered_stack () =
@@ -105,13 +106,13 @@ let coverage_filtered_stack () =
       in
       match Printexc.Slot.location slot with
       | None -> filtered (pos + 1)
-      | Some _ -> slot :: filtered (pos + 1))
+      | Some _ -> Call_stack.Slot.create slot :: filtered (pos + 1))
   in
   (* Exclude slots pertaining to the current file. *)
   let filtered =
     filtered 0
     |> List.drop_while ~f:(fun slot ->
-      match Printexc.Slot.location slot with
+      match slot with
       | None -> false
       | Some loc -> String.equal Stdlib.__FILE__ loc.filename)
   in
@@ -124,7 +125,9 @@ let full () =
     if pos = len
     then []
     else
-      (Printexc.get_raw_backtrace_slot stack pos |> Printexc.convert_raw_backtrace_slot)
+      (Printexc.get_raw_backtrace_slot stack pos
+       |> Printexc.convert_raw_backtrace_slot
+       |> Call_stack.Slot.create)
       :: full (pos + 1)
   in
   Some (Full_trace (full 0))

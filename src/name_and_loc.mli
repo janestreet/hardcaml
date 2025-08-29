@@ -1,9 +1,9 @@
 (** A hardcaml signal name with source code location. *)
 
-open Base
+open! Core0
 
 type t =
   { name : string
   ; loc : Source_code_position.t
   }
-[@@deriving hash, compare ~localize, equal ~localize, sexp_of]
+[@@deriving bin_io, hash, compare ~localize, equal ~localize, sexp_of]

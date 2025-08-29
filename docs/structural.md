@@ -212,8 +212,7 @@ their implementations as follows:
 
 ```ocaml
 # let components = structural_rtl_components circuit
-val components : Base.Set.M(Hardcaml.Structural.Structural_rtl_component).t =
-  <abstr>
+val components : structural_rtl_component_set = <abstr>
 # Set.iter components ~f:(fun subcircuit ->
     let subcircuit = Structural_rtl_component.rtl_circuit subcircuit in
     Hardcaml.Rtl.print Verilog subcircuit)

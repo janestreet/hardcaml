@@ -1,4 +1,4 @@
-open Core
+open! Core0
 
 module State = struct
   module Named = struct
@@ -7,7 +7,7 @@ module State = struct
         { name : string
         ; value : int
         }
-      [@@deriving equal, sexp_of, compare, hash]
+      [@@deriving bin_io, equal, sexp_of, compare, hash]
     end
 
     include Comparator.Make (T)
@@ -43,7 +43,7 @@ module Case = struct
           ; state : State.Named.t option
           }
       | Default of { states : State.Named.t list }
-    [@@deriving sexp_of]
+    [@@deriving bin_io, sexp_of]
 
     let to_string = function
       | Specified { state = Some state; _ } -> state.name
@@ -71,7 +71,7 @@ module Case = struct
     | Positional of int
     | State of State.Named.t
     | Default
-  [@@deriving sexp_of, equal]
+  [@@deriving bin_io, sexp_of, equal]
 
   let to_string = function
     | Positional position -> Int.to_string position
@@ -81,7 +81,7 @@ module Case = struct
 end
 
 module Cases = struct
-  type t = Case.Positional_with_state.t list [@@deriving sexp_of]
+  type t = Case.Positional_with_state.t list [@@deriving bin_io, sexp_of]
 
   let create ~non_default_cases ~default_states =
     Case.Positional_with_state.Default { states = default_states }
@@ -107,7 +107,7 @@ module Toggle = struct
       { bit : int
       ; on : bool
       }
-    [@@deriving sexp_of, compare, hash, equal]
+    [@@deriving bin_io, sexp_of, compare, hash, equal]
   end
 
   include Comparator.Make (T)
@@ -131,7 +131,7 @@ module Transition = struct
     { from : 'a
     ; to_ : 'a
     }
-  [@@deriving sexp_of, compare, equal, hash]
+  [@@deriving bin_io, sexp_of, compare, equal, hash]
 
   let to_string t ~f = [%string {|%{f t.from} -> %{f t.to_}|}]
   let map t ~f = { from = f t.from; to_ = f t.to_ }
@@ -162,13 +162,13 @@ module Waiver = struct
     | Only_expect of 'a list
     | Exclude of 'a list
     | None
-  [@@deriving sexp_of]
+  [@@deriving bin_io, sexp_of]
 
   type 'a t =
     { kind : 'a kind
     ; warn_on_waived_but_observed : bool
     }
-  [@@deriving sexp_of, fields ~getters]
+  [@@deriving bin_io, sexp_of, fields ~getters]
 
   let create ?(warn_on_waived_but_observed = true) kind =
     { kind; warn_on_waived_but_observed }
@@ -246,17 +246,17 @@ module Always_metadata = struct
     module State_reg = struct
       type t =
         { creation_pos : Source_code_position.t
-        ; states_by_value : State.Named.t Map.M(Int).t
-        ; transitions_by_value : (int, int Hash_set.t) Hashtbl.t
+        ; states_by_value : State.Named.t Int.Map.t
+        ; transitions_by_value : Int.Hash_set.t Int.Table.t
         ; initial_value : int
         }
-      [@@deriving sexp_of]
+      [@@deriving bin_io, sexp_of]
     end
 
     type t =
       | User_created of Source_code_position.t
       | State_machine_state of State_reg.t
-    [@@deriving sexp_of]
+    [@@deriving bin_io, sexp_of]
   end
 
   module Target = struct
@@ -264,7 +264,7 @@ module Always_metadata = struct
       { variable : Variable.t
       ; names : Name_and_loc.t list
       }
-    [@@deriving sexp_of]
+    [@@deriving bin_io, sexp_of]
   end
 
   module If = struct
@@ -275,7 +275,7 @@ module Always_metadata = struct
         | When
         | Unless
         | Proc
-      [@@deriving sexp_of, to_string ~capitalize:"snake_case"]
+      [@@deriving bin_io, sexp_of, to_string ~capitalize:"snake_case"]
     end
 
     type t =
@@ -283,7 +283,7 @@ module Always_metadata = struct
       ; target : Target.t
       ; kind : Kind.t
       }
-    [@@deriving sexp_of]
+    [@@deriving bin_io, sexp_of]
   end
 
   module Switch_cases = struct
@@ -292,7 +292,7 @@ module Always_metadata = struct
       ; target : Target.t
       ; cases : Cases.t
       }
-    [@@deriving sexp_of]
+    [@@deriving bin_io, sexp_of]
   end
 
   module Switch_mux = struct
@@ -301,6 +301,6 @@ module Always_metadata = struct
       ; target : Target.t
       ; case : Case.t
       }
-    [@@deriving sexp_of]
+    [@@deriving bin_io, sexp_of]
   end
 end

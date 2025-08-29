@@ -1,4 +1,4 @@
-open Base
+open! Core0
 include Bits0
 
 let char_zero = Char.to_int '0'

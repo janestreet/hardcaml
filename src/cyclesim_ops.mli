@@ -1,7 +1,7 @@
 (** Runtime functions for the simulator. Implementations are selected based on operand and
     result sizes. *)
 
-open Base
+open! Core0
 
 val get64 : Bytes.t -> int -> Int64.t
 val set64 : Bytes.t -> int -> Int64.t -> unit

@@ -5,7 +5,7 @@
     Though data is represented as a [Bytes.t] we assume throughout that we are really
     working with arrays of [Int64.t]s. *)
 
-open Base
+open! Core0
 
 module type READ = sig
   type t

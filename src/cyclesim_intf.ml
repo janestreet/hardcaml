@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Cyclesim = sig
   module Port_list = Cyclesim0.Port_list
@@ -144,13 +144,5 @@ module type Cyclesim = sig
        and type memory = Memory.t
 
     module Traced_nodes : module type of Cyclesim0.Traced_nodes
-
-    (** It is useful when extending cyclesim to know that Cyclesim.t = Cyclesim0.t.
-        However, we don't want to expose [type ('i,'o) t = ('i,'o) Cyclesim0.t] in this
-        interface, since we do not want general clients of Cyclesim to be able to rely on
-        this fact. Instead, we expose this [Type_equal.t] in the [Private] module so that
-        libraries extending cyclesim can coerce their [Cyclesim0.t] to [Cyclesim.t] in
-        order to interoperate more easily with existing code that uses cyclesim. *)
-    val eq : unit -> (('i, 'o) t, ('i, 'o) Cyclesim0.t) Type_equal.t
   end
 end

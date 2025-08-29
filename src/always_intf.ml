@@ -81,7 +81,7 @@
       ....
     v} *)
 
-open Base
+open! Core0
 
 module type S = sig
   module Signal : Signal.S

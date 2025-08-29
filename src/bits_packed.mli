@@ -3,7 +3,7 @@
     The size and offset of data is passed to the functions rather than embedded like with
     [Bits.t]. *)
 
-open Base
+open! Core0
 
 type t = Bytes.t
 

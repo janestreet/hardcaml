@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module Instance = struct
   type t = { call_stack : Call_stack.t [@globalized] }

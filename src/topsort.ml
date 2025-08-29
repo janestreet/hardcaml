@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 (* This is a "vendored" version of [Topological_sort] specialized for Signals, and
    respecting the input node ordering. If we can get the new functionality backported it

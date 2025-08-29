@@ -1,6 +1,6 @@
 (** Compatibility hacks between different vendor tools. *)
 
-open! Base
+open! Core0
 
 type t =
   | Vivado

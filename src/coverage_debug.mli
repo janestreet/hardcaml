@@ -3,7 +3,7 @@
     Coverage is often run with the inline tests runner which captures std output.
     Therefore it useful to have debug spew sent somewhere else. *)
 
-open Base
+open! Core0
 
 (** Print the sexp to the debug file when printing is enabled in the ml file. The lazy
     type ensures that we don't build the sexp unless we are actually going to print it. *)

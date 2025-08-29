@@ -1,4 +1,30 @@
-open Base
+open! Core0
+
+(* We cannot serialize the [Custom] constructor. Instead we map it to a simple conversion
+   to a bit string. *)
+module Custom = struct
+  module M = struct
+    type t = unit [@@deriving bin_io]
+  end
+
+  module T = struct
+    type t = Bits.t -> string [@@deriving sexp_of]
+
+    let of_binable () =
+      let simple_conversion t = Bits.to_string t in
+      simple_conversion
+    ;;
+
+    let to_binable (_ : t) = ()
+
+    let caller_identity =
+      Bin_prot.Shape.Uuid.of_string "7f52c42b-a0bf-4241-ba12-31e009fd768d"
+    ;;
+  end
+
+  include T
+  include Binable.Of_binable_with_uuid (M) (T)
+end
 
 type t =
   | Binary
@@ -8,9 +34,9 @@ type t =
   | Unsigned_int
   | Int
   | Index of string list
-  | Custom of (Bits.t -> string)
+  | Custom of Custom.t
   | Map of (Bits.t, string) List.Assoc.t
-[@@deriving sexp_of]
+[@@deriving bin_io, sexp_of]
 
 let%template[@mode local] rec equal a b =
   match a, b with

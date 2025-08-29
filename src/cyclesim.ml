@@ -1,4 +1,4 @@
-open Base
+open! Core0
 include Cyclesim_intf
 
 (* types defined in Cyclesim0. *)
@@ -9,8 +9,6 @@ module Port_list = Cyclesim0.Port_list
 module Private = struct
   include Cyclesim0.Private
   module Traced_nodes = Cyclesim0.Traced_nodes
-
-  let eq () = Type_equal.T
 end
 
 module Traced = Cyclesim0.Traced

@@ -1,6 +1,6 @@
 (** Core coverage types used across different stages of coverage analysis *)
 
-open Base
+open! Core0
 
 module State : sig
   module Named : sig
@@ -49,7 +49,7 @@ module Case : sig
     | Positional of int
     | State of State.Named.t
     | Default
-  [@@deriving sexp_of, to_string, equal]
+  [@@deriving bin_io, sexp_of, to_string, equal]
 end
 
 module Cases : sig
@@ -70,7 +70,7 @@ module Toggle : sig
     { bit : int
     ; on : bool
     }
-  [@@deriving sexp_of, equal, hash, compare, to_string]
+  [@@deriving bin_io, sexp_of, equal, hash, compare, to_string]
 
   include Comparator.S with type t := t
 
@@ -82,7 +82,7 @@ module Transition : sig
     { from : 'a
     ; to_ : 'a
     }
-  [@@deriving sexp_of, compare, equal, hash]
+  [@@deriving bin_io, sexp_of, compare, equal, hash]
 
   val to_string : 'a t -> f:('a -> string) -> string
   val map : 'a t -> f:('a -> 'b) -> 'b t
@@ -99,7 +99,7 @@ module Transition : sig
 end
 
 module Waiver : sig
-  type 'a t [@@deriving sexp_of]
+  type 'a t [@@deriving bin_io, sexp_of]
 
   (** {2 Creation} *)
 
@@ -146,7 +146,7 @@ module Always_metadata : sig
     type t =
       | User_created of Source_code_position.t
       | State_machine_state of State_reg.t
-    [@@deriving sexp_of]
+    [@@deriving bin_io, sexp_of]
   end
 
   module Target : sig
@@ -165,7 +165,7 @@ module Always_metadata : sig
         | When
         | Unless
         | Proc
-      [@@deriving sexp_of, to_string]
+      [@@deriving bin_io, sexp_of, to_string]
     end
 
     type t =
@@ -173,7 +173,7 @@ module Always_metadata : sig
       ; target : Target.t
       ; kind : Kind.t
       }
-    [@@deriving sexp_of]
+    [@@deriving bin_io, sexp_of]
   end
 
   module Switch_cases : sig
@@ -182,7 +182,7 @@ module Always_metadata : sig
       ; target : Target.t
       ; cases : Cases.t
       }
-    [@@deriving sexp_of]
+    [@@deriving bin_io, sexp_of]
   end
 
   module Switch_mux : sig
@@ -191,6 +191,6 @@ module Always_metadata : sig
       ; target : Target.t
       ; case : Case.t
       }
-    [@@deriving sexp_of]
+    [@@deriving bin_io, sexp_of]
   end
 end

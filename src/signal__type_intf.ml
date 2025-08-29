@@ -9,7 +9,7 @@
     Note the double underscore in the module name is deliberate in order for Ocaml to
     infer reasonable type names for signals. *)
 
-open Base
+open! Core0
 
 (** Uids unqiuely label every hardcaml node with an integer value. *)
 module type Uid = Uid_builder.S
@@ -132,98 +132,271 @@ module type Type = sig
   module Uid : Uid
 
   (** simple operators *)
-  type signal_op =
-    | Signal_add
-    | Signal_sub
-    | Signal_mulu
-    | Signal_muls
-    | Signal_and
-    | Signal_or
-    | Signal_xor
-    | Signal_eq
-    | Signal_lt
-  [@@deriving sexp_of, compare ~localize, equal ~localize, hash]
+  module Op : sig
+    type t =
+      | Add
+      | Sub
+      | Mulu
+      | Muls
+      | And
+      | Or
+      | Xor
+      | Eq
+      | Lt
+    [@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]
+  end
 
-  type signal_metadata =
-    { mutable names_and_locs : Name_and_loc.t list
-    ; mutable attributes : Rtl_attribute.t list
-    ; mutable comment : string option
-    ; caller_id : Caller_id.t option
-    ; mutable wave_format : Wave_format.t
-    ; mutable coverage : Coverage_metadata.t option
-    }
-  [@@deriving sexp_of]
+  module Metadata : sig
+    type t =
+      { mutable names_and_locs : Name_and_loc.t list
+      ; mutable attributes : Rtl_attribute.t list
+      ; mutable comment : string option
+      ; caller_id : Caller_id.t option
+      ; mutable wave_format : Wave_format.t
+      ; mutable coverage : Coverage_metadata.t option
+      }
+    [@@deriving bin_io, sexp_of]
+  end
 
   (** internal structure for tracking signals *)
-  type signal_id =
-    { s_id : Uid.t
-    ; s_width : int
-    ; mutable s_metadata : signal_metadata option
-    }
-  [@@deriving sexp_of]
+  module Info : sig
+    type t =
+      { uid : Uid.t
+      ; width : int
+      ; mutable metadata : Metadata.t option
+      }
+    [@@deriving bin_io, sexp_of]
+  end
+
+  module Const : sig
+    type t =
+      { info : Info.t
+      ; constant : Bits.t
+      }
+    [@@deriving bin_io, sexp_of]
+  end
+
+  module Op2 : sig
+    type 'signal t =
+      { info : Info.t
+      ; op : Op.t
+      ; arg_a : 'signal
+      ; arg_b : 'signal
+      }
+    [@@deriving bin_io, sexp_of]
+
+    val map : 'a t -> f:('a -> 'b) -> 'b t
+  end
+
+  module Mux : sig
+    type 'signal t =
+      { info : Info.t
+      ; select : 'signal
+      ; cases : 'signal list
+      }
+    [@@deriving bin_io, sexp_of]
+
+    val map : 'a t -> f:('a -> 'b) -> 'b t
+  end
+
+  module Cases : sig
+    type 'signal t =
+      { info : Info.t
+      ; select : 'signal
+      ; cases : ('signal * 'signal) list
+      ; default : 'signal
+      }
+    [@@deriving bin_io, sexp_of]
+
+    val map : 'a t -> f:('a -> 'b) -> 'b t
+  end
+
+  module Cat : sig
+    type 'signal t =
+      { info : Info.t
+      ; args : 'signal list
+      }
+    [@@deriving bin_io, sexp_of]
+
+    val map : 'a t -> f:('a -> 'b) -> 'b t
+  end
+
+  module Not : sig
+    type 'signal t =
+      { info : Info.t
+      ; arg : 'signal
+      }
+    [@@deriving bin_io, sexp_of]
+
+    val map : 'a t -> f:('a -> 'b) -> 'b t
+  end
+
+  module Wire : sig
+    type 'signal t =
+      { info : Info.t
+      ; mutable driver : 'signal option
+      }
+    [@@deriving bin_io, sexp_of]
+
+    val map : 'a t -> f:('a -> 'b) -> 'b t
+  end
+
+  module Select : sig
+    type 'signal t =
+      { info : Info.t
+      ; arg : 'signal
+      ; high : int
+      ; low : int
+      }
+    [@@deriving bin_io, sexp_of]
+
+    val map : 'a t -> f:('a -> 'b) -> 'b t
+  end
+
+  module Reg : sig
+    module Clock_spec : sig
+      type 'a t =
+        { clock : 'a
+        ; clock_edge : Edge.t
+        }
+      [@@deriving bin_io, sexp_of]
+
+      val map : 'a t -> f:('a -> 'b) -> 'b t
+    end
+
+    module Reset_spec : sig
+      type 'a t =
+        { reset : 'a
+        ; reset_edge : Edge.t
+        ; reset_to : 'a
+        }
+      [@@deriving bin_io, sexp_of]
+
+      val map : 'a t -> f:('a -> 'b) -> 'b t
+    end
+
+    module Clear_spec : sig
+      type 'a t =
+        { clear : 'a
+        ; clear_to : 'a
+        }
+      [@@deriving bin_io, sexp_of]
+
+      val map : 'a t -> f:('a -> 'b) -> 'b t
+    end
+
+    module Register : sig
+      type 'a t =
+        { clock : 'a Clock_spec.t
+        ; reset : 'a Reset_spec.t option
+        ; clear : 'a Clear_spec.t option
+        ; enable : 'a option
+        ; initialize_to : 'a option
+        }
+      [@@deriving bin_io, sexp_of]
+
+      val map : 'a t -> f:('a -> 'b) -> 'b t
+    end
+
+    type 'signal t =
+      { info : Info.t
+      ; register : 'signal Register.t
+      ; d : 'signal
+      }
+    [@@deriving bin_io, sexp_of]
+
+    val map : 'a t -> f:('a -> 'b) -> 'b t
+  end
+
+  module Multiport_mem : sig
+    type 'signal t =
+      { info : Info.t
+      ; size : int
+      ; write_ports : 'signal Write_port.t array
+      ; initialize_to : Bits.t array option
+      }
+    [@@deriving bin_io, sexp_of]
+
+    val map : 'a t -> f:('a -> 'b) -> 'b t
+  end
+
+  module Mem_read_port : sig
+    type 'signal t =
+      { info : Info.t
+      ; memory : 'signal
+      ; read_address : 'signal
+      }
+    [@@deriving bin_io, sexp_of]
+
+    val map : 'a t -> f:('a -> 'b) -> 'b t
+  end
+
+  module Inst : sig
+    module Input : sig
+      type 'signal t =
+        { name : string
+        ; input_signal : 'signal
+        }
+      [@@deriving bin_io, sexp_of]
+
+      val map : 'a t -> f:('a -> 'b) -> 'b t
+    end
+
+    module Output : sig
+      type t =
+        { name : string
+        ; output_width : int
+        ; output_low_index : int
+        }
+      [@@deriving equal]
+    end
+
+    module Vhdl_instance : sig
+      type t =
+        { library_name : string
+        ; architecture_name : string
+        }
+      [@@deriving bin_io, sexp_of]
+    end
+
+    module Instantiation : sig
+      type 'signal t =
+        { circuit_name : string
+        ; instance_label : string
+        ; parameters : Parameter.t list
+        ; inputs : 'signal Input.t list
+        ; outputs : Output.t list
+        ; vhdl_instance : Vhdl_instance.t
+        }
+      [@@deriving bin_io, sexp_of]
+
+      val map : 'a t -> f:('a -> 'b) -> 'b t
+    end
+
+    type 'signal t =
+      { info : Info.t
+      ; instantiation : 'signal Instantiation.t
+      }
+    [@@deriving bin_io, sexp_of]
+
+    val map : 'a t -> f:('a -> 'b) -> 'b t
+  end
 
   (** main signal data type *)
   type t =
     | Empty
-    | Const of
-        { signal_id : signal_id
-        ; constant : Bits.t
-        }
-    | Op2 of
-        { signal_id : signal_id
-        ; op : signal_op
-        ; arg_a : t
-        ; arg_b : t
-        }
-    | Mux of
-        { signal_id : signal_id
-        ; select : t
-        ; cases : t list
-        }
-    | Cases of
-        { signal_id : signal_id
-        ; select : t
-        ; cases : (t * t) list
-        ; default : t
-        }
-    | Cat of
-        { signal_id : signal_id
-        ; args : t list
-        }
-    | Not of
-        { signal_id : signal_id
-        ; arg : t
-        }
-    | Wire of
-        { signal_id : signal_id
-        ; mutable driver : t option
-        }
-    | Select of
-        { signal_id : signal_id
-        ; arg : t
-        ; high : int
-        ; low : int
-        }
-    | Reg of
-        { signal_id : signal_id
-        ; register : t register
-        ; d : t
-        }
-    | Multiport_mem of
-        { signal_id : signal_id
-        ; size : int
-        ; write_ports : t Write_port.t array
-        ; initialize_to : Bits.t array option
-        }
-    | Mem_read_port of
-        { signal_id : signal_id
-        ; memory : t
-        ; read_address : t
-        }
-    | Inst of
-        { signal_id : signal_id
-        ; instantiation : instantiation
-        }
+    | Const of Const.t
+    | Op2 of t Op2.t
+    | Mux of t Mux.t
+    | Cases of t Cases.t
+    | Cat of t Cat.t
+    | Not of t Not.t
+    | Wire of t Wire.t
+    | Select of t Select.t
+    | Reg of t Reg.t
+    | Multiport_mem of t Multiport_mem.t
+    | Mem_read_port of t Mem_read_port.t
+    | Inst of t Inst.t
 
   (** These types are used to define a particular type of register as per the following
       template, where each part is optional:
@@ -243,55 +416,6 @@ module type Type = sig
     ; reset : t option
     ; reset_edge : Edge.t
     ; clear : t option
-    }
-
-  and 'a clock_spec =
-    { clock : 'a (** clock *)
-    ; clock_edge : Edge.t (** active clock edge *)
-    }
-
-  and 'a reset_spec =
-    { reset : 'a (** asynchronous reset *)
-    ; reset_edge : Edge.t (** asynchronous reset edge *)
-    ; reset_to : 'a (** asynchronous reset value *)
-    }
-
-  and 'a clear_spec =
-    { clear : 'a (** synchronous clear *)
-    ; clear_to : 'a (** synchronous clear value *)
-    }
-
-  and 'a register =
-    { clock : 'a clock_spec
-    ; reset : 'a reset_spec option
-    ; clear : 'a clear_spec option
-    ; enable : 'a option (** clock enable *)
-    ; initialize_to : 'a option (** initial value (not supported by all tools) *)
-    }
-
-  and instantiation_input =
-    { name : string
-    ; input_signal : t
-    }
-
-  and instantiation_output =
-    { name : string
-    ; output_width : int
-    ; output_low_index : int
-    }
-
-  and vhdl_instance =
-    { library_name : string
-    ; architecture_name : string
-    }
-
-  and instantiation =
-    { circuit_name : string
-    ; instance_label : string
-    ; parameters : Parameter.t list
-    ; inputs : instantiation_input list
-    ; outputs : instantiation_output list
-    ; vhdl_instance : vhdl_instance
     }
 end
 
@@ -343,23 +467,23 @@ module type Signal__type = sig
 
   module Register :
     Register
-    with type 'a t = 'a register
+    with type 'a t = 'a Reg.Register.t
      and type signal := t
      and type reg_spec := reg_spec
 
   module type Printable =
     Printable
     with type t := t
-     and type register := t register
+     and type register := t Reg.Register.t
      and type reg_spec := reg_spec
 
-  module type Is_a = Is_a with type t := t and type signal_op := signal_op
+  module type Is_a = Is_a with type t := t and type signal_op := Op.t
 
   include Printable
   include Is_a
 
-  (** returns the (private) signal_id. For internal use only. *)
-  val signal_id : t -> signal_id option
+  (** returns the (private) signal info. For internal use only. *)
+  val info : t -> Info.t option
 
   (** Returns the unique id of the signal. *)
   val%template uid : t -> Uid.t
@@ -401,12 +525,12 @@ module type Signal__type = sig
   (** Creates a new signal uid. *)
   val new_id : unit -> Uid.t
 
-  (** Constructs a signal_id type with given width. Allows zero width which can be used
-      for instantiations with no outputs. *)
-  val make_id_allow_zero_width : int -> signal_id
+  (** Constructs a [Info.t] type with given width. Allows zero width which can be used for
+      instantiations with no outputs. *)
+  val make_id_allow_zero_width : int -> Info.t
 
-  (** Constructs a signal_id type with given [width>0]. *)
-  val make_id : int -> signal_id
+  (** Constructs a [Info.t] type with given [width>0]. *)
+  val make_id : int -> Info.t
 
   (** Create a constant *)
   val of_bits : Bits.t -> t
@@ -440,15 +564,11 @@ module type Signal__type = sig
     -> f:(Coverage_metadata.t option -> Coverage_metadata.t)
     -> unit
 
-  (** This function creates a copy of the signal with [f] applied to the signal's signal
-      id (if applicable) *)
-  val map_signal_id : t -> f:(signal_id -> signal_id) -> t
+  (** This function creates a copy of the signal with [f] applied to the signal's info (if
+      applicable) *)
+  val map_info : t -> f:(Info.t -> Info.t) -> t
 
   (** This function creates a copy of the signal with [f] applied to each of the signal's
       dependants *)
   val map_dependant : t -> f:(t -> t) -> t
-
-  module For_testing : sig
-    val uid_of_int : int -> Uid.t
-  end
 end

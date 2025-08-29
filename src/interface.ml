@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 include struct
   open Interface_intf

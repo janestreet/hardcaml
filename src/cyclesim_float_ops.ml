@@ -1,4 +1,4 @@
-open Base
+open! Core0
 include Cyclesim_float_ops_intf
 
 (* simulation modules for floating point arithmetic *)

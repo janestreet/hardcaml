@@ -1,6 +1,6 @@
 (** Clock, reset and clear specification for registers. *)
 
-open Base
+open! Core0
 
 module type Signal = sig
   type t [@@deriving sexp_of]

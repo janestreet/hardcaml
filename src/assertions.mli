@@ -6,7 +6,7 @@
     2. enable them in the [Circuit.Config] (see [circuit_config_with_assertions])
     3. (optionally) attach assertion tracing to the simulation (see [trace]) *)
 
-open! Base
+open! Core0
 
 type t [@@deriving sexp_of]
 
