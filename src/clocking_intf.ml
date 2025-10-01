@@ -71,6 +71,8 @@ module type Functions = sig
       -> width:int
       -> Always.Variable.t
 
+    val reg_no_clear : ?enable:Signal.t -> Signal.t t -> width:int -> Always.Variable.t
+
     val cut_through_reg
       :  ?enable:Signal.t
       -> ?clear:Signal.t
@@ -104,7 +106,8 @@ module type Functions = sig
       -> Signal.t With_valid.t
 
     (** Create [1 + num_additional_pipeline_stages] registers in a pipeline with
-        [async_reg] attribute set *)
+        [async_reg] attribute set. Note this does not add any false path or timing
+        constraints, the user needs to do that separately. *)
     val reg_no_clear_with_async_reg_annotation
       :  num_additional_pipeline_stages:int
       -> Signal.t t

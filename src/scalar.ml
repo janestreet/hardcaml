@@ -46,6 +46,9 @@ module Make (X : Value.Arg) = struct
     check_width (module Comb) ~expected_width:port_widths x.value;
     x
   ;;
+
+  let lift_with_valid t = t
+  let lower_with_valid t = t
 end
 
 let scalar ?(name = "scalar") port_width =

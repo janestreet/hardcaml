@@ -161,4 +161,16 @@ module Registers (Comb : sig
     -> enable:t
     -> t
     -> t
+
+  (** Basic counter. Adds [by] on each [enabled] cycle. Wraps on over/underflow. *)
+  val counter
+    :  ?enable:t
+    -> ?initialize_to:t
+    -> ?reset_to:t
+    -> ?clear:t
+    -> ?clear_to:t
+    -> ?by:int (** Default is [1] *)
+    -> Reg_spec.t
+    -> width:int
+    -> t
 end

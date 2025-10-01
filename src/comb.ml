@@ -588,10 +588,24 @@ module Make (Prims : Primitives) = struct
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
+  (* We rely on being able to convert the select to an unsigned integer. This is slightly
+     more restrictive than necessary so we can do [1 lsl max_mux_select_bits]. *)
+  let max_mux_select_bits = Int.num_bits - 2
+
+  let raise_width_of_sel_too_large width_of_sel =
+    raise_s
+      [%message.omit_nil
+        "[mux] select width must fit within an (unsigned) integer value"
+          (width_of_sel : int)
+          (max_mux_select_bits : int)]
+  ;;
+
   (* mux *)
   let mux sel l =
+    let width_of_sel = width sel in
+    if width_of_sel > max_mux_select_bits then raise_width_of_sel_too_large width_of_sel;
     let number_of_data_elements = List.length l in
-    let max_number_of_data_elements = 1 lsl width sel in
+    let max_number_of_data_elements = 1 lsl width_of_sel in
     assert_widths_same "mux" l;
     if number_of_data_elements > max_number_of_data_elements
     then raise_mux_too_many_inputs number_of_data_elements max_number_of_data_elements;
@@ -602,11 +616,14 @@ module Make (Prims : Primitives) = struct
   ;;
 
   let mux_strict sel l =
+    let width_of_sel = width sel in
+    if width_of_sel > max_mux_select_bits then raise_width_of_sel_too_large width_of_sel;
     let number_of_data_elements = List.length l in
     (match number_of_data_elements with
      | 0 | 1 -> raise_mux_too_few_inputs number_of_data_elements
      | _ ->
-       if 1 lsl width sel <> number_of_data_elements
+       let expected_number_of_data_elements = 1 lsl width_of_sel in
+       if expected_number_of_data_elements <> number_of_data_elements
        then raise_mux_not_exact (width sel) number_of_data_elements);
     mux sel l
   ;;
@@ -1566,14 +1583,26 @@ module Make (Prims : Primitives) = struct
   let any_bit_set t = if width t = 1 then t else t <>:. 0
   let all_bits_set t = if width t = 1 then t else t ==+. -1
   let no_bits_set t = if width t = 1 then ~:t else t ==:. 0
+  let incr ?(by = 1) x = x +:. by
+  let decr ?(by = 1) x = x -:. by
+
+  let check_invalid_truncation_width ~output_width ~input_width =
+    if output_width <= 0
+    then
+      raise_s
+        [%message "[Typed_math.truncate] output width must be >= 0" (output_width : int)];
+    if output_width > input_width
+    then
+      raise_s
+        [%message
+          "[Typed_math.truncate] Output width must be less than or equal to input width"
+            (output_width : int)
+            (input_width : int)]
+  ;;
 
   (* General arithmetic on unsigned signals.  Operands and results are resized to fit a
      appropriate. *)
   module Unsigned = struct
-    type v = t
-
-    let of_signal s = s
-    let to_signal s = s
     let resize s i = uresize s ~width:i
 
     let re size op a b =
@@ -1594,13 +1623,20 @@ module Make (Prims : Primitives) = struct
     let ( >=: ) = re0 ( >=: )
     let ( ==: ) = re0 ( ==: )
     let ( <>: ) = re0 ( <>: )
+
+    let truncate v ~width:output_width =
+      let input_width = width v in
+      check_invalid_truncation_width ~output_width ~input_width;
+      if input_width = output_width
+      then { valid = vdd; value = v }
+      else (
+        let top, bottom = split_in_half_lsb ~lsbs:output_width v in
+        let valid = ~:(any_bit_set top) in
+        { valid; value = bottom })
+    ;;
   end
 
   module Signed = struct
-    type v = t
-
-    let of_signal s = s
-    let to_signal s = s
     let resize s i = sresize s ~width:i
 
     let re size op a b =
@@ -1621,10 +1657,18 @@ module Make (Prims : Primitives) = struct
     let ( >=: ) = re0 ( >=+ )
     let ( ==: ) = re0 ( ==: )
     let ( <>: ) = re0 ( <>: )
-  end
 
-  module Uop = Unsigned
-  module Sop = Signed
+    let truncate v ~width:output_width =
+      let input_width = width v in
+      check_invalid_truncation_width ~output_width ~input_width;
+      if input_width = output_width
+      then { valid = vdd; value = v }
+      else (
+        let top, bottom = split_in_half_lsb ~lsbs:output_width v in
+        let valid = top ==: repeat (msb bottom) ~count:(width top) in
+        { valid; value = bottom })
+    ;;
+  end
 end
 
 module Expert = struct

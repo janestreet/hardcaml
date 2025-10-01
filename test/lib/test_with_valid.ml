@@ -328,3 +328,51 @@ let%expect_test "With_valid Of_signal wires raises for different value widths" =
      (width            6))
     |}]
 ;;
+
+let%expect_test "Lifting and lowering between With_valid.Fields and With_valid.Wrap for \
+                 a Scalar"
+  =
+  (* When working with a Scalar.S, the type ['a X.t] of the scalar is equivalent to ['a],
+     however this is not directly exposed, causing the [With_valid.Fields] version and the
+     [With_valid.Wrap] version to differ even though they are functionally equivalent.
+     This issue (and the lift/lower functions used to work around this) are documented in
+     this test. *)
+  let module My_scalar : Types.Scalar = (val Types.scalar ~name:"my_scalar" 8) in
+  let module My_scalar_with_valid_fields = With_valid.Fields.Make (My_scalar) in
+  let module My_scalar_with_valid_wrap = With_valid.Wrap.Make (My_scalar) in
+  let x : Bits.t My_scalar.t = My_scalar.Of_bits.of_unsigned_int 7 in
+  let with_valid_fields : Bits.t My_scalar_with_valid_fields.t =
+    My_scalar.map x ~f:(fun value -> { Hardcaml.With_valid.value; valid = Bits.vdd })
+  in
+  print_s
+    [%message
+      ""
+        (with_valid_fields : Bits.t My_scalar_with_valid_fields.t)
+        (My_scalar.lift_with_valid with_valid_fields : Bits.t My_scalar_with_valid_wrap.t)];
+  [%expect
+    {|
+    ((with_valid_fields (
+       my_scalar (
+         (valid 1)
+         (value 00000111))))
+     ("My_scalar.lift_with_valid with_valid_fields"
+      ((valid 1) (value (my_scalar 00000111)))))
+    |}];
+  let with_valid_wrap : Bits.t My_scalar_with_valid_wrap.t =
+    { value = x; valid = Bits.vdd }
+  in
+  print_s
+    [%message
+      ""
+        (with_valid_wrap : Bits.t My_scalar_with_valid_wrap.t)
+        (My_scalar.lower_with_valid with_valid_wrap
+         : Bits.t My_scalar_with_valid_fields.t)];
+  [%expect
+    {|
+    ((with_valid_wrap ((valid 1) (value (my_scalar 00000111))))
+     ("My_scalar.lower_with_valid with_valid_wrap"
+      (my_scalar (
+        (valid 1)
+        (value 00000111)))))
+    |}]
+;;

@@ -424,7 +424,7 @@ struct
   ;;
 end
 
-module _ = Make (struct
+module%test Int = Make (struct
     module Int = Int
 
     let to_unsigned_int = to_unsigned_int
@@ -435,7 +435,7 @@ module _ = Make (struct
     let of_base_int = Int.of_int_exn
   end)
 
-module _ = Make (struct
+module%test Int32 = Make (struct
     module Int = Int32
 
     let to_unsigned_int = to_unsigned_int32
@@ -446,7 +446,7 @@ module _ = Make (struct
     let of_base_int = Int32.of_int_exn
   end)
 
-module _ = Make (struct
+module%test Int64 = Make (struct
     module Int = Int64
 
     let to_unsigned_int = to_unsigned_int64

@@ -7,9 +7,9 @@ module type With_valid = sig
     { valid : 'a
     ; value : 'b
     }
-  [@@deriving sexp, bin_io]
+  [@@deriving sexp, bin_io, equal ~localize, compare ~localize]
 
-  type 'a t = ('a, 'a) t2 [@@deriving sexp, equal ~localize, bin_io]
+  type 'a t = ('a, 'a) t2 [@@deriving sexp, equal ~localize, compare ~localize, bin_io]
 
   val valid : ('a, 'b) t2 -> 'a
   val value : ('a, 'b) t2 -> 'b

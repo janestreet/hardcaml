@@ -313,6 +313,6 @@ let%expect_test "std_logic_vector, logic works" =
   [%expect {| ("x |: y" 1110) |}];
   print_s [%message (x ^: y : t)];
   [%expect {| ("x ^: y" 0110) |}];
-  print_s [%message (Uop.(x +: y) : t)];
-  [%expect {| ("let open Uop in x +: y" 10110) |}]
+  print_s [%message (Unsigned.(x +: y) : t)];
+  [%expect {| ("let open Unsigned in x +: y" 10110) |}]
 ;;

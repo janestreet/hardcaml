@@ -4,10 +4,10 @@ type ('a, 'b) t2 = ('a, 'b) Comb.with_valid2 =
   { valid : 'a
   ; value : 'b
   }
-[@@deriving sexp, bin_io, equal ~localize]
+[@@deriving sexp, bin_io, equal ~localize, compare ~localize]
 
 module T = struct
-  type 'a t = ('a, 'a) t2 [@@deriving sexp, bin_io, equal ~localize]
+  type 'a t = ('a, 'a) t2 [@@deriving sexp, bin_io, equal ~localize, compare ~localize]
 
   let valid { valid; value = _ } = valid
   let value { valid = _; value } = value
@@ -77,7 +77,7 @@ module Fields = struct
     type 'a value = 'a M.t
 
     module Pre = struct
-      type nonrec 'a t = 'a t M.t [@@deriving equal ~localize, sexp_of]
+      type nonrec 'a t = 'a t M.t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
       let map t ~f = M.map ~f:(map ~f) t
       let iter (t : 'a t) ~(f : 'a -> unit) = M.iter ~f:(iter ~f) t
@@ -139,7 +139,8 @@ module Wrap = struct
     type 'a value = 'a M.t
 
     module Pre = struct
-      type nonrec 'a t = ('a, 'a M.t) t2 [@@deriving equal ~localize, sexp_of]
+      type nonrec 'a t = ('a, 'a M.t) t2
+      [@@deriving equal ~localize, compare ~localize, sexp_of]
 
       let map t ~f = { valid = f t.valid; value = M.map ~f t.value }
 

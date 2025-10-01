@@ -92,6 +92,12 @@ module Make (Cases : Cases) = struct
     Comb.(s.:(rank_of_case v))
   ;;
 
+  let set_one (type a) (module Comb : Comb.S with type t = a) (s : a t) v =
+    let open Comb in
+    let mask = Int.pow 2 (rank_of_case v) |> of_unsigned_int ~width:(width s) in
+    s |: mask
+  ;;
+
   let mux2 (type a) (module Comb : Comb.S with type t = a) (sel : a) (s : a t) (t : a t) =
     Comb.mux2 sel s t
   ;;

@@ -969,7 +969,7 @@ let wire_driver = function
 
 let has_name t = not (List.is_empty (names t))
 let `New new_id, `Reset _ = Uid.generator ()
-let default_wave_format = Wave_format.Bit_or Binary
+let default_wave_format = Wave_format.Bit_or Hex
 
 let make_id_allow_zero_width width : Info.t =
   { uid = new_id ()

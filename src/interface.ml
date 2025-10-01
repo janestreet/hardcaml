@@ -109,7 +109,7 @@ type ('a, 'b) with_valid2 = ('a, 'b) Comb_intf.with_valid2
 module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   include X
 
-  type tag = int [@@deriving equal ~localize]
+  type tag = int [@@deriving equal ~localize, compare ~localize]
 
   let port_names = map port_names_and_widths ~f:fst
   let port_widths = map port_names_and_widths ~f:snd
@@ -566,10 +566,10 @@ struct
 end
 
 module Empty = struct
-  type 'a t = Empty [@@deriving equal ~localize, sexp_of]
+  type 'a t = Empty [@@deriving equal ~localize, compare ~localize, sexp_of]
 
   include Make (struct
-      type nonrec 'a t = 'a t [@@deriving equal ~localize, sexp_of]
+      type nonrec 'a t = 'a t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
       let port_names_and_widths = Empty
       let iter _ ~f:_ = ()
@@ -583,16 +583,16 @@ end
 module Make_interface_with_conversion
     (Repr : S)
     (M : sig
-       type 'a t [@@deriving equal ~localize, sexp_of]
+       type 'a t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
        val t_of_repr : 'a Repr.t -> 'a t
        val repr_of_t : 'a t -> 'a Repr.t
      end) =
 struct
-  type 'a t = 'a M.t [@@deriving equal ~localize, sexp_of]
+  type 'a t = 'a M.t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
   include Make (struct
-      type nonrec 'a t = 'a t [@@deriving equal ~localize, sexp_of]
+      type nonrec 'a t = 'a t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
       let port_names_and_widths = M.t_of_repr Repr.port_names_and_widths
       let map t ~f = M.t_of_repr (Repr.map (M.repr_of_t t) ~f)

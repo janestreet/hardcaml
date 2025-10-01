@@ -151,6 +151,18 @@ module type Regs = sig
       The internal registers are shared between calls. When called multiple times with a
       maximum value of [n] exactly [n] registers are created. *)
   val prev : (t -> (int -> t) Staged.t) with_register_spec
+
+  (** Basic counter. Adds [by] on each [enabled] cycle. Wraps on over/underflow. *)
+  val counter
+    :  ?enable:t
+    -> ?initialize_to:t
+    -> ?reset_to:t
+    -> ?clear:t
+    -> ?clear_to:t
+    -> ?by:int (** Default is [1] *)
+    -> Reg_spec.t
+    -> width:int
+    -> t
 end
 
 module type Memory_prim = sig

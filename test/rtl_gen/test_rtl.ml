@@ -27,7 +27,7 @@ let%expect_test "example" =
       let open Signal.Unoptimized in
       let spec = Signal.Reg_spec.create ~clock:i.clock ~clear:i.clear ~reset:i.reset () in
       let zoo = i.foo +: i.bar in
-      let sum = Uop.(i.foo +: i.bar) in
+      let sum = Unsigned.(i.foo +: i.bar) in
       let coo = i.foo -: ~:(i.bar) -- "coo" in
       let doo = zoo |: ~:(coo -- "noo") -- "zoo" in
       let moo = mux2 zoo (doo @: doo) (zoo @: coo) in

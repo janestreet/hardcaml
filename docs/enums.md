@@ -251,7 +251,7 @@ cycle's enum input.
 module O = struct
   type 'a t =
     { counter : 'a [@bits 32]
-    ; prev_hello : 'a Hello.Binary.t [@rtlmangle true]
+    ; prev_hello : 'a Hello.Binary.t [@rtlmangle "$"]
     }
   [@@deriving hardcaml]
 end

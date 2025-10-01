@@ -82,7 +82,7 @@ module Sedgewick_log_stack = struct
   (* $MDX part-end *)
 end
 
-module _ (* Debug  *) = struct
+module%test Debug = struct
   let swap a i j =
     let tmp = a.(i) in
     a.(i) <- a.(j);

@@ -69,7 +69,7 @@ struct
 
     let reg_no_clear_with_async_reg_annotation ~num_additional_pipeline_stages t d =
       let attribute = Rtl_attribute.Vivado.async_reg true in
-      let d_false_path =
+      let d_path =
         Signal.reg (to_spec_no_clear t) d |> Fn.flip Signal.add_attribute attribute
       in
       let attributes = [ attribute ] in
@@ -77,13 +77,17 @@ struct
         ~attributes
         (to_spec_no_clear t)
         ~n:num_additional_pipeline_stages
-        d_false_path
+        d_path
     ;;
   end
 
   module Var = struct
     let reg ?enable ?clear ?clear_to clocking ~width =
       Always.Variable.reg ?enable ?clear ?clear_to (to_spec clocking) ~width
+    ;;
+
+    let reg_no_clear ?enable clocking ~width =
+      Always.Variable.reg ?enable (to_spec_no_clear clocking) ~width
     ;;
 
     let cut_through_reg ?enable ?clear ?clear_to clocking ~width =

@@ -9,7 +9,7 @@ module Make (S : sig
   end) =
 struct
   module T = struct
-    type 'a t = 'a [@@deriving equal ~localize]
+    type 'a t = 'a [@@deriving equal ~localize, compare ~localize]
 
     let sexp_of_t sexp_of_a a = [%sexp_of: string * a] (S.port_name, a)
     let port_names_and_widths = S.port_name, S.port_width

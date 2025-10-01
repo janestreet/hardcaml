@@ -26,7 +26,7 @@ end
 
 module List (X : Arg_with_length) = struct
   module Pre = struct
-    type 'a t = 'a List.t [@@deriving equal ~localize, sexp_of]
+    type 'a t = 'a List.t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
     let init = List.init
     let map = List.map
@@ -46,7 +46,7 @@ end
 
 module Array (X : Arg_with_length) = struct
   module Pre = struct
-    type 'a t = 'a Array.t [@@deriving equal ~localize, sexp_of]
+    type 'a t = 'a Array.t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
     let init = Array.init
     let map = Array.map

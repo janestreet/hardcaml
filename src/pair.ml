@@ -4,7 +4,8 @@ module M = Pair_intf.M
 
 module Wrap (Data : Interface.S) = struct
   module T = struct
-    type nonrec 'a t = 'a Data.t t [@@deriving equal ~localize, sexp_of]
+    type nonrec 'a t = 'a Data.t t
+    [@@deriving equal ~localize, compare ~localize, sexp_of]
 
     let port_names_and_widths =
       map port_names_and_widths ~f:(fun (p, _) ->

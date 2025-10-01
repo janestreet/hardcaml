@@ -330,4 +330,9 @@ struct
     assign d (f q);
     q
   ;;
+
+  let counter ?enable ?initialize_to ?reset_to ?clear ?clear_to ?(by = 1) spec ~width =
+    reg_fb ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~width ~f:(fun d ->
+      d +: of_int_trunc ~width by)
+  ;;
 end

@@ -52,7 +52,7 @@ module Explicit_interface_record_implementation = struct
       { foo : 'a
       ; bar : 'a
       }
-    [@@deriving equal ~localize, sexp_of]
+    [@@deriving equal ~localize, compare ~localize, sexp_of]
 
     let map t ~f = { foo = f t.foo; bar = f t.bar }
     let map2 s t ~f = { foo = f s.foo t.foo; bar = f s.bar t.bar }

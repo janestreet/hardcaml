@@ -1,7 +1,7 @@
 open! Core0
 
 module type Pre_partial = sig
-  type 'a t [@@deriving equal ~localize, sexp_of]
+  type 'a t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
   val iter : 'a t -> f:('a -> unit) -> unit
   val iter2 : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
@@ -478,7 +478,7 @@ module type Interface = sig
   module Make_interface_with_conversion
       (Repr : S)
       (M : sig
-         type 'a t [@@deriving equal ~localize, sexp_of]
+         type 'a t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
          val t_of_repr : 'a Repr.t -> 'a t
          val repr_of_t : 'a t -> 'a Repr.t
