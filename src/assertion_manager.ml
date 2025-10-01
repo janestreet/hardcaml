@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 type t =
   { mutable map : Signal.t Map.M(String).t

@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Private = sig
   type ('i, 'o) t
@@ -44,7 +44,7 @@ module type Private = sig
   val modify : ('i, 'o) t -> (Side.t * Step.t * task) list -> ('i, 'o) t
 
   val coerce
-    :  (port_list, port_list) t
+    :  ('a, 'b) t
     -> to_input:(port_list -> 'i)
     -> to_output:(port_list -> 'o)
     -> ('i, 'o) t

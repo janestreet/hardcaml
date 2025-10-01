@@ -1,4 +1,4 @@
-open! Base
+open! Core0
 
 type 'a t =
   { write_clock : 'a
@@ -6,7 +6,7 @@ type 'a t =
   ; write_enable : 'a
   ; write_data : 'a
   }
-[@@deriving sexp_of]
+[@@deriving bin_io, sexp_of]
 
 let iter t ~f =
   f t.write_clock;
@@ -16,11 +16,11 @@ let iter t ~f =
 ;;
 
 let map t ~f =
-  { write_clock = f t.write_clock
-  ; write_address = f t.write_address
-  ; write_enable = f t.write_enable
-  ; write_data = f t.write_data
-  }
+  let write_clock = f t.write_clock in
+  let write_address = f t.write_address in
+  let write_data = f t.write_data in
+  let write_enable = f t.write_enable in
+  { write_clock; write_address; write_enable; write_data }
 ;;
 
 let zip s t =

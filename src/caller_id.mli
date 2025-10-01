@@ -8,7 +8,7 @@
     expensive as circuits grow. The environment variable [HARDCAML_DEBUG] can be set to
     enable tracing. *)
 
-open Base
+open! Core0
 
 module Mode : sig
   type t =
@@ -19,8 +19,9 @@ module Mode : sig
     | Full_trace
 end
 
-type t [@@deriving sexp_of]
+type t [@@deriving bin_io, sexp_of]
 
 val set_mode : Mode.t -> unit
 val get : ?skip:string list -> unit -> t option
-val call_stack : t -> Stack_slot.t list
+val call_stack : t -> Call_stack.t
+val call_stack_opt : t option -> Call_stack.t

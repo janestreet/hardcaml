@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 type t = { by_name : (string, Combinational_op.t) Hashtbl.t } [@@deriving sexp_of]
 

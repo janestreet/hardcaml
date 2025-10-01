@@ -1,6 +1,6 @@
 (** Definition of clock, reset and clear signals for sequential logic (ie registers). *)
 
-open Base
+open! Core0
 
 module type Signal = Reg_spec_intf.Signal
 module type S = Reg_spec_intf.S

@@ -115,8 +115,8 @@ let%expect_test "Intstantiation in Verilog with multiple inputs and outputs" =
             the_example
             ( .a(a),
               .b(b),
-              .d(_5[4:1]),
-              .c(_5[0:0]) );
+              .c(_5[0:0]),
+              .d(_5[4:1]) );
         assign _7 = _5[0:0];
         assign c = _7;
         assign d = _6;

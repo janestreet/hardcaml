@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Names = sig
   type t
@@ -41,6 +41,30 @@ module type Comments = sig
   val comment : t -> string option
 end
 
+module type Coverage = sig
+  open Coverage_prim
+
+  type t
+
+  (** Attach a waiver for mux coverage. Raises if the signal is not a mux. *)
+  val add_mux_waiver_exn : t -> int Waiver.t -> t
+
+  (** Attach a waiver for cases coverage. Raises if the signal is not a cases signal. *)
+  val add_cases_waiver_exn : t -> Case.t Waiver.t -> t
+
+  (** Attach a waiver for register coverage. Raises if the signal is not a register or it
+      is an always state register. *)
+  val add_register_waiver_exn : t -> Toggle.t Waiver.t -> t
+
+  (** Attach a state waiver to an always state register. Raises if the signal is not an
+      always state register. *)
+  val add_always_state_waiver_exn : t -> string Waiver.t -> t
+
+  (** Attach as transition wavier to an always state register. Raises if the signal is not
+      an always state register. *)
+  val add_always_state_transition_waiver_exn : t -> string Transition.t Waiver.t -> t
+end
+
 module type Ports = sig
   type t
 
@@ -75,6 +99,12 @@ module type Logic = sig
 
   (** Combinational logic API without constant propogation optimizations. *)
   module Unoptimized : Comb.S with type t := t
+
+  (** Create the signal from bits. *)
+  val of_bits : Bits.t -> t
+
+  (** Convert the signal to bits. Raises if the signal is not a constant. *)
+  val to_bits : t -> Bits.t
 end
 
 module type Regs = sig
@@ -98,6 +128,22 @@ module type Regs = sig
       RTL attributes will also be applied to each register created. *)
   val pipeline : ?attributes:Rtl_attribute.t list -> (n:int -> t -> t) with_register_spec
 
+  (** A register which forwards its input value to the output during cycles in which it is
+      enabled.
+
+      Implemented as a register with a mux on the output. Note that the cut through
+      bevahiour will also occur if enable is high during a clear (or even reset)
+      operation. *)
+  val cut_through_reg
+    :  ?initialize_to:t
+    -> ?reset_to:t
+    -> ?clear:t
+    -> ?clear_to:t
+    -> Reg_spec.t
+    -> enable:t
+    -> t
+    -> t
+
   (** [Staged.unstage (prev spec ?enable d)] returns a function [prev n] which provides
       [d] registered [n] times (ie the value of [d] [n] cycles in the past). [n=0] means
       the current (combinational value).
@@ -105,6 +151,18 @@ module type Regs = sig
       The internal registers are shared between calls. When called multiple times with a
       maximum value of [n] exactly [n] registers are created. *)
   val prev : (t -> (int -> t) Staged.t) with_register_spec
+
+  (** Basic counter. Adds [by] on each [enabled] cycle. Wraps on over/underflow. *)
+  val counter
+    :  ?enable:t
+    -> ?initialize_to:t
+    -> ?reset_to:t
+    -> ?clear:t
+    -> ?clear_to:t
+    -> ?by:int (** Default is [1] *)
+    -> Reg_spec.t
+    -> width:int
+    -> t
 end
 
 module type Memory_prim = sig
@@ -206,11 +264,6 @@ module type S = sig
 
   include Signal__type.With_info with type t := t
 
-  (** Check if the provided signals are consistent where the definition of consistency is
-      defined by the underlying signal type. If signals are inconsistent, returns a pair
-      of them as evidence. *)
-  val are_consistent : t list -> (t * t) option
-
   (** {1 Naming}
 
       One or more string names applied to a signal. These will be used during RTL code
@@ -232,6 +285,7 @@ module type S = sig
       information to downstream tooling (specifically Verilator). *)
 
   include Comments with type t := t
+  include Coverage with type t := t
 
   (** {1 Circuit Input and Output Ports}
 
@@ -320,5 +374,6 @@ module type Signal = sig
   include S with type t := Signal__type.t
 
   (** Returns the unique id of the signal. *)
-  val uid : t -> Type.Uid.t
+  val%template uid : t @ m -> Type.Uid.t @ m
+  [@@mode m = (local, global)]
 end

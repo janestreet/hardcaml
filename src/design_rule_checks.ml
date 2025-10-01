@@ -1,10 +1,10 @@
-open Base
+open! Core0
 
 let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
   let rec transitively_resolve (signal : Signal.t) =
     match signal with
     | Empty -> assert false
-    | Wire { signal_id = _; driver } ->
+    | Wire { info = _; driver } ->
       (match driver with
        | None -> signal
        | Some otherwise -> transitively_resolve otherwise)
@@ -19,7 +19,7 @@ let verify_clock_pins ~expected_clock_pins (t : Circuit.t) =
     | Multiport_mem _
     | Mem_read_port _
     | Inst _ ->
-      (match Signal.Type.signal_id signal with
+      (match Signal.Type.info signal with
        | None -> assert false
        | Some _ -> signal)
   in

@@ -20,17 +20,40 @@ let%expect_test "guarded assignment width mistmatch" =
     |}]
 ;;
 
+let%expect_test "width of if/when condition must be a single bit" =
+  require_does_raise (fun () ->
+    let w = Variable.wire ~default:gnd () in
+    let sel = wire 2 -- "sel" in
+    compile [ if_ sel [ w <-- vdd ] [ w <-- gnd ] ]);
+  [%expect
+    {|
+    ("Condition in [Always.if_] and [Always.when_] must be 1 bit"
+     (variable_name (sel))
+     (width 2))
+    |}];
+  require_does_raise (fun () ->
+    let w = Variable.wire ~default:gnd () in
+    let sel = wire 2 -- "sel" in
+    compile [ when_ sel [ w <-- vdd ] ]);
+  [%expect
+    {|
+    ("Condition in [Always.if_] and [Always.when_] must be 1 bit"
+     (variable_name (sel))
+     (width 2))
+    |}]
+;;
+
 let reg_spec = Reg_spec.create () ~clock ~clear
 
 module State = struct
-  type t = int [@@deriving compare, sexp_of]
+  type t = int [@@deriving compare ~localize, sexp_of]
 
   let all = [ 1; 3; 5 ]
 end
 
 let%expect_test "single state State_machine compiles" =
   let module State = struct
-    type t = int [@@deriving compare, sexp_of]
+    type t = int [@@deriving compare ~localize, sexp_of]
 
     let all = [ 1 ]
   end
@@ -94,7 +117,7 @@ let%expect_test "test statemachine encodings" =
       | S10
       | S15
       | Valid
-    [@@deriving compare, enumerate, sexp_of, variants]
+    [@@deriving compare ~localize, enumerate, sexp_of, variants]
   end
   in
   let test ~encoding ~nickel ~dime =

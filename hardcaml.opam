@@ -17,6 +17,7 @@ depends: [
   "core"
   "core_kernel"
   "jane_rope"
+  "ppx_compare"
   "ppx_jane"
   "ppx_rope"
   "ppx_sexp_conv"

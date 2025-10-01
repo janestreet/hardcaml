@@ -22,7 +22,8 @@ A state machine is constructed with the following function:
 # open Hardcaml
 # open Signal
 # Always.State_machine.create
-- : ?encoding:Always.State_machine.Encoding.t ->
+- : here:[%call_pos] ->
+    ?encoding:Always.State_machine.Encoding.t ->
     ?auto_wave_format:bool ->
     ?attributes:Hardcaml.Rtl_attribute.t list ->
     ?enable:t ->
@@ -43,7 +44,7 @@ module States = struct
     | Wait_for_start
     | Process_something
     | Process_something_else
-  [@@deriving sexp_of, compare, enumerate]
+  [@@deriving sexp_of, compare ~localize, enumerate]
 end
 ```
 

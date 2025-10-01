@@ -1,9 +1,9 @@
-(* A f!circuit is defined by transitively following the dependencies of its outputs,
-   stopping at unassigned wires or constants.  [Signal_graph.inputs] does this.
-   All such unassigned wires are circuit inputs.  As a consequence, all other wires
-   in a circuit are assigned, and hence cannot be changed. *)
+(* A circuit is defined by transitively following the dependencies of its outputs,
+   stopping at unassigned wires or constants. [Signal_graph.inputs] does this. All such
+   unassigned wires are circuit inputs. As a consequence, all other wires in a circuit are
+   assigned, and hence cannot be changed. *)
 
-open Base
+open! Core0
 module Uid_set = Signal.Type.Uid_set
 
 module Signal_map = struct
@@ -22,9 +22,11 @@ module Signal_map = struct
 end
 
 module Instantiation_sexp = struct
-  type t = Signal.Type.instantiation
+  type t = Signal.t Signal.Type.Inst.Instantiation.t
 
-  let sexp_of_t (t : t) = [%message "" (t.inst_name : string) (t.inst_instance : string)]
+  let sexp_of_t (t : t) =
+    [%message "" (t.circuit_name : string) (t.instance_label : string)]
+  ;;
 end
 
 module Port_checks = struct
@@ -226,13 +228,12 @@ let set_phantom_inputs circuit phantom_inputs =
      that have the same name as an output. *)
   let module Port = struct
     module T = struct
-      type t = string * int [@@deriving sexp_of]
-
-      let compare (n0, _) (n1, _) = String.compare n0 n1
+      type t = string * (int[@compare.ignore]) [@@deriving compare ~localize, sexp_of]
     end
 
     include T
-    include Comparable.Make (T)
+
+    include%template Comparable.Make_plain [@mode local] (T)
 
     let of_signal port =
       let name =

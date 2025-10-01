@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 (** Generate RTL for one or more circuits.
 

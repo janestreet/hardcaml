@@ -2,9 +2,10 @@
 
     For use with generated RTL when we want to reference some non-hardcaml modules. *)
 
-open Base
+open! Core0
 
 type t
+type output_map = Signal.t Map.M(String).t
 
 val create
   :  ?lib:string
@@ -22,7 +23,7 @@ val create
 val instantiation_signal : t -> Signal.t
 
 (** Return a map from output port name to output signal. *)
-val outputs : t -> Signal.t Map.M(String).t
+val outputs : t -> output_map
 
 (** Find an output signal from it's name. Raises if it doesns't exist. *)
 val output : t -> string -> Signal.t

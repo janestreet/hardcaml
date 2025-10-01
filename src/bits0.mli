@@ -10,15 +10,13 @@
 
     It is represented with [Bytes.t] because that is a more efficient memory layout than
     an ocaml array of [Int64]s. *)
-open Base
+open! Core0
 
-type t = private Bytes.t [@@deriving sexp, bin_io]
-
-(** Comparison of two [Bits.t]. First the widths are compared and if they are same the
+(** Comparison of two [Bits.t]: first the widths are compared and if they are same the
     unsigned numerical value is compared. *)
-val compare : t -> t -> int
+type t = private Bytes.t [@@deriving bin_io, compare ~localize, sexp]
 
-module Comparable : Comparable.S with type t := t
+module%template Comparable : Comparable.S [@mode local] with type t := t
 
 val bits_per_word : int
 val log_bits_per_word : int
@@ -55,7 +53,7 @@ val unsafe_get_byte : t -> int -> char
 
 (** Get the n-th 64-bit word of the constant. [unsafe_get_int64 t pos] accesses the data
     at the [pos * 8]-th byte of t. *)
-val unsafe_get_int64 : t -> int -> int64
+val unsafe_get_int64 : local_ t -> int -> int64
 
 (** Similar to [unsafe_get_int64], but for writing instead of reading. *)
 val unsafe_set_int64 : t -> int -> int64 -> unit

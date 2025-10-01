@@ -49,7 +49,7 @@ let analyse_vhdl ?(quiet = false) circuit vhdl =
 
 let analyse ?quiet lang circuit hdl =
   match (lang : Rtl.Language.t) with
-  | Verilog -> analyse_verilog ?quiet circuit hdl
+  | Verilog | Systemverilog -> analyse_verilog ?quiet circuit hdl
   | Vhdl -> analyse_vhdl ?quiet circuit hdl
 ;;
 

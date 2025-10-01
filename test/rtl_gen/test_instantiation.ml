@@ -84,16 +84,16 @@ let%expect_test "instantiation, with 0 or more parameters." =
             the_foo
             ( .foo(_5),
               .bar(_3),
-              .moo(_12[2:1]),
-              .zoo(_12[0:0]) );
+              .zoo(_12[0:0]),
+              .moo(_12[2:1]) );
         assign _18 = _12[0:0];
         foo
             #( .par(3) )
             the_foo_1
             ( .foo(_5),
               .bar(_3),
-              .moo(_9[2:1]),
-              .zoo(_9[0:0]) );
+              .zoo(_9[0:0]),
+              .moo(_9[2:1]) );
         assign _16 = _9[0:0];
         assign _3 = bar;
         assign _5 = foo;
@@ -101,8 +101,8 @@ let%expect_test "instantiation, with 0 or more parameters." =
             the_foo_2
             ( .foo(_5),
               .bar(_3),
-              .moo(_7[2:1]),
-              .zoo(_7[0:0]) );
+              .zoo(_7[0:0]),
+              .moo(_7[2:1]) );
         assign _15 = _7[0:0];
         assign _17 = _15 | _16;
         assign _19 = _17 | _18;
@@ -154,23 +154,23 @@ let%expect_test "instantiation, with 0 or more parameters." =
                           far => "baloo" )
             port map ( foo => hc_5,
                        bar => hc_3,
-                       moo => hc_12(2 downto 1),
-                       zoo => hc_12(0) );
+                       zoo => hc_12(0),
+                       moo => hc_12(2 downto 1) );
         hc_18 <= hc_12(0);
         the_foo_1: entity work.foo (rtl)
             generic map ( par => 3 )
             port map ( foo => hc_5,
                        bar => hc_3,
-                       moo => hc_9(2 downto 1),
-                       zoo => hc_9(0) );
+                       zoo => hc_9(0),
+                       moo => hc_9(2 downto 1) );
         hc_16 <= hc_9(0);
         hc_3 <= bar;
         hc_5 <= foo;
         the_foo_2: entity work.foo (rtl)
             port map ( foo => hc_5,
                        bar => hc_3,
-                       moo => hc_7(2 downto 1),
-                       zoo => hc_7(0) );
+                       zoo => hc_7(0),
+                       moo => hc_7(2 downto 1) );
         hc_15 <= hc_7(0);
         hc_17 <= hc_15 or hc_16;
         hc_19 <= hc_17 or hc_18;

@@ -365,7 +365,7 @@ let%expect_test "test instantiation" =
             (float_param      (Real       1.2))
             (bit_vector_param (Bit_vector 11001))))
           (inputs  ((i1 a) (i2 b)))
-          (outputs ((o2 3) (o1 4)))))))
+          (outputs ((o1 4) (o2 3)))))))
     |}]
 ;;
 

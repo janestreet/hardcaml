@@ -16,7 +16,7 @@
         - ...
     v} *)
 
-open Base
+open! Core0
 open Stdio
 
 (** Timescales.
@@ -65,7 +65,7 @@ module Var : sig
     val to_string : t -> string
   end
 
-  type t [@@deriving sexp_of, compare, hash]
+  type t [@@deriving sexp_of, compare ~localize, hash]
 
   val create
     :  ?typ:Type.t

@@ -514,7 +514,7 @@ let%expect_test "binary_to_gray" =
 let%expect_test "[binary_to_gray] and [gray_to_binary] are inverses" =
   let num_tests = ref 0 in
   iter_all_inputs ~min_width:1 ~max_width:5 ~f:(fun input ->
-    incr num_tests;
+    Int.incr num_tests;
     let output = binary_to_gray (gray_to_binary input) in
     require
       (Sexp.equal [%sexp (input : signal)] [%sexp (output : signal)])
@@ -618,7 +618,7 @@ let%expect_test "[select]" =
   iter_all_inputs ~min_width:2 ~max_width:5 ~f:(fun input ->
     let width = width input in
     for split = 0 to width - 2 do
-      incr num_tests;
+      Int.incr num_tests;
       let output =
         With_zero_width.concat_msb
           [ With_zero_width.select (Some input) ~high:(width - 1) ~low:(split + 1)

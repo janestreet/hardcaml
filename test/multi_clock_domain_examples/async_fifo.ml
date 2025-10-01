@@ -10,25 +10,15 @@ module Fifo = Async_fifo.Make (struct
     let optimize_for_same_clock_rate_and_always_reading = false
   end)
 
-include struct
-  open Hardcaml_event_driven_sim
-  module Logic = Two_state_logic
-  module Evsim = Make (Logic)
-  module Config = Config
-  module Waveform = Waveterm.Waveform
-end
+open Hardcaml_event_driven_sim.Two_state_simulator
+module Process = Simulator.Process
+module Waveform = Waveterm.Waveform
 
-include struct
-  open Event_driven_sim
-  module Simulator = Simulator
-  module Process = Simulator.Process
+let ( <-- ) = Simulator.( <-- )
+let ( !& ) = Simulator.( !& )
+let ( !! ) = Simulator.( !! )
 
-  let ( <-- ) = Simulator.( <-- )
-  let ( !& ) = Simulator.( !& )
-  let ( !! ) = Simulator.( !! )
-end
-
-module Fifo_sim = Evsim.With_interface (Fifo.I) (Fifo.O)
+module Fifo_sim = With_interface (Fifo.I) (Fifo.O)
 
 let fifo () =
   Fifo.create

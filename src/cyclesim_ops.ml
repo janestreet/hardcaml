@@ -2,7 +2,7 @@
    much better inlining and code gen, though we still lack cross module inlining. *)
 [@@@ocaml.flambda_o3]
 
-open Base
+open! Core0
 
 let run_bounds_checks = false
 

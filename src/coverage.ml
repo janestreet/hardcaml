@@ -5,6 +5,7 @@ module Make (M : sig
 
     val total_cases : t -> int
     val covered_cases : t -> int
+    val unexpectedly_observed_cases : t -> int
   end) =
 struct
   include M

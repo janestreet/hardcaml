@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 (** ['a t] represents some kind of circuit memory in a simulation. The contents of the
     memory may change as the simulation advances *)

@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module Make (Comb : sig
     include Comb.S

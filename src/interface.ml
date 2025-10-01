@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 include struct
   open Interface_intf
@@ -109,7 +109,7 @@ type ('a, 'b) with_valid2 = ('a, 'b) Comb_intf.with_valid2
 module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   include X
 
-  type tag = int [@@deriving equal]
+  type tag = int [@@deriving equal ~localize, compare ~localize]
 
   let port_names = map port_names_and_widths ~f:fst
   let port_widths = map port_names_and_widths ~f:snd
@@ -129,12 +129,6 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
   let iter3 a b c ~f = ignore @@ map3 ~f a b c
   let iter4 a b c d ~f = ignore @@ map4 ~f a b c d
   let iter5 a b c d e ~f = ignore @@ map5 ~f a b c d e
-
-  let equal equal_a t1 t2 =
-    With_return.with_return (fun r ->
-      iter2 t1 t2 ~f:(fun a1 a2 -> if not (equal_a a1 a2) then r.return false);
-      true)
-  ;;
 
   let fold a ~init ~f =
     let init = ref init in
@@ -391,7 +385,7 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     | Some t -> map t ~f:(fun t -> Some t)
   ;;
 
-  module Of_signal = struct
+  module Make_signal_functions (Signal : Signal.S) = struct
     include Make_comb (Signal)
 
     let assign t1 t2 = iter2 t1 t2 ~f:Signal.assign
@@ -414,6 +408,16 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
         t
         ~f:(fun initialize_to reset_to clear_to d ->
           Signal.reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d)
+    ;;
+
+    let cut_through_reg ?initialize_to ?reset_to ?clear ?clear_to spec ~enable t =
+      map4
+        (opt initialize_to)
+        (opt reset_to)
+        (opt clear_to)
+        t
+        ~f:(fun initialize_to reset_to clear_to d ->
+          Signal.cut_through_reg ?initialize_to ?reset_to ?clear ?clear_to spec ~enable d)
     ;;
 
     let pipeline ?attributes ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~n t =
@@ -445,6 +449,44 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     let __ppx_auto_name t prefix = apply_names ~prefix:(prefix ^ "$") t
   end
 
+  module Of_signal = struct
+    include Make_signal_functions (Signal)
+  end
+
+  module Of_clocked_signal = struct
+    include Make_signal_functions (Clocked_signal)
+
+    let wires ?named arg =
+      let output =
+        let from =
+          match arg with
+          | `From from -> Some from
+          | `Domains _ -> None
+        in
+        wires ?named ?from ()
+      in
+      match arg with
+      | `Domains doms ->
+        map2 doms output ~f:(fun dom signal ->
+          Clocked_signal.Unsafe.set_domain signal ~dom)
+      | `From _ -> output
+    ;;
+
+    let inputs doms = wires ~named:true (`Domains doms)
+    let outputs t = wires ~named:true (`From t)
+
+    let apply_names ?prefix ?suffix ?naming_op t =
+      Of_signal.apply_names
+        ?prefix
+        ?suffix
+        ?naming_op
+        (X.map t ~f:(fun t ->
+           Clocked_signal.unwrap_signal ~dom:(Clocked_signal.get_domain t) t))
+      |> map2 t ~f:(fun t s ->
+        Clocked_signal.to_clocked ~dom:(Clocked_signal.get_domain t) s)
+    ;;
+  end
+
   module Names_and_widths = struct
     let port_names_and_widths = to_list port_names_and_widths
     let port_names = to_list port_names
@@ -465,6 +507,23 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
         port_widths
         ~f:(fun initialize_to reset_to clear_to width ->
           Always.Variable.reg
+            spec
+            ?enable
+            ?initialize_to
+            ?reset_to
+            ?clear
+            ?clear_to
+            ~width)
+    ;;
+
+    let cut_through_reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec =
+      map4
+        (opt initialize_to)
+        (opt reset_to)
+        (opt clear_to)
+        port_widths
+        ~f:(fun initialize_to reset_to clear_to width ->
+          Always.Variable.cut_through_reg
             spec
             ?enable
             ?initialize_to
@@ -507,10 +566,10 @@ struct
 end
 
 module Empty = struct
-  type 'a t = Empty [@@deriving sexp_of]
+  type 'a t = Empty [@@deriving equal ~localize, compare ~localize, sexp_of]
 
   include Make (struct
-      type nonrec 'a t = 'a t [@@deriving sexp_of]
+      type nonrec 'a t = 'a t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
       let port_names_and_widths = Empty
       let iter _ ~f:_ = ()
@@ -524,16 +583,16 @@ end
 module Make_interface_with_conversion
     (Repr : S)
     (M : sig
-       type 'a t [@@deriving sexp_of]
+       type 'a t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
        val t_of_repr : 'a Repr.t -> 'a t
        val repr_of_t : 'a t -> 'a Repr.t
      end) =
 struct
-  type 'a t = 'a M.t [@@deriving sexp_of]
+  type 'a t = 'a M.t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
   include Make (struct
-      type nonrec 'a t = 'a t [@@deriving sexp_of]
+      type nonrec 'a t = 'a t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
       let port_names_and_widths = M.t_of_repr Repr.port_names_and_widths
       let map t ~f = M.t_of_repr (Repr.map (M.repr_of_t t) ~f)
@@ -548,4 +607,10 @@ module type S_with_ast = sig
   include S
 
   val ast : Ast.t
+end
+
+module type S_with_clock_domains = sig
+  include S
+
+  val domains : Clock_domain.t t
 end

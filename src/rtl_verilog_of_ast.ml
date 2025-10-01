@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 let tab_len = 4
 let spaces n = String.init n ~f:(Fn.const ' ') |> Rope.of_string

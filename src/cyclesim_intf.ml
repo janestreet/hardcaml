@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Cyclesim = sig
   module Port_list = Cyclesim0.Port_list
@@ -8,33 +8,51 @@ module type Cyclesim = sig
   module Memory = Cyclesim0.Memory
   module Config = Cyclesim0.Config
 
-  (** base type of the cycle based simulators *)
+  (** Base type of the cycle based simulators *)
   type ('i, 'o) t
 
   type t_port_list = (Port_list.t, Port_list.t) t
 
-  (** returns the circuit used to compile the simulation. *)
+  (** Returns the circuit used to compile the simulation. *)
   val circuit : _ t -> Circuit.t option
 
-  (** advance by n clock cycles (check->comb->seq->comb). [n] defaults to 1. *)
+  (** Advance by n clock cycles (check->comb->seq->comb). [n] defaults to 1. *)
   val cycle : ?n:int -> _ t -> unit
 
-  (** check inputs are valid before a simulation cycle *)
+  (** Check inputs are valid before a simulation cycle *)
   val cycle_check : _ t -> unit
 
-  (** update combinatorial logic before clock edge and relative to new inputs. *)
+  (** Update combinatorial logic before clock edge and relative to new inputs. *)
   val cycle_before_clock_edge : _ t -> unit
 
-  (** update sequential logic - registers and memories. *)
+  (** Update sequential logic - registers and memories. *)
   val cycle_at_clock_edge : _ t -> unit
 
-  (** update combinatorial logic after clock edge *)
+  (** Update combinatorial logic after clock edge *)
   val cycle_after_clock_edge : _ t -> unit
 
-  (** reset simulator *)
+  (** Reset simulator *)
   val reset : _ t -> unit
 
-  (** get input port given a name *)
+  (** Attach to a simulator and cause it to raise after the given number of steps.
+      Resetting the simulation will also reset the timeouts. *)
+  val raise_after_timeout
+    :  ?message:string
+    -> here:[%call_pos]
+    -> ('i, 'o) t
+    -> timeout:int
+    -> ('i, 'o) t
+
+  (** Raise if the provided callback [f] takes more than [timeout] cycles to execute. *)
+  val with_timeout
+    :  ?message:string
+    -> here:[%call_pos]
+    -> timeout:int
+    -> f:(('i, 'o) t -> 'c)
+    -> ('i, 'o) t
+    -> 'c
+
+  (** Get input port given a name *)
   val in_port : _ t -> string -> Bits.t ref
 
   (** Signals and their unique (mangled) names to be traced by the simulation. Includes

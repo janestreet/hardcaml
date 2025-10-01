@@ -19,7 +19,7 @@ module Simple_enum_example = struct
     type t =
       | Foo
       | Bar
-    [@@deriving sexp_of, compare, enumerate]
+    [@@deriving sexp_of, compare ~localize, enumerate]
   end
 
   include Hardcaml.Enum.Make_enums(Enum)
@@ -37,7 +37,7 @@ module Foo = struct
   type t =
     | Foo_a
     | Foo_b
-  [@@deriving sexp_of, compare, enumerate]
+  [@@deriving sexp_of, compare ~localize, enumerate]
 end
 
 module Bar = struct
@@ -45,7 +45,7 @@ module Bar = struct
     | Bar_a
     | Bar_b
     | Bar_c
-  [@@deriving sexp_of, compare, enumerate]
+  [@@deriving sexp_of, compare ~localize, enumerate]
 end
 
 module Hello = struct
@@ -53,7 +53,7 @@ module Hello = struct
     type t =
       | Foo of Foo.t
       | Bar of Bar.t
-    [@@deriving sexp_of, compare, enumerate]
+    [@@deriving sexp_of, compare ~localize, enumerate]
   end
 
   include Hardcaml.Enum.Make_enums(Enum)
@@ -251,7 +251,7 @@ cycle's enum input.
 module O = struct
   type 'a t =
     { counter : 'a [@bits 32]
-    ; prev_hello : 'a Hello.Binary.t [@rtlmangle true]
+    ; prev_hello : 'a Hello.Binary.t [@rtlmangle "$"]
     }
   [@@deriving hardcaml]
 end
@@ -294,7 +294,8 @@ opt for special APIs for getting/setting them in simulations:
 # Hello.Binary.sim_set_raw
 - : Bits.t ref Hello.Binary.t -> Bits.t -> unit = <fun>
 # Hello.Binary.sim_get
-- : Bits.t ref Hello.Binary.t -> Hello.Enum.t Or_error.t = <fun>
+- : Bits.t ref Hello.Binary.t -> Hello.Enum.t Hardcaml__.Core0.Or_error.t =
+<fun>
 # Hello.Binary.sim_get_raw
 - : Bits.t ref Hello.Binary.t -> Bits.t = <fun>
 ```

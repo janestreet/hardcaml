@@ -1,14 +1,14 @@
-open Base
+open! Core0
 
 type range =
   | Vector of { width : int }
   | Bit
-[@@deriving sexp_of, equal]
+[@@deriving sexp_of, equal ~localize]
 
 type reg_or_wire =
   | Reg
   | Wire
-[@@deriving equal, sexp_of]
+[@@deriving equal ~localize, sexp_of]
 
 type var =
   { name : Rope.t
@@ -17,7 +17,7 @@ type var =
   ; attributes : Rtl_attribute.t list
   ; comment : string option
   }
-[@@deriving sexp_of, equal]
+[@@deriving sexp_of, equal ~localize]
 
 type output =
   { output : var
@@ -332,7 +332,7 @@ let find_multiport_memory var_map signal =
   | _ -> raise_s [%message "[Rtl_ast] expecting multiport memory declaration"]
 ;;
 
-let always_of_reg var_map (register : _ Signal.Type.register) ~q ~d =
+let always_of_reg var_map (register : _ Signal.Type.Reg.Register.t) ~q ~d =
   let find = find_logic var_map in
   let q_of d : always = Assignment { lhs = (find q).write; rhs = (find d).read } in
   let enabled =
@@ -448,8 +448,8 @@ let create_phantom_inputs ~rtl_name circuit =
 ;;
 
 let is_mux2 = function
-  | Signal.Type.Mux { signal_id = _; select; cases = [ _; _ ] }
-    when Signal.width select = 1 -> true
+  | Signal.Type.Mux { info = _; select; cases = [ _; _ ] } when Signal.width select = 1 ->
+    true
   | _ -> false
 ;;
 
@@ -516,7 +516,7 @@ let map_parameters_for_compatibility
   (parameters : Parameter.t list)
   =
   match lang, Rtl_compatibility.force_std_logic_generics_to_bits backend with
-  | Rtl_language.Verilog, true ->
+  | (Rtl_language.Verilog | Systemverilog), true ->
     List.map parameters ~f:(function
       | { name; value = Std_logic v | Std_ulogic v } ->
         let v =
@@ -529,7 +529,7 @@ let map_parameters_for_compatibility
         in
         { Parameter.name; value = Bit v }
       | p -> p)
-  | Verilog, false | Vhdl, (true | false) -> parameters
+  | (Verilog | Systemverilog), false | Vhdl, (true | false) -> parameters
 ;;
 
 let create_statement ~(rtl_config : Rtl_config.t) ~language var_map (signal : Signal.t) =
@@ -568,7 +568,7 @@ let create_statement ~(rtl_config : Rtl_config.t) ~language var_map (signal : Si
          { lhs = (find "Cat.lhs" signal).write
          ; args = List.map args ~f:(fun arg -> (find "Cat.arg" arg).read)
          })
-  | Op2 { op = Signal_muls; arg_a; arg_b; _ } ->
+  | Op2 { op = Muls; arg_a; arg_b; _ } ->
     Assignment
       (Binop
          { lhs = (find "Op2.lhs" signal).write
@@ -579,15 +579,15 @@ let create_statement ~(rtl_config : Rtl_config.t) ~language var_map (signal : Si
   | Op2 { op; arg_a; arg_b; _ } ->
     let op =
       match op with
-      | Signal_add -> Add
-      | Signal_sub -> Sub
-      | Signal_mulu -> Mulu
-      | Signal_muls -> assert false
-      | Signal_and -> And
-      | Signal_or -> Or
-      | Signal_xor -> Xor
-      | Signal_eq -> Eq
-      | Signal_lt -> Lt
+      | Add -> Add
+      | Sub -> Sub
+      | Mulu -> Mulu
+      | Muls -> assert false
+      | And -> And
+      | Or -> Or
+      | Xor -> Xor
+      | Eq -> Eq
+      | Lt -> Lt
     in
     Assignment
       (Binop
@@ -673,24 +673,26 @@ let create_statement ~(rtl_config : Rtl_config.t) ~language var_map (signal : Si
   | Reg { register; d; _ } -> always_of_reg var_map register ~q:signal ~d
   | Const { constant; _ } ->
     Assignment (Const { lhs = (find "Const.lhs" signal).write; constant })
-  | Inst { signal_id = _; instantiation } ->
+  | Inst { info = _; instantiation } ->
     let input_ports =
-      List.map instantiation.inst_inputs ~f:(fun (port_name, signal) ->
+      List.map instantiation.inputs ~f:(fun { name = port_name; input_signal = signal } ->
         { port_name; connection = (find ("Inst.input_port: " ^ port_name) signal).read })
     in
     let output_ports =
-      List.map instantiation.inst_outputs ~f:(fun (port_name, (width, low)) ->
-        { port_name
-        ; connection = (find ("Inst.output_port: " ^ port_name) signal).read
-        ; high = low + width - 1
-        ; low
-        })
+      List.map
+        instantiation.outputs
+        ~f:(fun { name = port_name; output_width; output_low_index = low } ->
+          { port_name
+          ; connection = (find ("Inst.output_port: " ^ port_name) signal).read
+          ; high = low + output_width - 1
+          ; low
+          })
     in
     Instantiation
-      { name = instantiation.inst_name
+      { name = instantiation.circuit_name
       ; instance = find_instance_name var_map signal
       ; parameters =
-          map_parameters_for_compatibility language rtl_config instantiation.inst_generics
+          map_parameters_for_compatibility language rtl_config instantiation.parameters
       ; input_ports
       ; output_ports
       ; attributes = Signal.attributes signal
@@ -786,7 +788,7 @@ let of_circuit ~blackbox ~(language : Rtl_language.t) ~(config : Rtl_config.t) c
 module Signals_name_map = struct
   module Uid_with_index = struct
     module T = struct
-      type t = Signal.Type.Uid.t * int [@@deriving compare, sexp_of]
+      type t = Signal.Type.Uid.t * int [@@deriving compare ~localize, sexp_of]
     end
 
     include T
@@ -794,7 +796,7 @@ module Signals_name_map = struct
   end
 
   type t_rtl_ast = t
-  type t = string Map.M(Uid_with_index).t [@@deriving equal, sexp_of]
+  type t = string Map.M(Uid_with_index).t [@@deriving equal ~localize, sexp_of]
 
   let create (t : t_rtl_ast) =
     let empty = Map.empty (module Uid_with_index) in

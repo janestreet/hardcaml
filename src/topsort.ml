@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 (* This is a "vendored" version of [Topological_sort] specialized for Signals, and
    respecting the input node ordering. If we can get the new functionality backported it
@@ -16,7 +16,7 @@ module Edge = struct
     { from : 'a
     ; to_ : 'a
     }
-  [@@deriving compare, sexp_of]
+  [@@deriving compare ~localize, sexp_of]
 
   let map t ~f = { from = f t.from; to_ = f t.to_ }
 end

@@ -1,8 +1,18 @@
-open Core
+open! Core0
+open Coverage_prim
+
+module Config = struct
+  type t =
+    { hide_unstable : bool
+    ; verbose : bool
+    ; compact : bool
+    }
+  [@@deriving fields ~getters]
+end
 
 let indent_unit = 4
 
-let output_line_with_indent oc string ~indent =
+let output_line ?(indent = 0) oc string =
   let indent = List.init (indent * indent_unit) ~f:(fun _ -> ' ') |> String.of_list in
   Out_channel.output_line oc (indent ^ string)
 ;;
@@ -23,7 +33,7 @@ end
 let output_heading oc heading level =
   let border_count = Heading_level.border_count level in
   let border = List.init border_count ~f:(fun _ -> '=') |> String.of_list in
-  Out_channel.output_line oc [%string {|%{border} %{heading} %{border}|}];
+  output_line oc [%string {|%{border} %{heading} %{border}|}];
   Out_channel.newline oc
 ;;
 
@@ -33,23 +43,22 @@ module Coverage_stats = struct
     ; full : int
     }
 
-  let compute (type a) (module M : Coverage.S with type t = a) coverage ~f =
+  let compute (type a) (module M : Coverage.S with type t = a) coverage =
     { tested = List.length coverage
-    ; full = List.count coverage ~f:(fun c -> M.fully_covered (f c))
+    ; full = List.count coverage ~f:(fun c -> M.fully_covered c)
     }
   ;;
 
   let percent { tested; full } = Percent.of_mult (Int.to_float full /. Int.to_float tested)
 
   let print_precent oc t ~name =
-    if t.tested <> 0
-    then Out_channel.output_line oc [%string {|%{name}: %{(percent t)#Percent}|}]
+    if t.tested <> 0 then output_line oc [%string {|%{name}: %{(percent t)#Percent}|}]
   ;;
 
   let print_full oc t ~name ~unit =
     print_precent oc t ~name;
-    Out_channel.output_line oc [%string {|%{unit} tested: %{t.tested#Int}|}];
-    Out_channel.output_line oc [%string {|%{unit} with full coverage: %{t.full#Int}|}]
+    output_line oc [%string {|%{unit} tested: %{t.tested#Int}|}];
+    output_line oc [%string {|%{unit} with full coverage: %{t.full#Int}|}]
   ;;
 end
 
@@ -62,236 +71,296 @@ let output_list oc list ~to_string ~title ~indent =
       String.length string_list + (indent * indent_unit) + String.length title
     in
     if line_length < 85
-    then output_line_with_indent oc ~indent [%string {|%{title}: %{string_list}|}]
+    then output_line oc ~indent [%string {|%{title}: %{string_list}|}]
     else (
       let chunks = List.chunks_of list ~length:25 in
-      output_line_with_indent oc ~indent [%string {|%{title}:|}];
+      output_line oc ~indent [%string {|%{title}:|}];
       List.iter chunks ~f:(fun chunk ->
-        output_line_with_indent oc ~indent:(indent + 1) (list_to_string chunk))))
+        output_line oc ~indent:(indent + 1) (list_to_string chunk))))
 ;;
 
-let output_names oc (names : Name_and_loc.t list) ~title ~indent =
+let output_list_lines oc list ~to_string ~title ~indent =
+  if not (List.length list = 0) then output_line oc ~indent [%string {|%{title}:|}];
+  List.iter list ~f:(fun a -> output_line oc ~indent:(indent + 1) (to_string a))
+;;
+
+let output_source_loc ?title oc config loc ~indent =
+  match title with
+  | None ->
+    if not (Config.hide_unstable config)
+    then output_line oc [%string {|%{loc#Source_code_position}|}] ~indent
+  | Some title ->
+    if not (Config.hide_unstable config)
+    then output_line oc [%string {|%{title}: %{loc#Source_code_position}|}] ~indent
+    else output_line oc [%string {|%{title}: <elided>|}] ~indent
+;;
+
+let output_names ?(indent = 0) oc (names : Name_and_loc.t list) ~title =
+  (* For now don't output the locations as well, it doesn't seem that helpful in
+     addition to the name. *)
   match names with
   | [] -> ()
+  | [ { name; loc = _ } ] -> output_line oc [%string {|%{title}: %{name}|}] ~indent
   | names ->
-    output_line_with_indent oc [%string {|%{title}:|}] ~indent;
-    List.iter names ~f:(fun { name; loc } ->
-      output_line_with_indent oc [%string {|%{name}|}] ~indent:(indent + 1);
-      output_line_with_indent
-        oc
-        [%string {|%{loc#Source_code_position}|}]
-        ~indent:(indent + 2))
+    output_line oc [%string {|%{title}:|}] ~indent;
+    List.iter names ~f:(fun { name; loc = _ } ->
+      output_line oc [%string {|%{name}|}] ~indent:(indent + 1))
 ;;
 
-let report_call_stack oc slots ~indent =
-  List.iter slots ~f:(fun slot ->
-    output_line_with_indent oc (Stack_slot.format slot) ~indent)
+let report_call_stack oc config call_stack ~indent =
+  if List.length call_stack > 0 && not (Config.hide_unstable config)
+  then (
+    output_line oc ~indent "call_stack:";
+    List.iter call_stack ~f:(fun slot ->
+      output_line oc (Call_stack.Slot.format slot) ~indent:(indent + 1)))
 ;;
 
-let report_single_mux
-  oc
-  (mux : Signal_coverage.Mux.t Signal_coverage.with_metadata)
-  ~indent
+let report_always oc config creation_pos (target : Always_metadata.Target.t) ~kind ~indent
   =
-  let mux = mux.data in
-  let covered, not_covered =
-    List.range 0 (Signal_coverage.Mux.case_count mux)
-    |> List.partition_tf ~f:(fun case -> Signal_coverage.Mux.case_covered mux case)
+  output_line oc [%string {|always %{kind}|}] ~indent;
+  output_source_loc oc config creation_pos ~title:"created at" ~indent:(indent + 1);
+  let title, pos =
+    match target.variable with
+    | User_created pos -> "driving (always variable)", pos
+    | State_machine_state { creation_pos; _ } -> "driving (state variable)", creation_pos
   in
-  output_names oc (Signal_coverage.Mux.select_names mux) ~title:"selector names" ~indent;
-  output_list oc ~indent ~title:"saw selector values of" covered ~to_string:Int.to_string;
-  output_list oc ~indent ~title:"never saw" not_covered ~to_string:Int.to_string;
-  Out_channel.newline oc
+  match target.names with
+  | [] -> output_source_loc oc config pos ~title ~indent:(indent + 1)
+  | names -> output_names oc names ~title ~indent:(indent + 1)
 ;;
 
-let report_single_cases
-  oc
-  (cases : Signal_coverage.Cases.t Signal_coverage.with_metadata)
-  ~indent
-  =
-  let cases = cases.data in
-  let covered, not_covered =
-    Signal_coverage.Cases.cases cases
-    |> List.partition_tf ~f:(fun case -> Signal_coverage.Cases.case_covered cases case)
+let report_single_mux oc config mux ~indent =
+  let%tydi { select_names; kind } = Signal_coverage.Mux.debug_info mux in
+  (match kind with
+   | Basic -> ()
+   | If { creation_pos; target; kind } ->
+     report_always
+       oc
+       config
+       creation_pos
+       target
+       ~kind:(Always_metadata.If.Kind.to_string kind)
+       ~indent
+   | Switch { creation_pos; target; case } ->
+     report_always
+       oc
+       config
+       creation_pos
+       target
+       ~kind:[%string {|switch %{case#Case}|}]
+       ~indent);
+  output_names oc select_names ~title:"selector names" ~indent;
+  let%tydi { observed; unexpectedly_observed; not_covered } =
+    Signal_coverage.Mux.coverage mux
   in
-  output_names
-    oc
-    (Signal_coverage.Cases.select_names cases)
-    ~title:"selector names"
-    ~indent;
-  let to_string = Signal_coverage.Cases.Case.to_string in
-  output_list oc ~indent ~title:"saw selector values of" covered ~to_string;
+  let to_string = Int.to_string in
+  output_list oc ~indent ~title:"saw selector values of" observed ~to_string;
   output_list oc ~indent ~title:"never saw" not_covered ~to_string;
+  output_list oc ~indent ~title:"!! unexpectedly saw" unexpectedly_observed ~to_string;
   Out_channel.newline oc
 ;;
 
-let report_single_reg
-  oc
-  (reg : Signal_coverage.Reg.t Signal_coverage.with_metadata)
-  ~indent
-  =
-  let reg = reg.data in
+let report_single_cases oc config cases ~indent =
+  let%tydi { select_names; kind } = Signal_coverage.Cases.debug_info cases in
+  (match kind with
+   | Basic -> ()
+   | Switch { creation_pos; target; _ } ->
+     report_always oc config creation_pos target ~kind:"switch" ~indent);
+  output_names oc select_names ~title:"selector names" ~indent;
+  let%tydi { observed; unexpectedly_observed; not_covered } =
+    Signal_coverage.Cases.coverage cases
+  in
+  let to_string = Case.Positional_with_state.to_string in
+  output_list oc ~indent ~title:"selector matched cases" observed ~to_string;
+  output_list oc ~indent ~title:"never matched" not_covered ~to_string;
+  output_list oc ~indent ~title:"!! unexpectedly saw" unexpectedly_observed ~to_string;
+  Out_channel.newline oc
+;;
+
+let report_single_reg oc _config reg ~indent =
   let bits = Signal_coverage.Reg.bits reg in
-  output_line_with_indent oc ~indent [%string {|width: %{bits#Int}|}];
+  output_line oc ~indent [%string {|width: %{bits#Int}|}];
   let report_toggle ~on =
-    let toggled, not_toggled =
-      List.range 0 bits
-      |> List.partition_tf ~f:(fun bit -> Signal_coverage.Reg.bit_toggled reg ~bit ~on)
+    let%tydi { observed; unexpectedly_observed; not_covered } =
+      Signal_coverage.Reg.coverage reg
+      |> Signal_coverage.filter_coverage ~f:(fun { on = is_on; _ } -> Bool.equal is_on on)
     in
+    let to_string (toggle : Toggle.t) = Int.to_string toggle.bit in
     let state = if on then "ON" else "OFF" in
+    output_list oc ~indent observed ~title:[%string {|bits toggled %{state}|}] ~to_string;
     output_list
       oc
       ~indent
-      toggled
-      ~title:[%string {|bits toggled %{state}|}]
-      ~to_string:Int.to_string;
-    output_list
-      oc
-      ~indent
-      not_toggled
+      not_covered
       ~title:[%string {|bits never toggled %{state}|}]
-      ~to_string:Int.to_string
+      ~to_string;
+    output_list
+      oc
+      ~indent
+      ~title:[%string {|!! unexpectedly toggled %{state}|}]
+      unexpectedly_observed
+      ~to_string
   in
   report_toggle ~on:true;
   report_toggle ~on:false;
   Out_channel.newline oc
 ;;
 
-let report_shared_coverage
-  oc
-  (debug_info : Signal_coverage.Debug_info.t)
-  (coverage : _ Signal_coverage.with_metadata list)
-  ~name
-  report_single
-  =
-  Out_channel.output_line oc [%string {|%{name}:|}];
-  let%tydi { names; call_stack; comment } = debug_info in
-  output_names oc names ~title:"names" ~indent:1;
-  (match call_stack with
-   | [] -> ()
-   | call_stack ->
-     output_line_with_indent oc [%string {|call stack:|}] ~indent:1;
-     report_call_stack oc call_stack ~indent:2);
-  Option.iter comment ~f:(fun comment -> output_line_with_indent oc comment ~indent:1);
-  Out_channel.newline oc;
-  List.iter coverage ~f:(fun c ->
-    output_line_with_indent
-      oc
-      [%string {|coverage for id: %{c.id#Signal_graph.Normalized_signal_uid}|}]
-      ~indent:1;
-    report_single oc c ~indent:2)
+let report_single_always_state oc _config state ~indent =
+  let%tydi { observed; unexpectedly_observed; not_covered } =
+    Signal_coverage.Always_state.coverage state
+  in
+  let to_string = Transition.State.to_string in
+  output_list_lines oc ~indent ~title:"saw transitions" observed ~to_string;
+  output_list_lines oc ~indent ~title:"never saw" not_covered ~to_string;
+  output_list oc ~indent ~title:"!! unexpectedly saw" unexpectedly_observed ~to_string;
+  Out_channel.newline oc
 ;;
 
 let report_group_coverage
   (type a)
   oc
-  (module M : Coverage.S with type t = a)
-  (coverage : a Signal_coverage.with_metadata list)
-  report_signal
+  config
+  (module M : Signal_coverage.S with type t = a)
+  (coverage : a list)
+  report_single
   ~name
   ~unit
-  ~verbose
   =
   if List.length coverage > 0
   then (
-    output_heading oc [%string {|%{name} coverage|}] H3;
-    let stats = Coverage_stats.compute (module M) coverage ~f:(fun { data; _ } -> data) in
-    Coverage_stats.print_full oc stats ~name:"total" ~unit;
-    Out_channel.newline oc;
-    let by_debug_info = Hashtbl.create (module Signal_coverage.Debug_info) in
-    List.iter coverage ~f:(fun coverage ->
-      Hashtbl.update by_debug_info coverage.debug_info ~f:(function
-        | Some coverage_list -> coverage :: coverage_list
-        | None -> [ coverage ]));
-    Hashtbl.iteri by_debug_info ~f:(fun ~key:debug_info ~data:coverage_list ->
-      let to_report =
-        List.filter_map coverage_list ~f:(fun coverage ->
-          if verbose || not (M.fully_covered coverage.data) then Some coverage else None)
-      in
-      if List.length to_report > 0
-      then report_shared_coverage oc debug_info to_report ~name report_signal);
-    Out_channel.newline oc)
+    if not (Config.compact config)
+    then (
+      output_heading oc [%string {|%{name} coverage|}] H3;
+      let stats = Coverage_stats.compute (module M) coverage in
+      Coverage_stats.print_full oc stats ~name:"total" ~unit;
+      Out_channel.newline oc);
+    let to_report =
+      List.filter_map coverage ~f:(fun coverage ->
+        if Config.verbose config
+           || (not (M.fully_covered coverage))
+           || M.unexpectedly_observed_cases coverage <> 0
+        then Some coverage
+        else None)
+    in
+    let to_report =
+      if Config.hide_unstable config
+      then
+        List.sort to_report ~compare:(fun a b ->
+          Signal_graph.Normalized_signal_uid.compare (M.id a) (M.id b))
+      else to_report
+    in
+    if List.length to_report > 0
+    then
+      List.iter to_report ~f:(fun c ->
+        output_line
+          oc
+          [%string {|%{name} with id: %{(M.id c)#Signal_graph.Normalized_signal_uid}|}];
+        (match M.signal_names c with
+         | [] -> report_call_stack oc config (M.call_stack c) ~indent:1
+         | names -> output_names oc names ~title:"names" ~indent:1);
+        report_single oc config c ~indent:1))
 ;;
 
-let report_coverage_by_group oc (coverage : Signal_coverage.Grouped.t) ~verbose =
-  let%tydi { muxes; cases; regs } = coverage in
+let report_coverage_by_group oc config (coverage : Signal_coverage.Grouped.t) =
+  let%tydi { muxes; cases; regs; always_states } = coverage in
   report_group_coverage
     oc
+    config
     (module Signal_coverage.Mux)
     muxes
     ~unit:"muxes"
     ~name:"Mux"
-    report_single_mux
-    ~verbose;
+    report_single_mux;
   report_group_coverage
     oc
+    config
     (module Signal_coverage.Cases)
     cases
     ~unit:"cases"
     ~name:"Cases"
-    report_single_cases
-    ~verbose;
+    report_single_cases;
   report_group_coverage
     oc
+    config
     (module Signal_coverage.Reg)
     regs
     ~unit:"regs"
     ~name:"Reg"
-    report_single_reg
-    ~verbose
+    report_single_reg;
+  report_group_coverage
+    oc
+    config
+    (module Signal_coverage.Always_state)
+    always_states
+    ~unit:"always states"
+    ~name:"Always state"
+    report_single_always_state
 ;;
 
 let report_group_totals oc (coverage : Signal_coverage.Grouped.t) =
   let report_total
     (type a)
     (module M : Coverage.S with type t = a)
-    (coverage : a Signal_coverage.with_metadata list)
+    (coverage : a list)
     ~name
     =
-    let stats = Coverage_stats.compute (module M) coverage ~f:(fun { data; _ } -> data) in
+    let stats = Coverage_stats.compute (module M) coverage in
     Coverage_stats.print_precent oc stats ~name
   in
-  let%tydi { muxes; cases; regs } = coverage in
+  let%tydi { muxes; cases; regs; always_states } = coverage in
   report_total (module Signal_coverage.Mux) muxes ~name:"muxes";
   report_total (module Signal_coverage.Cases) cases ~name:"cases";
-  report_total (module Signal_coverage.Reg) regs ~name:"regs"
+  report_total (module Signal_coverage.Reg) regs ~name:"regs";
+  report_total (module Signal_coverage.Always_state) always_states ~name:"always_states"
 ;;
 
-let report_circuit_instance oc (instance : Circuit_coverage.Instance.t) ~count ~indent =
-  output_line_with_indent oc ~indent "call_stack:";
-  report_call_stack oc instance.call_stack ~indent:(indent + 1);
-  if count > 1
-  then output_line_with_indent oc ~indent [%string {|creation count: %{count#Int}|}];
+let report_circuit_instance
+  oc
+  config
+  (instance : Circuit_coverage.Instance.t)
+  ~count
+  ~indent
+  =
+  report_call_stack oc config instance.call_stack ~indent;
+  if count > 1 then output_line oc ~indent [%string {|creation count: %{count#Int}|}];
   Out_channel.newline oc
 ;;
 
-let report_circuit_coverage oc coverage ~verbose =
-  if verbose || not (Circuit_coverage.fully_covered coverage)
+let report_circuit_coverage oc config coverage =
+  if Config.verbose config
+     || (not (Circuit_coverage.fully_covered coverage))
+     || Circuit_coverage.unexpectedly_observed_cases coverage <> 0
   then (
-    let name = Circuit_coverage.name coverage in
-    output_heading oc [%string {|Circuit coverage for %{name}|}] H2;
     let signal_coverage = Circuit_coverage.signal_coverage coverage in
-    let signal_coverage_stats =
-      Coverage_stats.compute (module Signal_coverage) signal_coverage ~f:Fn.id
-    in
-    Coverage_stats.print_precent oc signal_coverage_stats ~name:"total coverage";
     let grouped = Signal_coverage.Grouped.of_flat signal_coverage in
-    report_group_totals oc grouped;
-    Out_channel.newline oc;
-    let instances = Circuit_coverage.instance_counts coverage in
-    (match instances with
-     | [ (instance, count) ] -> report_circuit_instance oc instance ~count ~indent:0
-     | _ ->
-       Out_channel.output_line oc "Instances:";
-       List.iter instances ~f:(fun (instance, count) ->
-         report_circuit_instance oc instance ~count ~indent:1));
-    report_coverage_by_group oc grouped ~verbose)
+    if not (Config.compact config)
+    then (
+      let name = Circuit_coverage.name coverage in
+      output_heading oc [%string {|Circuit coverage for %{name}|}] H2;
+      let signal_coverage_stats =
+        Coverage_stats.compute (module Signal_coverage) signal_coverage
+      in
+      Coverage_stats.print_precent oc signal_coverage_stats ~name:"total coverage";
+      report_group_totals oc grouped;
+      let instances = Circuit_coverage.instance_counts coverage in
+      match instances with
+      | [ (instance, count) ] ->
+        report_circuit_instance oc config instance ~count ~indent:0
+      | _ ->
+        output_line oc "Instances:";
+        List.iter instances ~f:(fun (instance, count) ->
+          report_circuit_instance oc config instance ~count ~indent:1));
+    report_coverage_by_group oc config grouped)
 ;;
 
-let write oc coverage ~verbose =
-  output_heading oc [%string {|Total coverage|}] H1;
-  let stats = Coverage_stats.compute (module Circuit_coverage) coverage ~f:Fn.id in
-  Coverage_stats.print_full oc stats ~name:"total" ~unit:"circuits";
-  Out_channel.newline oc;
-  List.iter coverage ~f:(fun coverage -> report_circuit_coverage oc coverage ~verbose)
+let write oc coverage ~hide_unstable ~verbose ~compact =
+  let config = { Config.hide_unstable; verbose; compact } in
+  if not (Config.compact config)
+  then (
+    output_heading oc [%string {|Total coverage|}] H1;
+    let stats = Coverage_stats.compute (module Circuit_coverage) coverage in
+    Coverage_stats.print_full oc stats ~name:"total" ~unit:"circuits";
+    Out_channel.newline oc);
+  List.iter coverage ~f:(fun coverage -> report_circuit_coverage oc config coverage)
 ;;

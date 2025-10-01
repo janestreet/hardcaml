@@ -1,7 +1,7 @@
-open Base
+open! Core0
 
 module type Bits = sig
-  type t = private Constant.t [@@deriving compare, sexp_of]
+  type t = private Constant.t [@@deriving bin_io, compare ~localize, sexp_of]
 
   include Comb.S with type t := t
   include Comparator.S with type t := t
@@ -11,7 +11,7 @@ module type Bits = sig
   val number_of_data_bytes : t -> int
 
   (** Get the i-th 64-bit word within the underlying representation. *)
-  val unsafe_get_int64 : t -> int -> int64
+  val unsafe_get_int64 : local_ t -> int -> int64
 
   (** Set the i-th 64-bit word within the underlying representation. *)
   val unsafe_set_int64 : t -> int -> int64 -> unit
@@ -52,6 +52,7 @@ module type Bits = sig
       (** Create a [t] of given width, initially set to [0]. *)
       val create : int -> t
 
+      val unsafe_copy : src:t -> dst:t -> unit
       val copy : src:t -> dst:t -> unit
       val copy_bits : src:bits -> dst:t -> unit
 
@@ -61,7 +62,7 @@ module type Bits = sig
       (** Set to random value. *)
       val randomize : random_state:Splittable_random.t -> t -> unit
 
-      val unsafe_get_int64 : t -> int -> int64
+      val unsafe_get_int64 : local_ t -> int -> int64
       val unsafe_set_int64 : t -> int -> int64 -> unit
       val get_int64 : t -> int -> int64
       val set_int64 : t -> int -> int64 -> unit
@@ -99,7 +100,7 @@ module type Bits = sig
   val pp : Formatter.t -> t -> unit
 
   module type To_sexp_and_string := sig
-    type nonrec t = t [@@deriving compare, sexp_of, to_string]
+    type nonrec t = t [@@deriving compare ~localize, sexp_of, to_string]
   end
 
   module Binary : To_sexp_and_string

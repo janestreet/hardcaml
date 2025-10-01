@@ -19,7 +19,7 @@ enums we can now express it as follows:
         | Not
         | Less
         | Equal
-      [@@deriving sexp_of, compare, enumerate]
+      [@@deriving sexp_of, compare ~localize, enumerate]
     end
 
     include Hardcaml.Enum.Make_enums (Enum)

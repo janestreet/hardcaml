@@ -1,4 +1,4 @@
-open Base
+open! Core0
 include Cyclesim_intf
 
 (* types defined in Cyclesim0. *)
@@ -42,6 +42,31 @@ let cycle ?(n = 1) sim =
     cycle_at_clock_edge sim;
     cycle_after_clock_edge sim
   done
+;;
+
+let raise_after_timeout ?message ~(here : [%call_pos]) sim ~timeout =
+  let cycle' = ref 0 in
+  Private.modify
+    sim
+    [ (Side.Before, Reset, fun () -> cycle' := 0)
+    ; ( Side.Before
+      , Before_clock_edge
+      , fun () ->
+          let cycle = !cycle' in
+          Int.incr cycle';
+          if cycle = timeout
+          then
+            raise_s
+              [%message.omit_nil
+                "Cyclesim timed out"
+                  ~_:(message : string option)
+                  (timeout : int)
+                  ~timeout_set_at:(here : Source_code_position.t)] )
+    ]
+;;
+
+let with_timeout ?message ~(here : [%call_pos]) ~timeout ~f sim =
+  f (raise_after_timeout ?message ~here ~timeout sim)
 ;;
 
 let in_port (sim : _ Cyclesim0.t) name =
@@ -117,7 +142,7 @@ let combine = Cyclesim_combine.combine
 
 let create' ?config circuit =
   let sim = Cyclesim_compile.create ?config circuit in
-  Cyclesim_coverage.maybe_wrap sim circuit
+  Cyclesim_coverage.For_cyclesim.maybe_wrap sim circuit
 ;;
 
 let create ?config circuit = create' ?config circuit

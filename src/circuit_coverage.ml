@@ -1,7 +1,8 @@
-open Base
+open! Core0
 
 module Instance = struct
-  type t = { call_stack : Stack_slot.t list } [@@deriving sexp_of, hash, compare]
+  type t = { global_ call_stack : Call_stack.t }
+  [@@deriving sexp_of, hash, compare ~localize]
 
   let create circuit =
     { call_stack =
@@ -21,6 +22,11 @@ module T = struct
 
   let total_cases t = Hashtbl.length t.coverage
   let covered_cases t = Hashtbl.count t.coverage ~f:Signal_coverage.fully_covered
+
+  let unexpectedly_observed_cases t =
+    Hashtbl.fold t.coverage ~init:0 ~f:(fun ~key:_ ~data:s count ->
+      count + Signal_coverage.unexpectedly_observed_cases s)
+  ;;
 end
 
 include Coverage.Make (T)

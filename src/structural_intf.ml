@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Lib = sig
   include Comb.S
@@ -65,7 +65,7 @@ module type Structural = sig
 
       They may be converted into standard hardcaml circuits for code generation. *)
   module Structural_rtl_component : sig
-    type t [@@deriving compare, sexp_of]
+    type t [@@deriving compare ~localize, sexp_of]
 
     include Comparator.S with type t := t
 
@@ -93,6 +93,8 @@ module type Structural = sig
   exception No_circuit
   exception Circuit_already_started
 
+  type structural_rtl_component_set = Set.M(Structural_rtl_component).t
+
   (** Clears the circuit database and resets all internal state back to initial values. *)
   val reset_circuit_database : unit -> unit
 
@@ -110,7 +112,7 @@ module type Structural = sig
   (** Return the circuit name *)
   val circuit_name : circuit -> string
 
-  val structural_rtl_components : circuit -> Set.M(Structural_rtl_component).t
+  val structural_rtl_components : circuit -> structural_rtl_component_set
 
   (** Add an attribute to the signal. Currently only works on input and outputs. *)
   val add_attribute : signal -> Rtl_attribute.t -> unit

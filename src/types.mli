@@ -8,12 +8,22 @@ module With_valid : With_valid_intf.With_valid
 
 module type Value_arg = Value.Arg
 
+val value : ?name:string -> int -> (module Value.S)
+
+module type Value = Value.S
+
 (** An interface for a single value *)
-module Value (S : Value_arg) : Interface.S with type 'a t = 'a
+module Value (S : Value_arg) : Value.S
+
+val scalar : ?name:string -> int -> (module Scalar.S_untyped)
 
 module type Scalar = Scalar.S
 
-module Scalar (S : Value_arg) : Scalar with type 'a t = 'a
+(** An interface for a single value.
+
+    Generating a Scalar results in an 'untyped' value such that ['a t = 'a]. However, when
+    exposed via an interface it must be [Scalar.S] which hides this equality. *)
+module Scalar (S : Value_arg) : Scalar.S_untyped
 
 module type Arg_with_length = sig
   include Value_arg

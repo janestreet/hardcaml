@@ -159,7 +159,7 @@ module Make_with_memory (Config : Config) = struct
 
   module I = struct
     type 'a t =
-      { clocking : 'a Types.Clocking.t
+      { clocking : 'a Clocking.t
       ; start : 'a
       ; write_enable : 'a
       ; write_address : 'a [@bits log_size]
@@ -167,7 +167,7 @@ module Make_with_memory (Config : Config) = struct
       ; read_address : 'a [@bits log_size]
       ; read_enable : 'a
       }
-    [@@deriving hardcaml]
+    [@@deriving hardcaml ~rtlmangle:false]
   end
 
   module O = struct
@@ -253,7 +253,7 @@ state machine.
         ; push : 'a
         ; pop : 'a
         }
-      [@@deriving hardcaml]
+      [@@deriving hardcaml ~rtlmangle:false]
     end
 
     module O = struct
@@ -261,7 +261,7 @@ state machine.
         { partition : 'a Partition.t
         ; is_empty : 'a
         }
-      [@@deriving hardcaml]
+      [@@deriving hardcaml ~rtlmangle:false]
     end
 
     let create scope (i : _ I.t) : _ O.t =
@@ -318,11 +318,11 @@ RAM.
 ```ocaml
   module I = struct
     type 'a t =
-      { clocking : 'a Types.Clocking.t
+      { clocking : 'a Clocking.t
       ; start : 'a
       ; read_data : 'a [@bits data_size]
       }
-    [@@deriving hardcaml]
+    [@@deriving hardcaml ~rtlmangle:false]
   end
 
   module O = struct
@@ -357,7 +357,7 @@ and `Recurse` are involved with recursion and iteration control. `Pivot`, `Parti
       | Swap_pivot
       | Update_range
       | Recurse
-    [@@deriving sexp_of, compare, enumerate]
+    [@@deriving sexp_of, compare ~localize, enumerate]
   end
 ```
 

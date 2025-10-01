@@ -1,6 +1,6 @@
 [@@@ocaml.flambda_o3]
 
-open Base
+open! Core0
 include Comb_intf
 
 module Gen_cases_from_mux (Comb : Comb_intf.Gen_cases_from_mux) = struct
@@ -16,8 +16,8 @@ module Make_primitives (Gates : Gates) = struct
   include Gates
 
   (* utils *)
-  let vdd = of_constant (Constant.of_int ~width:1 1)
-  let gnd = of_constant (Constant.of_int ~width:1 0)
+  let vdd = of_constant (Constant.of_int ~width:1 1) -- "vdd"
+  let gnd = of_constant (Constant.of_int ~width:1 0) -- "gnd"
 
   let bits_lsb x =
     let w = width x in
@@ -142,9 +142,8 @@ type nonrec ('a, 'b) with_valid2 = ('a, 'b) with_valid2 =
 type nonrec 'a with_valid = 'a with_valid
 
 module Make (Prims : Primitives) = struct
-  type t = Prims.t
+  type t = Prims.t [@@deriving equal ~localize]
 
-  let equal = Prims.equal
   let empty = Prims.empty
   let is_empty = Prims.is_empty
   let ( -- ) ~(loc : [%call_pos]) a b = Prims.( -- ) ~loc a b
@@ -219,7 +218,7 @@ module Make (Prims : Primitives) = struct
 
   let of_unsigned
     (type a)
-    (module Int : Int.S with type t = a)
+    (module Int : Base.Int.S with type t = a)
     (f : width:int -> a -> t)
     ~width
     x
@@ -227,7 +226,7 @@ module Make (Prims : Primitives) = struct
     if Int.( < ) x Int.zero
     then raise_s [%message "[of_unsigned_int] input value is less than 0" (x : Int.t)];
     let max_value =
-      if width >= Int.num_bits - 1
+      if width >= Int.(num_bits |> to_int_exn) - 1
       then Int.max_value
       else Int.((Int.one lsl width) - Int.one)
     in
@@ -244,13 +243,13 @@ module Make (Prims : Primitives) = struct
 
   let of_signed
     (type a)
-    (module Int : Int.S with type t = a)
+    (module Int : Base.Int.S with type t = a)
     (f : width:int -> a -> t)
     ~width
     x
     =
     let max_value, min_value =
-      if width >= Int.num_bits
+      if width >= Int.(num_bits |> to_int_exn)
       then Int.max_value, Int.min_value
       else (
         let width = width - 1 in
@@ -321,6 +320,18 @@ module Make (Prims : Primitives) = struct
 
   let of_char c = of_int_trunc ~width:8 (Char.to_int c)
 
+  let of_ascii_string_msb s =
+    if String.is_empty s
+    then
+      raise_s
+        [%message.omit_nil
+          "[of_ascii_string] got empty string"
+            ~loc:(Caller_id.get () : Caller_id.t option)];
+    s |> String.to_list |> List.map ~f:of_char |> Prims.concat_msb
+  ;;
+
+  let of_ascii_string_lsb s = String.rev s |> of_ascii_string_msb
+
   let[@cold] raise_concat_empty s =
     raise_s
       [%message.omit_nil
@@ -345,8 +356,8 @@ module Make (Prims : Primitives) = struct
 
   let concat_lsb s = concat_msb (List.rev s)
   let ( @: ) a b = concat_msb [ a; b ]
-  let vdd = of_bit_string "1" -- "vdd"
-  let gnd = of_bit_string "0" -- "gnd"
+  let vdd = Prims.vdd
+  let gnd = Prims.gnd
   let is_vdd t = equal t vdd
   let is_gnd t = equal t gnd
 
@@ -577,10 +588,24 @@ module Make (Prims : Primitives) = struct
           ~loc:(Caller_id.get () : Caller_id.t option)]
   ;;
 
+  (* We rely on being able to convert the select to an unsigned integer. This is slightly
+     more restrictive than necessary so we can do [1 lsl max_mux_select_bits]. *)
+  let max_mux_select_bits = Int.num_bits - 2
+
+  let raise_width_of_sel_too_large width_of_sel =
+    raise_s
+      [%message.omit_nil
+        "[mux] select width must fit within an (unsigned) integer value"
+          (width_of_sel : int)
+          (max_mux_select_bits : int)]
+  ;;
+
   (* mux *)
   let mux sel l =
+    let width_of_sel = width sel in
+    if width_of_sel > max_mux_select_bits then raise_width_of_sel_too_large width_of_sel;
     let number_of_data_elements = List.length l in
-    let max_number_of_data_elements = 1 lsl width sel in
+    let max_number_of_data_elements = 1 lsl width_of_sel in
     assert_widths_same "mux" l;
     if number_of_data_elements > max_number_of_data_elements
     then raise_mux_too_many_inputs number_of_data_elements max_number_of_data_elements;
@@ -591,11 +616,14 @@ module Make (Prims : Primitives) = struct
   ;;
 
   let mux_strict sel l =
+    let width_of_sel = width sel in
+    if width_of_sel > max_mux_select_bits then raise_width_of_sel_too_large width_of_sel;
     let number_of_data_elements = List.length l in
     (match number_of_data_elements with
      | 0 | 1 -> raise_mux_too_few_inputs number_of_data_elements
      | _ ->
-       if 1 lsl width sel <> number_of_data_elements
+       let expected_number_of_data_elements = 1 lsl width_of_sel in
+       if expected_number_of_data_elements <> number_of_data_elements
        then raise_mux_not_exact (width sel) number_of_data_elements);
     mux sel l
   ;;
@@ -1355,22 +1383,26 @@ module Make (Prims : Primitives) = struct
   let to_int32 = to_int32_trunc
 
   let to_signed_int32 =
-    to_signed ~num_bits:Int32.num_bits ~to_int_type_trunc:to_int32_trunc
+    to_signed ~num_bits:Int32.(num_bits |> to_int_trunc) ~to_int_type_trunc:to_int32_trunc
   ;;
 
   let to_unsigned_int32 =
-    to_unsigned ~num_bits:(Int32.num_bits - 1) ~to_int_type_trunc:to_int32_trunc
+    to_unsigned
+      ~num_bits:(Int32.(num_bits |> to_int_trunc) - 1)
+      ~to_int_type_trunc:to_int32_trunc
   ;;
 
   let to_int64_trunc c = to_constant c |> Constant.to_int64
   let to_int64 = to_int64_trunc
 
   let to_signed_int64 =
-    to_signed ~num_bits:Int64.num_bits ~to_int_type_trunc:to_int64_trunc
+    to_signed ~num_bits:Int64.(num_bits |> to_int_trunc) ~to_int_type_trunc:to_int64_trunc
   ;;
 
   let to_unsigned_int64 =
-    to_unsigned ~num_bits:(Int64.num_bits - 1) ~to_int_type_trunc:to_int64_trunc
+    to_unsigned
+      ~num_bits:(Int64.(num_bits |> to_int_trunc) - 1)
+      ~to_int_type_trunc:to_int64_trunc
   ;;
 
   let to_char x =
@@ -1379,6 +1411,19 @@ module Make (Prims : Primitives) = struct
     then raise_s [%message "[to_char] signal must be 8 bits wide" (actual_width : int)];
     Char.of_int_exn (to_int_trunc x)
   ;;
+
+  let to_ascii_string_lsb x =
+    let actual_width = width x in
+    if actual_width % 8 <> 0
+    then
+      raise_s
+        [%message
+          "[to_ascii_string] signal must be a multiple of 8 bits wide"
+            (actual_width : int)];
+    x |> split_lsb ~exact:true ~part_width:8 |> List.map ~f:to_char |> String.of_char_list
+  ;;
+
+  let to_ascii_string_msb x = to_ascii_string_lsb x |> String.rev
 
   module With_zero_width = struct
     type non_zero_width = t [@@deriving sexp_of]
@@ -1538,14 +1583,26 @@ module Make (Prims : Primitives) = struct
   let any_bit_set t = if width t = 1 then t else t <>:. 0
   let all_bits_set t = if width t = 1 then t else t ==+. -1
   let no_bits_set t = if width t = 1 then ~:t else t ==:. 0
+  let incr ?(by = 1) x = x +:. by
+  let decr ?(by = 1) x = x -:. by
+
+  let check_invalid_truncation_width ~output_width ~input_width =
+    if output_width <= 0
+    then
+      raise_s
+        [%message "[Typed_math.truncate] output width must be >= 0" (output_width : int)];
+    if output_width > input_width
+    then
+      raise_s
+        [%message
+          "[Typed_math.truncate] Output width must be less than or equal to input width"
+            (output_width : int)
+            (input_width : int)]
+  ;;
 
   (* General arithmetic on unsigned signals.  Operands and results are resized to fit a
      appropriate. *)
   module Unsigned = struct
-    type v = t
-
-    let of_signal s = s
-    let to_signal s = s
     let resize s i = uresize s ~width:i
 
     let re size op a b =
@@ -1566,13 +1623,20 @@ module Make (Prims : Primitives) = struct
     let ( >=: ) = re0 ( >=: )
     let ( ==: ) = re0 ( ==: )
     let ( <>: ) = re0 ( <>: )
+
+    let truncate v ~width:output_width =
+      let input_width = width v in
+      check_invalid_truncation_width ~output_width ~input_width;
+      if input_width = output_width
+      then { valid = vdd; value = v }
+      else (
+        let top, bottom = split_in_half_lsb ~lsbs:output_width v in
+        let valid = ~:(any_bit_set top) in
+        { valid; value = bottom })
+    ;;
   end
 
   module Signed = struct
-    type v = t
-
-    let of_signal s = s
-    let to_signal s = s
     let resize s i = sresize s ~width:i
 
     let re size op a b =
@@ -1593,10 +1657,18 @@ module Make (Prims : Primitives) = struct
     let ( >=: ) = re0 ( >=+ )
     let ( ==: ) = re0 ( ==: )
     let ( <>: ) = re0 ( <>: )
-  end
 
-  module Uop = Unsigned
-  module Sop = Signed
+    let truncate v ~width:output_width =
+      let input_width = width v in
+      check_invalid_truncation_width ~output_width ~input_width;
+      if input_width = output_width
+      then { valid = vdd; value = v }
+      else (
+        let top, bottom = split_in_half_lsb ~lsbs:output_width v in
+        let valid = top ==: repeat (msb bottom) ~count:(width top) in
+        { valid; value = bottom })
+    ;;
+  end
 end
 
 module Expert = struct

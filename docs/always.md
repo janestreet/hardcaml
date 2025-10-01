@@ -37,7 +37,9 @@ clock signal provided within a `Reg_spec.t` type.
 ```ocaml
 # (* Creates a register variable. *)
   Always.Variable.reg
-- : (width:int -> Always.Variable.t) Signal.with_register_spec = <fun>
+- : here:[%call_pos] ->
+    (width:int -> Always.Variable.t) Signal.with_register_spec
+= <fun>
 ```
 
 A `wire` is one whose value is updated combinationally, meaning that
@@ -48,7 +50,7 @@ such assignment exists, the variable will possess the `default` value.
 ```ocaml
 # (* Creates a wire register, that is, the value of the wire. *)
   Always.Variable.wire
-- : default:Signal.t -> unit -> Always.Variable.t = <fun>
+- : here:[%call_pos] -> default:Signal.t -> unit -> Always.Variable.t = <fun>
 ```
 
 Both kinds of variable will return the same type, namely an `Always.Variable.t`

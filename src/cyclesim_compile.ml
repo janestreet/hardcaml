@@ -2,7 +2,7 @@
    much better inlining and code gen, though we still lack cross module inlining. *)
 [@@@ocaml.flambda_o3]
 
-open Base
+open! Core0
 module Config = Cyclesim0.Config
 
 module Node = struct
@@ -290,17 +290,17 @@ let compile_comb
   let find_address signal = (find_exn signal).address in
   let dst_width = Signal.width dst_signal in
   match dst_signal with
-  | Op2 { arg_a; arg_b; op = Signal_add; _ } ->
+  | Op2 { arg_a; arg_b; op = Add; _ } ->
     let src_address_a = find_address arg_a in
     let src_address_b = find_address arg_b in
     let width_in_bits = dst_width in
     Some (Cyclesim_ops.add t ~dst_address ~src_address_a ~src_address_b ~width_in_bits)
-  | Op2 { arg_a; arg_b; op = Signal_sub; _ } ->
+  | Op2 { arg_a; arg_b; op = Sub; _ } ->
     let src_address_a = find_address arg_a in
     let src_address_b = find_address arg_b in
     let width_in_bits = dst_width in
     Some (Cyclesim_ops.sub t ~dst_address ~src_address_a ~src_address_b ~width_in_bits)
-  | Op2 { arg_a; arg_b; op = Signal_mulu; _ } ->
+  | Op2 { arg_a; arg_b; op = Mulu; _ } ->
     let arg_a = Map.find_exn map (Signal.uid arg_a) in
     let arg_b = Map.find_exn map (Signal.uid arg_b) in
     let src_address_a, width_in_bits_a = arg_a.address, Signal.width arg_a.signal in
@@ -313,7 +313,7 @@ let compile_comb
          ~src_address_b
          ~width_in_bits_a
          ~width_in_bits_b)
-  | Op2 { arg_a; arg_b; op = Signal_muls; _ } ->
+  | Op2 { arg_a; arg_b; op = Muls; _ } ->
     let arg_a = Map.find_exn map (Signal.uid arg_a) in
     let arg_b = Map.find_exn map (Signal.uid arg_b) in
     let src_address_a, width_in_bits_a = arg_a.address, Signal.width arg_a.signal in
@@ -326,27 +326,27 @@ let compile_comb
          ~src_address_b
          ~width_in_bits_a
          ~width_in_bits_b)
-  | Op2 { arg_a; arg_b; op = Signal_and; _ } ->
+  | Op2 { arg_a; arg_b; op = And; _ } ->
     let src_address_a = find_address arg_a in
     let src_address_b = find_address arg_b in
     let width_in_bits = dst_width in
     Some (Cyclesim_ops.and_ t ~dst_address ~src_address_a ~src_address_b ~width_in_bits)
-  | Op2 { arg_a; arg_b; op = Signal_or; _ } ->
+  | Op2 { arg_a; arg_b; op = Or; _ } ->
     let src_address_a = find_address arg_a in
     let src_address_b = find_address arg_b in
     let width_in_bits = dst_width in
     Some (Cyclesim_ops.or_ t ~dst_address ~src_address_a ~src_address_b ~width_in_bits)
-  | Op2 { arg_a; arg_b; op = Signal_xor; _ } ->
+  | Op2 { arg_a; arg_b; op = Xor; _ } ->
     let src_address_a = find_address arg_a in
     let src_address_b = find_address arg_b in
     let width_in_bits = dst_width in
     Some (Cyclesim_ops.xor t ~dst_address ~src_address_a ~src_address_b ~width_in_bits)
-  | Op2 { arg_a; arg_b; op = Signal_eq; _ } ->
+  | Op2 { arg_a; arg_b; op = Eq; _ } ->
     let { Node.address = src_address_a; signal = arg_a } = find_exn arg_a in
     let src_address_b = find_address arg_b in
     let width_in_bits = Signal.width arg_a in
     Some (Cyclesim_ops.eq t ~dst_address ~src_address_a ~src_address_b ~width_in_bits)
-  | Op2 { arg_a; arg_b; op = Signal_lt; _ } ->
+  | Op2 { arg_a; arg_b; op = Lt; _ } ->
     let { Node.address = src_address_a; signal = arg_a } = find_exn arg_a in
     let src_address_b = find_address arg_b in
     let width_in_bits = Signal.width arg_a in
@@ -418,20 +418,20 @@ let compile_comb
          ~size_in_words)
   | Inst { instantiation = i; _ } ->
     (match
-       Combinational_ops_database.find combinational_ops_database ~name:i.inst_name
+       Combinational_ops_database.find combinational_ops_database ~name:i.circuit_name
      with
      | None ->
        raise_s
          [%message
-           "Instantiation not supported in simulation" ~name:(i.inst_name : string)]
+           "Instantiation not supported in simulation" ~name:(i.circuit_name : string)]
      | Some op ->
        let f = Combinational_op.create_fn op in
        let inputs =
-         List.map i.inst_inputs ~f:(fun (_, signal) ->
+         List.map i.inputs ~f:(fun { name = _; input_signal = signal } ->
            Bits.Mutable.create (Signal.width signal))
        in
        let copy_inputs =
-         List.map2_exn i.inst_inputs inputs ~f:(fun (_, signal) bits ->
+         List.map2_exn i.inputs inputs ~f:(fun { name = _; input_signal = signal } bits ->
            let src_address = find_address signal in
            let size_in_words = num_words signal in
            fun () ->
@@ -440,7 +440,10 @@ let compile_comb
              done)
        in
        let outputs =
-         List.map i.inst_outputs ~f:(fun (_, (bits, _)) -> Bits.Mutable.create bits)
+         List.map
+           i.outputs
+           ~f:(fun { name = _; output_width = bits; output_low_index = _ } ->
+             Bits.Mutable.create bits)
        in
        let target = Bits.Mutable.create dst_width in
        let copy_output =
@@ -450,10 +453,13 @@ let compile_comb
              Cyclesim_ops.set64 t (dst_address + i) (Bits.Mutable.get_int64 target i)
            done
        in
+       (* The reversed order is is needed because of the msb first concat below. *)
+       let outputs_in_reverse_order = List.rev outputs in
+       let f = Staged.unstage (f ~inputs ~outputs) in
        let inst () =
          List.iter copy_inputs ~f:(fun f -> f ());
-         f inputs outputs;
-         Bits.Mutable.concat target (List.rev outputs);
+         f ();
+         Bits.Mutable.concat target outputs_in_reverse_order;
          copy_output ()
        in
        Some inst)
@@ -609,6 +615,7 @@ let lookup_mem runtime (map : Read_map.t) (traced : Cyclesim0.Traced.internal_si
 ;;
 
 let create_cyclesim
+  circuit
   (offsets : offsets)
   (map : Read_map.t)
   (traced : Cyclesim0.Traced.t)
@@ -682,6 +689,7 @@ let create_cyclesim
     List.map ports ~f:(fun ({ name; address = _; width = _ }, bits) -> name, bits)
   in
   Cyclesim0.Private.create
+    ?circuit
     ~in_ports:(get_ports in_ports)
     ~out_ports_before_clock_edge:(get_ports out_ports_before)
     ~out_ports_after_clock_edge:(get_ports out_ports_after)
@@ -840,6 +848,7 @@ let create ?(config = Cyclesim0.Config.default) circuit =
   Option.iter config.random_initializer ~f:(fun random_initializer ->
     initialize_state ~runtime ~random_initializer ~allocation);
   create_cyclesim
+    (if config.store_circuit then Some circuit else None)
     offsets
     map
     traced

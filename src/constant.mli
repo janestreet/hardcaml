@@ -1,8 +1,8 @@
 (** Representation of variable width Constants and conversion to/from OCaml types. *)
 
-open Base
+open! Core0
 
-type t = Bits0.t [@@deriving compare, sexp, bin_io]
+type t = Bits0.t [@@deriving compare ~localize, equal ~localize, sexp, bin_io]
 
 (* The empty constant. Contains no bits. *)
 val empty : t

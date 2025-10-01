@@ -57,7 +57,7 @@ let command =
     ~summary:"count leading zeros logic"
     (let open Command.Let_syntax in
      let%map_open () = return ()
-     and flags = Hardcaml_xilinx_reports.Command.Command_flags.flags
+     and flags = Hardcaml_xilinx_reports.Command.Command_flags.flags ()
      and bits = flag "bits" (required int) ~doc:"BITS Number of input bits" in
      fun () ->
        let module Clz =

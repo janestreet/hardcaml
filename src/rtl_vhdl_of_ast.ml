@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 (* Type of a VHDL attribute. *)
 module Attribute_type = struct
@@ -7,7 +7,7 @@ module Attribute_type = struct
       | Int
       | String
       | Bool
-    [@@deriving sexp_of, equal]
+    [@@deriving sexp_of, equal ~localize]
 
     let to_string = function
       | Int -> "integer"

@@ -3,6 +3,7 @@
 module Always = Always
 module Assertions = Assertions
 module Caller_id = Caller_id
+module Call_stack = Call_stack
 module Comb = Comb
 module Constant = Constant
 module Interface = Interface
@@ -29,12 +30,14 @@ module Bits = Bits
 module Bits_list = Bits_list
 module Combinational_op = Combinational_op
 module Combinational_ops_database = Combinational_ops_database
+module Coverage_prim = Coverage_prim
 module Cyclesim = Cyclesim
+module Cyclesim_coverage_expect_test = Cyclesim_coverage.For_expect_tests
 module Cyclesim_float_ops = Cyclesim_float_ops
 module Logic = Logic
 module Vcd = Vcd
-module Wave_format = Wave_format
 module Wave_data = Wave_data
+module Wave_format = Wave_format
 
 (** {1 Rtl generation} *)
 
@@ -59,7 +62,9 @@ module Signal_graph = Signal_graph
 (** {1 Misc types} *)
 
 module Architecture = Architecture
+module Binable_circuit = Binable_circuit
 module Build_mode = Build_mode
+module Clocking = Clocking
 module Edge = Edge
 module Enum = Enum
 module Flags_vector = Flags_vector
@@ -78,16 +83,32 @@ module Async_fifo = Async_fifo
 module Fifo = Fifo
 module Ram = Ram
 
+(** {1 Circuit design with clock domain checking} *)
+
+module Clock_domain = Clock_domain
+module Clocked_design = Clocked_design
+module Clocked_signal = Clocked_signal
+
 (**/**)
 
 module Tools_config = Tools_config
 
-(** These are exposed for code that does [@@deriving hardcaml]. *)
-let sexp_of_array = Base.sexp_of_array
+(* These are exposed for code that does [@@deriving hardcaml]. *)
 
-let sexp_of_list = Base.sexp_of_list
+let sexp_of_array = Core.sexp_of_array
+let sexp_of_list = Core.sexp_of_list
+let equal_list = Core.equal_list
+let equal_list__local = Core.equal_list__local
 
-(** {1 Expert interface} *)
-module Expert = struct
+(** {1 Private interface}
+
+    These modules should only be used by hardcaml adjacent libraries and are not intended
+    to be used by end users of hardcaml. *)
+module Private = struct
+  module Bits_packed = Bits_packed
+  module Cyclesim0 = Cyclesim0
+  module Cyclesim_combine = Cyclesim_combine
+  module Cyclesim_coverage = Cyclesim_coverage
+  module Cyclesim_ops = Cyclesim_ops
   module Simulation_memory = Simulation_memory
 end

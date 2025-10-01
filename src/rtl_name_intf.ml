@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Language = sig
   val legalize : string -> string
@@ -10,6 +10,7 @@ module type Rtl_name = sig
   module type Language = Language
 
   module Verilog : Language
+  module Systemverilog : Language
   module Vhdl : Language
 
   type t

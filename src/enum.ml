@@ -1,15 +1,17 @@
-open Base
+open! Core0
 module Ast = Interface.Ast
 
 type ('a, 'b) with_valid2 = ('a, 'b) Comb_intf.with_valid2
 
+module type Cases = Enum_intf.Cases
 module type S_enum = Enum_intf.S_enum
 module type S_enums = Enum_intf.S_enums
 
 module Make_enums (Cases : Enum_intf.Cases) = struct
   module Cases = struct
     include Cases
-    include Comparable.Make (Cases)
+
+    include%template Comparable.Make_plain [@mode local] (Cases)
   end
 
   let to_rank =
@@ -29,7 +31,7 @@ module Make_enums (Cases : Enum_intf.Cases) = struct
       | `One_hot -> "ont_hot_variant", List.length Cases.all
     ;;
 
-    type 'a t = 'a [@@deriving sexp_of]
+    type 'a t = 'a [@@deriving equal ~localize, compare ~localize, sexp_of]
 
     let to_list t = [ t ]
     let map t ~f = f t

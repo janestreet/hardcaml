@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 (** Various functions that build a tree-structured circuit take an optional
     [branching_factor] argument that controls the number of branches at each level of the
@@ -22,44 +22,40 @@ module type Typed_math = sig
   (** Base signal or bits type *)
   type t
 
-  (** Typed wrapper for [t]. *)
-  type v
-
-  (** Convert to [v] from a [Comb.t]. *)
-  val of_signal : t -> v
-
-  (** Convert [v] to a [Comb.t]. *)
-  val to_signal : v -> t
-
   (** Addition. Arguments are extended appropriately and result is 1 bit wider to avoid
-      truntraction. *)
-  val ( +: ) : v -> v -> v
+      truncation. *)
+  val ( +: ) : t -> t -> t
 
   (** Subtraction. Arguments are extended appropriately and result is 1 bit wider to avoid
-      truntraction. *)
-  val ( -: ) : v -> v -> v
+      truncation. *)
+  val ( -: ) : t -> t -> t
 
-  (** Mulitplication. *)
-  val ( *: ) : v -> v -> v
+  (** Multiplication. *)
+  val ( *: ) : t -> t -> t
 
   (** {2 Comparison operations}
-      . Arguments need not be the same width. *)
 
-  val ( <: ) : v -> v -> v
-  val ( >: ) : v -> v -> v
-  val ( <=: ) : v -> v -> v
-  val ( >=: ) : v -> v -> v
-  val ( ==: ) : v -> v -> v
-  val ( <>: ) : v -> v -> v
+      Arguments need not be the same width. *)
+
+  val ( <: ) : t -> t -> t
+  val ( >: ) : t -> t -> t
+  val ( <=: ) : t -> t -> t
+  val ( >=: ) : t -> t -> t
+  val ( ==: ) : t -> t -> t
+  val ( <>: ) : t -> t -> t
 
   (** Resize argument to given width. Appropriate extension is performed. *)
-  val resize : v -> int -> v
+  val resize : t -> int -> t
+
+  (** Reduce the width of [t] to [width] bits. The result is [valid] if the [value] fits
+      within [width] bits. *)
+  val truncate : t -> width:int -> t with_valid
 end
 
 module type Gates = sig
   type t [@@deriving sexp_of]
 
-  include Equal.S with type t := t
+  include%template Equal.S [@mode local] with type t := t
 
   (** the empty signal *)
   val empty : t
@@ -76,6 +72,9 @@ module type Gates = sig
 
   (** concatenates a list of signals *)
   val concat_msb : t list -> t
+
+  val gnd : t
+  val vdd : t
 
   (** select a range of bits *)
   val select : t -> high:int -> low:int -> t
@@ -212,6 +211,14 @@ module type Constructors = sig
   (** convert a [bool] to [vdd] or [gnd] *)
   val of_bool : bool -> t
 
+  (** convert a string to a series of 8-bit characters and concatenate them into a signal,
+      with the first character of the string being in the least-significant bits *)
+  val of_ascii_string_lsb : string -> t
+
+  (** convert a string to a series of 8-bit characters and concatenate them into a signal,
+      with the first character of the string being in the most-significant bits *)
+  val of_ascii_string_msb : string -> t
+
   (** create random constant vector of given width *)
   val random : width:int -> t
 
@@ -229,7 +236,8 @@ end
 module type S = sig
   type t [@@deriving sexp_of]
 
-  include Equal.S with type t := t
+  include%template Equal.S [@mode local] with type t := t
+
   include Constructors with type t := t
 
   (** the empty signal *)
@@ -529,6 +537,14 @@ module type S = sig
   (** Convert signal to a [char]. The signal must be 8 bits wide. *)
   val to_char : t -> char
 
+  (** Convert into a string, with the first character being from the least-significant
+      bits of the signal. The signal width must be a multiple of 8 bits. *)
+  val to_ascii_string_lsb : t -> string
+
+  (** Convert into a string, with the first character being from the most-significant bits
+      of the signal. The signal width must be a multiple of 8 bits. *)
+  val to_ascii_string_msb : t -> string
+
   (** create binary string from signal *)
   val to_bstr : t -> string
 
@@ -734,6 +750,12 @@ module type S = sig
   (** [no_bits_set t] returns [vdd] if no bits in [t] are set and [gnd] otherwise. *)
   val no_bits_set : t -> t
 
+  (** Increment (defaults to 1). Wrap on overflow. *)
+  val incr : ?by:int -> t -> t
+
+  (** Decrement (defaults to 1). Wrap on overflow. *)
+  val decr : ?by:int -> t -> t
+
   (** Concatention, selection and resizing functions for signals encoded as an option
       where [None] means zero width. *)
   module With_zero_width : sig
@@ -761,17 +783,11 @@ module type S = sig
 
   module type Typed_math = Typed_math with type t := t
 
-  (** Unsigned vectors. *)
+  (** Unsigned vector operations (ie may operate on [Bits.t] or [Signal.t] directly). *)
   module Unsigned : Typed_math
 
-  (** Signed vectors. *)
-  module Signed : Typed_math
-
-  (** Unsigned vector operations (ie may operate on [Bits.t] or [Signal.t] directly). *)
-  module Uop : Typed_math with type v := t
-
   (** Signed vector operations (ie may operate on [Bits.t] or [Signal.t] directly). *)
-  module Sop : Typed_math with type v := t
+  module Signed : Typed_math
 end
 
 module type Gen_cases_from_mux = sig

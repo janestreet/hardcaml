@@ -120,7 +120,9 @@ type 'a min_max =
 [@@deriving sexp_of]
 
 let min_max (type a) const (module Int : Int.S with type t = a) =
-  { min = const Int.num_bits Int.min_value; max = const Int.num_bits Int.max_value }
+  { min = const Int.(num_bits |> to_int_exn) Int.min_value
+  ; max = const Int.(num_bits |> to_int_exn) Int.max_value
+  }
 ;;
 
 let%expect_test "minimum and maximum" =

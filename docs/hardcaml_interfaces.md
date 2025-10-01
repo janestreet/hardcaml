@@ -47,12 +47,12 @@ a record containing two fields: `foo` and `bar`.
 
 ```ocaml
 module Explicit_interface_record_implementation = struct
-  module T = struct 
+  module T = struct
     type 'a t =
-      { foo : 'a 
-      ; bar : 'a 
+      { foo : 'a
+      ; bar : 'a
       }
-    [@@deriving sexp_of]
+    [@@deriving equal ~localize, compare ~localize, sexp_of]
 
     let map t ~f = { foo = f t.foo; bar = f t.bar }
     let map2 s t ~f = { foo = f s.foo t.foo; bar = f s.bar t.bar }

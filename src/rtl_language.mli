@@ -1,7 +1,8 @@
-open! Base
+open! Core0
 
 type t =
   | Verilog
+  | Systemverilog
   | Vhdl
 [@@deriving sexp_of]
 

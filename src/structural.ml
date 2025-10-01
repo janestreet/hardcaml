@@ -28,7 +28,7 @@
    NOTE: It would be nice if many of the rules below could be encoded into the
    type system, but I dont know how or if it's possible. *)
 
-open Base
+open! Core0
 
 type name = string
 type id = int
@@ -118,7 +118,7 @@ module Structural_rtl_component = struct
           ; reset_edge : Edge.t
           ; width : int
           }
-    [@@deriving compare, sexp_of]
+    [@@deriving compare ~localize, sexp_of]
   end
 
   include T
@@ -196,6 +196,8 @@ exception Circuit_already_started
 exception Circuit_already_exists of string
 exception IO_name_already_exists of string
 
+type structural_rtl_component_set = Set.M(Structural_rtl_component).t
+
 let signal_is_empty = function
   | Empty -> true
   | _ -> false
@@ -240,7 +242,9 @@ let get_id = function
   | Instantiation_tristate (id, _) -> id
 ;;
 
-let signal_equal (s1 : signal) s2 = Int.equal (get_id s1) (get_id s2)
+let%template[@mode local] equal_signal (s1 : signal) s2 =
+  Int.equal (get_id s1) (get_id s2)
+;;
 
 let name t =
   match t with
@@ -490,9 +494,8 @@ let use_generic_instantiations = false
 (* Comb primitives API. Also tracks a set of instantiations so they can be generated
    later. *)
 module Base () = struct
-  type t = signal
+  type t = signal [@@deriving equal ~localize]
 
-  let equal = signal_equal
   let empty = Empty
 
   let is_empty = function
@@ -556,6 +559,8 @@ module Base () = struct
   let select = select
   let mux = mux
   let of_constant c = Constant.to_binary_string c |> of_bit_string
+  let vdd = of_constant (Constant.of_int ~width:1 1)
+  let gnd = of_constant (Constant.of_int ~width:1 0)
 
   let ( +: ) a b =
     let o, name = binop1 "add" a b in

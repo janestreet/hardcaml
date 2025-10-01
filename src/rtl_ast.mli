@@ -1,14 +1,14 @@
-open Base
+open! Core0
 
 type range =
   | Vector of { width : int }
   | Bit
-[@@deriving equal, sexp_of]
+[@@deriving equal ~localize, sexp_of]
 
 type reg_or_wire =
   | Reg
   | Wire
-[@@deriving equal, sexp_of]
+[@@deriving equal ~localize, sexp_of]
 
 type var =
   { name : Rope.t
@@ -17,7 +17,7 @@ type var =
   ; attributes : Rtl_attribute.t list
   ; comment : string option
   }
-[@@deriving equal, sexp_of]
+[@@deriving equal ~localize, sexp_of]
 
 type output =
   { output : var
@@ -231,13 +231,13 @@ val of_circuit
 (** Map signal names to mangled RTL names. This used in [Hardcaml_verilator]. *)
 module Signals_name_map : sig
   module Uid_with_index : sig
-    type t = Signal.Type.Uid.t * int [@@deriving compare, sexp_of]
+    type t = Signal.Type.Uid.t * int [@@deriving compare ~localize, sexp_of]
 
     include Comparator.S with type t := t
   end
 
   type t_rtl_ast = t
-  type t = string Map.M(Uid_with_index).t [@@deriving equal, sexp_of]
+  type t = string Map.M(Uid_with_index).t [@@deriving equal ~localize, sexp_of]
 
   val create : t_rtl_ast -> t
 end

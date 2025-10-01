@@ -1,4 +1,4 @@
-open Base
+open! Core0
 open Signal
 include Fifo_intf.T
 module Kinded_fifo = Fifo_intf.Kinded_fifo
@@ -519,6 +519,222 @@ let create_showahead_with_extra_reg
   fifo_rd_en' <-- fifo_rd_en;
   fifo
 ;;
+
+module Clocked = struct
+  let create
+    ?read_latency
+    ?showahead
+    ?nearly_empty
+    ?nearly_full
+    ?overflow_check
+    ?underflow_check
+    ?ram_attributes
+    ?scope
+    ()
+    ~capacity
+    ~clock
+    ~clear
+    ~wr
+    ~d
+    ~rd
+    =
+    let dom = Clocked_signal.get_domain clock in
+    app
+      (create
+         ?read_latency
+         ?showahead
+         ?nearly_empty
+         ?nearly_full
+         ?overflow_check
+         ?underflow_check
+         ?ram_attributes
+         ?scope
+         ()
+         ~capacity)
+      ~clock
+      ~clear
+      ~wr
+      ~d
+      ~rd
+      ~f:(Clocked_signal.unwrap_signal ~dom)
+    |> map ~f:(Clocked_signal.to_clocked ~dom)
+  ;;
+
+  let create_classic_with_extra_reg
+    ?nearly_empty
+    ?nearly_full
+    ?overflow_check
+    ?underflow_check
+    ?ram_attributes
+    ?scope
+    ()
+    ~capacity
+    ~clock
+    ~clear
+    ~wr
+    ~d
+    ~rd
+    =
+    let dom = Clocked_signal.get_domain clock in
+    app
+      (create_classic_with_extra_reg
+         ?nearly_empty
+         ?nearly_full
+         ?overflow_check
+         ?underflow_check
+         ?ram_attributes
+         ?scope
+         ()
+         ~capacity)
+      ~clock
+      ~clear
+      ~wr
+      ~d
+      ~rd
+      ~f:(Clocked_signal.unwrap_signal ~dom)
+    |> map ~f:(Clocked_signal.to_clocked ~dom)
+  ;;
+
+  let create_showahead_from_classic
+    ?nearly_empty
+    ?nearly_full
+    ?overflow_check
+    ?underflow_check
+    ?ram_attributes
+    ?scope
+    ()
+    ~capacity
+    ~clock
+    ~clear
+    ~wr
+    ~d
+    ~rd
+    =
+    let dom = Clocked_signal.get_domain clock in
+    app
+      (create_showahead_from_classic
+         ?nearly_empty
+         ?nearly_full
+         ?overflow_check
+         ?underflow_check
+         ?ram_attributes
+         ?scope
+         ()
+         ~capacity)
+      ~clock
+      ~clear
+      ~wr
+      ~d
+      ~rd
+      ~f:(Clocked_signal.unwrap_signal ~dom)
+    |> map ~f:(Clocked_signal.to_clocked ~dom)
+  ;;
+
+  let create_showahead_with_read_latency
+    ~read_latency
+    ?nearly_empty
+    ?nearly_full
+    ?overflow_check
+    ?underflow_check
+    ?ram_attributes
+    ?scope
+    ()
+    ~capacity
+    ~clock
+    ~clear
+    ~wr
+    ~d
+    ~rd
+    =
+    let dom = Clocked_signal.get_domain clock in
+    app
+      (create_showahead_with_read_latency
+         ~read_latency
+         ?nearly_empty
+         ?nearly_full
+         ?overflow_check
+         ?underflow_check
+         ?ram_attributes
+         ?scope
+         ()
+         ~capacity)
+      ~clock
+      ~clear
+      ~wr
+      ~d
+      ~rd
+      ~f:(Clocked_signal.unwrap_signal ~dom)
+    |> map ~f:(Clocked_signal.to_clocked ~dom)
+  ;;
+
+  let create_showahead_with_extra_reg_wrapper
+    ?nearly_empty
+    ?nearly_full
+    ?scope
+    fifo
+    ~overflow_check
+    ~underflow_check
+    ~capacity
+    ~clock
+    ~clear
+    ~wr
+    ~rd
+    =
+    let dom = Clocked_signal.get_domain clock in
+    let unwrap = Clocked_signal.unwrap_signal ~dom in
+    let wrap = Clocked_signal.to_clocked ~dom in
+    let { fifo; fifo_rd_en } =
+      (create_showahead_with_extra_reg_wrapper
+         ?nearly_empty
+         ?nearly_full
+         ?scope
+         (map fifo ~f:unwrap)
+         ~overflow_check
+         ~underflow_check
+         ~capacity)
+        ~clock:(unwrap clock)
+        ~clear:(unwrap clear)
+        ~wr:(unwrap wr)
+        ~rd:(unwrap rd)
+    in
+    { fifo = map fifo ~f:wrap; fifo_rd_en = wrap fifo_rd_en }
+  ;;
+
+  let create_showahead_with_extra_reg
+    ?nearly_empty
+    ?nearly_full
+    ?overflow_check
+    ?underflow_check
+    ?ram_attributes
+    ?scope
+    ()
+    ~capacity
+    ~clock
+    ~clear
+    ~wr
+    ~d
+    ~rd
+    =
+    let dom = Clocked_signal.get_domain clock in
+    app
+      (create_showahead_with_extra_reg
+         ?nearly_empty
+         ?nearly_full
+         ?overflow_check
+         ?underflow_check
+         ?ram_attributes
+         ?scope
+         ()
+         ~capacity)
+      ~clock
+      ~clear
+      ~wr
+      ~d
+      ~rd
+      ~f:(Clocked_signal.unwrap_signal ~dom)
+    |> map ~f:(Clocked_signal.to_clocked ~dom)
+  ;;
+end
 
 module type Config = Fifo_intf.Config
 

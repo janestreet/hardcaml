@@ -1,9 +1,9 @@
-open Base
+open! Core0
 
 type t =
   | Simulation
   | Synthesis
-[@@deriving sexp_of, compare, equal]
+[@@deriving sexp_of, compare ~localize, equal ~localize]
 
 let of_string = function
   | "simulation" -> Simulation

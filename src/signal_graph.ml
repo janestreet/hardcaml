@@ -1,6 +1,6 @@
 [@@@ocaml.flambda_o3]
 
-open Base
+open! Core0
 
 module Normalized_signal_uid = struct
   include Signal.Type.Uid
@@ -170,7 +170,7 @@ let rewrite t ~f ~f_upto =
       ~old_signal:old_wire
       ~new_signal:
         (match old_wire with
-         | Wire { signal_id; _ } -> f (Wire { signal_id; driver = None })
+         | Wire { info; _ } -> f (Wire { info; driver = None })
          | _ -> expecting_a_wire old_wire));
   (* rewrite from every wire and output *)
   List.iter (old_wires @ t.outputs) ~f:(function
@@ -213,8 +213,8 @@ let normalize_uids t =
   let fresh_id = normalized_uids_generator () in
   let rewrite_uid ~fresh_id signal =
     let open Signal in
-    let update_id id = { id with Type.s_id = fresh_id () } in
-    Signal.Type.map_signal_id signal ~f:update_id
+    let update_id id = { id with Type.Info.uid = fresh_id () } in
+    Signal.Type.map_info signal ~f:update_id
   in
   rewrite t ~f:(rewrite_uid ~fresh_id) ~f_upto:Fn.id |> fst
 ;;

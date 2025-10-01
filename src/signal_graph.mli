@@ -6,13 +6,15 @@
     will stop when it reaches any signal in the given list (which is also /not/ included
     as part of the search). *)
 
-open Base
+open! Core0
 
 module Normalized_signal_uid : sig
-  type t = private Signal.Type.Uid.t [@@deriving compare, hash, sexp_of, to_string]
+  type t = private Signal.Type.Uid.t
+  [@@deriving compare ~localize, hash, sexp_of, to_string]
 
   include Comparator.S with type t := t
-  include Equal.S with type t := t
+
+  include%template Equal.S [@mode local] with type t := t
 end
 
 type t [@@deriving sexp_of]

@@ -1,8 +1,8 @@
 [@@@ocaml.flambda_o3]
 
-open Base
+open! Core0
 
-type t = Bits0.t
+type t = Bits0.t [@@deriving bin_io]
 
 let number_of_data_bytes (t : t) = Bits0.number_of_data_bytes t
 let unsafe_get_int64 = Bits0.unsafe_get_int64
@@ -27,7 +27,7 @@ module Mutable = struct
   let equal (a : t) (b : t) = Bytes.equal (a :> bytes) (b :> bytes)
   let equal_bits = equal
 
-  let copy ~src ~dst =
+  let unsafe_copy ~src ~dst =
     let words = words src in
     for i = 0 to words - 1 do
       unsafe_set_int64 dst i (unsafe_get_int64 src i)
@@ -229,7 +229,7 @@ module Mutable = struct
 
   let mux dst sel l =
     let idx = to_int sel in
-    copy ~src:(mux_find idx 0 l) ~dst
+    unsafe_copy ~src:(mux_find idx 0 l) ~dst
   ;;
 
   let cat2 a_width a b =
@@ -512,8 +512,21 @@ module Mutable = struct
 
   let to_bits t =
     let result = create (width t) in
-    copy ~src:t ~dst:result;
+    unsafe_copy ~src:t ~dst:result;
     result
+  ;;
+
+  let raise_copy_bits_widths src dst =
+    let src_width = width src in
+    let dst_width = width dst in
+    raise_s
+      [%message
+        "[copy_bits] width of src and dst differ" (src_width : int) (dst_width : int)]
+  ;;
+
+  let copy ~src ~dst =
+    if width src <> width dst then raise_copy_bits_widths src dst;
+    unsafe_copy ~src ~dst
   ;;
 
   let copy_bits = copy
@@ -521,13 +534,15 @@ module Mutable = struct
   module Comb = Comb.Make (struct
       type t = Bits0.t
 
-      let equal = Bits0.Comparable.equal
+      let%template equal = (Bits0.Comparable.equal [@mode m]) [@@mode m = (local, global)]
       let empty = empty
       let is_empty = is_empty
       let width = width
       let of_constant = of_constant
       let to_constant = to_constant
       let add_widths w y = w + width y
+      let vdd = of_constant (Constant.of_int ~width:1 1)
+      let gnd = of_constant (Constant.of_int ~width:1 0)
 
       let concat_msb l =
         let w = List.fold l ~init:0 ~f:add_widths in
@@ -649,7 +664,7 @@ module _ = Pretty_printer.Register (struct
   end)
 
 module Binary = struct
-  type nonrec t = t [@@deriving compare]
+  type nonrec t = t [@@deriving compare ~localize]
 
   let to_string t =
     let width = width t in
@@ -661,7 +676,7 @@ module Binary = struct
 end
 
 module Hex = struct
-  type nonrec t = t [@@deriving compare]
+  type nonrec t = t [@@deriving compare ~localize]
 
   let to_string t =
     let width = width t in
@@ -673,7 +688,7 @@ module Hex = struct
 end
 
 module Unsigned_int = struct
-  type nonrec t = t [@@deriving compare]
+  type nonrec t = t [@@deriving compare ~localize]
 
   let to_string t =
     let width = width t in
@@ -685,7 +700,7 @@ module Unsigned_int = struct
 end
 
 module Signed_int = struct
-  type nonrec t = t [@@deriving compare]
+  type nonrec t = t [@@deriving compare ~localize]
 
   let to_string t =
     let width = width t in

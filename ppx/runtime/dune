@@ -1,0 +1,6 @@
+(library
+ (name ppx_hardcaml_runtime0)
+ (public_name hardcaml.ppx_hardcaml_runtime0)
+ (libraries core)
+ (preprocess
+  (pps ppx_jane)))

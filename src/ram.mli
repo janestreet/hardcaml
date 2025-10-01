@@ -3,15 +3,15 @@
     Can be specified with arbitrary numbers of read and write ports, though in reality
     only up to 1 of each can be inferred by a synthesizer. *)
 
-open Base
+open! Core0
 
 module Collision_mode : sig
   type t =
     | Read_before_write
     | Write_before_read
-  [@@deriving sexp_of, compare]
+  [@@deriving sexp_of, compare ~localize]
 
-  include Comparable.S with type t := t
+  include%template Comparable.S_plain [@mode local] with type t := t
 end
 
 val create

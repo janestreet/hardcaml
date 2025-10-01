@@ -1,4 +1,4 @@
-open Core
+open! Core0
 
 let debug = false
 let debug_oc = ref None

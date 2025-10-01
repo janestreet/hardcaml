@@ -1,6 +1,6 @@
 (** A memory write port. *)
 
-open! Base
+open! Core0
 
 type 'a t =
   { write_clock : 'a
@@ -8,7 +8,7 @@ type 'a t =
   ; write_enable : 'a
   ; write_data : 'a
   }
-[@@deriving sexp_of]
+[@@deriving bin_io, sexp_of]
 
 (** {2 A partial [Interface] implementation}
 

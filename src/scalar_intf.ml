@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type S = sig
   include Interface.S
@@ -22,6 +22,9 @@ module type S = sig
     :  (module Comb.S with type t = 'a)
     -> 'a With_valid.t t
     -> 'a With_valid.t
+
+  val lift_with_valid : 'a With_valid.t t -> ('a, 'a t) With_valid.t2
+  val lower_with_valid : ('a, 'a t) With_valid.t2 -> 'a With_valid.t t
 end
 
 module type S_untyped = S with type 'a t = 'a
@@ -31,4 +34,6 @@ module type Scalar = sig
   module type S_untyped = S_untyped
 
   module Make (X : Value.Arg) : S_untyped
+
+  val scalar : ?name:string -> int -> (module S_untyped)
 end

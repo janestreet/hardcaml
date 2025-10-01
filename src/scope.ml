@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module Path = struct
   type t = string list [@@deriving sexp_of]
@@ -16,7 +16,7 @@ module Naming_scheme = struct
     | Full_path
     | Local_path
     | No_path
-  [@@deriving equal, sexp_of]
+  [@@deriving equal ~localize, sexp_of]
 end
 
 type t =
@@ -95,6 +95,12 @@ let name ?(sep = Path.default_path_seperator) scope n =
 
 let instance (scope : t) = List.hd scope.path
 let naming ?sep scope ~(loc : [%call_pos]) s n = Signal.( -- ) ~loc s (name ?sep scope n)
+
+let naming_clocked ?sep scope ~(loc : [%call_pos]) (s : Clocked_signal.t) n
+  : Clocked_signal.t
+  =
+  Clocked_signal.map ~f:(fun s -> naming ?sep scope ~loc s n) s
+;;
 
 let make_ltl_ap scope name signal =
   let wire = Signal.wireof signal in

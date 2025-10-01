@@ -1,4 +1,4 @@
-open Base
+open! Core0
 open Cyclesim0
 
 module Combine_error = struct

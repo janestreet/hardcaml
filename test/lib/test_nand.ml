@@ -128,7 +128,7 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
         wire _22;
         wire _79;
         wire _23;
-        wire _52;
+        wire gnd;
         wire _80;
         wire _24;
         wire _81;
@@ -188,14 +188,14 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
         wire [2:0] _107;
         nand
             the_nand
-            ( .a(_52),
+            ( .a(gnd),
               .b(_2),
               .c(_53) );
         assign _1 = _53;
         nand
             the_nand_1
             ( .a(_6),
-              .b(_52),
+              .b(gnd),
               .c(_54) );
         assign _2 = _54;
         nand
@@ -308,7 +308,7 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
         assign _20 = _76;
         nand
             the_nand_20
-            ( .a(_52),
+            ( .a(gnd),
               .b(_57),
               .c(_77) );
         assign _21 = _77;
@@ -324,11 +324,11 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
               .b(_22),
               .c(_79) );
         assign _23 = _79;
-        assign _52 = 1'b0;
+        assign gnd = 1'b0;
         nand
             the_nand_23
             ( .a(_55),
-              .b(_52),
+              .b(gnd),
               .c(_80) );
         assign _24 = _80;
         nand
@@ -599,7 +599,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
         wire [1:0] _101;
         wire _102;
         wire _23;
-        wire _52;
+        wire gnd;
         wire [1:0] _103;
         wire _104;
         wire _24;
@@ -682,7 +682,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
         wire _154;
         wire _50;
         wire [2:0] _155;
-        assign _53 = { _52,
+        assign _53 = { gnd,
                        _2 };
         LUT2
             #( .INIT("1110") )
@@ -691,7 +691,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
               .O(_54) );
         assign _1 = _54;
         assign _55 = { _6,
-                       _52 };
+                       gnd };
         LUT2
             #( .INIT("1110") )
             the_LUT2_1
@@ -842,7 +842,7 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
             ( .I(_95),
               .O(_96) );
         assign _20 = _96;
-        assign _97 = { _52,
+        assign _97 = { gnd,
                        _60 };
         LUT2
             #( .INIT("1110") )
@@ -866,9 +866,9 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
             ( .I(_101),
               .O(_102) );
         assign _23 = _102;
-        assign _52 = 1'b0;
+        assign gnd = 1'b0;
         assign _103 = { _57,
-                        _52 };
+                        gnd };
         LUT2
             #( .INIT("1110") )
             the_LUT2_23

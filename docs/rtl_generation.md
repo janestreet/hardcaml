@@ -58,6 +58,10 @@ begin
 end architecture;
 ```
 
+We also provide basic Systemverilog support - the generated RTL is basically the same as
+Verilog mode except we use the Systemverilog reserved words to correctly perform name
+mangling.
+
 # Instantiations
 
 In Hardcaml, a `Circuit` corresponds to a single module in Verilog or entity in

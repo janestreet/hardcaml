@@ -3,7 +3,7 @@
     They track a circuit database of instantiated modules, and a scheme for managing the
     naming of signals within the design. *)
 
-open Base
+open! Core0
 
 module Path : sig
   type t [@@deriving sexp_of]
@@ -36,7 +36,7 @@ module Naming_scheme : sig
     | Full_path
     | Local_path
     | No_path
-  [@@deriving equal, sexp_of]
+  [@@deriving equal ~localize, sexp_of]
 end
 
 type t [@@deriving sexp_of]
@@ -102,6 +102,15 @@ val instance : t -> string option
       let named_signal = some_signal -- "data" in
     ]} *)
 val naming : ?sep:string -> t -> loc:[%call_pos] -> Signal.t -> string -> Signal.t
+
+(** Similar to [naming], but on a clocked signal instead. *)
+val naming_clocked
+  :  ?sep:string
+  -> t
+  -> loc:[%call_pos]
+  -> Clocked_signal.t
+  -> string
+  -> Clocked_signal.t
 
 (** Creates an atomic proposition for use in an LTL formula, naming the AP with the
     scope's name and the provided string argument *)

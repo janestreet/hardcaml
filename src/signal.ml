@@ -1,20 +1,21 @@
-open Base
-open! Signal_intf
+open! Core0
 module Type = Signal__type
 
 type t = Type.t
 
-module type S = S
+module type S = Signal_intf.S
 
 open Type
 
 let names = Type.names
 let names_and_locs = Type.names_and_locs
-let uid = Type.uid
-let are_consistent _ = None
+let%template uid = (Type.uid [@mode m]) [@@mode m = (local, global)]
+let to_rep t = t, ()
+let from_rep t () = t
+let update_rep t ~info:() = t
 
 let add_attribute signal attribute =
-  match signal_id signal with
+  match info signal with
   | None ->
     raise_s
       [%message
@@ -30,7 +31,7 @@ let add_attributes signal attributes =
 ;;
 
 let set_comment signal comment =
-  match signal_id signal with
+  match info signal with
   | None ->
     raise_s [%message "attempt to add comment to an empty signal" ~to_:(comment : string)]
   | Some _ ->
@@ -39,7 +40,7 @@ let set_comment signal comment =
 ;;
 
 let unset_comment signal =
-  match signal_id signal with
+  match info signal with
   | None -> raise_s [%message "attempt to remove comment from an empty signal"]
   | Some _ ->
     Type.unset_comment signal;
@@ -49,15 +50,92 @@ let unset_comment signal =
 let set_names s names = Type.set_names s names
 
 let attributes s =
-  match signal_id s with
+  match info s with
   | None -> []
   | Some _ -> Type.get_attributes s
 ;;
 
 let comment s =
-  match signal_id s with
+  match info s with
   | None -> raise_s [%message "cannot get [comment] from the empty signal"]
   | Some _ -> Type.get_comment s
+;;
+
+let raise_invalid_waiver t ~expected_kind =
+  let msg =
+    [%string
+      {|Trying to add a %{expected_kind} waiver to a signal that isn't a %{expected_kind}|}]
+  in
+  raise_s [%message msg (t : t)]
+;;
+
+let add_mux_waiver_exn t waiver =
+  match t with
+  | Mux _ ->
+    Type.update_coverage_metadata t ~f:(fun m ->
+      Coverage_metadata.add_mux_waiver_exn m waiver);
+    t
+  | _ -> raise_invalid_waiver t ~expected_kind:"mux"
+;;
+
+let add_cases_waiver_exn t waiver =
+  match t with
+  | Cases _ ->
+    Type.update_coverage_metadata t ~f:(fun m ->
+      Coverage_metadata.add_cases_waiver_exn m waiver);
+    t
+  | _ -> raise_invalid_waiver t ~expected_kind:"cases"
+;;
+
+let is_always_state_register t =
+  match Type.coverage_metadata t with
+  | Some { kind = Some (Variable (State_machine_state _)); _ } -> true
+  | _ -> false
+;;
+
+let add_register_waiver_exn t waiver =
+  match t with
+  | Reg _ ->
+    if is_always_state_register t
+    then
+      raise_s
+        [%message
+          "Trying to add a toggle waiver to an always state register. Use \
+           [add_always_state_waiver_exn]"];
+    Type.update_coverage_metadata t ~f:(fun m ->
+      Coverage_metadata.add_register_waiver_exn m waiver);
+    t
+  | _ -> raise_invalid_waiver t ~expected_kind:"register"
+;;
+
+let add_always_state_waiver_exn t waiver =
+  match t with
+  | Reg _ ->
+    if not (is_always_state_register t)
+    then
+      raise_s
+        [%message
+          "Trying to add an always state waiver to a plain register. Use \
+           [add_register_waiver_exn]"];
+    Type.update_coverage_metadata t ~f:(fun m ->
+      Coverage_metadata.add_always_state_waiver_exn m waiver);
+    t
+  | _ -> raise_invalid_waiver t ~expected_kind:"register"
+;;
+
+let add_always_state_transition_waiver_exn t waiver =
+  match t with
+  | Reg _ ->
+    if not (is_always_state_register t)
+    then
+      raise_s
+        [%message
+          "Trying to add a always state waiver to plain register. Use \
+           [add_register_waiver_exn]"];
+    Type.update_coverage_metadata t ~f:(fun m ->
+      Coverage_metadata.add_always_state_transition_waiver_exn m waiver);
+    t
+  | _ -> raise_invalid_waiver t ~expected_kind:"register"
 ;;
 
 let ( --$ ) s w =
@@ -70,13 +148,18 @@ module Base = struct
 
   type nonrec t = t
 
-  let equal (t1 : t) t2 =
+  let%template[@mode local] equal (t1 @ local) (t2 @ local) =
     match t1, t2 with
     | Empty, Empty -> true
-    | Const { constant = c1; _ }, Const { constant = c2; _ } -> Bits.equal c1 c2
-    | _ -> Uid.equal (uid t1) (uid t2)
+    | Const { constant = c1; _ }, Const { constant = c2; _ } ->
+      (Bits.equal [@mode local]) c1 c2
+    | _ ->
+      (Uid.equal [@mode local])
+        ((uid [@mode local]) t1)
+        ((uid [@mode local]) t2) [@nontail]
   ;;
 
+  let%template equal = [%eta2 equal [@mode local]]
   let width = width
   let to_string = to_string
   let sexp_of_t = sexp_of_t
@@ -98,7 +181,7 @@ module Base = struct
   ;;
 
   let ( -- ) ~(loc : [%call_pos]) signal name =
-    match signal_id signal with
+    match info signal with
     | None ->
       raise_s
         [%message "attempt to set the name of the empty signal" ~to_:(name : string)]
@@ -107,30 +190,29 @@ module Base = struct
       signal
   ;;
 
-  let op2 op len arg_a arg_b = Op2 { signal_id = make_id len; op; arg_a; arg_b }
+  let vdd = of_constant (Constant.of_int ~width:1 1) -- "vdd"
+  let gnd = of_constant (Constant.of_int ~width:1 0) -- "gnd"
+  let op2 op len arg_a arg_b = Op2 { info = make_id len; op; arg_a; arg_b }
 
   let concat_msb a =
     match a with
     | [ a ] -> a
     | _ ->
       let len = List.fold a ~init:0 ~f:(fun acc a -> acc + width a) in
-      Cat { signal_id = make_id len; args = a }
+      Cat { info = make_id len; args = a }
   ;;
 
-  let select arg ~high ~low =
-    Select { signal_id = make_id (high - low + 1); arg; high; low }
-  ;;
-
-  let ( +: ) a b = op2 Signal_add (width a) a b
-  let ( -: ) a b = op2 Signal_sub (width a) a b
-  let ( *: ) a b = op2 Signal_mulu (width a + width b) a b
-  let ( *+ ) a b = op2 Signal_muls (width a + width b) a b
-  let ( &: ) a b = op2 Signal_and (width a) a b
-  let ( |: ) a b = op2 Signal_or (width a) a b
-  let ( ^: ) a b = op2 Signal_xor (width a) a b
-  let ( ~: ) a = Not { signal_id = make_id (width a); arg = a }
-  let ( ==: ) a b = op2 Signal_eq 1 a b
-  let ( <: ) a b = op2 Signal_lt 1 a b
+  let select arg ~high ~low = Select { info = make_id (high - low + 1); arg; high; low }
+  let ( +: ) a b = op2 Add (width a) a b
+  let ( -: ) a b = op2 Sub (width a) a b
+  let ( *: ) a b = op2 Mulu (width a + width b) a b
+  let ( *+ ) a b = op2 Muls (width a + width b) a b
+  let ( &: ) a b = op2 And (width a) a b
+  let ( |: ) a b = op2 Or (width a) a b
+  let ( ^: ) a b = op2 Xor (width a) a b
+  let ( ~: ) a = Not { info = make_id (width a); arg = a }
+  let ( ==: ) a b = op2 Eq 1 a b
+  let ( <: ) a b = op2 Lt 1 a b
 
   let mux select cases =
     (* We are a bit more lax about this in [Comb], but RTL generation requires 2 cases
@@ -138,7 +220,7 @@ module Base = struct
     if List.length cases < 2
     then raise_s [%message "[Signal.mux] requires a minimum of 2 cases"];
     match cases with
-    | first_case :: _ -> Mux { signal_id = make_id (width first_case); select; cases }
+    | first_case :: _ -> Mux { info = make_id (width first_case); select; cases }
     | [] -> raise_s [%message "Mux with no cases"]
   ;;
 
@@ -148,12 +230,11 @@ module Base = struct
       then raise_s [%message "[cases] the match value must be a constant."]);
     match cases with
     | (_, first_case) :: _ ->
-      Cases { signal_id = make_id (width first_case); select; cases; default }
+      Cases { info = make_id (width first_case); select; cases; default }
     | [] -> raise_s [%message "[cases] no cases specified"]
   ;;
 end
 
-module Comb_make = Comb.Make
 module Unoptimized = Comb.Make (Base)
 
 let assign a b =
@@ -184,7 +265,7 @@ let assign a b =
 let ( <-- ) = assign
 
 let wire w =
-  let wire = Wire { signal_id = make_id w; driver = None } in
+  let wire = Wire { info = make_id w; driver = None } in
   wire
 ;;
 
@@ -202,178 +283,15 @@ let output name s =
   w
 ;;
 
-module Const_prop = struct
-  module Base = struct
+module Optimized : Comb.S with type t = t = Signal_builders.Const_prop (struct
     include Unoptimized
 
-    let cv s = const_value s
+    let is_const = Type.is_const
+    let const_value = Type.const_value
+  end)
 
-    let eqs s n =
-      let d = Bits.( ==: ) (cv s) (Bits.of_int_trunc ~width:(width s) n) in
-      Bits.to_int_trunc d = 1
-    ;;
-
-    let cst b = of_constant (Bits.to_constant b)
-
-    let ( +: ) a b =
-      match is_const a, is_const b with
-      | true, true -> cst (Bits.( +: ) (cv a) (cv b))
-      | true, false when eqs a 0 -> b (* 0+b *)
-      | false, true when eqs b 0 -> a (* a+0 *)
-      | _ -> a +: b
-    ;;
-
-    let ( -: ) a b =
-      match is_const a, is_const b with
-      | true, true -> cst (Bits.( -: ) (cv a) (cv b))
-      (* | true, false when eqs a 0 -> b *)
-      | false, true when eqs b 0 -> a (* a-0 *)
-      | _ -> a -: b
-    ;;
-
-    let ( *: ) a b =
-      let w = width a + width b in
-      let opt d c =
-        if eqs c 0
-        then zero w
-        else if eqs c 1
-        then zero (width c) @: d
-        else (
-          let c = cv c in
-          if Bits.to_int_trunc @@ Bits.popcount c <> 1
-          then a *: b
-          else (
-            let p = Bits.to_int_trunc @@ (Bits.floor_log2 c).value in
-            if p = 0 then uresize d ~width:w else uresize (d @: zero p) ~width:w))
-      in
-      match is_const a, is_const b with
-      | true, true -> cst (Bits.( *: ) (cv a) (cv b))
-      | true, false -> opt b a
-      | false, true -> opt a b
-      | _ -> a *: b
-    ;;
-
-    let ( *+ ) a b =
-      match is_const a, is_const b with
-      | true, true -> cst (Bits.( *+ ) (cv a) (cv b))
-      (* | we could do certain optimisations here *)
-      | _ -> a *+ b
-    ;;
-
-    let ( &: ) a b =
-      let opt d c =
-        if eqs c 0 then zero (width a) else if eqs c (-1) then d else a &: b
-      in
-      match is_const a, is_const b with
-      | true, true -> cst (Bits.( &: ) (cv a) (cv b))
-      | true, false -> opt b a
-      | false, true -> opt a b
-      | _ -> a &: b
-    ;;
-
-    let ( |: ) a b =
-      let opt d c =
-        if eqs c 0 then d else if eqs c (-1) then ones (width a) else a |: b
-      in
-      match is_const a, is_const b with
-      | true, true -> cst (Bits.( |: ) (cv a) (cv b))
-      | true, false -> opt b a
-      | false, true -> opt a b
-      | _ -> a |: b
-    ;;
-
-    let ( ^: ) a b =
-      match is_const a, is_const b with
-      | true, true -> cst (Bits.( ^: ) (cv a) (cv b))
-      | _ -> a ^: b
-    ;;
-
-    let ( ==: ) a b =
-      match is_const a, is_const b with
-      | true, true -> cst (Bits.( ==: ) (cv a) (cv b))
-      | _ -> a ==: b
-    ;;
-
-    let ( ~: ) a =
-      match is_const a with
-      | true -> cst (Bits.( ~: ) (cv a))
-      | _ -> ~:a
-    ;;
-
-    let ( <: ) a b =
-      match is_const a, is_const b with
-      | true, true -> cst (Bits.( <: ) (cv a) (cv b))
-      | _ -> a <: b
-    ;;
-
-    let concat_msb l =
-      let optimise_consts l =
-        List.group l ~break:(fun a b -> not (Bool.equal (is_const a) (is_const b)))
-        |> List.map ~f:(function
-          | [] -> []
-          | [ x ] -> [ x ]
-          | h :: _ as l ->
-            if is_const h
-            then [ List.map l ~f:const_value |> Bits.concat_msb |> cst ]
-            else l)
-        |> List.concat
-      in
-      concat_msb (optimise_consts l)
-    ;;
-
-    (* {[
-         let is_rom els =
-           List.fold (fun b s -> b && is_const s) true els
-
-         let opt_rom sel els =
-           let len = List.length els in
-           let len' = 1 lsl (width sel) in
-           let els =
-             if len' <> len
-             then
-               let e = List.nth els (len'-1) in
-               els @ linit (len'-len) (fun _ -> e)
-             else
-               els
-           in
-           mux sel els
-       ]} *)
-
-    let mux sel els =
-      let len = List.length els in
-      (*let len' = 1 lsl (width sel) in*)
-      if is_const sel
-      then (
-        let x = Bits.to_int_trunc (cv sel) in
-        let x = min x (len - 1) in
-        (* clip select *)
-        List.nth_exn els x
-        (* {[
-           else if is_rom els && len <= len'
-             then
-               opt_rom sel els
-           ]} *))
-      else mux sel els
-    ;;
-
-    let select d ~high:h ~low:l =
-      if is_const d
-      then cst (Bits.select (cv d) ~high:h ~low:l)
-      else if l = 0 && h = width d - 1
-      then d
-      else select d ~high:h ~low:l
-    ;;
-  end
-
-  module Comb = struct
-    include Comb_make (Base)
-
-    let is_vdd = Type.is_vdd
-    let is_gnd = Type.is_gnd
-  end
-end
-
-include (Const_prop.Comb : module type of Const_prop.Comb with type t := t)
+include (Optimized : Comb.S with type t := t)
+include Signal_builders.Conversion_functions (Optimized)
 
 module Reg_spec_ = Reg_spec.Make (struct
     type nonrec t = t [@@deriving sexp_of]
@@ -417,67 +335,22 @@ let reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
       ~clear
       d
   in
-  Reg { signal_id = make_id (width d); register = spec; d }
+  Reg { info = make_id (width d); register = spec; d }
 ;;
 
-let reg_fb ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~width ~f =
-  let d = wire width in
-  let q = reg spec ?enable ?initialize_to ?reset_to ?clear_to ?clear d in
-  d <-- f q;
-  q
-;;
+include Signal_builders.Registers (struct
+    type info = unit
 
-let rec pipeline
-  ?(attributes = [])
-  ?enable
-  ?initialize_to
-  ?reset_to
-  ?clear
-  ?clear_to
-  spec
-  ~n
-  d
-  =
-  let maybe_add_attributes s = List.fold attributes ~init:s ~f:add_attribute in
-  if n = 0
-  then d
-  else
-    maybe_add_attributes
-      (reg
-         ?enable
-         ?initialize_to
-         ?reset_to
-         ?clear
-         ?clear_to
-         spec
-         (pipeline
-            ~attributes
-            ?enable
-            ?initialize_to
-            ?reset_to
-            ?clear
-            ?clear_to
-            spec
-            ~n:(n - 1)
-            d))
-;;
+    include Optimized
+    module Reg_spec = Reg_spec
 
-let prev ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
-  let tbl = Hashtbl.create (module Int) in
-  Hashtbl.set tbl ~key:0 ~data:d;
-  let rec f n =
-    if n < 0
-    then raise_s [%message "[Signal.prev] cannot accept a negative value" (n : int)];
-    match Hashtbl.find tbl n with
-    | Some x -> x
-    | None ->
-      let p = f (n - 1) in
-      let r = reg spec ?enable ?initialize_to ?reset_to ?clear ?clear_to p in
-      Hashtbl.set tbl ~key:n ~data:r;
-      r
-  in
-  Staged.stage f
-;;
+    let add_attribute = add_attribute
+    let reg = reg
+    let wire = wire
+    let assign = assign
+    let update_rep = update_rep
+    let to_rep = to_rep
+  end)
 
 module Memory_prim = struct
   let multiport_memory_prim
@@ -492,13 +365,14 @@ module Memory_prim = struct
     =
     let write_ports =
       if remove_unused_write_ports
-      then Array.filter write_ports ~f:(fun { write_enable; _ } -> is_gnd write_enable)
+      then
+        Array.filter write_ports ~f:(fun { write_enable; _ } -> Type.is_gnd write_enable)
       else write_ports
     in
     let memory =
       add_attributes
         (Multiport_mem
-           { signal_id = make_id data_width
+           { info = make_id data_width
            ; size
            ; write_ports
            ; initialize_to = Option.map initialize_to ~f:Array.copy
@@ -507,43 +381,17 @@ module Memory_prim = struct
     in
     Option.iter name ~f:(fun name -> ignore (memory -- name : t));
     Array.map read_addresses ~f:(fun read_address ->
-      Mem_read_port { signal_id = make_id data_width; memory; read_address })
+      Mem_read_port { info = make_id data_width; memory; read_address })
   ;;
 end
 
-include Multiport_memory.Make (struct
-    include Const_prop.Comb
+include Signal_builders.Memories (struct
+    include Optimized
     include Memory_prim
+    module Reg_spec = Reg_spec
+
+    let reg = reg
   end)
-
-let memory size ~write_port ~read_address =
-  (multiport_memory size ~write_ports:[| write_port |] ~read_addresses:[| read_address |]).(
-  0)
-;;
-
-let ram_rbw ?name ?attributes ~write_port ~(read_port : _ Read_port.t) size =
-  let spec = Reg_spec.create ~clock:read_port.read_clock () in
-  reg
-    spec
-    ~enable:read_port.read_enable
-    (multiport_memory
-       ?name
-       ?attributes
-       size
-       ~write_ports:[| write_port |]
-       ~read_addresses:[| read_port.read_address |]).(0)
-;;
-
-let ram_wbr ?name ?attributes ~write_port ~(read_port : _ Read_port.t) size =
-  let spec = Reg_spec.create ~clock:read_port.read_clock () in
-  (multiport_memory
-     size
-     ?name
-     ?attributes
-     ~write_ports:[| write_port |]
-     ~read_addresses:[| reg spec ~enable:read_port.read_enable read_port.read_address |]).(
-  0)
-;;
 
 include Signal__type.Make_default_info (struct
     type nonrec t = t
@@ -553,9 +401,6 @@ let __ppx_auto_name = ( -- )
 
 (* Pretty printer *)
 let pp fmt t = Stdlib.Format.fprintf fmt "%s" ([%sexp (t : t)] |> Sexp.to_string_hum)
-let to_rep t = t, ()
-let from_rep t () = t
-let update_rep t ~info:() = t
 
 module Expert = struct
   include Memory_prim
@@ -567,3 +412,8 @@ module (* Install pretty printer in top level *) _ = Pretty_printer.Register (st
     let module_name = "Hardcaml.Signal"
     let to_string = to_bstr
   end)
+
+(* For tests - we have a mode in ppx_hardcaml0 which is supposed to work without linking
+   Hardcaml. We can use this value in tests to tell one way of the other - it will become
+   true if hardcaml is linked. *)
+let () = Ppx_hardcaml_runtime0.hardcaml_is_linked := true

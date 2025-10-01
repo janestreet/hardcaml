@@ -82,7 +82,7 @@ module Sedgewick_log_stack = struct
   (* $MDX part-end *)
 end
 
-module _ (* Debug  *) = struct
+module%test Debug = struct
   let swap a i j =
     let tmp = a.(i) in
     a.(i) <- a.(j);
@@ -294,7 +294,7 @@ let%expect_test "test software implementations" =
 ;;
 
 open Signal
-module Clocking = Types.Clocking
+module Clocking = Clocking
 
 (* $MDX part-begin=config *)
 module type Config = sig
@@ -328,7 +328,7 @@ module Make (Config : Config) = struct
         ; push : 'a
         ; pop : 'a
         }
-      [@@deriving hardcaml]
+      [@@deriving hardcaml ~rtlmangle:false]
     end
 
     module O = struct
@@ -336,7 +336,7 @@ module Make (Config : Config) = struct
         { partition : 'a Partition.t
         ; is_empty : 'a
         }
-      [@@deriving hardcaml]
+      [@@deriving hardcaml ~rtlmangle:false]
     end
 
     let create scope (i : _ I.t) : _ O.t =
@@ -369,11 +369,11 @@ module Make (Config : Config) = struct
   (* $MDX part-begin=interface *)
   module I = struct
     type 'a t =
-      { clocking : 'a Types.Clocking.t
+      { clocking : 'a Clocking.t
       ; start : 'a
       ; read_data : 'a [@bits data_size]
       }
-    [@@deriving hardcaml]
+    [@@deriving hardcaml ~rtlmangle:false]
   end
 
   module O = struct
@@ -400,7 +400,7 @@ module Make (Config : Config) = struct
       | Swap_pivot
       | Update_range
       | Recurse
-    [@@deriving sexp_of, compare, enumerate]
+    [@@deriving sexp_of, compare ~localize, enumerate]
   end
   (* $MDX part-end *)
 
@@ -574,7 +574,7 @@ module Make_with_memory (Config : Config) = struct
 
   module I = struct
     type 'a t =
-      { clocking : 'a Types.Clocking.t
+      { clocking : 'a Clocking.t
       ; start : 'a
       ; write_enable : 'a
       ; write_address : 'a [@bits log_size]
@@ -582,7 +582,7 @@ module Make_with_memory (Config : Config) = struct
       ; read_address : 'a [@bits log_size]
       ; read_enable : 'a
       }
-    [@@deriving hardcaml]
+    [@@deriving hardcaml ~rtlmangle:false]
   end
 
   module O = struct

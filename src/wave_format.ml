@@ -1,4 +1,30 @@
-open Base
+open! Core0
+
+(* We cannot serialize the [Custom] constructor. Instead we map it to a simple conversion
+   to a bit string. *)
+module Custom = struct
+  module M = struct
+    type t = unit [@@deriving bin_io]
+  end
+
+  module T = struct
+    type t = Bits.t -> string [@@deriving sexp_of]
+
+    let of_binable () =
+      let simple_conversion t = Bits.to_string t in
+      simple_conversion
+    ;;
+
+    let to_binable (_ : t) = ()
+
+    let caller_identity =
+      Bin_prot.Shape.Uuid.of_string "7f52c42b-a0bf-4241-ba12-31e009fd768d"
+    ;;
+  end
+
+  include T
+  include Binable.Of_binable_with_uuid (M) (T)
+end
 
 type t =
   | Binary
@@ -8,20 +34,22 @@ type t =
   | Unsigned_int
   | Int
   | Index of string list
-  | Custom of (Bits.t -> string)
+  | Custom of Custom.t
   | Map of (Bits.t, string) List.Assoc.t
-[@@deriving sexp_of]
+[@@deriving bin_io, sexp_of]
 
-let rec equal a b =
+let%template[@mode local] rec equal (a @ local) (b @ local) =
   match a, b with
   | Binary, Binary | Bit, Bit | Hex, Hex | Int, Int | Unsigned_int, Unsigned_int -> true
-  | Bit_or a, Bit_or b -> equal a b
-  | Index a, Index b -> [%compare.equal: string list] a b
+  | Bit_or a, Bit_or b -> (equal [@mode local]) a b
+  | Index a, Index b -> [%compare_local.equal: string list] a b
   | Custom f, Custom g -> phys_equal f g
-  | Map m, Map n -> List.equal [%equal: Bits.t * string] m n
+  | Map m, Map n -> [%equal_local: (Bits.t * string) list] m n
   | (Bit | Bit_or _ | Binary | Hex | Unsigned_int | Int | Index _ | Custom _ | Map _), _
     -> false
 ;;
+
+let%template equal = [%eta2 equal [@mode local]]
 
 let rec to_string t =
   match t with

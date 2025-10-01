@@ -2,10 +2,10 @@
 
     From software, the interface can be controlled using normal flags. *)
 
-open Base
+open! Core0
 
 module type Cases = sig
-  type t [@@deriving sexp_of, compare, enumerate]
+  type t [@@deriving sexp_of, compare ~localize, enumerate]
 
   val port_name : string
 end
@@ -43,6 +43,9 @@ module type S = sig
 
   (** [iter_flags] calls [f] for each flag where [is_set] is true. **)
   val iter_flags : Flags.t -> f:(cases -> unit) -> unit
+
+  (** Set a single flag without clearing others *)
+  val set_one : (module Comb.S with type t = 'a) -> 'a t -> cases -> 'a t
 end
 
 module type Flags_vector = sig

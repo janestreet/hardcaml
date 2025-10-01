@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Cases = Flags_vector_intf.Cases
 module type S = Flags_vector_intf.S
@@ -90,6 +90,12 @@ module Make (Cases : Cases) = struct
 
   let is_set (type a) (module Comb : Comb.S with type t = a) (s : a t) v =
     Comb.(s.:(rank_of_case v))
+  ;;
+
+  let set_one (type a) (module Comb : Comb.S with type t = a) (s : a t) v =
+    let open Comb in
+    let mask = Int.pow 2 (rank_of_case v) |> of_unsigned_int ~width:(width s) in
+    s |: mask
   ;;
 
   let mux2 (type a) (module Comb : Comb.S with type t = a) (sel : a) (s : a t) (t : a t) =

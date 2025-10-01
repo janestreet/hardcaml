@@ -1,8 +1,9 @@
 (** RTL name of parameters on instantiated modules. *)
 
-open Base
+open! Core0
 
-type t [@@deriving compare, sexp]
+type t [@@deriving bin_io, compare ~localize, sexp]
 
-include Equal.S with type t := t
+include%template Equal.S [@mode local] with type t := t
+
 include Stringable.S with type t := t

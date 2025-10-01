@@ -17,7 +17,7 @@
     [instantiations] are recursively processed if present in an optional
     [Circuit_database.t]. *)
 
-open! Base
+open! Core0
 
 type t [@@deriving sexp_of]
 

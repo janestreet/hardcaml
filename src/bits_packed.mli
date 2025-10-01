@@ -3,7 +3,7 @@
     The size and offset of data is passed to the functions rather than embedded like with
     [Bits.t]. *)
 
-open Base
+open! Core0
 
 type t = Bytes.t
 
@@ -85,3 +85,9 @@ val cases
   -> cases:Case.t array
   -> value_size_in_words:int
   -> unit
+
+module Jit_exports : sig
+  val hardcaml_bits_sub_inner_address : unit -> nativeint
+  val hardcaml_bits_umul_i_address : unit -> nativeint
+  val hardcaml_bits_smul_i_address : unit -> nativeint
+end

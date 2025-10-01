@@ -30,7 +30,7 @@ module States = struct
     | S_wait
     | S_counting
     | S_write_result
-  [@@deriving sexp_of, compare, enumerate]
+  [@@deriving sexp_of, compare ~localize, enumerate]
 end
 (* $MDX part-end *)
 

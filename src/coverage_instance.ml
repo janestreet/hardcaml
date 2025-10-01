@@ -1,4 +1,5 @@
-open Base
+open! Core0
+open Coverage_prim
 
 module Mux = struct
   type t =
@@ -49,10 +50,32 @@ module Reg = struct
   let get_previous_byte t ~i = Bytes.get t.previous_value i
 end
 
+module Always_state = struct
+  type t =
+    { reg : Cyclesim_lookup.Reg.t
+    ; mutable previous_value : int
+    ; coverage : Signal_coverage.Always_state.t
+    }
+  [@@deriving fields ~getters]
+
+  let read_and_update_prev t =
+    let value = Cyclesim_lookup.Reg.to_int t.reg in
+    t.previous_value <- value;
+    value
+  ;;
+
+  let create reg coverage =
+    let t = { reg; previous_value = 0; coverage } in
+    let _ : int = read_and_update_prev t in
+    t
+  ;;
+end
+
 type t =
   | Mux of Mux.t
   | Cases of Cases.t
   | Reg of Reg.t
+  | Always_state of Always_state.t
 
 let lookup_node_exn sim signal =
   Cyclesim0.lookup_node_by_id sim (Signal.uid signal) |> Option.value_exn
@@ -90,7 +113,7 @@ let create_cases sim (signal : Signal.t) coverage =
   match signal with
   | Cases { select; cases; _ } ->
     let num_cases_including_default = List.length cases + 1 in
-    if num_cases_including_default <> List.length (Signal_coverage.Cases.cases coverage)
+    if num_cases_including_default <> Signal_coverage.Cases.case_count coverage
     then
       raise_s
         [%message
@@ -105,7 +128,7 @@ let create_cases sim (signal : Signal.t) coverage =
   | _ -> raise_kind_mismatch (module Signal_coverage.Cases) signal coverage
 ;;
 
-let create_reg sim (signal : Signal.t) coverage =
+let create_basic_reg sim (signal : Signal.t) coverage =
   match signal with
   | Reg _ ->
     if Signal.width signal <> Signal_coverage.Reg.bits coverage
@@ -120,18 +143,28 @@ let create_reg sim (signal : Signal.t) coverage =
   | _ -> raise_kind_mismatch (module Signal_coverage.Reg) signal coverage
 ;;
 
+let create_always_state sim (signal : Signal.t) coverage =
+  match signal with
+  | Reg _ ->
+    let reg = lookup_reg_exn sim signal in
+    Always_state (Always_state.create reg coverage)
+  | _ -> raise_kind_mismatch (module Signal_coverage.Always_state) signal coverage
+;;
+
 let create sim signal (coverage : Signal_coverage.t) =
-  let debug_info = Signal_coverage.Debug_info.create signal in
-  if not (Signal_coverage.Debug_info.equal debug_info coverage.debug_info)
+  let call_stack = Signal_coverage.call_stack coverage in
+  let new_call_stack = Signal_coverage.call_stack_of_signal signal in
+  if not (Call_stack.equal call_stack new_call_stack)
   then
     raise_s
       [%message
-        "Signals with different debug info"
-          (debug_info : Signal_coverage.Debug_info.t)
-          (coverage.debug_info : Signal_coverage.Debug_info.t)];
-  match coverage.data with
+        "Signals with different call stacks"
+          (call_stack : Call_stack.t)
+          (new_call_stack : Call_stack.t)];
+  match coverage with
   | Mux coverage -> create_mux sim signal coverage
-  | Reg coverage -> create_reg sim signal coverage
+  | Reg coverage -> create_basic_reg sim signal coverage
+  | Always_state coverage -> create_always_state sim signal coverage
   | Cases coverage -> create_cases sim signal coverage
 ;;
 
@@ -148,7 +181,7 @@ let sample_cases (cases : Cases.t) =
       List.find_mapi case_nodes ~f:(fun i case_node ->
         if select = Cyclesim_lookup.Node.to_int case_node then Some i else None)
     with
-    | None -> Signal_coverage.Cases.Case.Default
+    | None -> Case.Positional.Default
     | Some index -> Specified index
   in
   Signal_coverage.Cases.mark_choice coverage choice
@@ -164,7 +197,7 @@ let sample_reg (reg : Reg.t) =
     if bit <> select_bit prev_byte ~i
     then (
       changed := true;
-      Signal_coverage.Reg.mark_toggled_bit reg.coverage ~bit:bit_index ~on:(bit <> 0))
+      Signal_coverage.Reg.mark_choice reg.coverage { bit = bit_index; on = bit <> 0 })
   in
   let sample_byte ~byte_index =
     let byte = Reg.get_byte reg ~i:byte_index in
@@ -183,9 +216,16 @@ let sample_reg (reg : Reg.t) =
   if !changed then Reg.update_previous_value reg
 ;;
 
+let sample_always_state state =
+  let from = Always_state.previous_value state in
+  let to_ = Always_state.read_and_update_prev state in
+  Signal_coverage.Always_state.mark_choice state.coverage { from; to_ }
+;;
+
 let sample t =
   match t with
   | Mux mux -> sample_mux mux
   | Cases cases -> sample_cases cases
   | Reg reg -> sample_reg reg
+  | Always_state state -> sample_always_state state
 ;;

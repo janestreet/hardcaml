@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 let keywords s = String.split_lines s |> List.map ~f:String.strip
 

@@ -1,6 +1,6 @@
 (** Tables of reserved words in Verilog, VHDL and OCaml. *)
 
-open Base
+open! Core0
 
 val verilog : string list
 val systemverilog : string list

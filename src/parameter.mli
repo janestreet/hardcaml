@@ -3,7 +3,7 @@
 
     In Verilog they are called [parameters]s and in VHDL they are called [generic]s. *)
 
-open Base
+open! Core0
 
 module Value : sig
   type t =
@@ -18,18 +18,18 @@ module Value : sig
     | Std_ulogic_vector of Logic.Std_logic_vector.t
     | String of string
     | Array of t list
-  [@@deriving sexp, variants]
+  [@@deriving bin_io, sexp, variants]
 
-  include Equal.S with type t := t
+  include%template Equal.S [@mode local] with type t := t
 end
 
 type t =
   { name : Parameter_name.t
   ; value : Value.t
   }
-[@@deriving sexp_of]
+[@@deriving bin_io, sexp_of]
 
-include Equal.S with type t := t
+include%template Equal.S [@mode local] with type t := t
 
 val create : name:string -> value:Value.t -> t
 val find_name : t list -> Parameter_name.t -> Value.t Option.t

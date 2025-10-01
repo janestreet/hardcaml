@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type Std_logic = sig
   type t =
@@ -11,9 +11,9 @@ module type Std_logic = sig
     | L (** Weak - prefer 0 *)
     | H (** Weak - prefer 1 *)
     | Don't_care (** Dont care *)
-  [@@deriving compare, enumerate, sexp, variants]
+  [@@deriving bin_io, compare ~localize, enumerate, sexp, variants]
 
-  include Equal.S with type t := t
+  include%template Equal.S [@mode local] with type t := t
 
   (** Provide the index of [t] in textual order. When passing a std_logic parameter from
       verilog to vhdl, we need to encode this type into an integer. For example, L1 =
@@ -32,9 +32,9 @@ module type Four_state = sig
     | Z
     | L0
     | L1
-  [@@deriving compare, enumerate, sexp, variants]
+  [@@deriving bin_io, compare ~localize, enumerate, sexp, variants]
 
-  include Equal.S with type t := t
+  include%template Equal.S [@mode local] with type t := t
 
   (** Provide the index of [t] in textual order. *)
   val to_int : t -> int
@@ -49,7 +49,7 @@ module type Logic = sig
 
   module Std_logic : Std_logic
   module Four_state : Four_state
-  module Std_logic_vector : Bits_list.Comb with type t = Std_logic.t list
-  module Bit_vector : Bits_list.Comb with type t = int list
-  module Four_state_vector : Bits_list.Comb with type t = Four_state.t list
+  module Std_logic_vector : Bits_list.Comb_binable with type t = Std_logic.t list
+  module Bit_vector : Bits_list.Comb_binable with type t = int list
+  module Four_state_vector : Bits_list.Comb_binable with type t = Four_state.t list
 end

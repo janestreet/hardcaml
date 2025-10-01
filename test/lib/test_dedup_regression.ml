@@ -4,7 +4,7 @@ open! Signal
 
 let set_reg_uid (reg : t) uid : t =
   match reg with
-  | Reg reg -> Reg { reg with signal_id = { reg.signal_id with s_id = uid } }
+  | Reg reg -> Reg { reg with info = { reg.info with uid } }
   | _ -> raise_s [%message "error"]
 ;;
 
@@ -20,10 +20,10 @@ let%expect_test "2 registers with colliding uids doesn't cause the registers to 
   let clock = wire 1 -- "clock" in
   let i1 = wire 1 -- "i1" in
   let r1 = reg (Reg_spec.create ~clock ()) i1 -- "r1" in
-  let r1 = set_reg_uid r1 (Signal.Type.For_testing.uid_of_int uid1) in
+  let r1 = set_reg_uid r1 (Signal.Type.Uid.Expert.of_int uid1) in
   let i2 = wire 1 -- "i2" in
   let r2 = reg (Reg_spec.create ~clock ()) i2 -- "r2" in
-  let r2 = set_reg_uid r2 (Signal.Type.For_testing.uid_of_int uid2) in
+  let r2 = set_reg_uid r2 (Signal.Type.Uid.Expert.of_int uid2) in
   let sum = r1 +: r2 -- "sum" in
   let circuit =
     Circuit.create_exn
@@ -46,10 +46,9 @@ let%expect_test "2 registers with colliding uids doesn't cause the registers to 
 (* This test must pass for the above test to actually test the regression *)
 let%test_unit "hash collision" =
   let create_reg_signal_with_uid ~uid =
-    Signal.Type.map_signal_id
+    Signal.Type.map_info
       (Signal.reg (Signal.Reg_spec.create () ~clock:Signal.vdd) Signal.vdd)
-      ~f:(fun signal_id ->
-        { signal_id with s_id = Signal.Type.For_testing.uid_of_int uid })
+      ~f:(fun signal_info -> { signal_info with uid = Signal.Type.Uid.Expert.of_int uid })
   in
   let hash1 =
     Dedup.For_testing.signal_hash

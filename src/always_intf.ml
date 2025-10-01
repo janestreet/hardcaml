@@ -81,9 +81,11 @@
       ....
     v} *)
 
-open Base
+open! Core0
 
-module type Always = sig
+module type S = sig
+  module Signal : Signal.S
+
   (** The type of variables in guarded assignments. Variables may be asychronous [wire]s,
       or synchronous [reg]s. The current value of the variable may be accessed through the
       [value] field below. *)
@@ -94,24 +96,58 @@ module type Always = sig
       { value : Signal.t
       ; internal : internal
       }
-    [@@deriving fields ~getters, sexp_of]
+    [@@deriving sexp_of]
+
+    (** gets the current value of the variable *)
+    val value : t -> Signal.t
 
     (** create a wire *)
-    val wire : default:Signal.t -> unit -> t
+    val wire : here:[%call_pos] -> default:Signal.t -> unit -> t
 
     (** create a register *)
-    val reg : (width:int -> t) Signal.with_register_spec
+    val reg : here:[%call_pos] -> (width:int -> t) Signal.with_register_spec
+
+    (** creates a register which forwards its input value to the output during cycles in
+        which it is enabled. *)
+    val cut_through_reg : (width:int -> t) Signal.with_register_spec
 
     (** create a pipeline of registers *)
-    val pipeline : (width:int -> depth:int -> t) Signal.with_register_spec
+    val pipeline
+      :  here:[%call_pos]
+      -> (width:int -> depth:int -> t) Signal.with_register_spec
 
     val __ppx_auto_name : t -> string -> t
+
+    module Expert : sig
+      (** Transform the value within the Variable *)
+      val map_value : t -> f:(Signal.t -> Signal.t) -> t
+    end
   end
 
-  type t = private
-    | Assign of Variable.t * Signal.t
-    | If of Signal.t * t list * t list
-    | Switch of Signal.t * (Signal.t * t list) list
+  type assign_internal
+  type if_internal
+  type match_internal
+  type switch_internal
+
+  type match_ = private
+    { value : Signal.t * t list
+    ; internal : match_internal
+    }
+  [@@deriving sexp_of]
+
+  and t = private
+    | Assign of
+        { value : Variable.t * Signal.t
+        ; internal : assign_internal
+        }
+    | If of
+        { value : Signal.t * t list * t list
+        ; internal : if_internal
+        }
+    | Switch of
+        { value : Signal.t * match_ list
+        ; internal : switch_internal
+        }
   [@@deriving sexp_of]
 
   type always := t
@@ -119,25 +155,25 @@ module type Always = sig
   type 'a cases = 'a case list
 
   (** if statement *)
-  val if_ : Signal.t -> t list -> t list -> t
+  val if_ : here:[%call_pos] -> Signal.t -> t list -> t list -> t
 
   (** else if branch *)
-  val elif : Signal.t -> t list -> t list -> t list
+  val elif : here:[%call_pos] -> Signal.t -> t list -> t list -> t list
 
   (** else branch (for readability) *)
   val else_ : t list -> t list
 
   (** if sel then [...] else [] *)
-  val when_ : Signal.t -> t list -> t
+  val when_ : here:[%call_pos] -> Signal.t -> t list -> t
 
   (** if sel then [] else [...] *)
-  val unless : Signal.t -> t list -> t
+  val unless : here:[%call_pos] -> Signal.t -> t list -> t
 
   (** switch statement *)
-  val switch : Signal.t -> Signal.t cases -> t
+  val switch : here:[%call_pos] -> Signal.t -> Signal.t cases -> t
 
   (** Allows sequences of expressions to be inserted into the code; a syntactic nicety. *)
-  val proc : t list -> t
+  val proc : here:[%call_pos] -> t list -> t
 
   (** assignment *)
   val ( <-- ) : Variable.t -> Signal.t -> t
@@ -165,7 +201,7 @@ module type Always = sig
       (** [switch cases] does a switch on all possible states. The cases must be
           exhaustive and irredundant. If the cases are non-exhaustive, one can supply
           [~default] to make them exhaustive. *)
-      ; switch : ?default:always list -> 'a cases -> always
+      ; switch : here:[%call_pos] -> ?default:always list -> 'a cases -> always
       }
     [@@deriving sexp_of]
 
@@ -174,13 +210,13 @@ module type Always = sig
         | Binary
         | Gray
         | Onehot
-      [@@deriving sexp_of]
+      [@@deriving sexp_of, enumerate]
 
       val to_string : t -> string
     end
 
     module type State = sig
-      type t [@@deriving compare, enumerate, sexp_of]
+      type t [@@deriving compare ~localize, enumerate, sexp_of]
     end
 
     (** [create reg_spec ~e] creates a new state machine where the state is stored in a
@@ -191,7 +227,8 @@ module type Always = sig
 
         [auto_wave_format] will automatically make state names show in waveforms. *)
     val create
-      :  ?encoding:Encoding.t (** default is [Binary] *)
+      :  here:[%call_pos]
+      -> ?encoding:Encoding.t (** default is [Binary] *)
       -> ?auto_wave_format:bool (** default is [true] *)
       -> ?attributes:Rtl_attribute.t list
            (** attributes to apply to the state register. Default is one_hot encoding up
@@ -208,4 +245,20 @@ module type Always = sig
 
   (** compile to structural code *)
   val compile : t list -> unit
+end
+
+module type Always = sig
+  module type S = S
+
+  include S with module Signal := Signal
+
+  module Clocked : sig
+    include S with module Signal := Clocked_signal
+
+    val set_variable_dom : Variable.t -> dom:Clock_domain.Runtime.t -> Variable.t
+
+    module Variable_overrides : sig
+      val wire : default:Clocked_signal.t -> dom:Clock_domain.Runtime.t -> Variable.t
+    end
+  end
 end

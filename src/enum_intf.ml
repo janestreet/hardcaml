@@ -1,15 +1,15 @@
-open Base
+open! Core0
 
 (** An enumerated type (generally a variant type with no arguments) which should derive
     [compare, enumerate, sexp_of, variants]. *)
 module type Cases = sig
-  type t [@@deriving compare, enumerate, sexp_of]
+  type t [@@deriving compare ~localize, enumerate, sexp_of]
 end
 
 (** Functions to project an [Cases] type into and out of hardcaml bit vectors
     representated as an interface. *)
 module type S_enum = sig
-  module Cases : Cases
+  module Cases : T
   include Interface.S
 
   val ast : Interface.Ast.t
@@ -115,12 +115,13 @@ end
 
 (** Binary and onehot selectors for [Casess]. *)
 module type S_enums = sig
-  module Cases : Cases
+  module Cases : T
   module Binary : S_enum with module Cases := Cases
   module One_hot : S_enum with module Cases := Cases
 end
 
 module type Enum = sig
+  module type Cases = Cases
   module type S_enum = S_enum
   module type S_enums = S_enums
 

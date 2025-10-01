@@ -84,11 +84,12 @@ This can be applied to specialized Hardcaml types and in particular is implement
 
 <!--
 ```ocaml
-# module State = struct type t = A [@@deriving sexp_of, compare, enumerate] end;;
+# module State = struct type t = A [@@deriving sexp_of, compare ~localize, enumerate] end;;
 module State :
   sig
     type t = A
     val sexp_of_t : t -> Sexp.t
+    val compare__local : local_ t -> local_ t -> int
     val compare : t -> t -> int
     val all : t list
   end

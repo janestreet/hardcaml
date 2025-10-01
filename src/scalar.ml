@@ -1,4 +1,4 @@
-open Base
+open! Core0
 
 module type S = Scalar_intf.S
 module type S_untyped = Scalar_intf.S_untyped
@@ -46,4 +46,17 @@ module Make (X : Value.Arg) = struct
     check_width (module Comb) ~expected_width:port_widths x.value;
     x
   ;;
+
+  let lift_with_valid t = t
+  let lower_with_valid t = t
 end
+
+let scalar ?(name = "scalar") port_width =
+  let module M =
+    Make (struct
+      let port_name = name
+      let port_width = port_width
+    end)
+  in
+  (module M : S_untyped)
+;;
