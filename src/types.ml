@@ -1,10 +1,11 @@
+module Pair_ = Pair
 open! Base
 module Clocking = Clocking
 module Cross_product = Cross_product.Make
 
 module type Value_arg = Value.Arg
 
-module Pair = Pair
+module Pair = Pair_
 module With_valid = With_valid
 module Value = Value.Make
 

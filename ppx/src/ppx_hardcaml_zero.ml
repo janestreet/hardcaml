@@ -871,7 +871,7 @@ let declare_let_binding_extension ~name ~generate_naming_function =
 
           aren't supported. *)
     let bindings =
-      List.map bindings ~f:(fun { pvb_pat; pvb_expr; pvb_attributes; pvb_loc } ->
+      List.map bindings ~f:(fun { pvb_pat; pvb_expr; pvb_attributes; pvb_loc; pvb_constraint } ->
         (* The [pvb_pat] must be a simple assignment to a name right now. Maybe we
               can add support for structure unpacking later. *)
         let loc = { pvb_loc with loc_ghost = true } in
@@ -882,6 +882,7 @@ let declare_let_binding_extension ~name ~generate_naming_function =
               [%expr [%e generate_naming_function ~arg ~loc ~name:txt] [%e pvb_expr]]
           ; pvb_attributes
           ; pvb_loc
+          ; pvb_constraint
           }
         | _ ->
           Location.raise_errorf
