@@ -11,6 +11,7 @@ end
 
 module Int = Int
 module Interface = Interface
+module Wave_format = Wave_format
 module List = List
 
 val concat : ?sep:string -> string list -> string

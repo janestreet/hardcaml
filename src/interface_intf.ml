@@ -384,6 +384,9 @@ module type S = sig
   end
 
   module Names_and_widths : Names_and_widths with type tag := tag
+
+  (** {2 Optional Metadata} *)
+  val wave_formats : Wave_format.t t
 end
 
 (** Monomorphic functions on Hardcaml interfaces. Note that a functor (or a function)
@@ -464,6 +467,12 @@ module type Interface = sig
   end
 
   module Make (X : Pre) : S with type 'a t := 'a X.t
+
+  module Make_with_wave_formats (X : sig
+      include Pre
+
+      val wave_formats : Wave_format.t t
+    end) : S with type 'a t := 'a X.t
 
   (** Recreate a Hardcaml Interface with the same type, but different port names / widths. *)
   module Update

@@ -106,7 +106,11 @@ end
 type 'a with_valid = 'a Comb_intf.with_valid
 type ('a, 'b) with_valid2 = ('a, 'b) Comb_intf.with_valid2
 
-module Make (X : Pre) : S with type 'a t := 'a X.t = struct
+module Make_with_wave_formats (X : sig
+    include Pre
+
+    val wave_formats : Wave_format.t t
+  end) : S with type 'a t := 'a X.t = struct
   include X
 
   type tag = int [@@deriving equal ~localize, compare ~localize]
@@ -446,7 +450,10 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
       map2 t port_names ~f:(fun s n -> naming_op s (prefix ^ n ^ suffix))
     ;;
 
-    let __ppx_auto_name t prefix = apply_names ~prefix:(prefix ^ "$") t
+    let __ppx_auto_name t prefix =
+      iter2 t wave_formats ~f:Signal.set_wave_format;
+      apply_names ~prefix:(prefix ^ "$") t
+    ;;
   end
 
   module Of_signal = struct
@@ -542,11 +549,19 @@ module Make (X : Pre) : S with type 'a t := 'a X.t = struct
     ;;
 
     let __ppx_auto_name t prefix =
+      iter2 (value t) wave_formats ~f:Signal.set_wave_format;
       apply_names ~prefix:(prefix ^ "$") t;
       t
     ;;
   end
 end
+[@@inline never]
+
+module Make (X : Pre) : S with type 'a t := 'a X.t = Make_with_wave_formats (struct
+    include X
+
+    let wave_formats = X.map port_names_and_widths ~f:(Fn.const Wave_format.default)
+  end)
 [@@inline never]
 
 module Update

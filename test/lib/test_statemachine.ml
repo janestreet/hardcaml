@@ -166,95 +166,95 @@ let%expect_test "" =
 
     architecture rtl of statemachine is
 
-        signal hc_10 : std_logic_vector(1 downto 0);
-        signal hc_24 : std_logic_vector(1 downto 0);
-        signal hc_22 : std_logic_vector(3 downto 0);
-        signal hc_14 : std_logic_vector(3 downto 0);
-        signal hc_2 : std_logic;
-        signal hc_4 : std_logic;
-        signal hc_16 : std_logic_vector(3 downto 0);
-        signal hc_17 : std_logic_vector(3 downto 0);
-        signal hc_19 : std_logic_vector(3 downto 0);
-        signal hc_5 : std_logic_vector(3 downto 0);
-        signal hc_15 : std_logic_vector(3 downto 0);
-        signal hc_23 : std_logic;
-        signal hc_25 : std_logic_vector(1 downto 0);
-        signal hc_18 : std_logic_vector(1 downto 0);
-        signal hc_13 : std_logic_vector(1 downto 0);
-        signal hc_7 : std_logic;
-        signal hc_20 : std_logic_vector(1 downto 0);
-        signal hc_26 : std_logic_vector(1 downto 0);
-        signal hc_8 : std_logic_vector(1 downto 0);
-        signal hc_11 : std_logic_vector(1 downto 0);
-        attribute fsm_encoding of hc_11 : signal is "one_hot";
-        signal hc_27 : std_logic;
+        signal \_10\ : std_logic_vector(1 downto 0);
+        signal \_24\ : std_logic_vector(1 downto 0);
+        signal \_22\ : std_logic_vector(3 downto 0);
+        signal \_14\ : std_logic_vector(3 downto 0);
+        signal \_2\ : std_logic;
+        signal \_4\ : std_logic;
+        signal \_16\ : std_logic_vector(3 downto 0);
+        signal \_17\ : std_logic_vector(3 downto 0);
+        signal \_19\ : std_logic_vector(3 downto 0);
+        signal \_5\ : std_logic_vector(3 downto 0);
+        signal \_15\ : std_logic_vector(3 downto 0);
+        signal \_23\ : std_logic;
+        signal \_25\ : std_logic_vector(1 downto 0);
+        signal \_18\ : std_logic_vector(1 downto 0);
+        signal \_13\ : std_logic_vector(1 downto 0);
+        signal \_7\ : std_logic;
+        signal \_20\ : std_logic_vector(1 downto 0);
+        signal \_26\ : std_logic_vector(1 downto 0);
+        signal \_8\ : std_logic_vector(1 downto 0);
+        signal \_11\ : std_logic_vector(1 downto 0);
+        attribute fsm_encoding of \_11\ : signal is "one_hot";
+        signal \_27\ : std_logic;
 
     begin
 
-        hc_10 <= "00";
-        hc_24 <= "11";
-        hc_22 <= "1111";
-        hc_14 <= "0000";
-        hc_2 <= clear;
-        hc_4 <= clock;
-        hc_16 <= "0001";
-        hc_17 <= std_logic_vector(unsigned(hc_15) + unsigned(hc_16));
+        \_10\ <= "00";
+        \_24\ <= "11";
+        \_22\ <= "1111";
+        \_14\ <= "0000";
+        \_2\ <= clear;
+        \_4\ <= clock;
+        \_16\ <= "0001";
+        \_17\ <= std_logic_vector(unsigned(\_15\) + unsigned(\_16\));
         process (all) begin
-            case hc_11 is
+            case \_11\ is
             when "01" =>
-                hc_19 <= hc_14;
+                \_19\ <= \_14\;
             when "10" =>
-                hc_19 <= hc_17;
+                \_19\ <= \_17\;
             when others =>
-                hc_19 <= hc_15;
+                \_19\ <= \_15\;
             end case;
         end process;
-        hc_5 <= hc_19;
-        process (hc_4) begin
-            if rising_edge(hc_4) then
-                if hc_2 = '1' then
-                    hc_15 <= hc_14;
+        \_5\ <= \_19\;
+        process (\_4\) begin
+            if rising_edge(\_4\) then
+                if \_2\ = '1' then
+                    \_15\ <= \_14\;
                 else
-                    hc_15 <= hc_5;
+                    \_15\ <= \_5\;
                 end if;
             end if;
         end process;
-        hc_23 <= unsigned(hc_15) ?= unsigned(hc_22);
-        with to_integer(unsigned(std_logic_vector'("" & hc_23))) select hc_25 <=
-            hc_11 when 0,
-            hc_24 when others;
-        hc_18 <= "10";
-        hc_13 <= "01";
-        hc_7 <= start;
-        with to_integer(unsigned(std_logic_vector'("" & hc_7))) select hc_20 <=
-            hc_11 when 0,
-            hc_13 when others;
+        \_23\ <= unsigned(\_15\) ?= unsigned(\_22\);
+        with to_integer(unsigned(std_logic_vector'("" & \_23\))) select \_25\ <=
+            \_11\ when 0,
+            \_24\ when others;
+        \_18\ <= "10";
+        \_13\ <= "01";
+        \_7\ <= start;
+        with to_integer(unsigned(std_logic_vector'("" & \_7\))) select \_20\ <=
+            \_11\ when 0,
+            \_13\ when others;
         process (all) begin
-            case hc_11 is
+            case \_11\ is
             when "00" =>
-                hc_26 <= hc_20;
+                \_26\ <= \_20\;
             when "01" =>
-                hc_26 <= hc_18;
+                \_26\ <= \_18\;
             when "10" =>
-                hc_26 <= hc_25;
+                \_26\ <= \_25\;
             when "11" =>
-                hc_26 <= hc_10;
+                \_26\ <= \_10\;
             when others =>
-                hc_26 <= hc_11;
+                \_26\ <= \_11\;
             end case;
         end process;
-        hc_8 <= hc_26;
-        process (hc_4) begin
-            if rising_edge(hc_4) then
-                if hc_2 = '1' then
-                    hc_11 <= hc_10;
+        \_8\ <= \_26\;
+        process (\_4\) begin
+            if rising_edge(\_4\) then
+                if \_2\ = '1' then
+                    \_11\ <= \_10\;
                 else
-                    hc_11 <= hc_8;
+                    \_11\ <= \_8\;
                 end if;
             end if;
         end process;
-        hc_27 <= unsigned(hc_10) ?= unsigned(hc_11);
-        is_done <= hc_27;
+        \_27\ <= unsigned(\_10\) ?= unsigned(\_11\);
+        is_done <= \_27\;
 
     end architecture;
     |}]

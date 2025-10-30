@@ -21,4 +21,6 @@ module Wrap (Data : Interface.S) = struct
 
   include T
   include Interface.Make (T)
+
+  let wave_formats = { lhs = Data.wave_formats; rhs = Data.wave_formats }
 end

@@ -126,56 +126,56 @@ let%expect_test "instantiation, with 0 or more parameters." =
 
     architecture rtl of temp is
 
-        signal hc_13 : std_logic_vector(1 downto 0);
-        signal hc_10 : std_logic_vector(1 downto 0);
-        signal hc_8 : std_logic_vector(1 downto 0);
-        signal hc_11 : std_logic_vector(1 downto 0);
-        signal hc_14 : std_logic_vector(1 downto 0);
-        signal hc_12 : std_logic_vector(2 downto 0);
-        signal hc_18 : std_logic;
-        signal hc_9 : std_logic_vector(2 downto 0);
-        signal hc_16 : std_logic;
-        signal hc_3 : std_logic;
-        signal hc_5 : std_logic;
-        signal hc_7 : std_logic_vector(2 downto 0);
-        signal hc_15 : std_logic;
-        signal hc_17 : std_logic;
-        signal hc_19 : std_logic;
+        signal \_13\ : std_logic_vector(1 downto 0);
+        signal \_10\ : std_logic_vector(1 downto 0);
+        signal \_8\ : std_logic_vector(1 downto 0);
+        signal \_11\ : std_logic_vector(1 downto 0);
+        signal \_14\ : std_logic_vector(1 downto 0);
+        signal \_12\ : std_logic_vector(2 downto 0);
+        signal \_18\ : std_logic;
+        signal \_9\ : std_logic_vector(2 downto 0);
+        signal \_16\ : std_logic;
+        signal \_3\ : std_logic;
+        signal \_5\ : std_logic;
+        signal \_7\ : std_logic_vector(2 downto 0);
+        signal \_15\ : std_logic;
+        signal \_17\ : std_logic;
+        signal \_19\ : std_logic;
 
     begin
 
-        hc_13 <= hc_12(2 downto 1);
-        hc_10 <= hc_9(2 downto 1);
-        hc_8 <= hc_7(2 downto 1);
-        hc_11 <= hc_8 or hc_10;
-        hc_14 <= hc_11 or hc_13;
+        \_13\ <= \_12\(2 downto 1);
+        \_10\ <= \_9\(2 downto 1);
+        \_8\ <= \_7\(2 downto 1);
+        \_11\ <= \_8\ or \_10\;
+        \_14\ <= \_11\ or \_13\;
         the_foo: entity work.foo (rtl)
             generic map ( par => 3,
                           far => "baloo" )
-            port map ( foo => hc_5,
-                       bar => hc_3,
-                       zoo => hc_12(0),
-                       moo => hc_12(2 downto 1) );
-        hc_18 <= hc_12(0);
+            port map ( foo => \_5\,
+                       bar => \_3\,
+                       zoo => \_12\(0),
+                       moo => \_12\(2 downto 1) );
+        \_18\ <= \_12\(0);
         the_foo_1: entity work.foo (rtl)
             generic map ( par => 3 )
-            port map ( foo => hc_5,
-                       bar => hc_3,
-                       zoo => hc_9(0),
-                       moo => hc_9(2 downto 1) );
-        hc_16 <= hc_9(0);
-        hc_3 <= bar;
-        hc_5 <= foo;
+            port map ( foo => \_5\,
+                       bar => \_3\,
+                       zoo => \_9\(0),
+                       moo => \_9\(2 downto 1) );
+        \_16\ <= \_9\(0);
+        \_3\ <= bar;
+        \_5\ <= foo;
         the_foo_2: entity work.foo (rtl)
-            port map ( foo => hc_5,
-                       bar => hc_3,
-                       zoo => hc_7(0),
-                       moo => hc_7(2 downto 1) );
-        hc_15 <= hc_7(0);
-        hc_17 <= hc_15 or hc_16;
-        hc_19 <= hc_17 or hc_18;
-        zoo <= hc_19;
-        moo <= hc_14;
+            port map ( foo => \_5\,
+                       bar => \_3\,
+                       zoo => \_7\(0),
+                       moo => \_7\(2 downto 1) );
+        \_15\ <= \_7\(0);
+        \_17\ <= \_15\ or \_16\;
+        \_19\ <= \_17\ or \_18\;
+        zoo <= \_19\;
+        moo <= \_14\;
 
     end architecture;
     |}]
@@ -244,21 +244,21 @@ let%expect_test "instantiation output corner case" =
 
     architecture rtl of temp is
 
-        signal hc_2 : std_logic;
-        signal hc_4 : std_logic;
-        signal hc_7 : std_logic;
-        signal hc_5 : std_logic;
+        signal \_2\ : std_logic;
+        signal \_4\ : std_logic;
+        signal \_7\ : std_logic;
+        signal \_5\ : std_logic;
 
     begin
 
-        hc_2 <= bar;
-        hc_4 <= foo;
+        \_2\ <= bar;
+        \_4\ <= foo;
         the_foo: entity work.foo (rtl)
-            port map ( foo => hc_4,
-                       bar => hc_2,
-                       zoo => hc_7 );
-        hc_5 <= hc_7;
-        zoo <= hc_5;
+            port map ( foo => \_4\,
+                       bar => \_2\,
+                       zoo => \_7\ );
+        \_5\ <= \_7\;
+        zoo <= \_5\;
 
     end architecture;
     |}]
@@ -360,15 +360,15 @@ let%expect_test "all parameter types" =
 
     architecture rtl of temp is
 
-        signal hc_2 : std_logic;
-        signal hc_4 : std_logic;
-        signal hc_7 : std_logic;
-        signal hc_5 : std_logic;
+        signal \_2\ : std_logic;
+        signal \_4\ : std_logic;
+        signal \_7\ : std_logic;
+        signal \_5\ : std_logic;
 
     begin
 
-        hc_2 <= bar;
-        hc_4 <= foo;
+        \_2\ <= bar;
+        \_4\ <= foo;
         the_foo: entity work.foo (rtl)
             generic map ( a => '1',
                           a2 => '0',
@@ -382,11 +382,11 @@ let%expect_test "all parameter types" =
                           h => 'W',
                           i => std_ulogic_vector'("UX01ZWLH_"),
                           j => "foo" )
-            port map ( foo => hc_4,
-                       bar => hc_2,
-                       zoo => hc_7 );
-        hc_5 <= hc_7;
-        zoo <= hc_5;
+            port map ( foo => \_4\,
+                       bar => \_2\,
+                       zoo => \_7\ );
+        \_5\ <= \_7\;
+        zoo <= \_5\;
 
     end architecture;
     |}]
@@ -439,12 +439,12 @@ let%expect_test "phantom input" =
 
     architecture rtl of temp is
 
-        signal hc_2 : std_logic;
+        signal \_2\ : std_logic;
 
     begin
 
-        hc_2 <= foo;
-        zoo <= hc_2;
+        \_2\ <= foo;
+        zoo <= \_2\;
 
     end architecture;
     |}]
@@ -536,25 +536,25 @@ let%expect_test "vivado compatibility mode" =
 
     architecture rtl of temp is
 
-        signal hc_2 : std_logic;
-        signal hc_4 : std_logic;
-        signal hc_7 : std_logic;
-        signal hc_5 : std_logic;
+        signal \_2\ : std_logic;
+        signal \_4\ : std_logic;
+        signal \_7\ : std_logic;
+        signal \_5\ : std_logic;
 
     begin
 
-        hc_2 <= bar;
-        hc_4 <= foo;
+        \_2\ <= bar;
+        \_4\ <= foo;
         the_foo: entity work.foo (rtl)
             generic map ( a => '0',
                           b => '1',
                           c => '0',
                           d => '1' )
-            port map ( foo => hc_4,
-                       bar => hc_2,
-                       zoo => hc_7 );
-        hc_5 <= hc_7;
-        zoo <= hc_5;
+            port map ( foo => \_4\,
+                       bar => \_2\,
+                       zoo => \_7\ );
+        \_5\ <= \_7\;
+        zoo <= \_5\;
 
     end architecture;
     |}];

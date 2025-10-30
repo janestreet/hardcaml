@@ -224,7 +224,41 @@ module type Fifo = sig
         mode and include an extra register stage. Latency is slightly higher than the
         version built by [create]. *)
     val classic
-      :  ?extra_reg:bool (* default is false *)
+      :  ?extra_reg:bool (** default is false *)
       -> Interface.Create_fn(I)(O).t create_params
   end
+
+  type 'a typed_fifo_read_result =
+    { q : (Signal.t, 'a) With_valid.t2
+    (** q this cycle, valid is set if the fifo was not empty when it was read, value is
+        not well defined if valid is not set. *)
+    ; empty : Signal.t (** Is the fifo currently empty. *)
+    ; full : Signal.t (** Is the fifo currently full. *)
+    ; overflow : Signal.t (** Set if the input was valid when the fifo was full. *)
+    ; read_when_empty : Signal.t (** Set if read was valid when the fifo was empty. *)
+    }
+
+  (** A typed fifo, allowing for types deriving hardcaml to be added to a fifo without
+      manual packing / unpacking. We will write to the fifo whenever the input is valid
+      and the fifo is not full. We will pop the fifo whenever read is high and the fifo is
+      not empty. *)
+  val typed_fifo
+    :  ?scope:Scope.t
+    -> clocking:Signal.t Clocking.t
+    -> capacity:int
+    -> input:(Signal.t, 'a) With_valid.t2
+    -> read:Signal.t
+    -> (module Interface.S_Of_signal with type Of_signal.t = 'a)
+    -> 'a typed_fifo_read_result
+
+  (** A cut through typed fifo which will cut through if the fifo is empty and read is
+      high. *)
+  val cut_through_typed_fifo
+    :  ?scope:Scope.t
+    -> clocking:Signal.t Clocking.t
+    -> capacity:int
+    -> input:(Signal.t, 'a) With_valid.t2
+    -> read:Signal.t
+    -> (module Interface.S_Of_signal with type Of_signal.t = 'a)
+    -> 'a typed_fifo_read_result
 end

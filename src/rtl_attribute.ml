@@ -103,6 +103,8 @@ module Vivado = struct
   ;;
 
   let max_fanout n = create "max_fanout" ~value:(Value.Int n)
+  let retiming_forward n = create "retiming_forward" ~value:(Value.Int n)
+  let retiming_backward n = create "retiming_backward" ~value:(Value.Int n)
 
   let extract_enable b =
     create "extract_enable" ~applies_to:[ Regs ] ~value:(true_or_false_string b)

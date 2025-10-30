@@ -23,6 +23,8 @@ module type Attributes = sig
   val attributes : t -> Rtl_attribute.t list
 
   (** Set the format used to display the signal *)
+  val set_wave_format : t -> Wave_format.t -> unit
+
   val ( --$ ) : t -> Wave_format.t -> t
 end
 
@@ -223,7 +225,12 @@ module type Memories = sig
       to map ROMs into RAM resources by registering the output. *)
   val rom : read_addresses:t array -> Bits.t array -> t array
 
-  val memory : int -> write_port:t Write_port.t -> read_address:t -> t
+  val memory
+    :  ?attributes:Rtl_attribute.t list
+    -> int
+    -> write_port:t Write_port.t
+    -> read_address:t
+    -> t
 
   val ram_wbr
     :  ?name:string

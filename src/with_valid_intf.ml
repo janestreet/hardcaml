@@ -53,6 +53,8 @@ module type With_valid = sig
     -> ('a, 'd) t2
 
   val to_option : (Bits.t, 'a) t2 -> 'a option
+  val wave_formats : Wave_format.t t
+  val port_names_and_widths_dynamic : nbits:int -> (string * int) t
 
   (** Create a new hardcaml interface with type ['a With_valid.t X.t] *)
   module Fields : sig

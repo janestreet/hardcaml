@@ -151,6 +151,7 @@ let names_and_locs = pr_app Signal.names_and_locs
 (* Signal.Attributes *)
 let add_attribute = pr_transform_extra Signal.add_attribute
 let attributes = pr_app Signal.attributes
+let set_wave_format = pr_app Signal.set_wave_format
 let ( --$ ) = pr_transform_extra Signal.( --$ )
 
 (* Signal.Comments *)

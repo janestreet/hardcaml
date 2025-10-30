@@ -102,3 +102,5 @@ let rec to_string t =
     Staged.stage to_string
   | Custom f -> Staged.stage f
 ;;
+
+let default = Bit_or Hex

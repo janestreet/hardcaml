@@ -207,8 +207,9 @@ module Memories (Comb : sig
 struct
   include Multiport_memory.Make (Comb)
 
-  let memory size ~write_port ~read_address =
+  let memory ?attributes size ~write_port ~read_address =
     (multiport_memory
+       ?attributes
        size
        ~write_ports:[| write_port |]
        ~read_addresses:[| read_address |]).(0)

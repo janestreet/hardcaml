@@ -805,3 +805,68 @@ module With_interface (Config : Config) = struct
 
   let create = create_fn ~f:(create ~showahead:Config.showahead ?read_latency:None)
 end
+
+type 'a typed_fifo_read_result =
+  { q : (Signal.t, 'a) With_valid.t2
+  ; empty : Signal.t
+  ; full : Signal.t
+  ; overflow : Signal.t
+  ; read_when_empty : Signal.t
+  }
+
+let typed_fifo
+  (type a)
+  ?scope
+  ~(clocking : Signal.t Clocking.t)
+  ~capacity
+  ~(input : (Signal.t, a) With_valid.t2)
+  ~(read : Signal.t)
+  (module C : Interface.S_Of_signal with type Of_signal.t = a)
+  =
+  let fifo =
+    create
+      ?scope
+      ~showahead:true
+      ~capacity
+      ~clock:clocking.clock
+      ~clear:clocking.clear
+      ~wr:input.valid
+      ~d:(C.Of_signal.pack input.value)
+      ~rd:read
+      ()
+  in
+  let unpacked_q = C.Of_signal.unpack fifo.q in
+  { q = { With_valid.valid = ~:(fifo.empty); value = unpacked_q }
+  ; empty = fifo.empty
+  ; full = fifo.full
+  ; overflow = fifo.full &: input.valid &: ~:read
+  ; read_when_empty = fifo.empty &: read
+  }
+;;
+
+let cut_through_typed_fifo
+  (type a)
+  ?scope
+  ~(clocking : Signal.t Clocking.t)
+  ~capacity
+  ~(input : (Signal.t, a) With_valid.t2)
+  ~(read : Signal.t)
+  (module C : Interface.S_Of_signal with type Of_signal.t = a)
+  =
+  let cutting_through = wire 1 in
+  let fifo_input = { input with valid = input.valid &: ~:cutting_through } in
+  let fifo_read = read &: ~:cutting_through in
+  let underlying_fifo =
+    typed_fifo ?scope ~clocking ~capacity ~input:fifo_input ~read:fifo_read (module C)
+  in
+  cutting_through <-- (underlying_fifo.empty &: input.valid &: read);
+  { q =
+      { With_valid.valid = input.valid |: underlying_fifo.q.valid
+      ; value = C.Of_signal.mux2 underlying_fifo.empty input.value underlying_fifo.q.value
+      }
+  ; empty = underlying_fifo.empty
+  ; full = underlying_fifo.full
+  ; overflow = underlying_fifo.overflow
+  ; read_when_empty = underlying_fifo.read_when_empty
+  }
+;;

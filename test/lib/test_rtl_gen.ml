@@ -49,18 +49,18 @@ let%expect_test "reg, clock + enable" =
 
     architecture rtl of reg is
 
-        signal hc_5 : std_logic_vector(7 downto 0);
+        signal \_5\ : std_logic_vector(7 downto 0);
 
     begin
 
         process (clock) begin
             if rising_edge(clock) then
                 if enable = '1' then
-                    hc_5 <= d;
+                    \_5\ <= d;
                 end if;
             end if;
         end process;
-        q <= hc_5;
+        q <= \_5\;
 
     end architecture;
     |}]
@@ -126,28 +126,28 @@ let%expect_test "reg, clock, reset, clear + enable" =
 
     architecture rtl of reg is
 
-        signal hc_8 : std_logic_vector(7 downto 0);
-        signal hc_9 : std_logic_vector(7 downto 0);
+        signal \_8\ : std_logic_vector(7 downto 0);
+        signal \_9\ : std_logic_vector(7 downto 0);
 
     begin
 
-        hc_8 <= "00000000";
+        \_8\ <= "00000000";
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_9 <= hc_8;
+                \_9\ <= \_8\;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
-                        hc_9 <= hc_8;
+                        \_9\ <= \_8\;
                     else
                         if enable = '1' then
-                            hc_9 <= d;
+                            \_9\ <= d;
                         end if;
                     end if;
                 end if;
             end if;
         end process;
-        q <= hc_9;
+        q <= \_9\;
 
     end architecture;
     |}]
@@ -217,30 +217,21 @@ let%expect_test "mem" =
 
     architecture rtl of reg is
 
-        type hc_7_type is protected
-            procedure set(address : integer; data : std_logic_vector(7 downto 0));
-            impure function get(address : integer) return std_logic_vector;
-        end protected;
-        type hc_7_type is protected body
-            type t is array (0 to 3) of std_logic_vector(7 downto 0);
-            variable memory : t;
-            procedure set(address : integer; data : std_logic_vector(7 downto 0)) is begin memory(address) := data; end procedure;
-            impure function get(address : integer) return std_logic_vector is begin return memory(address); end function;
-        end protected body;
-        shared variable hc_7 : hc_7_type;
-        signal hc_8 : std_logic_vector(7 downto 0);
+        type \_7_type\ is array (0 to 3) of std_logic_vector(7 downto 0);
+        signal \_7\ : \_7_type\;
+        signal \_8\ : std_logic_vector(7 downto 0);
 
     begin
 
         process (clock) begin
             if rising_edge(clock) then
                 if write_enable = '1' then
-                    hc_7.set(to_integer(unsigned(write_address)), write_data);
+                    \_7\(to_integer(unsigned(write_address))) <= write_data;
                 end if;
             end if;
         end process;
-        hc_8 <= hc_7.get(to_integer(unsigned(read_address)));
-        q <= hc_8;
+        \_8\ <= \_7\(to_integer(unsigned(read_address)));
+        q <= \_8\;
 
     end architecture;
     |}]
@@ -315,38 +306,29 @@ let%expect_test "multiport mem" =
 
     architecture rtl of reg is
 
-        type hc_8_type is protected
-            procedure set(address : integer; data : std_logic_vector(7 downto 0));
-            impure function get(address : integer) return std_logic_vector;
-        end protected;
-        type hc_8_type is protected body
-            type t is array (0 to 3) of std_logic_vector(7 downto 0);
-            variable memory : t;
-            procedure set(address : integer; data : std_logic_vector(7 downto 0)) is begin memory(address) := data; end procedure;
-            impure function get(address : integer) return std_logic_vector is begin return memory(address); end function;
-        end protected body;
-        shared variable hc_8 : hc_8_type;
-        signal hc_9 : std_logic_vector(7 downto 0);
-        signal hc_10 : std_logic_vector(7 downto 0);
+        type \_8_type\ is array (0 to 3) of std_logic_vector(7 downto 0);
+        signal \_8\ : \_8_type\;
+        signal \_9\ : std_logic_vector(7 downto 0);
+        signal \_10\ : std_logic_vector(7 downto 0);
 
     begin
 
         process (clock) begin
             if rising_edge(clock) then
                 if write_enable = '1' then
-                    hc_8.set(to_integer(unsigned(write_address)), write_data);
+                    \_8\(to_integer(unsigned(write_address))) <= write_data;
                 end if;
             end if;
         end process;
-        hc_9 <= hc_8.get(to_integer(unsigned(read_address)));
+        \_9\ <= \_8\(to_integer(unsigned(read_address)));
         process (clock) begin
             if rising_edge(clock) then
                 if read_enable = '1' then
-                    hc_10 <= hc_9;
+                    \_10\ <= \_9\;
                 end if;
             end if;
         end process;
-        q0 <= hc_10;
+        q0 <= \_10\;
 
     end architecture;
     |}]
@@ -525,20 +507,20 @@ let%expect_test "initial value of resisters" =
 
     architecture rtl of reg is
 
-        signal hc_5 : std_logic_vector(7 downto 0);
-        signal hc_6 : std_logic_vector(7 downto 0) := "00101011";
+        signal \_5\ : std_logic_vector(7 downto 0);
+        signal \_6\ : std_logic_vector(7 downto 0) := "00101011";
 
     begin
 
-        hc_5 <= "00101011";
+        \_5\ <= "00101011";
         process (clock) begin
             if rising_edge(clock) then
                 if enable = '1' then
-                    hc_6 <= d;
+                    \_6\ <= d;
                 end if;
             end if;
         end process;
-        q <= hc_6;
+        q <= \_6\;
 
     end architecture;
     |}]

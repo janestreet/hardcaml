@@ -3,8 +3,8 @@ open! Core0
 module type S = Scalar_intf.S
 module type S_untyped = Scalar_intf.S_untyped
 
-module Make (X : Value.Arg) = struct
-  include Value.Make (X)
+module Make_with_wave_format (X : Value.Arg_with_wave_format) = struct
+  include Value.Make_with_wave_format (X)
 
   let num_bits = X.port_width
 
@@ -51,11 +51,18 @@ module Make (X : Value.Arg) = struct
   let lower_with_valid t = t
 end
 
-let scalar ?(name = "scalar") port_width =
+module Make (S : Value.Arg) = Make_with_wave_format (struct
+    include S
+
+    let wave_format = Wave_format.default
+  end)
+
+let scalar ?wave_format ?(name = "scalar") port_width =
   let module M =
-    Make (struct
+    Make_with_wave_format (struct
       let port_name = name
       let port_width = port_width
+      let wave_format = Option.value wave_format ~default:Wave_format.default
     end)
   in
   (module M : S_untyped)

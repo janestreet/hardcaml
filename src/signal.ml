@@ -138,6 +138,8 @@ let add_always_state_transition_waiver_exn t waiver =
   | _ -> raise_invalid_waiver t ~expected_kind:"register"
 ;;
 
+let set_wave_format = Type.set_wave_format
+
 let ( --$ ) s w =
   Type.set_wave_format s w;
   s

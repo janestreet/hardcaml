@@ -210,77 +210,77 @@ let%expect_test "operators" =
 
     architecture rtl of operators is
 
-        signal hc_25 : std_logic_vector(7 downto 0);
-        signal hc_24 : std_logic_vector(7 downto 0);
-        signal hc_23 : std_logic_vector(1 downto 0);
-        signal hc_26 : std_logic_vector(7 downto 0);
-        signal hc_27 : std_logic;
-        signal hc_28 : std_logic_vector(7 downto 0);
-        signal hc_29 : std_logic_vector(25 downto 0);
-        signal hc_30 : std_logic_vector(15 downto 0);
-        signal hc_31 : std_logic_vector(5 downto 0);
-        signal hc_32 : std_logic_vector(1 downto 0);
-        signal hc_33 : std_logic;
-        signal hc_34 : std_logic;
-        signal hc_35 : std_logic_vector(17 downto 0);
-        signal hc_11 : std_logic_vector(9 downto 0);
-        signal hc_36 : std_logic_vector(17 downto 0);
-        signal hc_37 : std_logic_vector(7 downto 0);
-        signal hc_38 : std_logic_vector(7 downto 0);
-        signal hc_39 : std_logic_vector(7 downto 0);
-        signal a_b : std_logic_vector(7 downto 0);
+        signal \_25\ : std_logic_vector(7 downto 0);
+        signal \_24\ : std_logic_vector(7 downto 0);
+        signal \_23\ : std_logic_vector(1 downto 0);
+        signal \_26\ : std_logic_vector(7 downto 0);
+        signal \_27\ : std_logic;
+        signal \_28\ : std_logic_vector(7 downto 0);
+        signal \_29\ : std_logic_vector(25 downto 0);
+        signal \_30\ : std_logic_vector(15 downto 0);
+        signal \_31\ : std_logic_vector(5 downto 0);
+        signal \_32\ : std_logic_vector(1 downto 0);
+        signal \_33\ : std_logic;
+        signal \_34\ : std_logic;
+        signal \_35\ : std_logic_vector(17 downto 0);
+        signal \_11\ : std_logic_vector(9 downto 0);
+        signal \_36\ : std_logic_vector(17 downto 0);
+        signal \_37\ : std_logic_vector(7 downto 0);
+        signal \_38\ : std_logic_vector(7 downto 0);
+        signal \_39\ : std_logic_vector(7 downto 0);
+        signal \a.b\ : std_logic_vector(7 downto 0);
         signal module : std_logic_vector(7 downto 0);
-        signal hc_19 : std_logic_vector(7 downto 0);
-        signal hc_21 : std_logic_vector(7 downto 0);
-        signal hc_42 : std_logic_vector(7 downto 0);
+        signal \_19\ : std_logic_vector(7 downto 0);
+        signal \_21\ : std_logic_vector(7 downto 0);
+        signal \_42\ : std_logic_vector(7 downto 0);
 
     begin
 
-        hc_25 <= "10101011";
-        hc_24 <= hc_11(7 downto 0);
-        hc_23 <= hc_21(2 downto 1);
-        with to_integer(unsigned(hc_23)) select hc_26 <=
-            hc_21 when 0,
-            hc_19 when 1,
-            hc_24 when 2,
-            hc_25 when others;
-        hc_27 <= hc_21(0);
-        with to_integer(unsigned(std_logic_vector'("" & hc_27))) select hc_28 <=
-            hc_19 when 0,
-            hc_21 when others;
-        hc_29 <= hc_21 & hc_19 & hc_11;
-        hc_30 <= hc_21 & hc_19;
-        hc_31 <= hc_11(9 downto 4);
-        hc_32 <= hc_21(4 downto 3);
-        hc_33 <= unsigned(hc_21) ?< unsigned(hc_19);
-        hc_34 <= unsigned(hc_21) ?= unsigned(hc_19);
-        hc_35 <= std_logic_vector(signed(hc_21) * signed(hc_11));
-        hc_11 <= i_c;
-        hc_36 <= std_logic_vector(unsigned(hc_21) * unsigned(hc_11));
-        hc_37 <= std_logic_vector(unsigned(hc_21) - unsigned(hc_19));
-        hc_38 <= std_logic_vector(unsigned(hc_21) + unsigned(hc_19));
-        hc_39 <= not hc_21;
-        a_b <= hc_21 xor hc_19;
-        module <= hc_21 or hc_19;
-        hc_19 <= i_b;
-        hc_21 <= i_a;
-        hc_42 <= hc_21 and hc_19;
-        o_and <= hc_42;
+        \_25\ <= "10101011";
+        \_24\ <= \_11\(7 downto 0);
+        \_23\ <= \_21\(2 downto 1);
+        with to_integer(unsigned(\_23\)) select \_26\ <=
+            \_21\ when 0,
+            \_19\ when 1,
+            \_24\ when 2,
+            \_25\ when others;
+        \_27\ <= \_21\(0);
+        with to_integer(unsigned(std_logic_vector'("" & \_27\))) select \_28\ <=
+            \_19\ when 0,
+            \_21\ when others;
+        \_29\ <= \_21\ & \_19\ & \_11\;
+        \_30\ <= \_21\ & \_19\;
+        \_31\ <= \_11\(9 downto 4);
+        \_32\ <= \_21\(4 downto 3);
+        \_33\ <= unsigned(\_21\) ?< unsigned(\_19\);
+        \_34\ <= unsigned(\_21\) ?= unsigned(\_19\);
+        \_35\ <= std_logic_vector(signed(\_21\) * signed(\_11\));
+        \_11\ <= i_c;
+        \_36\ <= std_logic_vector(unsigned(\_21\) * unsigned(\_11\));
+        \_37\ <= std_logic_vector(unsigned(\_21\) - unsigned(\_19\));
+        \_38\ <= std_logic_vector(unsigned(\_21\) + unsigned(\_19\));
+        \_39\ <= not \_21\;
+        \a.b\ <= \_21\ xor \_19\;
+        module <= \_21\ or \_19\;
+        \_19\ <= i_b;
+        \_21\ <= i_a;
+        \_42\ <= \_21\ and \_19\;
+        o_and <= \_42\;
         o_or <= module;
-        o_xor <= a_b;
-        o_not <= hc_39;
-        o_add <= hc_38;
-        o_sub <= hc_37;
-        o_mul <= hc_36;
-        o_smul <= hc_35;
-        o_eq <= hc_34;
-        o_lt <= hc_33;
-        o_select1 <= hc_32;
-        o_select2 <= hc_31;
-        o_cat1 <= hc_30;
-        o_cat2 <= hc_29;
-        o_mux2 <= hc_28;
-        o_mux <= hc_26;
+        o_xor <= \a.b\;
+        o_not <= \_39\;
+        o_add <= \_38\;
+        o_sub <= \_37\;
+        o_mul <= \_36\;
+        o_smul <= \_35\;
+        o_eq <= \_34\;
+        o_lt <= \_33\;
+        o_select1 <= \_32\;
+        o_select2 <= \_31\;
+        o_cat1 <= \_30\;
+        o_cat2 <= \_29\;
+        o_mux2 <= \_28\;
+        o_mux <= \_26\;
 
     end architecture;
     |}]

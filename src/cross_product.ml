@@ -24,4 +24,6 @@ module Make (Outer : Interface.S) (Inner : Interface.S) = struct
 
   include Pre
   include Interface.Make (Pre)
+
+  let wave_formats = Outer.map Outer.wave_formats ~f:(fun _ -> Inner.wave_formats)
 end

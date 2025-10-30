@@ -48,16 +48,16 @@ let%expect_test "clock" =
 
     architecture rtl of my_register is
 
-        signal hc_4 : std_logic;
+        signal \_4\ : std_logic;
 
     begin
 
         process (clock) begin
             if rising_edge(clock) then
-                hc_4 <= d;
+                \_4\ <= d;
             end if;
         end process;
-        q <= hc_4;
+        q <= \_4\;
 
     end architecture;
     |}];
@@ -95,16 +95,16 @@ let%expect_test "clock" =
 
     architecture rtl of my_register is
 
-        signal hc_4 : std_logic;
+        signal \_4\ : std_logic;
 
     begin
 
         process (clock) begin
             if rising_edge(clock) then
-                hc_4 <= d;
+                \_4\ <= d;
             end if;
         end process;
-        q <= hc_4;
+        q <= \_4\;
 
     end architecture;
     |}];
@@ -146,18 +146,18 @@ let%expect_test "clock" =
 
     architecture rtl of my_register is
 
-        signal hc_5 : std_logic;
+        signal \_5\ : std_logic;
 
     begin
 
         process (clock) begin
             if rising_edge(clock) then
                 if enable = '1' then
-                    hc_5 <= d;
+                    \_5\ <= d;
                 end if;
             end if;
         end process;
-        q <= hc_5;
+        q <= \_5\;
 
     end architecture;
     |}];
@@ -200,18 +200,18 @@ let%expect_test "clock" =
 
     architecture rtl of my_register is
 
-        signal hc_5 : std_logic;
+        signal \_5\ : std_logic;
 
     begin
 
         process (clock) begin
             if falling_edge(clock) then
                 if enable = '1' then
-                    hc_5 <= d;
+                    \_5\ <= d;
                 end if;
             end if;
         end process;
-        q <= hc_5;
+        q <= \_5\;
 
     end architecture;
     |}];
@@ -253,18 +253,18 @@ let%expect_test "clock" =
 
     architecture rtl of my_register is
 
-        signal hc_4 : std_logic;
-        signal hc_5 : std_logic := '1';
+        signal \_4\ : std_logic;
+        signal \_5\ : std_logic := '1';
 
     begin
 
-        hc_4 <= '1';
+        \_4\ <= '1';
         process (clock) begin
             if falling_edge(clock) then
-                hc_5 <= d;
+                \_5\ <= d;
             end if;
         end process;
-        q <= hc_5;
+        q <= \_5\;
 
     end architecture;
     |}]
@@ -327,22 +327,22 @@ let%expect_test "clock + reset" =
 
     architecture rtl of my_register is
 
-        signal hc_5 : std_logic;
-        signal hc_6 : std_logic;
+        signal \_5\ : std_logic;
+        signal \_6\ : std_logic;
 
     begin
 
-        hc_5 <= '0';
+        \_5\ <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_6 <= hc_5;
+                \_6\ <= \_5\;
             else
                 if rising_edge(clock) then
-                    hc_6 <= d;
+                    \_6\ <= d;
                 end if;
             end if;
         end process;
-        q <= hc_6;
+        q <= \_6\;
 
     end architecture;
     |}];
@@ -388,22 +388,22 @@ let%expect_test "clock + reset" =
 
     architecture rtl of my_register is
 
-        signal hc_5 : std_logic;
-        signal hc_6 : std_logic;
+        signal \_5\ : std_logic;
+        signal \_6\ : std_logic;
 
     begin
 
-        hc_5 <= '0';
+        \_5\ <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_6 <= hc_5;
+                \_6\ <= \_5\;
             else
                 if rising_edge(clock) then
-                    hc_6 <= d;
+                    \_6\ <= d;
                 end if;
             end if;
         end process;
-        q <= hc_6;
+        q <= \_6\;
 
     end architecture;
     |}];
@@ -453,24 +453,24 @@ let%expect_test "clock + reset" =
 
     architecture rtl of my_register is
 
-        signal hc_6 : std_logic;
-        signal hc_7 : std_logic;
+        signal \_6\ : std_logic;
+        signal \_7\ : std_logic;
 
     begin
 
-        hc_6 <= '0';
+        \_6\ <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_7 <= hc_6;
+                \_7\ <= \_6\;
             else
                 if rising_edge(clock) then
                     if enable = '1' then
-                        hc_7 <= d;
+                        \_7\ <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= hc_7;
+        q <= \_7\;
 
     end architecture;
     |}];
@@ -521,24 +521,24 @@ let%expect_test "clock + reset" =
 
     architecture rtl of my_register is
 
-        signal hc_6 : std_logic;
-        signal hc_7 : std_logic;
+        signal \_6\ : std_logic;
+        signal \_7\ : std_logic;
 
     begin
 
-        hc_6 <= '0';
+        \_6\ <= '0';
         process (clock, reset) begin
             if falling_edge(reset) then
-                hc_7 <= hc_6;
+                \_7\ <= \_6\;
             else
                 if rising_edge(clock) then
                     if enable = '1' then
-                        hc_7 <= d;
+                        \_7\ <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= hc_7;
+        q <= \_7\;
 
     end architecture;
     |}]
@@ -588,22 +588,22 @@ let%expect_test "clock + clear" =
 
     architecture rtl of my_register is
 
-        signal hc_5 : std_logic;
-        signal hc_6 : std_logic;
+        signal \_5\ : std_logic;
+        signal \_6\ : std_logic;
 
     begin
 
-        hc_5 <= '0';
+        \_5\ <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if clear = '1' then
-                    hc_6 <= hc_5;
+                    \_6\ <= \_5\;
                 else
-                    hc_6 <= d;
+                    \_6\ <= d;
                 end if;
             end if;
         end process;
-        q <= hc_6;
+        q <= \_6\;
 
     end architecture;
     |}];
@@ -649,22 +649,22 @@ let%expect_test "clock + clear" =
 
     architecture rtl of my_register is
 
-        signal hc_5 : std_logic;
-        signal hc_6 : std_logic;
+        signal \_5\ : std_logic;
+        signal \_6\ : std_logic;
 
     begin
 
-        hc_5 <= '0';
+        \_5\ <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if clear = '1' then
-                    hc_6 <= hc_5;
+                    \_6\ <= \_5\;
                 else
-                    hc_6 <= d;
+                    \_6\ <= d;
                 end if;
             end if;
         end process;
-        q <= hc_6;
+        q <= \_6\;
 
     end architecture;
     |}];
@@ -714,24 +714,24 @@ let%expect_test "clock + clear" =
 
     architecture rtl of my_register is
 
-        signal hc_6 : std_logic;
-        signal hc_7 : std_logic;
+        signal \_6\ : std_logic;
+        signal \_7\ : std_logic;
 
     begin
 
-        hc_6 <= '0';
+        \_6\ <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if clear = '1' then
-                    hc_7 <= hc_6;
+                    \_7\ <= \_6\;
                 else
                     if enable = '1' then
-                        hc_7 <= d;
+                        \_7\ <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= hc_7;
+        q <= \_7\;
 
     end architecture;
     |}]
@@ -787,26 +787,26 @@ let%expect_test "clock + reset + clear" =
 
     architecture rtl of my_register is
 
-        signal hc_7 : std_logic;
-        signal hc_8 : std_logic;
+        signal \_7\ : std_logic;
+        signal \_8\ : std_logic;
 
     begin
 
-        hc_7 <= '0';
+        \_7\ <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_8 <= hc_7;
+                \_8\ <= \_7\;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
-                        hc_8 <= hc_7;
+                        \_8\ <= \_7\;
                     else
-                        hc_8 <= d;
+                        \_8\ <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= hc_8;
+        q <= \_8\;
 
     end architecture;
     |}];
@@ -858,26 +858,26 @@ let%expect_test "clock + reset + clear" =
 
     architecture rtl of my_register is
 
-        signal hc_7 : std_logic;
-        signal hc_8 : std_logic;
+        signal \_7\ : std_logic;
+        signal \_8\ : std_logic;
 
     begin
 
-        hc_7 <= '0';
+        \_7\ <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_8 <= hc_7;
+                \_8\ <= \_7\;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
-                        hc_8 <= hc_7;
+                        \_8\ <= \_7\;
                     else
-                        hc_8 <= d;
+                        \_8\ <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= hc_8;
+        q <= \_8\;
 
     end architecture;
     |}];
@@ -933,28 +933,28 @@ let%expect_test "clock + reset + clear" =
 
     architecture rtl of my_register is
 
-        signal hc_8 : std_logic;
-        signal hc_9 : std_logic;
+        signal \_8\ : std_logic;
+        signal \_9\ : std_logic;
 
     begin
 
-        hc_8 <= '0';
+        \_8\ <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                hc_9 <= hc_8;
+                \_9\ <= \_8\;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
-                        hc_9 <= hc_8;
+                        \_9\ <= \_8\;
                     else
                         if enable = '1' then
-                            hc_9 <= d;
+                            \_9\ <= d;
                         end if;
                     end if;
                 end if;
             end if;
         end process;
-        q <= hc_9;
+        q <= \_9\;
 
     end architecture;
     |}];
@@ -1011,28 +1011,28 @@ let%expect_test "clock + reset + clear" =
 
     architecture rtl of my_register is
 
-        signal hc_8 : std_logic;
-        signal hc_9 : std_logic;
+        signal \_8\ : std_logic;
+        signal \_9\ : std_logic;
 
     begin
 
-        hc_8 <= '0';
+        \_8\ <= '0';
         process (clock, reset) begin
             if falling_edge(reset) then
-                hc_9 <= hc_8;
+                \_9\ <= \_8\;
             else
                 if falling_edge(clock) then
                     if clear = '1' then
-                        hc_9 <= hc_8;
+                        \_9\ <= \_8\;
                     else
                         if enable = '1' then
-                            hc_9 <= d;
+                            \_9\ <= d;
                         end if;
                     end if;
                 end if;
             end if;
         end process;
-        q <= hc_9;
+        q <= \_9\;
 
     end architecture;
     |}];
@@ -1091,27 +1091,27 @@ let%expect_test "clock + reset + clear" =
     architecture rtl of my_register is
 
         signal vdd : std_logic;
-        signal hc_8 : std_logic;
+        signal \_8\ : std_logic;
 
     begin
 
         vdd <= '1';
         process (clock, reset) begin
             if falling_edge(reset) then
-                hc_8 <= vdd;
+                \_8\ <= vdd;
             else
                 if falling_edge(clock) then
                     if clear = '1' then
-                        hc_8 <= vdd;
+                        \_8\ <= vdd;
                     else
                         if enable = '1' then
-                            hc_8 <= d;
+                            \_8\ <= d;
                         end if;
                     end if;
                 end if;
             end if;
         end process;
-        q <= hc_8;
+        q <= \_8\;
 
     end architecture;
     |}]
@@ -1180,21 +1180,21 @@ let%expect_test "multiple reg names" =
 
     architecture rtl of my_register is
 
-        signal hc_8 : std_logic;
+        signal \_8\ : std_logic;
         signal c : std_logic;
         signal b : std_logic;
         signal a : std_logic;
 
     begin
 
-        hc_8 <= '0';
+        \_8\ <= '0';
         process (clock, reset) begin
             if rising_edge(reset) then
-                c <= hc_8;
+                c <= \_8\;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
-                        c <= hc_8;
+                        c <= \_8\;
                     else
                         if enable = '1' then
                             c <= d;

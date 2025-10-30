@@ -116,12 +116,23 @@ module type Functions = sig
   end
 end
 
+module Untyped = struct
+  type 'a t =
+    { clock : 'a
+    ; clear : 'a
+    }
+  [@@deriving hardcaml]
+end
+
 module type S = sig
   type 'a t =
     { clock : 'a
     ; clear : 'a
     }
   [@@deriving hardcaml]
+
+  val to_untyped : 'a t -> 'a Untyped.t
+  val of_untyped : 'a Untyped.t -> 'a t
 
   include
     Functions
@@ -152,5 +163,5 @@ module type Clocking = sig
   module type S = S
 
   module Make () : S
-  include S
+  include S with type 'a t = 'a Untyped.t
 end

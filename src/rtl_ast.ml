@@ -281,7 +281,7 @@ let declaration_of_multiport_memory ~rtl_name signal =
   }
 ;;
 
-let var_of_io_port ~(rtl_name : Rtl_name.t) signal =
+let var_of_io_port ~(config : Rtl_config.t) ~(rtl_name : Rtl_name.t) signal =
   match Signal.names signal with
   | [] ->
     raise_s
@@ -290,7 +290,13 @@ let var_of_io_port ~(rtl_name : Rtl_name.t) signal =
           ~note:"This error should have been caught during circuit generation."
           ~port:(signal : Signal.t)]
   | [ name ] ->
-    Rtl_name.add_port_name rtl_name signal name;
+    let name =
+      if config.mangle_io_port_names
+      then Rtl_name.mangle_name rtl_name name
+      else (
+        Rtl_name.add_port_name rtl_name signal name;
+        name)
+    in
     ( Signal.uid signal
     , { name = Rope.of_string name
       ; range = bit_or_vec_of_signal signal
@@ -435,10 +441,16 @@ let initial_of_multiport_mem ~multiport_memory_declaration ~initialize_to =
     }
 ;;
 
-let create_phantom_inputs ~rtl_name circuit =
+let create_phantom_inputs ~(config : Rtl_config.t) ~rtl_name circuit =
   Circuit.phantom_inputs circuit
   |> List.map ~f:(fun (name, width) ->
-    Rtl_name.add_phantom_port_name rtl_name name;
+    let name =
+      if config.mangle_io_port_names
+      then Rtl_name.mangle_name rtl_name name
+      else (
+        Rtl_name.add_phantom_port_name rtl_name name;
+        name)
+    in
     { name = Rope.of_string name
     ; range = bit_or_vec width
     ; reg_or_wire = Wire
@@ -747,10 +759,10 @@ let create_outputs ~blackbox var_map outputs output_vars =
 let of_circuit ~blackbox ~(language : Rtl_language.t) ~(config : Rtl_config.t) circuit =
   let rtl_name = Rtl_name.of_language language in
   let module_name = Circuit.name circuit in
-  let inputs = Circuit.inputs circuit |> List.map ~f:(var_of_io_port ~rtl_name) in
-  let phantom_inputs = create_phantom_inputs ~rtl_name circuit in
+  let inputs = Circuit.inputs circuit |> List.map ~f:(var_of_io_port ~config ~rtl_name) in
+  let phantom_inputs = create_phantom_inputs ~config ~rtl_name circuit in
   let outputs = Circuit.outputs circuit in
-  let output_vars = List.map outputs ~f:(var_of_io_port ~rtl_name) in
+  let output_vars = List.map outputs ~f:(var_of_io_port ~config ~rtl_name) in
   if blackbox
   then (
     let var_map = create_var_map inputs [] in

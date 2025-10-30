@@ -21,3 +21,5 @@ include%template Equal.S [@mode local] with type t := t
 
     Staging is used to precompute arrays/maps to make the conversion operation faster. *)
 val to_string : t -> (Bits.t -> string) Staged.t
+
+val default : t

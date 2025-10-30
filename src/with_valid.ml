@@ -53,6 +53,11 @@ module T = struct
   ;;
 
   let to_option { valid; value } = Option.some_if (Bits.to_bool valid) value
+  let wave_formats = { value = Signal.Type.default_wave_format; valid = Wave_format.Bit }
+
+  let port_names_and_widths_dynamic ~nbits =
+    { value = "value", nbits; valid = "valid", 1 }
+  ;;
 end
 
 include T

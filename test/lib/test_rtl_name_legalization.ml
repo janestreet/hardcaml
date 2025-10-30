@@ -2,7 +2,7 @@ open! Import
 
 let%expect_test "rtl name legalization" =
   let verilog = (module Rtl.Name.Verilog : Rtl.Name.Language) in
-  let vhdl = (module Rtl.Name.Vhdl : Rtl.Name.Language) in
+  let vhdl = (module Rtl.Name.Vhdl_with_mangling : Rtl.Name.Language) in
   let legalize (module Lang : Rtl.Name.Language) s = Lang.legalize s in
   let show name =
     [%message
