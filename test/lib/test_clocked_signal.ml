@@ -528,10 +528,7 @@ module%test Signal_ops = struct
       let spec = Clocked_signal.Reg_spec.create ~clock () in
       ignore
         (Clocked_signal.reg
-           ~reset_to:
-             (Clocked_signal.Unsafe.set_domain
-                (Clocked_signal.input "rst_val" 8)
-                ~dom:dom2)
+           ~reset_to:(Bits.ones 8)
            spec
            (Clocked_signal.Unsafe.set_domain (Clocked_signal.input "data" 8) ~dom)
          : Clocked_signal.t)

@@ -129,84 +129,57 @@ let%expect_test "memory " =
 
     architecture rtl of mem is
 
-        signal hc_11 : std_logic;
-        signal hc_10 : std_logic;
-        type hc_12_type is protected
-            procedure set(address : integer; data : std_logic);
-            impure function get(address : integer) return std_logic;
-        end protected;
-        type hc_12_type is protected body
-            type t is array (0 to 1) of std_logic;
-            variable memory : t;
-            procedure set(address : integer; data : std_logic) is begin memory(address) := data; end procedure;
-            impure function get(address : integer) return std_logic is begin return memory(address); end function;
-        end protected body;
-        shared variable hc_12 : hc_12_type;
-        signal hc_9 : std_logic;
+        signal \_11\ : std_logic;
+        signal \_10\ : std_logic;
+        type \_12_type\ is array (0 to 1) of std_logic;
+        signal \_12\ : \_12_type\;
+        signal \_9\ : std_logic;
         signal q2_0 : std_logic;
         signal q1_0 : std_logic;
-        signal hc_15 : std_logic_vector(3 downto 0);
-        type hc_16_type is protected
-            procedure set(address : integer; data : std_logic_vector(31 downto 0));
-            impure function get(address : integer) return std_logic_vector;
-        end protected;
-        type hc_16_type is protected body
-            type t is array (0 to 15) of std_logic_vector(31 downto 0);
-            variable memory : t;
-            procedure set(address : integer; data : std_logic_vector(31 downto 0)) is begin memory(address) := data; end procedure;
-            impure function get(address : integer) return std_logic_vector is begin return memory(address); end function;
-        end protected body;
-        shared variable hc_16 : hc_16_type;
-        signal hc_14 : std_logic_vector(3 downto 0);
+        signal \_15\ : std_logic_vector(3 downto 0);
+        type \_16_type\ is array (0 to 15) of std_logic_vector(31 downto 0);
+        signal \_16\ : \_16_type\;
+        signal \_14\ : std_logic_vector(3 downto 0);
         signal q2_1 : std_logic_vector(31 downto 0);
         signal q1_1 : std_logic_vector(31 downto 0);
-        type hc_18_type is protected
-            procedure set(address : integer; data : std_logic_vector(31 downto 0));
-            impure function get(address : integer) return std_logic_vector;
-        end protected;
-        type hc_18_type is protected body
-            type t is array (0 to 127) of std_logic_vector(31 downto 0);
-            variable memory : t;
-            procedure set(address : integer; data : std_logic_vector(31 downto 0)) is begin memory(address) := data; end procedure;
-            impure function get(address : integer) return std_logic_vector is begin return memory(address); end function;
-        end protected body;
-        shared variable hc_18 : hc_18_type;
-        signal hc_19 : std_logic_vector(31 downto 0);
+        type \_18_type\ is array (0 to 127) of std_logic_vector(31 downto 0);
+        signal \_18\ : \_18_type\;
+        signal \_19\ : std_logic_vector(31 downto 0);
 
     begin
 
-        hc_11 <= d(0);
-        hc_10 <= wa(0);
+        \_11\ <= d(0);
+        \_10\ <= wa(0);
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    hc_12.set(to_integer(unsigned(std_logic_vector'("" & hc_10))), hc_11);
+                    \_12\(to_integer(unsigned(std_logic_vector'("" & \_10\)))) <= \_11\;
                 end if;
             end if;
         end process;
-        hc_9 <= ra(0);
-        q2_0 <= hc_12.get(to_integer(unsigned(std_logic_vector'("" & hc_9))));
-        hc_15 <= wa(3 downto 0);
+        \_9\ <= ra(0);
+        q2_0 <= \_12\(to_integer(unsigned(std_logic_vector'("" & \_9\))));
+        \_15\ <= wa(3 downto 0);
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    hc_16.set(to_integer(unsigned(hc_15)), d);
+                    \_16\(to_integer(unsigned(\_15\))) <= d;
                 end if;
             end if;
         end process;
-        hc_14 <= ra(3 downto 0);
-        q2_1 <= hc_16.get(to_integer(unsigned(hc_14)));
+        \_14\ <= ra(3 downto 0);
+        q2_1 <= \_16\(to_integer(unsigned(\_14\)));
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    hc_18.set(to_integer(unsigned(wa)), d);
+                    \_18\(to_integer(unsigned(wa))) <= d;
                 end if;
             end if;
         end process;
-        hc_19 <= hc_18.get(to_integer(unsigned(ra)));
+        \_19\ <= \_18\(to_integer(unsigned(ra)));
         q1_0 <= q2_0;
         q1_1 <= q2_1;
-        q1 <= hc_19;
+        q1 <= \_19\;
         q2 <= q2_1;
         q3 <= q2_0;
 
@@ -297,87 +270,66 @@ let%expect_test "memory " =
 
     architecture rtl of mem is
         -- Conversions
-        function to_bit(s : std_ulogic) return bit is begin return to_bit(s, '0'); end;
-        function to_bitvector(s : std_ulogic_vector) return bit_vector is begin return to_bitvector(s, '0'); end;
+        function to_stdlogic(i : in bit) return std_logic is
+        begin
+            if i = '0' then
+                return '0';
+            else
+                return '1';
+            end if;
+        end function;
 
-        signal hc_11 : bit;
-        signal hc_10 : bit;
-        type hc_12_type is protected
-            procedure set(address : integer; data : bit);
-            impure function get(address : integer) return bit;
-        end protected;
-        type hc_12_type is protected body
-            type t is array (0 to 1) of bit;
-            variable memory : t;
-            procedure set(address : integer; data : bit) is begin memory(address) := data; end procedure;
-            impure function get(address : integer) return bit is begin return memory(address); end function;
-        end protected body;
-        shared variable hc_12 : hc_12_type;
-        signal hc_9 : bit;
+        signal \_11\ : bit;
+        signal \_10\ : bit;
+        type \_12_type\ is array (0 to 1) of std_logic;
+        signal \_12\ : \_12_type\;
+        signal \_9\ : bit;
         signal q2_0 : bit;
         signal q1_0 : bit;
-        signal hc_15 : bit_vector(3 downto 0);
-        type hc_16_type is protected
-            procedure set(address : integer; data : bit_vector(31 downto 0));
-            impure function get(address : integer) return bit_vector;
-        end protected;
-        type hc_16_type is protected body
-            type t is array (0 to 15) of bit_vector(31 downto 0);
-            variable memory : t;
-            procedure set(address : integer; data : bit_vector(31 downto 0)) is begin memory(address) := data; end procedure;
-            impure function get(address : integer) return bit_vector is begin return memory(address); end function;
-        end protected body;
-        shared variable hc_16 : hc_16_type;
-        signal hc_14 : bit_vector(3 downto 0);
+        signal \_15\ : bit_vector(3 downto 0);
+        type \_16_type\ is array (0 to 15) of std_logic_vector(31 downto 0);
+        signal \_16\ : \_16_type\;
+        signal \_14\ : bit_vector(3 downto 0);
         signal q2_1 : bit_vector(31 downto 0);
         signal q1_1 : bit_vector(31 downto 0);
-        type hc_18_type is protected
-            procedure set(address : integer; data : bit_vector(31 downto 0));
-            impure function get(address : integer) return bit_vector;
-        end protected;
-        type hc_18_type is protected body
-            type t is array (0 to 127) of bit_vector(31 downto 0);
-            variable memory : t;
-            procedure set(address : integer; data : bit_vector(31 downto 0)) is begin memory(address) := data; end procedure;
-            impure function get(address : integer) return bit_vector is begin return memory(address); end function;
-        end protected body;
-        shared variable hc_18 : hc_18_type;
-        signal hc_19 : bit_vector(31 downto 0);
+        type \_18_type\ is array (0 to 127) of std_logic_vector(31 downto 0);
+        signal \_18\ : \_18_type\;
+        signal \_19\ : bit_vector(31 downto 0);
 
     begin
 
-        hc_11 <= d(0);
-        hc_10 <= wa(0);
+        \_11\ <= d(0);
+        \_10\ <= wa(0);
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    hc_12.set(to_integer(unsigned'("" & hc_10)), hc_11);
+                    \_12\(to_integer(unsigned'("" & \_10\))) <= to_stdlogic(\_11\);
                 end if;
             end if;
         end process;
-        hc_9 <= ra(0);
-        q2_0 <= hc_12.get(to_integer(unsigned'("" & hc_9)));
-        hc_15 <= wa(3 downto 0);
+        \_9\ <= ra(0);
+        q2_0 <= to_bit(\_12\(to_integer(unsigned'("" & \_9\))));
+        \_15\ <= wa(3 downto 0);
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    hc_16.set(to_integer(unsigned(hc_15)), d);
+                    \_16\(to_integer(unsigned(\_15\))) <= to_stdlogicvector(d);
                 end if;
             end if;
         end process;
-        hc_14 <= ra(3 downto 0);
-        q2_1 <= hc_16.get(to_integer(unsigned(hc_14)));
+        \_14\ <= ra(3 downto 0);
+        q2_1 <= to_bitvector(\_16\(to_integer(unsigned(\_14\))));
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    hc_18.set(to_integer(unsigned(wa)), d);
+                    \_18\(to_integer(unsigned(wa))) <= to_stdlogicvector(d);
                 end if;
             end if;
         end process;
-        hc_19 <= hc_18.get(to_integer(unsigned(ra)));
+        \_19\ <= to_bitvector(\_18\(to_integer(unsigned(ra))));
         q1_0 <= q2_0;
         q1_1 <= q2_1;
-        q1 <= hc_19;
+        q1 <= \_19\;
         q2 <= q2_1;
         q3 <= q2_0;
 

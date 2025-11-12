@@ -136,24 +136,24 @@ let%expect_test "In_directory" =
 
     architecture rtl of middle is
 
-        signal hc_5 : std_logic;
-        signal hc_1 : std_logic;
-        signal hc_6 : std_logic;
-        signal hc_3 : std_logic;
-        signal hc_7 : std_logic;
+        signal \_5\ : std_logic;
+        signal \_1\ : std_logic;
+        signal \_6\ : std_logic;
+        signal \_3\ : std_logic;
+        signal \_7\ : std_logic;
 
     begin
 
         the_inner: entity work.inner (rtl)
             port map ( a => a,
-                       b => hc_5 );
-        hc_1 <= hc_5;
+                       b => \_5\ );
+        \_1\ <= \_5\;
         the_inner_1: entity work.inner (rtl)
             port map ( a => a,
-                       b => hc_6 );
-        hc_3 <= hc_6;
-        hc_7 <= hc_3 or hc_1;
-        b <= hc_7;
+                       b => \_6\ );
+        \_3\ <= \_6\;
+        \_7\ <= \_3\ or \_1\;
+        b <= \_7\;
 
     end architecture;
     library ieee;
@@ -169,16 +169,16 @@ let%expect_test "In_directory" =
 
     architecture rtl of outer is
 
-        signal hc_4 : std_logic;
-        signal hc_2 : std_logic;
+        signal \_4\ : std_logic;
+        signal \_2\ : std_logic;
 
     begin
 
         the_middle: entity work.middle (rtl)
             port map ( a => a,
-                       b => hc_4 );
-        hc_2 <= hc_4;
-        b <= hc_2;
+                       b => \_4\ );
+        \_2\ <= \_4\;
+        b <= \_2\;
 
     end architecture;
     |}];

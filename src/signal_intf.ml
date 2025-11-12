@@ -23,6 +23,8 @@ module type Attributes = sig
   val attributes : t -> Rtl_attribute.t list
 
   (** Set the format used to display the signal *)
+  val set_wave_format : t -> Wave_format.t -> unit
+
   val ( --$ ) : t -> Wave_format.t -> t
 end
 
@@ -114,8 +116,8 @@ module type Regs = sig
 
   type 'a with_register_spec =
     ?enable:t
-    -> ?initialize_to:t
-    -> ?reset_to:t
+    -> ?initialize_to:Bits.t
+    -> ?reset_to:Bits.t
     -> ?clear:t
     -> ?clear_to:t
     -> Reg_spec.t
@@ -135,8 +137,8 @@ module type Regs = sig
       bevahiour will also occur if enable is high during a clear (or even reset)
       operation. *)
   val cut_through_reg
-    :  ?initialize_to:t
-    -> ?reset_to:t
+    :  ?initialize_to:Bits.t
+    -> ?reset_to:Bits.t
     -> ?clear:t
     -> ?clear_to:t
     -> Reg_spec.t
@@ -155,8 +157,8 @@ module type Regs = sig
   (** Basic counter. Adds [by] on each [enabled] cycle. Wraps on over/underflow. *)
   val counter
     :  ?enable:t
-    -> ?initialize_to:t
-    -> ?reset_to:t
+    -> ?initialize_to:Bits.t
+    -> ?reset_to:Bits.t
     -> ?clear:t
     -> ?clear_to:t
     -> ?by:int (** Default is [1] *)
@@ -223,7 +225,12 @@ module type Memories = sig
       to map ROMs into RAM resources by registering the output. *)
   val rom : read_addresses:t array -> Bits.t array -> t array
 
-  val memory : int -> write_port:t Write_port.t -> read_address:t -> t
+  val memory
+    :  ?attributes:Rtl_attribute.t list
+    -> int
+    -> write_port:t Write_port.t
+    -> read_address:t
+    -> t
 
   val ram_wbr
     :  ?name:string
@@ -362,6 +369,19 @@ module type S = sig
   module Expert : sig
     (*_ Exported for internal use. *)
     include Memory_prim with type t := t
+
+    (*_ Same as [reg] but with a signal argument for [reset_to]. This is used in some old
+      downstream libraries, and we recommend using the normal [reg] function so that
+      resets are generally driven by a constant value. *)
+    val reg__with_signal_reset
+      :  ?enable:t
+      -> ?initialize_to:Bits.t
+      -> ?reset_to:t
+      -> ?clear:t
+      -> ?clear_to:t
+      -> Reg_spec.t
+      -> t
+      -> t
   end
 end
 

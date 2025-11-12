@@ -65,14 +65,14 @@ let%expect_test "attributes on signals" =
 
     architecture rtl of attributes is
 
-        signal hc_4 : std_logic;
-        attribute boolattr of hc_4 : signal is true;
-        attribute intattr of hc_4 : signal is 123;
+        signal \_4\ : std_logic;
+        attribute boolattr of \_4\ : signal is true;
+        attribute intattr of \_4\ : signal is 123;
 
     begin
 
-        hc_4 <= i or j;
-        o <= hc_4;
+        \_4\ <= i or j;
+        o <= \_4\;
 
     end architecture;
     |}]
@@ -158,12 +158,12 @@ let%expect_test "attributes on instantiations" =
 
     architecture rtl of inner is
 
-        signal hc_2 : std_logic;
+        signal \_2\ : std_logic;
 
     begin
 
-        hc_2 <= a;
-        b <= hc_2;
+        \_2\ <= a;
+        b <= \_2\;
 
     end architecture;
     library ieee;
@@ -180,17 +180,17 @@ let%expect_test "attributes on instantiations" =
 
     architecture rtl of attributes is
 
-        signal hc_4 : std_logic;
+        signal \_4\ : std_logic;
         attribute stringattr of inner : label is "foo";
-        signal hc_2 : std_logic;
+        signal \_2\ : std_logic;
 
     begin
 
         inner: entity work.inner (rtl)
             port map ( a => i,
-                       b => hc_4 );
-        hc_2 <= hc_4;
-        o <= hc_2;
+                       b => \_4\ );
+        \_2\ <= \_4\;
+        o <= \_2\;
 
     end architecture;
     |}]
@@ -263,31 +263,22 @@ let%expect_test "attributes on memories" =
 
     architecture rtl of attributes is
 
-        type hc_7_type is protected
-            procedure set(address : integer; data : std_logic_vector(7 downto 0));
-            impure function get(address : integer) return std_logic_vector;
-        end protected;
-        type hc_7_type is protected body
-            type t is array (0 to 3) of std_logic_vector(7 downto 0);
-            variable memory : t;
-            procedure set(address : integer; data : std_logic_vector(7 downto 0)) is begin memory(address) := data; end procedure;
-            impure function get(address : integer) return std_logic_vector is begin return memory(address); end function;
-        end protected body;
-        shared variable hc_7 : hc_7_type;
-        attribute on_mem of hc_7 : variable is 123;
-        signal hc_8 : std_logic_vector(7 downto 0);
+        type \_7_type\ is array (0 to 3) of std_logic_vector(7 downto 0);
+        signal \_7\ : \_7_type\;
+        attribute on_mem of \_7\ : signal is 123;
+        signal \_8\ : std_logic_vector(7 downto 0);
 
     begin
 
         process (clk) begin
             if rising_edge(clk) then
                 if write_enable = '1' then
-                    hc_7.set(to_integer(unsigned(write_address)), write_data);
+                    \_7\(to_integer(unsigned(write_address))) <= write_data;
                 end if;
             end if;
         end process;
-        hc_8 <= hc_7.get(to_integer(unsigned(read_address)));
-        q <= hc_8;
+        \_8\ <= \_7\(to_integer(unsigned(read_address)));
+        q <= \_8\;
 
     end architecture;
     |}]
@@ -331,12 +322,12 @@ let%expect_test "comments on signals" =
 
     architecture rtl of comments is
 
-        signal hc_4 : std_logic;
+        signal \_4\ : std_logic;
 
     begin
 
-        hc_4 <= i or j;
-        o <= hc_4;
+        \_4\ <= i or j;
+        o <= \_4\;
 
     end architecture;
     |}]

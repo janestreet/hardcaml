@@ -3,10 +3,10 @@ open! Core0
 module type Pre_partial = sig
   type 'a t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
-  val iter : 'a t -> f:('a -> unit) -> unit
-  val iter2 : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
-  val map : 'a t -> f:('a -> 'b) -> 'b t
-  val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
+  val iter : 'a t -> f:('a -> unit) @ local -> unit
+  val iter2 : 'a t -> 'b t -> f:('a -> 'b -> unit) @ local -> unit
+  val map : 'a t -> f:('a -> 'b) @ local -> 'b t
+  val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) @ local -> 'c t
   val to_list : 'a t -> 'a list
 end
 
@@ -149,6 +149,7 @@ module type Of_signal_functions = sig
   module Signal : Signal.S
 
   type t
+  type bits_t
 
   (** Create a wire for each field. If [named] is true then wires are given the RTL field
       name. If [from] is provided the wire is attached to each given field in [from]. *)
@@ -159,10 +160,11 @@ module type Of_signal_functions = sig
     -> t
 
   (** Defines a register over values in this interface. [enable] defaults to vdd. *)
+
   val reg
     :  ?enable:Signal.t
-    -> ?initialize_to:t
-    -> ?reset_to:t
+    -> ?initialize_to:bits_t
+    -> ?reset_to:bits_t
     -> ?clear:Signal.t
     -> ?clear_to:t
     -> Signal.Reg_spec.t
@@ -171,8 +173,8 @@ module type Of_signal_functions = sig
 
   (** Defines a cut through register over values in this interface. *)
   val cut_through_reg
-    :  ?initialize_to:t
-    -> ?reset_to:t
+    :  ?initialize_to:bits_t
+    -> ?reset_to:bits_t
     -> ?clear:Signal.t
     -> ?clear_to:t
     -> Signal.Reg_spec.t
@@ -185,8 +187,8 @@ module type Of_signal_functions = sig
   val pipeline
     :  ?attributes:Rtl_attribute.t list
     -> ?enable:Signal.t
-    -> ?initialize_to:t
-    -> ?reset_to:t
+    -> ?initialize_to:bits_t
+    -> ?reset_to:bits_t
     -> ?clear:Signal.t
     -> ?clear_to:t
     -> Signal.Reg_spec.t
@@ -255,8 +257,15 @@ module type S = sig
   val zip3 : 'a t -> 'b t -> 'c t -> ('a * 'b * 'c) t
   val zip4 : 'a t -> 'b t -> 'c t -> 'd t -> ('a * 'b * 'c * 'd) t
   val zip5 : 'a t -> 'b t -> 'c t -> 'd t -> 'e t -> ('a * 'b * 'c * 'd * 'e) t
-  val map3 : 'a t -> 'b t -> 'c t -> f:('a -> 'b -> 'c -> 'd) -> 'd t
-  val map4 : 'a t -> 'b t -> 'c t -> 'd t -> f:('a -> 'b -> 'c -> 'd -> 'e) -> 'e t
+  val map3 : 'a t -> 'b t -> 'c t -> f:('a -> 'b -> 'c -> 'd) @ local -> 'd t
+
+  val map4
+    :  'a t
+    -> 'b t
+    -> 'c t
+    -> 'd t
+    -> f:('a -> 'b -> 'c -> 'd -> 'e) @ local
+    -> 'e t
 
   val map5
     :  'a t
@@ -264,11 +273,18 @@ module type S = sig
     -> 'c t
     -> 'd t
     -> 'e t
-    -> f:('a -> 'b -> 'c -> 'd -> 'e -> 'f)
+    -> f:('a -> 'b -> 'c -> 'd -> 'e -> 'f) @ local
     -> 'f t
 
-  val iter3 : 'a t -> 'b t -> 'c t -> f:('a -> 'b -> 'c -> unit) -> unit
-  val iter4 : 'a t -> 'b t -> 'c t -> 'd t -> f:('a -> 'b -> 'c -> 'd -> unit) -> unit
+  val iter3 : 'a t -> 'b t -> 'c t -> f:('a -> 'b -> 'c -> unit) @ local -> unit
+
+  val iter4
+    :  'a t
+    -> 'b t
+    -> 'c t
+    -> 'd t
+    -> f:('a -> 'b -> 'c -> 'd -> unit) @ local
+    -> unit
 
   val iter5
     :  'a t
@@ -276,13 +292,19 @@ module type S = sig
     -> 'c t
     -> 'd t
     -> 'e t
-    -> f:('a -> 'b -> 'c -> 'd -> 'e -> unit)
+    -> f:('a -> 'b -> 'c -> 'd -> 'e -> unit) @ local
     -> unit
 
-  val fold : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc) -> 'acc
-  val fold2 : 'a t -> 'b t -> init:'acc -> f:('acc -> 'a -> 'b -> 'acc) -> 'acc
-  val scan : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'b t
-  val scan2 : 'a t -> 'b t -> init:'acc -> f:('acc -> 'a -> 'b -> 'acc * 'c) -> 'c t
+  val fold : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc) @ local -> 'acc
+  val fold2 : 'a t -> 'b t -> init:'acc -> f:('acc -> 'a -> 'b -> 'acc) @ local -> 'acc
+  val scan : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) @ local -> 'b t
+
+  val scan2
+    :  'a t
+    -> 'b t
+    -> init:'acc
+    -> f:('acc -> 'a -> 'b -> 'acc * 'c) @ local
+    -> 'c t
 
   (** Offset of each field within the interface. The first field is placed at the least
       significant bit, unless the [rev] argument is true. *)
@@ -310,8 +332,15 @@ module type S = sig
   module Of_bits : Comb with type comb = Bits.t
 
   module Of_signal : sig
+    type 'a interface := 'a t
+
     include Comb with type comb = Signal.t
-    include Of_signal_functions with type t := t and module Signal := Signal
+
+    include
+      Of_signal_functions
+      with type t := t
+       and type bits_t = Bits.t interface
+       and module Signal := Signal
   end
 
   module Of_clocked_signal : sig
@@ -350,8 +379,8 @@ module type S = sig
     (** Creates a interface container with register variables. *)
     val reg
       :  ?enable:Signal.t
-      -> ?initialize_to:Signal.t t
-      -> ?reset_to:Signal.t t
+      -> ?initialize_to:Bits.t t
+      -> ?reset_to:Bits.t t
       -> ?clear:Signal.t
       -> ?clear_to:Signal.t t
       -> Signal.Reg_spec.t
@@ -360,8 +389,8 @@ module type S = sig
     (** Creates a interface container of cut through register variables. *)
     val cut_through_reg
       :  ?enable:Signal.t
-      -> ?initialize_to:Signal.t t
-      -> ?reset_to:Signal.t t
+      -> ?initialize_to:Bits.t t
+      -> ?reset_to:Bits.t t
       -> ?clear:Signal.t
       -> ?clear_to:Signal.t t
       -> Signal.Reg_spec.t
@@ -384,6 +413,9 @@ module type S = sig
   end
 
   module Names_and_widths : Names_and_widths with type tag := tag
+
+  (** {2 Optional Metadata} *)
+  val wave_formats : Wave_format.t t
 end
 
 (** Monomorphic functions on Hardcaml interfaces. Note that a functor (or a function)
@@ -394,10 +426,10 @@ module type S_monomorphic = sig
   type t
   type tag
 
-  val iter : t -> f:(a -> unit) -> unit
-  val iter2 : t -> t -> f:(a -> a -> unit) -> unit
-  val map : t -> f:(a -> a) -> t
-  val map2 : t -> t -> f:(a -> a -> a) -> t
+  val iter : t -> f:(a -> unit) @ local -> unit
+  val iter2 : t -> t -> f:(a -> a -> unit) @ local -> unit
+  val map : t -> f:(a -> a) @ local -> t
+  val map2 : t -> t -> f:(a -> a -> a) @ local -> t
   val to_list : t -> a list
   val to_alist : t -> (tag * a) list
   val of_alist : (tag * a) list -> t
@@ -407,14 +439,14 @@ module type S_monomorphic = sig
     val of_alist : (string * a) list -> t
   end
 
-  val map3 : t -> t -> t -> f:(a -> a -> a -> a) -> t
-  val map4 : t -> t -> t -> t -> f:(a -> a -> a -> a -> a) -> t
-  val map5 : t -> t -> t -> t -> t -> f:(a -> a -> a -> a -> a -> a) -> t
-  val iter3 : t -> t -> t -> f:(a -> a -> a -> unit) -> unit
-  val iter4 : t -> t -> t -> t -> f:(a -> a -> a -> a -> unit) -> unit
-  val iter5 : t -> t -> t -> t -> t -> f:(a -> a -> a -> a -> a -> unit) -> unit
-  val fold : t -> init:'acc -> f:('acc -> a -> 'acc) -> 'acc
-  val fold2 : t -> t -> init:'acc -> f:('acc -> a -> a -> 'acc) -> 'acc
+  val map3 : t -> t -> t -> f:(a -> a -> a -> a) @ local -> t
+  val map4 : t -> t -> t -> t -> f:(a -> a -> a -> a -> a) @ local -> t
+  val map5 : t -> t -> t -> t -> t -> f:(a -> a -> a -> a -> a -> a) @ local -> t
+  val iter3 : t -> t -> t -> f:(a -> a -> a -> unit) @ local -> unit
+  val iter4 : t -> t -> t -> t -> f:(a -> a -> a -> a -> unit) @ local -> unit
+  val iter5 : t -> t -> t -> t -> t -> f:(a -> a -> a -> a -> a -> unit) @ local -> unit
+  val fold : t -> init:'acc -> f:('acc -> a -> 'acc) @ local -> 'acc
+  val fold2 : t -> t -> init:'acc -> f:('acc -> a -> a -> 'acc) @ local -> 'acc
 
   module Names_and_widths : Names_and_widths with type tag := tag
 end
@@ -464,6 +496,12 @@ module type Interface = sig
   end
 
   module Make (X : Pre) : S with type 'a t := 'a X.t
+
+  module Make_with_wave_formats (X : sig
+      include Pre
+
+      val wave_formats : Wave_format.t t
+    end) : S with type 'a t := 'a X.t
 
   (** Recreate a Hardcaml Interface with the same type, but different port names / widths. *)
   module Update

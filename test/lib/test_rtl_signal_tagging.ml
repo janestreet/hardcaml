@@ -144,16 +144,16 @@ let%expect_test "Signal attributes on top of signals in VHDL" =
 
     architecture rtl of test is
 
-        signal hc_5 : std_logic_vector(3 downto 0);
-        signal hc_4 : std_logic_vector(3 downto 0);
+        signal \_5\ : std_logic_vector(3 downto 0);
+        signal \_4\ : std_logic_vector(3 downto 0);
         signal tmp : std_logic_vector(3 downto 0);
         attribute hello of tmp : signal is "world";
 
     begin
 
-        hc_5 <= "0011";
-        hc_4 <= std_logic_vector(unsigned(a) + unsigned(b));
-        tmp <= std_logic_vector(unsigned(hc_4) + unsigned(hc_5));
+        \_5\ <= "0011";
+        \_4\ <= std_logic_vector(unsigned(a) + unsigned(b));
+        tmp <= std_logic_vector(unsigned(\_4\) + unsigned(\_5\));
         result <= tmp;
 
     end architecture;

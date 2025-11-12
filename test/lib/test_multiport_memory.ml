@@ -433,56 +433,45 @@ let%expect_test "dual port VHDL" =
 
     architecture rtl of multi_port_memory is
 
-        signal hc_18 : std_logic_vector(14 downto 0);
-        signal hc_19 : std_logic_vector(14 downto 0);
-        type foo_type is protected
-            procedure set(address : integer; data : std_logic_vector(14 downto 0));
-            impure function get(address : integer) return std_logic_vector;
-        end protected;
-        type foo_type is protected body
-            type t is array (0 to 31) of std_logic_vector(14 downto 0);
-            variable memory : t;
-            procedure set(address : integer; data : std_logic_vector(14 downto 0)) is begin memory(address) := data; end procedure;
-            impure function get(address : integer) return std_logic_vector is begin return memory(address); end function;
-        end protected body;
-        shared variable foo : foo_type;
-        signal hc_20 : std_logic_vector(14 downto 0);
-        signal hc_21 : std_logic_vector(14 downto 0);
+        signal \_18\ : std_logic_vector(14 downto 0);
+        signal \_19\ : std_logic_vector(14 downto 0);
+        type foo_type is array (0 to 31) of std_logic_vector(14 downto 0);
+        signal foo : foo_type;
+        signal \_20\ : std_logic_vector(14 downto 0);
+        signal \_21\ : std_logic_vector(14 downto 0);
 
     begin
 
-        hc_18 <= foo.get(to_integer(unsigned(read_address2)));
+        \_18\ <= foo(to_integer(unsigned(read_address2)));
         process (read_clock2) begin
             if rising_edge(read_clock2) then
                 if read_enable2 = '1' then
-                    hc_19 <= hc_18;
+                    \_19\ <= \_18\;
                 end if;
             end if;
         end process;
-        process (write_clock1) begin
+        process (write_clock1, write_clock2) begin
             if rising_edge(write_clock1) then
                 if write_enable1 = '1' then
-                    foo.set(to_integer(unsigned(write_address1)), write_data1);
+                    foo(to_integer(unsigned(write_address1))) <= write_data1;
                 end if;
             end if;
-        end process;
-        process (write_clock2) begin
             if rising_edge(write_clock2) then
                 if write_enable2 = '1' then
-                    foo.set(to_integer(unsigned(write_address2)), write_data2);
+                    foo(to_integer(unsigned(write_address2))) <= write_data2;
                 end if;
             end if;
         end process;
-        hc_20 <= foo.get(to_integer(unsigned(read_address1)));
+        \_20\ <= foo(to_integer(unsigned(read_address1)));
         process (read_clock1) begin
             if rising_edge(read_clock1) then
                 if read_enable1 = '1' then
-                    hc_21 <= hc_20;
+                    \_21\ <= \_20\;
                 end if;
             end if;
         end process;
-        q0 <= hc_21;
-        q1 <= hc_19;
+        q0 <= \_21\;
+        q1 <= \_19\;
 
     end architecture;
     |}];
@@ -516,59 +505,54 @@ let%expect_test "dual port VHDL" =
 
     architecture rtl of multi_port_memory is
         -- Conversions
-        function to_bit(s : std_ulogic) return bit is begin return to_bit(s, '0'); end;
-        function to_bitvector(s : std_ulogic_vector) return bit_vector is begin return to_bitvector(s, '0'); end;
+        function to_stdlogic(i : in bit) return std_logic is
+        begin
+            if i = '0' then
+                return '0';
+            else
+                return '1';
+            end if;
+        end function;
 
-        signal hc_18 : bit_vector(14 downto 0);
-        signal hc_19 : bit_vector(14 downto 0);
-        type foo_type is protected
-            procedure set(address : integer; data : bit_vector(14 downto 0));
-            impure function get(address : integer) return bit_vector;
-        end protected;
-        type foo_type is protected body
-            type t is array (0 to 31) of bit_vector(14 downto 0);
-            variable memory : t;
-            procedure set(address : integer; data : bit_vector(14 downto 0)) is begin memory(address) := data; end procedure;
-            impure function get(address : integer) return bit_vector is begin return memory(address); end function;
-        end protected body;
-        shared variable foo : foo_type;
-        signal hc_20 : bit_vector(14 downto 0);
-        signal hc_21 : bit_vector(14 downto 0);
+        signal \_18\ : bit_vector(14 downto 0);
+        signal \_19\ : bit_vector(14 downto 0);
+        type foo_type is array (0 to 31) of std_logic_vector(14 downto 0);
+        signal foo : foo_type;
+        signal \_20\ : bit_vector(14 downto 0);
+        signal \_21\ : bit_vector(14 downto 0);
 
     begin
 
-        hc_18 <= foo.get(to_integer(unsigned(read_address2)));
+        \_18\ <= to_bitvector(foo(to_integer(unsigned(read_address2))));
         process (read_clock2) begin
             if rising_edge(read_clock2) then
                 if read_enable2 = '1' then
-                    hc_19 <= hc_18;
+                    \_19\ <= \_18\;
                 end if;
             end if;
         end process;
-        process (write_clock1) begin
+        process (write_clock1, write_clock2) begin
             if rising_edge(write_clock1) then
                 if write_enable1 = '1' then
-                    foo.set(to_integer(unsigned(write_address1)), write_data1);
+                    foo(to_integer(unsigned(write_address1))) <= to_stdlogicvector(write_data1);
                 end if;
             end if;
-        end process;
-        process (write_clock2) begin
             if rising_edge(write_clock2) then
                 if write_enable2 = '1' then
-                    foo.set(to_integer(unsigned(write_address2)), write_data2);
+                    foo(to_integer(unsigned(write_address2))) <= to_stdlogicvector(write_data2);
                 end if;
             end if;
         end process;
-        hc_20 <= foo.get(to_integer(unsigned(read_address1)));
+        \_20\ <= to_bitvector(foo(to_integer(unsigned(read_address1))));
         process (read_clock1) begin
             if rising_edge(read_clock1) then
                 if read_enable1 = '1' then
-                    hc_21 <= hc_20;
+                    \_21\ <= \_20\;
                 end if;
             end if;
         end process;
-        q0 <= hc_21;
-        q1 <= hc_19;
+        q0 <= \_21\;
+        q1 <= \_19\;
 
     end architecture;
     |}]
@@ -934,43 +918,34 @@ let%expect_test "memory initialization" =
 
     architecture rtl of initialized_memory is
 
-        signal hc_5 : std_logic_vector(7 downto 0);
-        signal hc_4 : std_logic_vector(1 downto 0);
+        signal \_5\ : std_logic_vector(7 downto 0);
+        signal \_4\ : std_logic_vector(1 downto 0);
         signal gnd : std_logic;
-        type hc_6_type is protected
-            procedure set(address : integer; data : std_logic_vector(7 downto 0));
-            impure function get(address : integer) return std_logic_vector;
-        end protected;
-        type hc_6_type is protected body
-            type t is array (0 to 3) of std_logic_vector(7 downto 0);
-            variable memory : t;
-            procedure set(address : integer; data : std_logic_vector(7 downto 0)) is begin memory(address) := data; end procedure;
-            impure function get(address : integer) return std_logic_vector is begin return memory(address); end function;
-        end protected body;
-        shared variable hc_6 : hc_6_type;
-        signal hc_7 : std_logic_vector(7 downto 0);
+        type \_6_type\ is array (0 to 3) of std_logic_vector(7 downto 0);
+        signal \_6\ : \_6_type\;
+        signal \_7\ : std_logic_vector(7 downto 0);
 
     begin
 
-        hc_5 <= "00000000";
-        hc_4 <= "00";
+        \_5\ <= "00000000";
+        \_4\ <= "00";
         gnd <= '0';
         process (gnd) begin
             if rising_edge(gnd) then
                 if gnd = '1' then
-                    hc_6.set(to_integer(unsigned(hc_4)), hc_5);
+                    \_6\(to_integer(unsigned(\_4\))) <= \_5\;
                 end if;
             end if;
         end process;
         process begin
-            hc_6.set(0, "00000000");
-            hc_6.set(1, "00000001");
-            hc_6.set(2, "00000010");
-            hc_6.set(3, "00000011");
+            \_6\(0) <= "00000000";
+            \_6\(1) <= "00000001";
+            \_6\(2) <= "00000010";
+            \_6\(3) <= "00000011";
             wait;
         end process;
-        hc_7 <= hc_6.get(to_integer(unsigned(read_address)));
-        q0 <= hc_7;
+        \_7\ <= \_6\(to_integer(unsigned(read_address)));
+        q0 <= \_7\;
 
     end architecture;
     |}];
@@ -1024,47 +999,38 @@ let%expect_test "memory initialization" =
 
     architecture rtl of initialized_memory is
 
-        signal hc_5 : std_logic;
-        signal hc_4 : std_logic_vector(2 downto 0);
+        signal \_5\ : std_logic;
+        signal \_4\ : std_logic_vector(2 downto 0);
         signal gnd : std_logic;
-        type hc_6_type is protected
-            procedure set(address : integer; data : std_logic);
-            impure function get(address : integer) return std_logic;
-        end protected;
-        type hc_6_type is protected body
-            type t is array (0 to 7) of std_logic;
-            variable memory : t;
-            procedure set(address : integer; data : std_logic) is begin memory(address) := data; end procedure;
-            impure function get(address : integer) return std_logic is begin return memory(address); end function;
-        end protected body;
-        shared variable hc_6 : hc_6_type;
-        signal hc_7 : std_logic;
+        type \_6_type\ is array (0 to 7) of std_logic;
+        signal \_6\ : \_6_type\;
+        signal \_7\ : std_logic;
 
     begin
 
-        hc_5 <= '0';
-        hc_4 <= "000";
+        \_5\ <= '0';
+        \_4\ <= "000";
         gnd <= '0';
         process (gnd) begin
             if rising_edge(gnd) then
                 if gnd = '1' then
-                    hc_6.set(to_integer(unsigned(hc_4)), hc_5);
+                    \_6\(to_integer(unsigned(\_4\))) <= \_5\;
                 end if;
             end if;
         end process;
         process begin
-            hc_6.set(0, '0');
-            hc_6.set(1, '1');
-            hc_6.set(2, '0');
-            hc_6.set(3, '1');
-            hc_6.set(4, '0');
-            hc_6.set(5, '1');
-            hc_6.set(6, '0');
-            hc_6.set(7, '1');
+            \_6\(0) <= '0';
+            \_6\(1) <= '1';
+            \_6\(2) <= '0';
+            \_6\(3) <= '1';
+            \_6\(4) <= '0';
+            \_6\(5) <= '1';
+            \_6\(6) <= '0';
+            \_6\(7) <= '1';
             wait;
         end process;
-        hc_7 <= hc_6.get(to_integer(unsigned(read_address)));
-        q0 <= hc_7;
+        \_7\ <= \_6\(to_integer(unsigned(read_address)));
+        q0 <= \_7\;
 
     end architecture;
     |}]

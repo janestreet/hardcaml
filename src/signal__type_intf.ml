@@ -291,7 +291,7 @@ module type Type = sig
         ; reset : 'a Reset_spec.t option
         ; clear : 'a Clear_spec.t option
         ; enable : 'a option
-        ; initialize_to : 'a option
+        ; initialize_to : Bits.t option
         }
       [@@deriving bin_io, sexp_of]
 
@@ -429,7 +429,7 @@ module type Register = sig
   val of_reg_spec
     :  reg_spec
     -> enable:signal option
-    -> initialize_to:signal option
+    -> initialize_to:Bits.t option
     -> reset_to:signal option
     -> clear_to:signal option
     -> clear:signal option
@@ -522,6 +522,9 @@ module type Signal__type = sig
   (** Return true if [t] has at least one name set. *)
   val has_name : t -> bool
 
+  (** The default wave format for new signals. *)
+  val default_wave_format : Wave_format.t
+
   (** Creates a new signal uid. *)
   val new_id : unit -> Uid.t
 
@@ -532,7 +535,7 @@ module type Signal__type = sig
   (** Constructs a [Info.t] type with given [width>0]. *)
   val make_id : int -> Info.t
 
-  (** Create a constant *)
+  (** Create a constant. *)
   val of_bits : Bits.t -> t
 
   (** Returns true iff [t] is a constant, has width [1] and equals the value [1]. Does not
@@ -543,7 +546,7 @@ module type Signal__type = sig
       raise. *)
   val is_gnd : t -> bool
 
-  (** Signal is a register or a memory with an [initialize_to] value specified *)
+  (** Signal is a register or a memory with an [initialize_to] value specified. *)
   val has_initializer : t -> bool
 
   (** Functions for working with metadata. *)
@@ -565,10 +568,10 @@ module type Signal__type = sig
     -> unit
 
   (** This function creates a copy of the signal with [f] applied to the signal's info (if
-      applicable) *)
+      applicable). *)
   val map_info : t -> f:(Info.t -> Info.t) -> t
 
   (** This function creates a copy of the signal with [f] applied to each of the signal's
-      dependants *)
+      dependants. *)
   val map_dependant : t -> f:(t -> t) -> t
 end

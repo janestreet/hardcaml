@@ -156,8 +156,8 @@ let top () =
     Circuit.create_exn ~name:"top" [output "t" (Instantiation.output inst "y")]
 ```
 
-This creates a hierarchy where `top` instantiates `inner1` which in turn instantiates
-`inner2`.
+This creates a hierarchy where `top` instantiates `inner2` which in turn instantiates
+`inner1`.
 
 We now need to create a `Circuit_database` containing the inner circuits.
 

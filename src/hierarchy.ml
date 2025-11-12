@@ -114,12 +114,19 @@ module In_scope_shared (I : Interface.S) (O : Interface.S) = struct
     let scope = Scope.sub_scope scope name in
     let label_ports = Scope.auto_label_hierarchical_ports scope in
     let ( -- ) = if auto_naming scope then Signal.( -- ) else Scope.naming scope in
-    let ( -- ) p s n = Signal.wireof s -- (p ^ Scope.Path.default_path_seperator ^ n) in
+    let ( -- ) p s n f =
+      let s = Signal.wireof s -- (p ^ Scope.Path.default_path_seperator ^ n) in
+      Signal.( --$ ) s f
+    in
     let inputs =
-      if label_ports then I.map2 inputs I.port_names ~f:(( -- ) "i") else inputs
+      if label_ports
+      then I.map3 inputs I.port_names I.wave_formats ~f:(( -- ) "i")
+      else inputs
     in
     let outputs = create_fn scope inputs in
-    if label_ports then O.map2 outputs O.port_names ~f:(( -- ) "o") else outputs
+    if label_ports
+    then O.map3 outputs O.port_names O.wave_formats ~f:(( -- ) "o")
+    else outputs
   ;;
 
   (* Convert a filename to a reasonable module name for use in the hierarchy *)

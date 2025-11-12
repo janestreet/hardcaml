@@ -14,10 +14,10 @@ module type With_valid = sig
   val valid : ('a, 'b) t2 -> 'a
   val value : ('a, 'b) t2 -> 'b
   val value_with_default : (module Comb.S with type t = 'a) -> 'a t -> default:'a -> 'a
-  val map : 'a t -> f:('a -> 'b) -> 'b t
-  val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
-  val iter : 'a t -> f:('a -> unit) -> unit
-  val iter2 : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
+  val map : 'a t -> f:('a -> 'b) @ local -> 'b t
+  val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) @ local -> 'c t
+  val iter : 'a t -> f:('a -> unit) @ local -> unit
+  val iter2 : 'a t -> 'b t -> f:('a -> 'b -> unit) @ local -> unit
   val to_list : 'a t -> 'a list
   val map_valid : ('a, 'b) t2 -> f:('a -> 'c) -> ('c, 'b) t2
 
@@ -31,7 +31,7 @@ module type With_valid = sig
     :  (module Comb.S with type t = 'a)
     -> ('a, 'b) t2
     -> ('a, 'c) t2
-    -> f:('b -> 'c -> 'd)
+    -> f:('b -> 'c -> 'd) @ local
     -> ('a, 'd) t2
 
   (** Applies the provided With_valid-returning function to the value. The result is
@@ -40,7 +40,7 @@ module type With_valid = sig
   val and_then
     :  (module Comb.S with type t = 'a)
     -> ('a, 'b) t2
-    -> f:('b -> ('a, 'c) t2)
+    -> f:('b -> ('a, 'c) t2) @ local
     -> ('a, 'c) t2
 
   (** Similar to [and_then], but for a function that takes two arguments. The result is
@@ -49,10 +49,12 @@ module type With_valid = sig
     :  (module Comb.S with type t = 'a)
     -> ('a, 'b) t2
     -> ('a, 'c) t2
-    -> f:('b -> 'c -> ('a, 'd) t2)
+    -> f:('b -> 'c -> ('a, 'd) t2) @ local
     -> ('a, 'd) t2
 
   val to_option : (Bits.t, 'a) t2 -> 'a option
+  val wave_formats : Wave_format.t t
+  val port_names_and_widths_dynamic : nbits:int -> (string * int) t
 
   (** Create a new hardcaml interface with type ['a With_valid.t X.t] *)
   module Fields : sig

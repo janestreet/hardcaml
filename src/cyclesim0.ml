@@ -139,12 +139,19 @@ module Config = struct
     let randomize_all s = randomize_regs s || randomize_memories s
   end
 
+  module Clock_mode = struct
+    type t =
+      | All_one_domain
+      | By_input_clocks of Cyclesim_clock_domain.t list
+  end
+
   type t =
     { is_internal_port : (Signal.t -> bool) option
     ; combinational_ops_database : Combinational_ops_database.t
     ; deduplicate_signals : bool
     ; store_circuit : bool
     ; random_initializer : Random_initializer.t option
+    ; clock_mode : Clock_mode.t
     }
 
   let empty_ops_database = Combinational_ops_database.create ()
@@ -155,6 +162,7 @@ module Config = struct
     ; deduplicate_signals = false
     ; store_circuit = false
     ; random_initializer = None
+    ; clock_mode = All_one_domain
     }
   ;;
 
@@ -168,6 +176,7 @@ module Config = struct
     ; deduplicate_signals = false
     ; store_circuit = false
     ; random_initializer = None
+    ; clock_mode = All_one_domain
     }
   ;;
 

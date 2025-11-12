@@ -56,16 +56,16 @@ let%expect_test "Intstantiation in VHDL with single bit output" =
 
     architecture rtl of example is
 
-        signal hc_4 : std_logic;
-        signal hc_2 : std_logic;
+        signal \_4\ : std_logic;
+        signal \_2\ : std_logic;
 
     begin
 
         the_example: entity work.example (rtl)
             port map ( a => a,
-                       b => hc_4 );
-        hc_2 <= hc_4;
-        b <= hc_2;
+                       b => \_4\ );
+        \_2\ <= \_4\;
+        b <= \_2\;
 
     end architecture;
     |}]

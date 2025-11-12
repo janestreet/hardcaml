@@ -2,21 +2,16 @@ open! Core0
 
 module type S = Clocking_intf.S
 
-module type Clocking_interface = sig
-  type 'a t =
-    { clock : 'a
-    ; clear : 'a
-    }
-  [@@deriving hardcaml]
-end
+module Untyped = Clocking_intf.Untyped
 
 module Generate_functions
-    (Clocking_interface : Clocking_interface)
     (Signal : Signal.S)
     (Always : Always.S with module Signal := Signal) =
 struct
-  open Clocking_interface
+  open Untyped
 
+  let of_untyped x = x
+  let to_untyped x = x
   let add_clear t clear = { t with clear = Signal.( |: ) t.clear clear }
   let to_spec t = Signal.Reg_spec.create ~clock:t.clock ~clear:t.clear ()
   let to_spec_no_clear t = Signal.Reg_spec.create ~clock:t.clock ()
@@ -101,23 +96,20 @@ struct
   end
 end
 
-module Generate_interface () = struct
-  type 'a t =
-    { clock : 'a
-    ; clear : 'a
-    }
-  [@@deriving hardcaml ~rtlmangle:false]
-end
-
-module Make () = struct
-  module Intf = Generate_interface ()
-  include Intf
-  include Generate_functions (Intf) (Signal) (Always)
+module Implementation_for_untyped = struct
+  include Untyped
+  include Generate_functions (Signal) (Always)
 
   module Clocked = struct
-    include Intf
-    include Generate_functions (Intf) (Clocked_signal) (Always.Clocked)
+    include Untyped
+    include Generate_functions (Clocked_signal) (Always.Clocked)
   end
 end
 
-include Make ()
+(* This implementation has Make().t = Untyped.t to be the same type, but this equality
+   isn't exposed in the interface file, so from the perspective of the user, these
+   two types won't unify.
+*)
+
+module Make () = Implementation_for_untyped
+include Implementation_for_untyped

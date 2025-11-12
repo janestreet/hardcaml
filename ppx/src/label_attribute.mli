@@ -6,8 +6,10 @@ type t
 
 val has_exists : loc:'a -> label_declaration -> bool
 val get_exists : loc:location -> label_declaration -> expression
-val get_bits : loc:location -> label_declaration -> expression
+val get_bits_opt : loc:location -> label_declaration -> expression option
+val get_bits_with_default : loc:location -> label_declaration -> expression
 val get_length : loc:location -> label_declaration -> expression
+val get_wave_format : loc:location -> label_declaration -> expression
 val get_rtlname : loc:location -> label -> label_declaration -> expression
 
 val get_rtlprefix

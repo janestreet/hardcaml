@@ -377,3 +377,43 @@ let last_layer_of_nodes ~is_input graph =
   Map.to_alist in_layer
   |> List.filter_map ~f:(fun (uid, is_in_layer) -> if is_in_layer then Some uid else None)
 ;;
+
+let resolve_clock_domains t =
+  let rec transitively_resolve (signal : Signal.t) =
+    match signal with
+    | Wire { info = _; driver } ->
+      (match driver with
+       | None -> signal
+       | Some otherwise -> transitively_resolve otherwise)
+    | Empty
+    | Op2 _
+    | Not _
+    | Cat _
+    | Mux _
+    | Cases _
+    | Const _
+    | Select _
+    | Reg _
+    | Multiport_mem _
+    | Mem_read_port _
+    | Inst _ -> raise_s [%message "Invalid clock driver" (signal : Signal.t)]
+  in
+  let resolve_clock clock_domains signal =
+    let uid = uid signal in
+    if Map.mem clock_domains uid
+    then clock_domains
+    else (
+      let clock_domain = transitively_resolve signal in
+      Map.add_exn clock_domains ~key:uid ~data:clock_domain)
+  in
+  depth_first_search
+    t
+    ~init:(Map.empty (module Signal.Type.Uid))
+    ~f_before:(fun acc signal ->
+      match signal with
+      | Reg reg -> resolve_clock acc reg.register.clock.clock
+      | Multiport_mem { write_ports; _ } ->
+        Array.fold write_ports ~init:acc ~f:(fun acc port ->
+          resolve_clock acc port.write_clock)
+      | _ -> acc)
+;;

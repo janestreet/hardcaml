@@ -17,10 +17,10 @@ which can manipulate that type:
 ```
 type 'a t [@@deriving sexp_of]
 
-val iter : 'a t -> f:('a -> unit) -> unit
-val iter2 : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit
-val map : 'a t -> f:('a -> 'b) -> 'b t
-val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) -> 'c t
+val iter : 'a t -> f:('a -> unit) @ local -> unit
+val iter2 : 'a t -> 'b t -> f:('a -> 'b -> unit) @ local -> unit
+val map : 'a t -> f:('a -> 'b) @ local -> 'b t
+val map2 : 'a t -> 'b t -> f:('a -> 'b -> 'c) @ local -> 'c t
 val to_list : 'a t -> 'a list
 ```
 
@@ -166,9 +166,29 @@ implementation. They often come with a specialized API for manipulating the valu
     'c Simple_interface.t ->
     'd Simple_interface.t ->
     'e Simple_interface.t ->
-    f:('a -> 'b -> 'c -> 'd -> 'e -> 'f) -> 'f Simple_interface.t
+    f:local_ ('a -> 'b -> 'c -> 'd -> 'e -> 'f) -> 'f Simple_interface.t
 = <fun>
 ```
+
+The f arguments have a local mode annotation. Modes like local apply only to Oxcaml users.
+OCaml users can ignore the local annotation.
+
+The local mode indicates values that cannot escape their scope. Values are global by
+default unless annotated otherwise. Functions expecting a local argument can accept either
+local or global values, but functions expecting a global argument can only accept global
+values. See the [OxCaml documentation on
++modes](https://oxcaml.org/documentation/modes/intro/) for more information.
+
+Interface users typically don't need to consider locality. This mainly matters when
+defining interfaces manually (not via the ppx). Some tips for manual interface
+definitions:
+
+- Explicitly annotate the f argument with @ local rather than relying on mode inference.
+  This annotation is required in module signatures, as omitting it implies global mode.
+- When a function's tail call passes f to another function, annotate the tail call with
+  [@nontail]. This is necessary because the compiler optimizes tail calls for constant space
+  by default. See the oxcaml documentation on stack allocation for details on why nontail is
+  needed.
 
 ## Zip
 

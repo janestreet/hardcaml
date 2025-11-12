@@ -1,6 +1,6 @@
 (library
  (name hardcaml_rtl_test)
- (libraries core core_unix expect_test_helpers_core hardcaml
-   core_unix.filename_unix jane_rope)
+ (libraries core core_unix expect_test_helpers_core core_unix.filename_unix
+   hardcaml jane_rope)
  (preprocess
   (pps ppx_jane ppx_hardcaml)))

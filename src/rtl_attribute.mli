@@ -106,6 +106,14 @@ module Vivado : sig
 
   val cascade_height : int -> t
 
+  (** Instructs the tool to move a register forward through [int] levels of logic closer
+      to the driven sequential elements. *)
+  val retiming_forward : int -> t
+
+  (** Instructs the tool to move a register backwards through [int] levels of logic closer
+      to sequential driving elements. *)
+  val retiming_backward : int -> t
+
   module Ram_style : sig
     val block : t
     val distributed : t

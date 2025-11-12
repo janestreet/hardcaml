@@ -1,6 +1,7 @@
+open Core
 open Hardcaml
 
-let%expect_test "example" =
+let circuit =
   let module I = struct
     type 'a t =
       { clock : 'a
@@ -38,7 +39,11 @@ let%expect_test "example" =
       let zoo = Signal.reg spec ~enable:coo zoo in
       { zoo; moo; sum })
   in
-  Testing.analyse_vhdl_and_verilog ~show:true circuit;
+  lazy circuit
+;;
+
+let%expect_test "simple example" =
+  Testing.analyse_vhdl_and_verilog ~show:true (force circuit);
   [%expect
     {|
     module temp (
@@ -156,73 +161,73 @@ let%expect_test "example" =
 
     architecture rtl of temp is
 
-        signal hc_17 : std_logic_vector(1 downto 0);
+        signal \_17\ : std_logic_vector(1 downto 0);
         signal gnd : std_logic;
-        signal hc_16 : std_logic_vector(1 downto 0);
-        signal hc_18 : std_logic_vector(1 downto 0);
-        signal hc_29 : std_logic_vector(1 downto 0);
+        signal \_16\ : std_logic_vector(1 downto 0);
+        signal \_18\ : std_logic_vector(1 downto 0);
+        signal \_29\ : std_logic_vector(1 downto 0);
         signal bbb : std_logic_vector(1 downto 0);
         signal aaa : std_logic_vector(1 downto 0);
         signal zoo_0 : std_logic;
-        signal hc_24 : std_logic;
-        signal hc_25 : std_logic_vector(1 downto 0);
-        signal hc_22 : std_logic_vector(1 downto 0);
-        signal hc_26 : std_logic_vector(1 downto 0);
-        signal hc_28 : std_logic_vector(1 downto 0);
+        signal \_24\ : std_logic;
+        signal \_25\ : std_logic_vector(1 downto 0);
+        signal \_22\ : std_logic_vector(1 downto 0);
+        signal \_26\ : std_logic_vector(1 downto 0);
+        signal \_28\ : std_logic_vector(1 downto 0);
         signal fff : std_logic_vector(1 downto 0);
         signal eee : std_logic_vector(1 downto 0);
         signal ddd : std_logic_vector(1 downto 0);
         signal ccc : std_logic_vector(1 downto 0);
-        signal hc_2 : std_logic_vector(1 downto 0);
-        signal hc_20 : std_logic;
+        signal \_2\ : std_logic_vector(1 downto 0);
+        signal \_20\ : std_logic;
         signal noo : std_logic;
         signal coo : std_logic;
-        signal hc_32 : std_logic;
-        signal hc_5 : std_logic;
-        signal hc_7 : std_logic;
-        signal hc_9 : std_logic;
-        signal hc_11 : std_logic;
-        signal hc_13 : std_logic;
-        signal hc_19 : std_logic;
-        signal hc_33 : std_logic;
+        signal \_32\ : std_logic;
+        signal \_5\ : std_logic;
+        signal \_7\ : std_logic;
+        signal \_9\ : std_logic;
+        signal \_11\ : std_logic;
+        signal \_13\ : std_logic;
+        signal \_19\ : std_logic;
+        signal \_33\ : std_logic;
 
     begin
 
-        hc_17 <= gnd & hc_11;
+        \_17\ <= gnd & \_11\;
         gnd <= '0';
-        hc_16 <= gnd & hc_13;
-        hc_18 <= std_logic_vector(unsigned(hc_16) + unsigned(hc_17));
-        hc_29 <= "11";
+        \_16\ <= gnd & \_13\;
+        \_18\ <= std_logic_vector(unsigned(\_16\) + unsigned(\_17\));
+        \_29\ <= "11";
         bbb <= "11";
         zoo_0 <= not noo;
-        hc_24 <= hc_19 or zoo_0;
-        hc_25 <= hc_24 & hc_24;
-        hc_22 <= hc_19 & noo;
-        with to_integer(unsigned(std_logic_vector'("" & hc_19))) select hc_26 <=
-            hc_22 when 0,
-            hc_25 when others;
-        hc_28 <= hc_26 or bbb;
-        fff <= hc_28 or hc_29;
-        hc_2 <= fff;
-        hc_20 <= not hc_11;
-        noo <= (unsigned(std_logic_vector'("" & hc_13)) - unsigned(std_logic_vector'("" & hc_20))) ?= "1";
-        hc_32 <= '0';
-        hc_5 <= clear;
-        hc_7 <= reset;
-        hc_9 <= clock;
-        hc_11 <= bar;
-        hc_13 <= foo;
-        hc_19 <= (unsigned(std_logic_vector'("" & hc_13)) + unsigned(std_logic_vector'("" & hc_11))) ?= "1";
-        process (hc_9, hc_7) begin
-            if rising_edge(hc_7) then
-                hc_33 <= hc_32;
+        \_24\ <= \_19\ or zoo_0;
+        \_25\ <= \_24\ & \_24\;
+        \_22\ <= \_19\ & noo;
+        with to_integer(unsigned(std_logic_vector'("" & \_19\))) select \_26\ <=
+            \_22\ when 0,
+            \_25\ when others;
+        \_28\ <= \_26\ or bbb;
+        fff <= \_28\ or \_29\;
+        \_2\ <= fff;
+        \_20\ <= not \_11\;
+        noo <= (unsigned(std_logic_vector'("" & \_13\)) - unsigned(std_logic_vector'("" & \_20\))) ?= "1";
+        \_32\ <= '0';
+        \_5\ <= clear;
+        \_7\ <= reset;
+        \_9\ <= clock;
+        \_11\ <= bar;
+        \_13\ <= foo;
+        \_19\ <= (unsigned(std_logic_vector'("" & \_13\)) + unsigned(std_logic_vector'("" & \_11\))) ?= "1";
+        process (\_9\, \_7\) begin
+            if rising_edge(\_7\) then
+                \_33\ <= \_32\;
             else
-                if rising_edge(hc_9) then
-                    if hc_5 = '1' then
-                        hc_33 <= hc_32;
+                if rising_edge(\_9\) then
+                    if \_5\ = '1' then
+                        \_33\ <= \_32\;
                     else
                         if noo = '1' then
-                            hc_33 <= hc_19;
+                            \_33\ <= \_19\;
                         end if;
                     end if;
                 end if;
@@ -233,16 +238,19 @@ let%expect_test "example" =
         ddd <= fff;
         ccc <= fff;
         coo <= noo;
-        zoo <= hc_33;
-        moo <= hc_2;
-        sum <= hc_18;
+        zoo <= \_33\;
+        moo <= \_2\;
+        sum <= \_18\;
 
     end architecture;
-    |}];
+    |}]
+;;
+
+let%expect_test "apply port mangling to " =
   Testing.analyse_vhdl_and_verilog
     ~show:true
     ~config:{ Rtl.Config.default with two_state = true }
-    circuit;
+    (force circuit);
   [%expect
     {|
     module temp (
@@ -360,76 +368,82 @@ let%expect_test "example" =
 
     architecture rtl of temp is
         -- Conversions
-        function to_bit(s : std_ulogic) return bit is begin return to_bit(s, '0'); end;
-        function to_bitvector(s : std_ulogic_vector) return bit_vector is begin return to_bitvector(s, '0'); end;
+        function to_stdlogic(i : in bit) return std_logic is
+        begin
+            if i = '0' then
+                return '0';
+            else
+                return '1';
+            end if;
+        end function;
 
-        signal hc_17 : bit_vector(1 downto 0);
+        signal \_17\ : bit_vector(1 downto 0);
         signal gnd : bit;
-        signal hc_16 : bit_vector(1 downto 0);
-        signal hc_18 : bit_vector(1 downto 0);
-        signal hc_29 : bit_vector(1 downto 0);
+        signal \_16\ : bit_vector(1 downto 0);
+        signal \_18\ : bit_vector(1 downto 0);
+        signal \_29\ : bit_vector(1 downto 0);
         signal bbb : bit_vector(1 downto 0);
         signal aaa : bit_vector(1 downto 0);
         signal zoo_0 : bit;
-        signal hc_24 : bit;
-        signal hc_25 : bit_vector(1 downto 0);
-        signal hc_22 : bit_vector(1 downto 0);
-        signal hc_26 : bit_vector(1 downto 0);
-        signal hc_28 : bit_vector(1 downto 0);
+        signal \_24\ : bit;
+        signal \_25\ : bit_vector(1 downto 0);
+        signal \_22\ : bit_vector(1 downto 0);
+        signal \_26\ : bit_vector(1 downto 0);
+        signal \_28\ : bit_vector(1 downto 0);
         signal fff : bit_vector(1 downto 0);
         signal eee : bit_vector(1 downto 0);
         signal ddd : bit_vector(1 downto 0);
         signal ccc : bit_vector(1 downto 0);
-        signal hc_2 : bit_vector(1 downto 0);
-        signal hc_20 : bit;
+        signal \_2\ : bit_vector(1 downto 0);
+        signal \_20\ : bit;
         signal noo : bit;
         signal coo : bit;
-        signal hc_32 : bit;
-        signal hc_5 : bit;
-        signal hc_7 : bit;
-        signal hc_9 : bit;
-        signal hc_11 : bit;
-        signal hc_13 : bit;
-        signal hc_19 : bit;
-        signal hc_33 : bit;
+        signal \_32\ : bit;
+        signal \_5\ : bit;
+        signal \_7\ : bit;
+        signal \_9\ : bit;
+        signal \_11\ : bit;
+        signal \_13\ : bit;
+        signal \_19\ : bit;
+        signal \_33\ : bit;
 
     begin
 
-        hc_17 <= gnd & hc_11;
+        \_17\ <= gnd & \_11\;
         gnd <= '0';
-        hc_16 <= gnd & hc_13;
-        hc_18 <= bit_vector(unsigned(hc_16) + unsigned(hc_17));
-        hc_29 <= "11";
+        \_16\ <= gnd & \_13\;
+        \_18\ <= bit_vector(unsigned(\_16\) + unsigned(\_17\));
+        \_29\ <= "11";
         bbb <= "11";
         zoo_0 <= not noo;
-        hc_24 <= hc_19 or zoo_0;
-        hc_25 <= hc_24 & hc_24;
-        hc_22 <= hc_19 & noo;
-        with to_integer(unsigned'("" & hc_19)) select hc_26 <=
-            hc_22 when 0,
-            hc_25 when others;
-        hc_28 <= hc_26 or bbb;
-        fff <= hc_28 or hc_29;
-        hc_2 <= fff;
-        hc_20 <= not hc_11;
-        noo <= (unsigned'("" & hc_13) - unsigned'("" & hc_20)) ?= "1";
-        hc_32 <= '0';
-        hc_5 <= clear;
-        hc_7 <= reset;
-        hc_9 <= clock;
-        hc_11 <= bar;
-        hc_13 <= foo;
-        hc_19 <= (unsigned'("" & hc_13) + unsigned'("" & hc_11)) ?= "1";
-        process (hc_9, hc_7) begin
-            if rising_edge(hc_7) then
-                hc_33 <= hc_32;
+        \_24\ <= \_19\ or zoo_0;
+        \_25\ <= \_24\ & \_24\;
+        \_22\ <= \_19\ & noo;
+        with to_integer(unsigned'("" & \_19\)) select \_26\ <=
+            \_22\ when 0,
+            \_25\ when others;
+        \_28\ <= \_26\ or bbb;
+        fff <= \_28\ or \_29\;
+        \_2\ <= fff;
+        \_20\ <= not \_11\;
+        noo <= (unsigned'("" & \_13\) - unsigned'("" & \_20\)) ?= "1";
+        \_32\ <= '0';
+        \_5\ <= clear;
+        \_7\ <= reset;
+        \_9\ <= clock;
+        \_11\ <= bar;
+        \_13\ <= foo;
+        \_19\ <= (unsigned'("" & \_13\) + unsigned'("" & \_11\)) ?= "1";
+        process (\_9\, \_7\) begin
+            if rising_edge(\_7\) then
+                \_33\ <= \_32\;
             else
-                if rising_edge(hc_9) then
-                    if hc_5 = '1' then
-                        hc_33 <= hc_32;
+                if rising_edge(\_9\) then
+                    if \_5\ = '1' then
+                        \_33\ <= \_32\;
                     else
                         if noo = '1' then
-                            hc_33 <= hc_19;
+                            \_33\ <= \_19\;
                         end if;
                     end if;
                 end if;
@@ -440,9 +454,9 @@ let%expect_test "example" =
         ddd <= fff;
         ccc <= fff;
         coo <= noo;
-        zoo <= hc_33;
-        moo <= hc_2;
-        sum <= hc_18;
+        zoo <= \_33\;
+        moo <= \_2\;
+        sum <= \_18\;
 
     end architecture;
     |}]

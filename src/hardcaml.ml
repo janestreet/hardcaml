@@ -32,6 +32,7 @@ module Combinational_op = Combinational_op
 module Combinational_ops_database = Combinational_ops_database
 module Coverage_prim = Coverage_prim
 module Cyclesim = Cyclesim
+module Cyclesim_clock_domain = Cyclesim_clock_domain
 module Cyclesim_coverage_expect_test = Cyclesim_coverage.For_expect_tests
 module Cyclesim_float_ops = Cyclesim_float_ops
 module Logic = Logic

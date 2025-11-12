@@ -86,4 +86,14 @@ module Expert : sig
   include module type of Expert
 
   val validate_assign_in_always : dst:t -> src:t -> unit
+
+  val reg__with_signal_reset
+    :  ?enable:t
+    -> ?initialize_to:Bits.t
+    -> ?reset_to:t
+    -> ?clear:t
+    -> ?clear_to:t
+    -> Reg_spec.t
+    -> t
+    -> t
 end

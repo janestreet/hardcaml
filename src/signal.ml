@@ -138,6 +138,8 @@ let add_always_state_transition_waiver_exn t waiver =
   | _ -> raise_invalid_waiver t ~expected_kind:"register"
 ;;
 
+let set_wave_format = Type.set_wave_format
+
 let ( --$ ) s w =
   Type.set_wave_format s w;
   s
@@ -316,14 +318,14 @@ end
 
 type 'a with_register_spec =
   ?enable:t
-  -> ?initialize_to:t
-  -> ?reset_to:t
+  -> ?initialize_to:Bits.t
+  -> ?reset_to:Bits.t
   -> ?clear:t
   -> ?clear_to:t
   -> Reg_spec.t
   -> 'a
 
-let reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
+let reg__with_signal_reset ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
   (* if width d = 0 then raise_s [%message "[Signal.reg] width of data input is 0"]; *)
   let spec =
     Type.Register.of_reg_spec
@@ -345,7 +347,7 @@ include Signal_builders.Registers (struct
     module Reg_spec = Reg_spec
 
     let add_attribute = add_attribute
-    let reg = reg
+    let reg__with_signal_reset = reg__with_signal_reset
     let wire = wire
     let assign = assign
     let update_rep = update_rep
@@ -404,6 +406,8 @@ let pp fmt t = Stdlib.Format.fprintf fmt "%s" ([%sexp (t : t)] |> Sexp.to_string
 
 module Expert = struct
   include Memory_prim
+
+  let reg__with_signal_reset = reg__with_signal_reset
 end
 
 module (* Install pretty printer in top level *) _ = Pretty_printer.Register (struct

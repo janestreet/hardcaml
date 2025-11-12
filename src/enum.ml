@@ -178,6 +178,18 @@ module Make_enums (Cases : Enum_intf.Cases) = struct
       ;;
     end
 
+    let wave_formats =
+      let case_names =
+        List.map Cases.all ~f:(fun c -> Sexp.to_string [%sexp (c : Cases.t)])
+      in
+      match M.how with
+      | `Binary -> Wave_format.Index case_names
+      | `One_hot ->
+        Wave_format.Map
+          (List.mapi case_names ~f:(fun i s ->
+             Bits.of_bigint ~width Bigint.(one lsl i), s))
+    ;;
+
     (* Testbench functions. *)
     let sim_set t enum = t := of_enum (module Bits) enum
     let sim_set_raw t raw = t := raw

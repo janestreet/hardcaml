@@ -34,6 +34,7 @@ module type Scalar = sig
   module type S_untyped = S_untyped
 
   module Make (X : Value.Arg) : S_untyped
+  module Make_with_wave_format (X : Value.Arg_with_wave_format) : S_untyped
 
-  val scalar : ?name:string -> int -> (module S_untyped)
+  val scalar : ?wave_format:Wave_format.t -> ?name:string -> int -> (module S_untyped)
 end

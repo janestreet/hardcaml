@@ -261,10 +261,10 @@ let%expect_test "instantiation in vhdl" =
 
     architecture rtl of test_parameter_instantiation_vhdl is
 
-        signal hc_6 : std_logic_vector(1 downto 0);
-        signal hc_1 : std_logic_vector(1 downto 0);
-        signal hc_7 : std_logic_vector(1 downto 0);
-        signal hc_4 : std_logic_vector(1 downto 0);
+        signal \_6\ : std_logic_vector(1 downto 0);
+        signal \_1\ : std_logic_vector(1 downto 0);
+        signal \_7\ : std_logic_vector(1 downto 0);
+        signal \_4\ : std_logic_vector(1 downto 0);
 
     begin
 
@@ -280,8 +280,8 @@ let%expect_test "instantiation in vhdl" =
                           a_std_logic_vector => std_logic_vector'("1010"),
                           a_std_ulogic_vector => std_ulogic_vector'("1011") )
             port map ( a => a,
-                       b => hc_6(1 downto 0) );
-        hc_1 <= hc_6;
+                       b => \_6\(1 downto 0) );
+        \_1\ <= \_6\;
         the_test_parameters_vhdl: entity work.test_parameters_vhdl (rtl)
             generic map ( an_int => 7,
                           a_bool => true,
@@ -294,10 +294,10 @@ let%expect_test "instantiation in vhdl" =
                           a_std_logic_vector => std_logic_vector'("1010"),
                           a_std_ulogic_vector => std_ulogic_vector'("1011") )
             port map ( a => a,
-                       b => hc_7(1 downto 0) );
-        hc_4 <= hc_7;
-        b_vhdl <= hc_4;
-        b_verilog <= hc_1;
+                       b => \_7\(1 downto 0) );
+        \_4\ <= \_7\;
+        b_vhdl <= \_4\;
+        b_verilog <= \_1\;
 
     end architecture;
     |}]

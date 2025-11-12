@@ -11,7 +11,8 @@ module type Rtl_name = sig
 
   module Verilog : Language
   module Systemverilog : Language
-  module Vhdl : Language
+  module Vhdl_with_mangling : Language
+  module Vhdl_with_extended_identifiers : Language
 
   type t
 

@@ -26,7 +26,7 @@ design, a vendor macro or even another Hardcaml circuit.
 - : ?lib:string ->
     ?arch:string ->
     ?instance:string ->
-    ?parameters:Parameter.t list ->
+    ?parameters:Hardcaml.Parameter.t list ->
     ?attributes:Hardcaml.Rtl_attribute.t list ->
     unit ->
     name:string ->

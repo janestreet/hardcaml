@@ -185,8 +185,8 @@ module Memories (Comb : sig
 
     val reg
       :  ?enable:t
-      -> ?initialize_to:t
-      -> ?reset_to:t
+      -> ?initialize_to:Bits.t
+      -> ?reset_to:Bits.t
       -> ?clear:t
       -> ?clear_to:t
       -> Reg_spec.t
@@ -207,8 +207,9 @@ module Memories (Comb : sig
 struct
   include Multiport_memory.Make (Comb)
 
-  let memory size ~write_port ~read_address =
+  let memory ?attributes size ~write_port ~read_address =
     (multiport_memory
+       ?attributes
        size
        ~write_ports:[| write_port |]
        ~read_addresses:[| read_address |]).(0)
@@ -248,9 +249,9 @@ module Registers (Pre : sig
 
     module Reg_spec : Reg_spec.S with type signal := t
 
-    val reg
+    val reg__with_signal_reset
       :  ?enable:t
-      -> ?initialize_to:t
+      -> ?initialize_to:Bits.t
       -> ?reset_to:t
       -> ?clear:t
       -> ?clear_to:t
@@ -265,6 +266,11 @@ module Registers (Pre : sig
   end) =
 struct
   open Pre
+
+  let reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
+    let reset_to = Option.map reset_to ~f:(Fn.compose of_constant Bits.to_constant) in
+    reg__with_signal_reset ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d
+  ;;
 
   let rec pipeline
     ?(attributes = [])

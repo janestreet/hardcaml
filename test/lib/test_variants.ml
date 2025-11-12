@@ -52,3 +52,48 @@ end
 
 include Test (Enum.Binary)
 include Test (Enum.One_hot)
+
+let%expect_test "Encodings and wave formats for binary" =
+  let module E = Enum.Binary in
+  print_s
+    [%message
+      ""
+        ~_:
+          (List.map Cases.all ~f:(fun c -> c, E.Of_bits.of_enum c)
+           : (Cases.t * Bits.t E.t) list)];
+  print_s [%message "" ~_:(E.wave_formats : Wave_format.t E.t)];
+  [%expect
+    {|
+    ((C0 000)
+     (C1 001)
+     (C2 010)
+     (C3 011)
+     (C4 100))
+    (Index (C0 C1 C2 C3 C4))
+    |}]
+;;
+
+let%expect_test "Encodings and wave formats for one hot" =
+  let module E = Enum.One_hot in
+  print_s
+    [%message
+      ""
+        ~_:
+          (List.map Cases.all ~f:(fun c -> c, E.Of_bits.of_enum c)
+           : (Cases.t * Bits.t E.t) list)];
+  print_s [%message "" ~_:(E.wave_formats : Wave_format.t E.t)];
+  [%expect
+    {|
+    ((C0 00001)
+     (C1 00010)
+     (C2 00100)
+     (C3 01000)
+     (C4 10000))
+    (Map (
+      (00001 C0)
+      (00010 C1)
+      (00100 C2)
+      (01000 C3)
+      (10000 C4)))
+    |}]
+;;

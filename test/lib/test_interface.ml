@@ -625,3 +625,40 @@ let%expect_test "pack and unpack work, even though port names are shared." =
       (baz ((value 0xaa)))))
     |}]
 ;;
+
+let%expect_test "initialize_to" =
+  (* This test is just to show that we have exported the [bits_t] type in
+     [Of_signal_functions] such that it can be used *)
+  let spec = Hardcaml.Signal.Reg_spec.create ~clock:Signal.vdd () in
+  let t =
+    Of_signal.reg spec ~initialize_to:(Of_bits.of_int_trunc 0) (Of_signal.of_int_trunc 0)
+  in
+  print_s [%message (t : Signal.t t)];
+  [%expect
+    {|
+    (t (
+      (foo (
+        register
+        (width 8)
+        ((clock         0b1)
+         (clock_edge    Rising)
+         (initialize_to 00000000))
+        (data_in 0b00000000)))
+      (bar ((
+        value (
+          register
+          (width 16)
+          ((clock         0b1)
+           (clock_edge    Rising)
+           (initialize_to 0000000000000000))
+          (data_in 0x0000)))))
+      (baz ((
+        value (
+          register
+          (width 16)
+          ((clock         0b1)
+           (clock_edge    Rising)
+           (initialize_to 0000000000000000))
+          (data_in 0x0000)))))))
+    |}]
+;;

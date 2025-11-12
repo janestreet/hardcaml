@@ -89,7 +89,7 @@ struct
         (* use a wire - need to derive the default value *)
         match reset_to with
         | None -> wire' ~default:(Signal.zero width) debug_info
-        | Some default -> wire ~default ())
+        | Some default -> wire ~default:(Signal.of_bits default) ())
       else (
         let r =
           reg' ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~width debug_info
@@ -475,7 +475,7 @@ struct
           Variable_.reg' (* must be reset to get into state 0 *)
             reg_spec
             ~clear_to:(Signal.one nstates)
-            ~reset_to:(Signal.one nstates)
+            ~reset_to:(Bits.one nstates)
             ~enable
             ~width:nstates
             debug_info

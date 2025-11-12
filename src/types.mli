@@ -8,14 +8,18 @@ module With_valid : With_valid_intf.With_valid
 
 module type Value_arg = Value.Arg
 
-val value : ?name:string -> int -> (module Value.S)
+val value : ?wave_format:Wave_format.t -> ?name:string -> int -> (module Value.S)
 
 module type Value = Value.S
 
 (** An interface for a single value *)
 module Value (S : Value_arg) : Value.S
 
-val scalar : ?name:string -> int -> (module Scalar.S_untyped)
+val scalar
+  :  ?wave_format:Wave_format.t
+  -> ?name:string
+  -> int
+  -> (module Scalar.S_untyped)
 
 module type Scalar = Scalar.S
 

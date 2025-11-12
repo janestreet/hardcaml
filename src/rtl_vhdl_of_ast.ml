@@ -67,13 +67,6 @@ let slv (range : Rtl_ast.range) two_state =
     else [%rope "std_logic_vector(%{(width-1)#Int} downto 0)"]
 ;;
 
-let slv_type (range : Rtl_ast.range) two_state =
-  match range with
-  | Bit -> if two_state then [%rope "bit"] else [%rope "std_logic"]
-  | Vector { width = _ } ->
-    if two_state then [%rope "bit_vector"] else [%rope "std_logic_vector"]
-;;
-
 let to_integer (var : Rtl_ast.var) (two_state : bool) =
   if Rtl_ast.equal_range var.range Bit
   then
@@ -81,6 +74,27 @@ let to_integer (var : Rtl_ast.var) (two_state : bool) =
     then [%rope {|to_integer(unsigned'("" & %{var.name}))|}]
     else [%rope {|to_integer(unsigned(std_logic_vector'("" & %{var.name})))|}]
   else [%rope "to_integer(unsigned(%{var.name}))"]
+;;
+
+(* Always convert to std_logic{,_vector} from the current variable (which may or may not
+   be 2-state) *)
+let to_std_logic_vector (var : Rtl_ast.var) (two_state : bool) =
+  if two_state
+  then
+    if Rtl_ast.equal_range var.range Bit
+    then [%rope {|to_stdlogic(%{var.name})|}]
+    else [%rope {|to_stdlogicvector(%{var.name})|}]
+  else [%rope {|%{var.name}|}]
+;;
+
+(* Always convert from std_logic{,_vector} to the current mode *)
+let of_std_logic_vector ~range inner (two_state : bool) =
+  if two_state
+  then
+    if Rtl_ast.equal_range range Bit
+    then [%rope {|to_bit(%{inner})|}]
+    else [%rope {|to_bitvector(%{inner})|}]
+  else [%rope {|%{inner}|}]
 ;;
 
 let input name range two_state = [%rope "%{name} : in %{slv range two_state}"]
@@ -119,8 +133,14 @@ let preamble two_state =
   then
     [%rope
       {|%{tab}-- Conversions
-%{tab}function to_bit(s : std_ulogic) return bit is begin return to_bit(s, '0'); end;
-%{tab}function to_bitvector(s : std_ulogic_vector) return bit_vector is begin return to_bitvector(s, '0'); end;
+%{tab}function to_stdlogic(i : in bit) return std_logic is
+%{tab}begin
+%{tab}%{tab}if i = '0' then
+%{tab}%{tab}%{tab}return '0';
+%{tab}%{tab}else
+%{tab}%{tab}%{tab}return '1';
+%{tab}%{tab}end if;
+%{tab}end function;
 |}]
   else Rope.empty
 ;;
@@ -173,27 +193,6 @@ let vhdl_constant constant =
   else [%rope "\"%{Bits.to_bstr constant#String}\""]
 ;;
 
-let protected_memory_type ~(memory : Rtl_ast.var) ~memory_type ~two_state ~depth =
-  let slv_ranged = slv memory.range two_state in
-  let slv_type = slv_type memory.range two_state in
-  [%rope
-    {|%{tab}type %{memory_type#String} is protected
-%{tab}%{tab}procedure set(address : integer; data : %{slv_ranged});
-%{tab}%{tab}impure function get(address : integer) return %{slv_type};
-%{tab}end protected;
-%{tab}type %{memory_type#String} is protected body
-%{tab}%{tab}type t is array (0 to %{(depth-1)#Int}) of %{slv_ranged};
-%{tab}%{tab}variable memory : t;
-%{tab}%{tab}procedure set(address : integer; data : %{slv_ranged}) is begin memory(address) := data; end procedure;
-%{tab}%{tab}impure function get(address : integer) return %{slv_type} is begin return memory(address); end function;
-%{tab}end protected body;
-|}]
-;;
-
-let shared_memory_variable ~(memory : Rtl_ast.var) ~memory_type =
-  [%rope "%{tab}shared variable %{memory.name} : %{memory_type#String};\n"]
-;;
-
 let declaration (decl : Rtl_ast.declaration) ~two_state =
   let write_var ~write_attrs (decl : Rtl_ast.logic_declaration) (var : Rtl_ast.var) =
     let initialize_to =
@@ -217,10 +216,12 @@ let declaration (decl : Rtl_ast.declaration) ~two_state =
           logic.write.attributes
       ]
   | Multiport_memory { memory; memory_type; depth; range = _ } ->
-    let attrs = attributes_of_var ~class_:"variable" memory in
+    let attrs = attributes_of_var ~class_:"signal" memory in
     Rope.concat
-      [ protected_memory_type ~memory ~memory_type ~two_state ~depth
-      ; shared_memory_variable ~memory ~memory_type
+      [ [%rope
+          "%{tab}type %{memory_type#String} is array (0 to %{(depth-1)#Int}) of %{slv \
+           memory.range false};\n"]
+      ; [%rope "%{tab}signal %{memory.name} : %{memory_type#String};\n"]
       ; attrs
       ]
 ;;
@@ -277,9 +278,11 @@ let rec write_always_statements indent (two_state : bool) (t : Rtl_ast.always) =
       ]
   | Assignment { lhs; rhs } -> [%rope "%{indent}%{lhs.name} <= %{rhs.name};\n"]
   | Memory_assignment { lhs; index; rhs } ->
-    [%rope "%{indent}%{lhs.name}.set(%{to_integer index two_state}, %{rhs.name});\n"]
+    [%rope
+      "%{indent}%{lhs.name}(%{to_integer index two_state}) <= %{to_std_logic_vector rhs \
+       two_state};\n"]
   | Constant_memory_assignment { lhs; index; value } ->
-    [%rope "%{indent}%{lhs.name}.set(%{index#Int}, %{vhdl_constant value});\n"]
+    [%rope "%{indent}%{lhs.name}(%{index#Int}) <= %{vhdl_constant value};\n"]
   | Case { select; cases } ->
     Rope.concat
       [ (if case_types_are_integer cases
@@ -319,7 +322,7 @@ let write_always (two_state : bool) (sensitivity_list : Rtl_ast.sensitivity_list
   in
   Rope.concat
     [ [%rope "%{tab}process %{sensitivity_list} begin\n"]
-    ; write_always_statements tab2 two_state always
+    ; always |> List.map ~f:(write_always_statements tab2 two_state) |> Rope.concat
     ; [%rope "%{tab}end process;\n"]
     ]
 ;;
@@ -484,16 +487,36 @@ let rec statement two_state (stat : Rtl_ast.statement) =
        %{tab2}%{cases};\n"]
   | Mux { to_assignment; to_always = _; is_mux2 = _ } ->
     statement two_state (to_assignment ())
-  | Always { sensitivity_list; always } -> write_always two_state sensitivity_list always
+  | Always { sensitivity_list; always } ->
+    write_always two_state sensitivity_list [ always ]
   | Initial { always } -> write_initial two_state always
   | Instantiation instantiation -> write_instantiation instantiation
   | Multiport_mem { always; initial } ->
+    (* Convert multiport mems to have all of their write ports in one process, this is
+       necessary to simulate multiple write ports in VHDL *)
+    let all_write_clocks =
+      List.concat_map always ~f:(function
+        | Always { sensitivity_list; always = _ } ->
+          (match sensitivity_list with
+           | Star -> failwith "not allowed to have sensitivity (*) in a memory write port"
+           | Edges edges -> edges)
+        | _ -> failwith "not allowed to have non-always statements in a memory write port")
+    in
+    let all_write_statements =
+      List.map always ~f:(function
+        | Always { sensitivity_list = _; always } -> always
+        | _ -> failwith "not allowed to have non-always statements in a memory write port")
+    in
     Rope.concat
-      [ concat_map always ~f:(statement two_state)
+      [ (if List.is_empty all_write_statements
+         then Rope.empty
+         else write_always two_state (Edges all_write_clocks) all_write_statements)
       ; Option.value_map ~default:Rope.empty initial ~f:(statement two_state)
       ]
   | Mem_read_port { lhs; memory; address } ->
-    [%rope "%{tab}%{lhs.name} <= %{memory.name}.get(%{to_integer address two_state});\n"]
+    let mem_read = [%rope "%{memory.name}(%{to_integer address two_state})"] in
+    [%rope
+      "%{tab}%{lhs.name} <= %{of_std_logic_vector ~range:lhs.range mem_read two_state};\n"]
 ;;
 
 let statements (ast : Rtl_ast.t) =
