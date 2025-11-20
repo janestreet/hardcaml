@@ -444,7 +444,7 @@ struct
         let read_mux q = mux_strict read_select (split_lsb ~part_width q.(0)) in
         { read_addresses = [| read_address |]; get_read_data = read_mux })
       else (
-        (* Read port is wider.  Add read ports and concat the output *)
+        (* Read port is wider. Add read ports and concat the output *)
         let diff = -diff in
         let ratio = Int.pow 2 diff in
         let read_concat q = concat_lsb (Array.to_list q) in

@@ -142,7 +142,7 @@ let rec write_always_statements indent (t : Rtl_ast.always) =
     | Level { level = High; var } | Edge { edge = Rising; var } -> [%rope "%{var.name}"]
     | Level { level = Low; var } | Edge { edge = Falling; var } ->
       [%rope "%{var.name} == 0"]
-    | Clock _ -> (* clocks are not written in verilog  *) assert false
+    | Clock _ -> (* clocks are not written in verilog *) assert false
   in
   match t with
   | If { condition = Clock _; on_true; on_false = [] } ->

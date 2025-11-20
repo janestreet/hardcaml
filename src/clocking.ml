@@ -107,8 +107,8 @@ module Implementation_for_untyped = struct
 end
 
 (* This implementation has Make().t = Untyped.t to be the same type, but this equality
-   isn't exposed in the interface file, so from the perspective of the user, these
-   two types won't unify.
+   isn't exposed in the interface file, so from the perspective of the user, these two
+   types won't unify.
 *)
 
 module Make () = Implementation_for_untyped

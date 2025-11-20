@@ -6,7 +6,7 @@
    These are the core operations from which the full [Comb.S] API is built.
 
    This is in preparation for testing either a Zarith based version, or a version built on
-   [int array].  The end goal will be to choose the fastest and delete all the rest. *)
+   [int array]. The end goal will be to choose the fastest and delete all the rest. *)
 
 open! Import
 open! Bits

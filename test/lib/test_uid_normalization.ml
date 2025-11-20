@@ -147,7 +147,7 @@ let%expect_test "verilog without normalization" =
         assign h = _56;
 
     endmodule |}]
-v} *)
+   v} *)
 
 let%expect_test "verilog with normalization" =
   test ~normalize_uids:true;

@@ -1,5 +1,5 @@
-(* Generate Hardcaml instantiations for VHDL and Verilog to test various
-   parameter types.  See hardcaml/test/rtl/README. *)
+(* Generate Hardcaml instantiations for VHDL and Verilog to test various parameter types.
+   See hardcaml/test/rtl/README. *)
 
 open Core
 open Hardcaml

@@ -65,7 +65,7 @@ module Circuit_instance = struct
   let module_name t = Circuit.name t.circuit
 
   (* The following fields are computed when the lazy thunk is evaluated. Wrap in a
-       descriptive exception. *)
+     descriptive exception. *)
 
   let rtl t = with_exn t ~f:(fun () -> Lazy.force t.rtl)
   let blackbox t = with_exn t ~f:(fun () -> Lazy.force t.blackbox)

@@ -80,8 +80,8 @@ module Mutable = struct
   ;;
 
   let ( ~: ) c a =
-    (* Use [lxor] instead of [lnot] since the former is exposed as a primitive
-       in base's mli. *)
+    (* Use [lxor] instead of [lnot] since the former is exposed as a primitive in base's
+       mli. *)
     let words = words a in
     for i = 0 to words - 1 do
       unsafe_set_int64 c i (Int64.( lxor ) (-1L) (unsafe_get_int64 a i))
@@ -157,8 +157,8 @@ module Mutable = struct
     | Other _ -> sub_ocaml
   ;;
 
-  (* [eq], [neq], [lt] returns int rather than int64 to prevent allocation or any
-     memory indirection.
+  (* [eq], [neq], [lt] returns int rather than int64 to prevent allocation or any memory
+     indirection.
   *)
   let rec eq words i a b =
     if i = words
@@ -200,8 +200,8 @@ module Mutable = struct
 
   let ( <: ) c a b =
     let words = words a in
-    (* We cannot special case <= 64, since OCaml does not have unsigned
-       comparison primitives yet. *)
+    (* We cannot special case <= 64, since OCaml does not have unsigned comparison
+       primitives yet. *)
     if width a <= 63
     then (
       let result =
@@ -219,7 +219,7 @@ module Mutable = struct
     raise_s [%message "Bits.mux unexpected empty list"]
   ;;
 
-  (* For [mux2] this is ever so slightly slower.  For mux16, it's slightly faster. *)
+  (* For [mux2] this is ever so slightly slower. For mux16, it's slightly faster. *)
   let rec mux_find idx n l =
     match l with
     | [] -> raise_mux_of_empty_list ()
@@ -239,8 +239,8 @@ module Mutable = struct
     let a_bits = a_width land width_mask in
     if a_bits = 0
     then
-      (* If the next bit to write to the is 64-bit-aligned, skip the unnecessary
-         bit shifts.
+      (* If the next bit to write to the is 64-bit-aligned, skip the unnecessary bit
+         shifts.
       *)
       for i = 0 to b_words - 1 do
         unsafe_set_int64 a (a_words + i) (unsafe_get_int64 b i)
@@ -252,20 +252,19 @@ module Mutable = struct
          [b].
       *)
       let x = ref (unsafe_get_int64 a (a_words - 1)) in
-      (* The following loop takes the bottom [64 - a_bits] and OR it with [a_bits]
-         from either an earlier word or the existing data in [a]. [x] is then
-         updated to contain the uppermost [a_bits] from this word in [b].
+      (* The following loop takes the bottom [64 - a_bits] and OR it with [a_bits] from
+         either an earlier word or the existing data in [a]. [x] is then updated to
+         contain the uppermost [a_bits] from this word in [b].
       *)
       for i = 0 to b_words - 1 do
         let y = unsafe_get_int64 b i in
         unsafe_set_int64 a (a_words - 1 + i) Int64.(!x lor (y lsl a_bits));
         x := Int64.O.(y lsr Int.(64 - a_bits))
       done;
-      (* [x] contains residual data, that is either the a[words - 1] (when b_words
-         = 0), or the upper [a_bits] of the last 64-bit word of [b]'s data.
+      (* [x] contains residual data, that is either the a[words - 1] (when b_words = 0),
+         or the upper [a_bits] of the last 64-bit word of [b]'s data.
 
-         The following conditional checks if the residual word is within the bound
-         of [b].
+         The following conditional checks if the residual word is within the bound of [b].
       *)
       let num_bits_in_last_word = b_width land 63 in
       let num_bits_in_last_word =
@@ -284,6 +283,7 @@ module Mutable = struct
          | h :: t ->
            let width = cat c_words width c h in
            cat_iter c_words width c t
+       ;;
 
        let concat_fast_allocs c l =
          let c_words = words c in
@@ -292,6 +292,7 @@ module Mutable = struct
          | h :: t ->
            copy ~src:h ~dst:c;
            cat_iter c_words (width h) c t
+       ;;
      ]} *)
   let rec cat_iter_back width_ c l =
     match l with
@@ -323,17 +324,16 @@ module Mutable = struct
     let hi_word = word h in
     if s_bits = 0
     then
-      (* If first selected bit position is 64-bit aligned, use short-circuit
-         that skip all the bit shifting
+      (* If first selected bit position is 64-bit aligned, use short-circuit that skip all
+         the bit shifting
       *)
       for i = 0 to words - 1 do
         unsafe_set_int64 dst i (unsafe_get_int64 src (lo_word + i))
       done
     else (
-      (* The following routine loops through [words] words in [src], can
-         concatenate the upper [bits] of the src[low_word+i] with the bottom
-         [64-bits] of [low_word+i+1]. src[low_word_i] is conveniently buffered
-         in the [a] variable.
+      (* The following routine loops through [words] words in [src], can concatenate the
+         upper [bits] of the src[low_word+i] with the bottom [64-bits] of [low_word+i+1].
+         src[low_word_i] is conveniently buffered in the [a] variable.
       *)
       let a = ref (unsafe_get_int64 src lo_word) in
       for i = 0 to words - 1 do

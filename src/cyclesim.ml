@@ -44,6 +44,14 @@ let cycle ?(n = 1) sim =
   done
 ;;
 
+let clock_mode (sim : _ t) = sim.clock_mode
+
+let cycle_until_clocks_aligned (sim : _ t) =
+  while not (sim.clocks_aligned ()) do
+    cycle sim
+  done
+;;
+
 let raise_after_timeout ?message ~(here : [%call_pos]) sim ~timeout =
   let cycle' = ref 0 in
   Private.modify

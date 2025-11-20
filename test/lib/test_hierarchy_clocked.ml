@@ -80,8 +80,8 @@ module%test Both_domains_specified_on_clocked_caller = struct
   let%expect_test "valid examples" =
     (* When domains are specified, constants are coerced to a specified domain. As in this
        case, the input domains doesn't have a concrete domain associated ot the dangling
-       domain, they're all assigned a generated domain, as implied by the _gen suffix in the
-       name.
+       domain, they're all assigned a generated domain, as implied by the _gen suffix in
+       the name.
     *)
     print_concrete_domains
       (instantiate
@@ -152,8 +152,8 @@ module%test Both_domains_specified_on_clocked_caller = struct
            (name bar)
            (loc lib/hardcaml/hardcaml/test/lib/test_hierarchy_clocked.ml:LINE:COL)))))
       |}];
-    (* Multiple clock domains in specification, but in runtime, both of them map to the same
-       concrete clock domain.
+    (* Multiple clock domains in specification, but in runtime, both of them map to the
+       same concrete clock domain.
     *)
     print_concrete_domains
       (instantiate
@@ -313,8 +313,8 @@ module%test Both_domains_specified_on_unclocked_caller = struct
   ;;
 
   let%expect_test "invalid examples" =
-    (* The following is invalid as [output.x] is expected to be bound to the concrete domain
-       of [input.a], but got the concreate domain of [input.b] instead.
+    (* The following is invalid as [output.x] is expected to be bound to the concrete
+       domain of [input.a], but got the concreate domain of [input.b] instead.
     *)
     require_does_raise (fun () ->
       instantiate_unclocked

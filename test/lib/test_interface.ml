@@ -615,8 +615,7 @@ let%expect_test "pack and unpack work, even though port names are shared." =
   in
   let unpacked = Of_bits.unpack packed |> map ~f:Bits.to_int_trunc in
   print_s [%message (unpacked : Int.Hex.t t)];
-  (* We don't actually print out the (wrong) values, as we now raise in this
-       situation. *)
+  (* We don't actually print out the (wrong) values, as we now raise in this situation. *)
   [%expect
     {|
     (unpacked (

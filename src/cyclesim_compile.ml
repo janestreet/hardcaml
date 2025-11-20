@@ -86,6 +86,12 @@ module Clocks = struct
     let find_clock_exn t clock_signal =
       Map.find_exn t.clocks_to_domains (Signal.Type.uid clock_signal) |> fst
     ;;
+
+    let aligned t =
+      Clock_domain.Group.elements t.domains
+      |> Iarray.for_all ~f:(fun indexed ->
+        Clock_domain.should_step (Clock_domain.domain indexed) ~cycle:t.cycle)
+    ;;
   end
 
   type t =
@@ -134,6 +140,11 @@ module Clocks = struct
   let incr_cycle = function
     | Single_domain _ -> ()
     | Multi_domain multi -> Multi_domain.incr_cycle multi
+  ;;
+
+  let aligned = function
+    | Single_domain _ -> true
+    | Multi_domain multi -> Multi_domain.aligned multi
   ;;
 end
 
@@ -187,8 +198,8 @@ module Nodes_and_addresses = struct
     ;;
 
     let add_to_section section signal size =
-      (* Constructing the nodes list this was reverses the order they are added
-         in. However the build function reverses them back. *)
+      (* Constructing the nodes list this was reverses the order they are added in.
+         However the build function reverses them back. *)
       { signal; size } :: section
     ;;
 
@@ -259,7 +270,7 @@ module Nodes_and_addresses = struct
             List.fold ids ~init:map ~f:(fun map id -> Map.add_exn map ~key:id ~data:node)
         in
         (* Rebuilding the nodes list this way reverses the ordering, preserving the
-           original order they were added to the builder.*)
+           original order they were added to the builder. *)
         map, node :: nodes, offset + size)
     in
     map, create_section nodes ~offset ~new_offset, new_offset
@@ -892,11 +903,16 @@ let create_cyclesim circuit t (traced : Cyclesim0.Traced.t) =
       Array.iteri data ~f:(fun i data ->
         Bytes.unsafe_set_int64 bytes ((address + i) * 8) data))
   in
+  let reset_clocks () =
+    Clocks.reset clocks;
+    clock_update ()
+  in
   set_consts init_consts;
   set_consts startup_consts;
+  reset_clocks ();
   let reset () =
     set_consts reset_consts;
-    Clocks.reset clocks
+    reset_clocks ()
   in
   (* Simulation steps *)
   let cycle_check () =
@@ -918,7 +934,6 @@ let create_cyclesim circuit t (traced : Cyclesim0.Traced.t) =
     reg_update ()
   in
   let cycle_at_clock_edge () =
-    clock_update ();
     (* run memory writes *)
     mem_update ();
     (* copy back new register values *)
@@ -938,17 +953,24 @@ let create_cyclesim circuit t (traced : Cyclesim0.Traced.t) =
     comb_last_layer ();
     (* copy output ports *)
     copy_out_ports t out_ports_after;
-    Clocks.incr_cycle clocks
+    Clocks.incr_cycle clocks;
+    clock_update ()
   in
   let get_ports (ports : Port.t list) =
     List.map ports ~f:(fun { name; address = _; width = _; bits } -> name, bits)
   in
+  let clocks_aligned () = Clocks.aligned clocks in
   Cyclesim0.Private.create
     ?circuit
     ~in_ports:(get_ports in_ports)
     ~out_ports_before_clock_edge:(get_ports out_ports_before)
     ~out_ports_after_clock_edge:(get_ports out_ports_after)
     ~reset
+    ~clock_mode:
+      (match clocks with
+       | Single_domain _ -> `All_one_domain
+       | Multi_domain _ -> `By_input_clocks)
+    ~clocks_aligned
     ~cycle_check
     ~cycle_before_clock_edge
     ~cycle_at_clock_edge

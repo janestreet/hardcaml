@@ -2,8 +2,8 @@ open! Core0
 
 type t [@@deriving sexp_of]
 
-(* Disables adding new assertions, and returns a map of the assertions added.
-   Calling it again will return the map. *)
+(* Disables adding new assertions, and returns a map of the assertions added. Calling it
+   again will return the map. *)
 val finalize : t -> Signal.t Map.M(String).t
 val create : unit -> t
 

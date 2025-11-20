@@ -25,8 +25,8 @@ module T = struct
   ;;
 
   type 'a create_params =
-    ?nearly_empty:int (** default is [1] **)
-    -> ?nearly_full:int (** default is [depth-1] **)
+    ?nearly_empty:int (** default is [1] *)
+    -> ?nearly_full:int (** default is [depth-1] *)
     -> ?overflow_check:bool (** default is [true] *)
     -> ?underflow_check:bool (** default is [true] *)
     -> ?ram_attributes:Rtl_attribute.t list (** default is blockram *)
@@ -234,6 +234,8 @@ module type Fifo = sig
         not well defined if valid is not set. *)
     ; empty : Signal.t (** Is the fifo currently empty. *)
     ; full : Signal.t (** Is the fifo currently full. *)
+    ; nearly_empty : Signal.t (** Is the fifo close to empty. *)
+    ; nearly_full : Signal.t (** Is the fifo close to full. *)
     ; overflow : Signal.t (** Set if the input was valid when the fifo was full. *)
     ; read_when_empty : Signal.t (** Set if read was valid when the fifo was empty. *)
     }
@@ -243,22 +245,22 @@ module type Fifo = sig
       and the fifo is not full. We will pop the fifo whenever read is high and the fifo is
       not empty. *)
   val typed_fifo
-    :  ?scope:Scope.t
-    -> clocking:Signal.t Clocking.t
-    -> capacity:int
-    -> input:(Signal.t, 'a) With_valid.t2
-    -> read:Signal.t
-    -> (module Interface.S_Of_signal with type Of_signal.t = 'a)
-    -> 'a typed_fifo_read_result
+    : (clocking:Signal.t Clocking.t
+       -> capacity:int
+       -> input:(Signal.t, 'a) With_valid.t2
+       -> read:Signal.t
+       -> (module Interface.S_Of_signal with type Of_signal.t = 'a)
+       -> 'a typed_fifo_read_result)
+        T.create_params
 
   (** A cut through typed fifo which will cut through if the fifo is empty and read is
       high. *)
   val cut_through_typed_fifo
-    :  ?scope:Scope.t
-    -> clocking:Signal.t Clocking.t
-    -> capacity:int
-    -> input:(Signal.t, 'a) With_valid.t2
-    -> read:Signal.t
-    -> (module Interface.S_Of_signal with type Of_signal.t = 'a)
-    -> 'a typed_fifo_read_result
+    : (clocking:Signal.t Clocking.t
+       -> capacity:int
+       -> input:(Signal.t, 'a) With_valid.t2
+       -> read:Signal.t
+       -> (module Interface.S_Of_signal with type Of_signal.t = 'a)
+       -> 'a typed_fifo_read_result)
+        T.create_params
 end

@@ -332,10 +332,10 @@ let topological_sort_exn ~deps graph =
 
 let last_layer_of_nodes ~is_input graph =
   let module Deps = Deps_for_simulation_scheduling in
-  (* DFS signals starting from [graph] until a register (or memory) is reached.
-     While traversing, mark all signals that are encountered with a bool to
-     indicate whether the signal is in a path between a register (or memory)
-     and the output of the graph--the last layer.
+  (* DFS signals starting from [graph] until a register (or memory) is reached. While
+     traversing, mark all signals that are encountered with a bool to indicate whether the
+     signal is in a path between a register (or memory) and the output of the graph--the
+     last layer.
 
      Note that the same map that keeps track of the whether the signal is in the last
      layer also doubles as a visited set for the DFS. *)
@@ -352,7 +352,7 @@ let last_layer_of_nodes ~is_input graph =
       then
         Map.set in_layer ~key:(uid signal) ~data:false, false
         (* Regs are not in the final layer either, but we can't add them to the map as
-           [false].  We will have to recurse to them each time instead. *)
+           [false]. We will have to recurse to them each time instead. *)
       else if Signal.Type.is_reg signal
       then in_layer, true
       else (

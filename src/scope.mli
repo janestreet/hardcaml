@@ -118,7 +118,7 @@ val make_ltl_ap : t -> string -> Signal.t -> Property.LTL.path
 
 val add_ltl_property : t -> string -> Property.LTL.path -> unit
 
-(* [assertion_manager t] returns the {!Assertion_manager.t} associated with [t]. Note
-   that assertion managers are shared among {!sub_scope}s. *)
+(* [assertion_manager t] returns the {!Assertion_manager.t} associated with [t]. Note that
+   assertion managers are shared among {!sub_scope}s. *)
 val assertion_manager : t -> Assertion_manager.t option
 val property_manager : t -> Property_manager.t option

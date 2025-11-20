@@ -217,8 +217,8 @@ module Base = struct
   let ( <: ) a b = op2 Lt 1 a b
 
   let mux select cases =
-    (* We are a bit more lax about this in [Comb], but RTL generation requires 2 cases
-       so ensure it here. *)
+    (* We are a bit more lax about this in [Comb], but RTL generation requires 2 cases so
+       ensure it here. *)
     if List.length cases < 2
     then raise_s [%message "[Signal.mux] requires a minimum of 2 cases"];
     match cases with

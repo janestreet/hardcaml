@@ -73,8 +73,8 @@ let%expect_test "lookup_reg can peek and poke internal registers" =
   Cyclesim.cycle sim;
   print_internal ();
   [%expect {| x1 = 0, x2 = 0 |}];
-  (* Replace the contents of a register with some dummy value and make sure
-     it is picked up by the simulator.
+  (* Replace the contents of a register with some dummy value and make sure it is picked
+     up by the simulator.
   *)
   assign_reg x1 75;
   Cyclesim.cycle sim;
@@ -127,16 +127,16 @@ let%expect_test "lookup_mem can read and write internal memory" =
   printf "peeking mem[17] value = %d" (Cyclesim.Memory.to_int ~address:17 mem);
   [%expect {| peeking mem[17] value = 19 |}];
   write_enable <--. 0;
-  (* Poke mem.(42) with a value, and make sure the regular simulation reads out
-     that value in the memory.
+  (* Poke mem.(42) with a value, and make sure the regular simulation reads out that value
+     in the memory.
   *)
   assign_mem mem ~address:42 123;
   read_address <--. 42;
   Cyclesim.cycle sim;
   printf "Read_data = %d" (Bits.to_int_trunc !read_data);
   [%expect {| Read_data = 123 |}];
-  (* Write a value via hardcaml, and make sure that the value is written after
-     calling Cyclesim.cycle
+  (* Write a value via hardcaml, and make sure that the value is written after calling
+     Cyclesim.cycle
   *)
   assign_mem mem ~address:24 49;
   printf "mem[24] directly after poke = %d" (Cyclesim.Memory.to_int mem ~address:24);

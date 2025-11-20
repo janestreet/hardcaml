@@ -1,32 +1,31 @@
 (* We have the following object types;
 
-   - MI module input {R}
-   - MO module output {W}
-   - MT module tristate {RW}
+   - MI module input [{R}]
+   - MO module output [{W}]
+   - MT module tristate [{RW}]
 
    - SI submodule input [<-MI, MT, W, C]
    - SO submodule output [->MO, MT, W]
    - ST submodule tristate [<-MI, MT, W, C ->MO, MT, W]
 
-   - W wires {RW} [<-MI, MT, W, C -> MO, MT, W]
-   - C constants {R} [->C, MO, MT]
+   - W wires [{RW}] [<-MI, MT, W, C -> MO, MT, W]
+   - C constants [{R}] [->C, MO, MT]
 
    Basic rules;
 
    - module IO's may connect to submodules
    - submodulues connect via wires or module IOs
-   - constants are currently included but are not needed - might be better to
-     detect them at generation time instead - similar for other simple RTL
-     operators.
+   - constants are currently included but are not needed - might be better to detect them
+     at generation time instead - similar for other simple RTL operators.
 
-   Multiple {RW}
+   Multiple [{RW}]
 
    - many things may read an object
    - in general only 1 thing may drive (write) and object
    - special case - multiple tristates may drive an object
 
-   NOTE: It would be nice if many of the rules below could be encoded into the
-   type system, but I dont know how or if it's possible. *)
+   NOTE: It would be nice if many of the rules below could be encoded into the type
+   system, but I dont know how or if it's possible. *)
 
 open! Core0
 
@@ -731,27 +730,29 @@ end
 
 (* {[
      let remove_unconnected circuit =
-       let module IdSet = Set.Make
-                            (struct
-                              type t = int
-                              let compare = compare
-                            end)
+       let module IdSet =
+         Set.Make (struct
+           type t = int
+
+           let compare = compare
+         end)
        in
        let add set signal = IdSet.add (get_id signal) set in
        let add_list set signals = List.fold add set signals in
        let rec find (i, o, io, m_o, m_io, inst, rest) = function
-         | [] -> (i, o, io, m_o, m_io, inst, rest)
+         | [] -> i, o, io, m_o, m_io, inst, rest
          | s :: t ->
-           match s with
-           | Module_input _ -> add i s
-           | Module_output _ -> add o s
-           | Module_tristate _ -> add io s
-           | Instantiation_output _ -> add m_o s
-           | Instantiation_tristate _ -> add m_io s
-           | Instantiation _ -> add inst s
-           | _ -> s :: rest
+           (match s with
+            | Module_input _ -> add i s
+            | Module_output _ -> add o s
+            | Module_tristate _ -> add io s
+            | Instantiation_output _ -> add m_o s
+            | Instantiation_tristate _ -> add m_io s
+            | Instantiation _ -> add inst s
+            | _ -> s :: rest)
        in
        ()
+     ;;
    ]} *)
 
 let concat_map ?sep l ~f = Rope.concat ?sep (List.map l ~f)

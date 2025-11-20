@@ -332,7 +332,7 @@ let run_core (sim : Sim.t) find_key =
   Cyclesim.cycle sim;
   inputs.start <--. 0;
   inputs.find_key <--. find_key;
-  (* Wait for it to finish.  Don't let it take more than 20 cycles. *)
+  (* Wait for it to finish. Don't let it take more than 20 cycles. *)
   let timeout = ref 0 in
   while (not (Bits.to_bool !(outputs.done_))) && !timeout < 20 do
     Cyclesim.cycle sim;

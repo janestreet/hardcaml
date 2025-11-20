@@ -91,6 +91,8 @@ type ('i, 'o) t =
   ; outputs_after_clock_edge : 'o
   ; outputs_before_clock_edge : 'o
   ; reset : task
+  ; clock_mode : [ `All_one_domain | `By_input_clocks ]
+  ; clocks_aligned : unit -> bool
   ; cycle_check : task
   ; cycle_before_clock_edge : task
   ; cycle_at_clock_edge : task
@@ -223,6 +225,8 @@ module Private = struct
     ~out_ports_before_clock_edge
     ~out_ports_after_clock_edge
     ~reset
+    ~clock_mode
+    ~clocks_aligned
     ~cycle_check
     ~cycle_before_clock_edge
     ~cycle_at_clock_edge
@@ -242,6 +246,8 @@ module Private = struct
     ; outputs_before_clock_edge = out_ports_before_clock_edge
     ; outputs_after_clock_edge = out_ports_after_clock_edge
     ; reset
+    ; clock_mode
+    ; clocks_aligned
     ; cycle_check
     ; cycle_before_clock_edge
     ; cycle_at_clock_edge

@@ -2,8 +2,8 @@ open! Core
 open Hardcaml
 open Hardcaml_test
 
-(* Write the example dual port memories to VHDL and Verilog.  They are then compiled
-   with Modelsim to check syntax. *)
+(* Write the example dual port memories to VHDL and Verilog. They are then compiled with
+   Modelsim to check syntax. *)
 let () =
   let circuit = Test_multiport_memory.dual_port () in
   Out_channel.write_all

@@ -195,7 +195,7 @@ module Explicit_stack = struct
     (* Create an empty stack *)
     val create : unit -> t
 
-    (* Push a new entry to the stack.  pivot is initially [0]. *)
+    (* Push a new entry to the stack. pivot is initially [0]. *)
     val push : t -> low:int -> high:int -> unit
 
     (* Pop the top entry of the stack. *)

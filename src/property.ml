@@ -140,8 +140,7 @@ module LTL = struct
   let u a b = U (a, b)
   let r a b = R (a, b)
 
-  (*let f p = vdd -- p
-    let g p = ~: (f (~: p))*)
+  (* let f p = vdd -- p let g p = ~: (f (~: p)) *)
   let f p = F p
   let g p = G p
   let w p q = u p q |: g p
@@ -209,7 +208,7 @@ module LTL = struct
     | G p -> depth p
   ;;
 
-  (* demorgan's law: ~(a & b) = (~a | ~b)
+  (*=demorgan's law: ~(a & b) = (~a | ~b)
      ~(a | b) = (~a & ~b)
 
      without an OR primitive we must then expand with (a | b) = ~( ~a & ~b )

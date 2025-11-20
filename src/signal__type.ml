@@ -348,7 +348,7 @@ type t =
          if (reset == reset_level) d <= reset_to;
          else if (clear) d <= clear_to;
          else if (enable) d <= ...;
-     v} *)
+   v} *)
 and reg_spec =
   { clock : t
   ; clock_edge : Edge.t
@@ -1184,7 +1184,7 @@ module Register = struct
     assert_width_or_none clear 1 "clear signal is invalid";
     let clear =
       (* If there is a clear, ensure there is a clear_to of the correct width (default to
-       zero) *)
+         zero) *)
       Option.map clear ~f:(fun clear ->
         let clear_to =
           match clear_to with

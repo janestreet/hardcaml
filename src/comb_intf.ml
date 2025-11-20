@@ -326,8 +326,8 @@ module type S = sig
   (** [sel_top s ~width] select top [width] bits of [s] *)
   val sel_top : t -> width:int -> t
 
-  (* Verilog-like addressing operators. These operators are less verbose than
-     the function counterparts. See IEEE 1800 Syntax 11-5. *)
+  (* Verilog-like addressing operators. These operators are less verbose than the function
+     counterparts. See IEEE 1800 Syntax 11-5. *)
 
   (** [x.:[hi, lo]] == [select x hi lo] *)
   val ( .:[] ) : t -> int * int -> t
@@ -597,13 +597,13 @@ module type S = sig
         split_lsb ~exact:false ~part_width:4 17b11_0001_0010_0011_0100 =
           [ 4b0100; 4b0011; 4b0010; 4b0001; 2b11 ]
       v} *)
-  val split_lsb : ?exact:bool (** default is [true] **) -> part_width:int -> t -> t list
+  val split_lsb : ?exact:bool (** default is [true] *) -> part_width:int -> t -> t list
 
   (** Like [split_lsb] except the most significant bits are at the head of the returned
       list. Residual bits when [exact] is [false] goes to the last element of the list, so
       in the general case [split_lsb] is not necessarily equivalent to
       [split_msb |> List.rev]. *)
-  val split_msb : ?exact:bool (** default is [true] **) -> part_width:int -> t -> t list
+  val split_msb : ?exact:bool (** default is [true] *) -> part_width:int -> t -> t list
 
   val bswap : t -> t
 

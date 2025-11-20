@@ -242,7 +242,7 @@ module State :
     val compare__local : local_ t -> local_ t -> int
     val compare : t -> t -> int
     val all : t list
-    val sexp_of_t : t -> Sexplib0.Sexp.t
+    val sexp_of_t : t -> Sexp_type.Sexp.t
     val a : t
     val b : t
     val c : t

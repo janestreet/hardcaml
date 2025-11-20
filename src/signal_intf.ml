@@ -371,8 +371,8 @@ module type S = sig
     include Memory_prim with type t := t
 
     (*_ Same as [reg] but with a signal argument for [reset_to]. This is used in some old
-      downstream libraries, and we recommend using the normal [reg] function so that
-      resets are generally driven by a constant value. *)
+        downstream libraries, and we recommend using the normal [reg] function so that
+        resets are generally driven by a constant value. *)
     val reg__with_signal_reset
       :  ?enable:t
       -> ?initialize_to:Bits.t

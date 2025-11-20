@@ -1,4 +1,4 @@
-(** Test routines for the various vector calculations in [Bits.Comb] **)
+(** Test routines for the various vector calculations in [Bits.Comb] *)
 
 open! Import
 

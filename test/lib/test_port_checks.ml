@@ -15,8 +15,7 @@ end
 (* Check input sets.
 
    Note; although outputs are also checked, there isn't an obvious way to trigger the
-   exception.  An empty output, for example, will cause an earlier exception in
-   [Circuit]. *)
+   exception. An empty output, for example, will cause an earlier exception in [Circuit]. *)
 
 let%expect_test "too many inputs" =
   let module Circuit = Circuit.With_interface (I) (O) in

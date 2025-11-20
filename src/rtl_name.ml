@@ -36,7 +36,7 @@ module Systemverilog = struct
 end
 
 module Vhdl_base = struct
-  (* Here are the (bonkers) rules.
+  (*=Here are the (bonkers) rules.
 
      1 identifiers can contain only upper or lower case letters a-z, numerals 0-9, and underscore
      2 the first character must be a letter
@@ -110,12 +110,12 @@ module Vhdl_base = struct
       |> String.substr_replace_all ~pattern:"\\" ~with_:"\\\\"
          (* While spaces are technically allowed in extended identifiers, they break all
             sorts of other things, so just don't bother with them. We already have to
-            modify the identifier in this step (escaping any backslashes it contains),
-            so there's not much downside to doing this additional change as well. *)
+            modify the identifier in this step (escaping any backslashes it contains), so
+            there's not much downside to doing this additional change as well. *)
       |> String.map ~f:(fun c -> if Char.is_whitespace c then '_' else c)
-      (* Avoid the possibility of creating confusion by having the same identifier
-           with different cases + avoid the issue of tools which don't handle
-           case-sensitivity properly. *)
+      (* Avoid the possibility of creating confusion by having the same identifier with
+         different cases + avoid the issue of tools which don't handle case-sensitivity
+         properly. *)
       |> String.lowercase
       |> fun s -> String.concat [ "\\"; s; "\\" ]
   ;;

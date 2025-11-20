@@ -2,7 +2,7 @@ open Base
 open Hardcaml
 open Signal
 
-(*  Take in binary coded decimal numbers and output a binary representation. *)
+(* Take in binary coded decimal numbers and output a binary representation. *)
 
 (* $MDX part-begin=bcd *)
 let create ~clock ~start ~bcd =

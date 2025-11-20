@@ -822,12 +822,19 @@ type 'a typed_fifo_read_result =
   { q : (Signal.t, 'a) With_valid.t2
   ; empty : Signal.t
   ; full : Signal.t
+  ; nearly_empty : Signal.t
+  ; nearly_full : Signal.t
   ; overflow : Signal.t
   ; read_when_empty : Signal.t
   }
 
 let typed_fifo
   (type a)
+  ?nearly_empty
+  ?nearly_full
+  ?overflow_check
+  ?underflow_check
+  ?ram_attributes
   ?scope
   ~(clocking : Signal.t Clocking.t)
   ~capacity
@@ -837,6 +844,11 @@ let typed_fifo
   =
   let fifo =
     create
+      ?nearly_empty
+      ?nearly_full
+      ?overflow_check
+      ?underflow_check
+      ?ram_attributes
       ?scope
       ~showahead:true
       ~capacity
@@ -851,13 +863,20 @@ let typed_fifo
   { q = { With_valid.valid = ~:(fifo.empty); value = unpacked_q }
   ; empty = fifo.empty
   ; full = fifo.full
-  ; overflow = fifo.full &: input.valid &: ~:read
+  ; nearly_empty = fifo.nearly_empty
+  ; nearly_full = fifo.nearly_full
+  ; overflow = fifo.full &: input.valid
   ; read_when_empty = fifo.empty &: read
   }
 ;;
 
 let cut_through_typed_fifo
   (type a)
+  ?nearly_empty
+  ?nearly_full
+  ?overflow_check
+  ?underflow_check
+  ?ram_attributes
   ?scope
   ~(clocking : Signal.t Clocking.t)
   ~capacity
@@ -869,16 +888,38 @@ let cut_through_typed_fifo
   let fifo_input = { input with valid = input.valid &: ~:cutting_through } in
   let fifo_read = read &: ~:cutting_through in
   let underlying_fifo =
-    typed_fifo ?scope ~clocking ~capacity ~input:fifo_input ~read:fifo_read (module C)
+    typed_fifo
+      ?nearly_empty
+      ?nearly_full
+      ?overflow_check
+      ?underflow_check
+      ?ram_attributes
+      ?scope
+      ~clocking
+      ~capacity
+      ~input:fifo_input
+      ~read:fifo_read
+      (module C)
   in
   cutting_through <-- (underlying_fifo.empty &: input.valid &: read);
-  { q =
-      { With_valid.valid = input.valid |: underlying_fifo.q.valid
-      ; value = C.Of_signal.mux2 underlying_fifo.empty input.value underlying_fifo.q.value
-      }
-  ; empty = underlying_fifo.empty
+  let q =
+    { With_valid.valid = input.valid |: underlying_fifo.q.valid
+    ; value = C.Of_signal.mux2 underlying_fifo.empty input.value underlying_fifo.q.value
+    }
+  in
+  let empty = ~:(q.valid) in
+  let nearly_empty =
+    (* In the case that [nearly_empty] is 0, we cut it through like [empty]. *)
+    match nearly_empty with
+    | Some 0 -> empty
+    | _ -> underlying_fifo.nearly_empty
+  in
+  { q
+  ; empty
   ; full = underlying_fifo.full
+  ; nearly_empty
+  ; nearly_full = underlying_fifo.nearly_full
   ; overflow = underlying_fifo.overflow
-  ; read_when_empty = underlying_fifo.read_when_empty
+  ; read_when_empty = empty &: read
   }
 ;;

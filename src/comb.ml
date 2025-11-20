@@ -106,10 +106,10 @@ module Make_primitives (Gates : Gates) = struct
       s &: a |: (~:s &: b)
     in
     let d' = List.hd_exn (List.rev d) in
-    (* Generate the 'n' input mux structure 'bottom-up'.  it works from the lsb of the
-       select signal.  Pairs from the data list are mux'd together and we recurse until
-       the select is complete.  Proper 'default' handling is included with the '[a]' case
-       in 'zip'. *)
+    (* Generate the 'n' input mux structure 'bottom-up'. it works from the lsb of the
+       select signal. Pairs from the data list are mux'd together and we recurse until the
+       select is complete. Proper 'default' handling is included with the '[a]' case in
+       'zip'. *)
     let rec build s d =
       match s with
       | [] -> List.hd_exn d
@@ -118,7 +118,7 @@ module Make_primitives (Gates : Gates) = struct
           match l with
           | [] -> []
           | [ a ] -> [ mux2 s d' a ]
-          (* | [ a ] -> [ a ] simpler *)
+          (*=| [ a ] -> [ a ] simpler *)
           | a :: b :: tl -> mux2 s b a :: zip tl
         in
         build s' (zip d)
@@ -746,11 +746,8 @@ module Make (Prims : Primitives) = struct
 
   (* {[
        let rec repeat s n =
-         if n = 0
-         then empty
-         else if n = 1
-         then s
-         else concat [ s; repeat s (n-1) ]
+         if n = 0 then empty else if n = 1 then s else concat [ s; repeat s (n - 1) ]
+       ;;
      ]} *)
 
   let[@cold] raise_repeat_negative_times () =
@@ -1600,7 +1597,7 @@ module Make (Prims : Primitives) = struct
             (input_width : int)]
   ;;
 
-  (* General arithmetic on unsigned signals.  Operands and results are resized to fit a
+  (* General arithmetic on unsigned signals. Operands and results are resized to fit a
      appropriate. *)
   module Unsigned = struct
     let resize s i = uresize s ~width:i

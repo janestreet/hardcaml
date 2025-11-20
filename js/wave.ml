@@ -328,7 +328,7 @@ module Gui = struct
       Array.iter
         (fun (v, _, _, d) ->
           let l = length d.data in
-          (*v##innerHTML <- jstr (d.str (get d.data (min (l-1) x)))*)
+          (* v##innerHTML <- jstr (d.str (get d.data (min (l-1) x))) *)
           v##.innerHTML := jstr (Bits.to_string (get d.data (min (l - 1) x))))
         waves
     in
@@ -369,12 +369,12 @@ module Gui = struct
     in
     List.iter
       (fun (id, b) ->
-        (*List.iter (fun (id, _) -> log id) events;*)
+        (* List.iter (fun (id, _) -> log id) events; *)
         let ev =
           (* {[
-             try List.assoc id events
-             with _ -> failwith ("assoc: " ^ id)
-           ]} *)
+               try List.assoc id events with
+               | _ -> failwith ("assoc: " ^ id)
+             ]} *)
           myassoc id events
         in
         b##.onclick := ev)

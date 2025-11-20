@@ -27,7 +27,8 @@ let%expect_test "simple" =
   in
   let c = dedup [ output "out" v ] in
   print_circuit c;
-  (* First addition is deduplicated with the last one. Also all constants are deduplicated. *)
+  (* First addition is deduplicated with the last one. Also all constants are
+     deduplicated. *)
   [%expect
     {|
     Wire[id:1 bits:4 names:out deps:6] -> 6
@@ -52,8 +53,8 @@ let%expect_test "register" =
   let c = dedup [ output "out" (v +: of_string "1111") ] in
   print_circuit c;
   (* Deduplication of the constant inside the register. Additionally we see that
-     deduplication inserts additional wires between registers and combinatorial logic.
-     (we could eliminate them in most cases, but let's keep them for simplicity)
+     deduplication inserts additional wires between registers and combinatorial logic. (we
+     could eliminate them in most cases, but let's keep them for simplicity)
   *)
   [%expect
     {|
