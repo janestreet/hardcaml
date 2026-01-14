@@ -11,6 +11,9 @@ module type Names = sig
 
   (** Set the given names on the signal. Wipes any names currently set. *)
   val set_names : t -> Name_and_loc.t list -> unit
+
+  (** Reset any names for global signals. *)
+  val reset_names : unit -> unit
 end
 
 module type Attributes = sig

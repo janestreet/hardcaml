@@ -238,6 +238,7 @@ module type Fifo = sig
     ; nearly_full : Signal.t (** Is the fifo close to full. *)
     ; overflow : Signal.t (** Set if the input was valid when the fifo was full. *)
     ; read_when_empty : Signal.t (** Set if read was valid when the fifo was empty. *)
+    ; used : Signal.t (** Number of entries currently in the fifo. *)
     }
 
   (** A typed fifo, allowing for types deriving hardcaml to be added to a fifo without
@@ -254,7 +255,8 @@ module type Fifo = sig
         T.create_params
 
   (** A cut through typed fifo which will cut through if the fifo is empty and read is
-      high. *)
+      high. Note that the [used] output reflects the underlying fifo used value, and does
+      not update if an input is cut through and immediately read. *)
   val cut_through_typed_fifo
     : (clocking:Signal.t Clocking.t
        -> capacity:int

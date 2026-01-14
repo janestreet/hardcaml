@@ -427,11 +427,11 @@ let%expect_test "Try to generate Verilog port names with dashes" =
       (circuit_name mod)
       (hierarchy_path (mod))
       (exn (
-        "[Rtl_name.add_port_name] illegal port name"
+        "[Illegal port name"
         (name       in-with-dash)
         (legal_name in_with_dash)
         (note       "Hardcaml will not change ports names.")
-        (port (wire (names (in-with-dash)) (width 32))))))
+        (port ((wire (names (in-with-dash)) (width 32)))))))
     |}]
 ;;
 

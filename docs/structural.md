@@ -4,7 +4,7 @@
 ```ocaml
 # open Base
 # let print_string = Stdio.print_string
-val print_string : string -> unit = <fun>
+val print_string : string @ local -> unit = <fun>
 ```
 -->
 

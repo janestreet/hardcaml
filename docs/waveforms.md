@@ -17,7 +17,7 @@ capture and print waveforms from Hardcaml simulations.
 ## Printing results as waveforms
 
 We can make a waveform with
-[`Waveform.create`](https://ocaml.org/p/hardcaml_waveterm/latest/doc/Hardcaml_waveterm/index.html).
+[`Waveform.create`](https://github.com/janestreet/hardcaml_waveterm/blob/with-extensions/cyclesim/hardcaml_waveterm_cyclesim.mli).
 It takes as an argument a simulator and returns a waveform and modified simulator that
 captures the input and output port values.
 
@@ -98,7 +98,7 @@ The `Waveform.print` function takes optional arguments which control the renderi
     ~display_height:10
     ~display_rules:
       Display_rule.[ port_name_is "dout" ~wave_format:Unsigned_int
-                   ; port_name_matches Re.Posix.(compile (re "cl.*")) ~wave_format:Bit ]
+                   ; port_name_matches (Posix "cl.*") ~wave_format:Bit ]
     waves
 ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
 │               ││────────────────┬───────┬───────┬───────────────   │

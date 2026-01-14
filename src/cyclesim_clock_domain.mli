@@ -15,7 +15,9 @@ type t =
 
 val create : name:string -> period:int -> t
 val create_list : (string * int) list -> t list
-val should_step : t -> cycle:int -> bool
+
+(** Whether or not the cycle is aligned with the clock's period. *)
+val aligned : t -> cycle:int -> bool
 
 (** Utilities for operating of a set of clock domains. Each element in the group is
     assigned a unique index out of a dense set. These indices can then be used to create
@@ -49,9 +51,10 @@ module Table : sig
 end
 
 module Set : sig
-  type t [@@deriving sexp_of]
+  type t [@@deriving sexp_of, to_string]
 
   val create : Group.t -> default:bool -> t
+  val clear : t -> unit
   val add : t -> indexed -> unit
   val remove : t -> indexed -> unit
   val mem : t -> indexed -> bool

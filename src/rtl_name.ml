@@ -1,11 +1,5 @@
 open! Core0
 
-module type Language = sig
-  val legalize : string -> string
-  val case_sensitive : bool
-  val reserved_words : string list
-end
-
 module Verilog_base = struct
   let is_valid_first_char c = Char.is_alpha c || Char.equal c '_'
   let is_valid_other_char c = Char.is_alphanum c || Char.equal c '_' || Char.equal c '$'
@@ -19,8 +13,6 @@ module Verilog_base = struct
     then String.map string ~f:(fun c -> if is_valid_other_char c then c else replace_with)
     else legalize (prefix ^ string)
   ;;
-
-  let case_sensitive = true
 end
 
 module Verilog = struct
@@ -35,7 +27,7 @@ module Systemverilog = struct
   let reserved_words = Reserved_words.systemverilog
 end
 
-module Vhdl_base = struct
+module Vhdl = struct
   (*=Here are the (bonkers) rules.
 
      1 identifiers can contain only upper or lower case letters a-z, numerals 0-9, and underscore
@@ -52,9 +44,6 @@ module Vhdl_base = struct
   let prefix = "hc_"
   let suffix = "_hc"
   let double_underscores = String.Search_pattern.create "__"
-
-  (* In reality, extended identifiers are case sensitive. *)
-  let case_sensitive = false
 
   let rec remove_double_underscores in_ =
     let out = String.Search_pattern.replace_all double_underscores ~in_ ~with_:"_" in
@@ -100,7 +89,7 @@ module Vhdl_base = struct
         |> remove_double_underscores)
   ;;
 
-  let legalize_by_making_extended_identifier string =
+  let legalize string =
     (* Check if the name is already legal and don't bother converting to an extended
        identifier if it is *)
     if String.equal string (legalize_by_mangling string)
@@ -126,83 +115,90 @@ module Vhdl_base = struct
   ;;
 end
 
-module Vhdl_with_mangling = struct
-  include Vhdl_base
+module Legalized : sig
+  type t [@@deriving to_string, sexp_of]
 
-  let legalize = legalize_by_mangling
+  val legalize : Rtl_language.t -> string -> t
+  val equal : t -> string -> bool
+end = struct
+  type t = string [@@deriving to_string, equal, sexp_of]
+
+  let legalize (lang : Rtl_language.t) name =
+    match lang with
+    | Verilog -> Verilog.legalize name
+    | Systemverilog -> Systemverilog.legalize name
+    | Vhdl -> Vhdl.legalize name
+  ;;
 end
 
-module Vhdl_with_extended_identifiers = struct
-  include Vhdl_base
+module Mangled_and_legalized : sig
+  type t [@@deriving to_string]
 
-  let legalize = legalize_by_making_extended_identifier
+  val mangle : Mangler.t -> Legalized.t -> t
+  val add : Mangler.t -> Legalized.t -> [ `Ok | `Duplicate ]
+end = struct
+  type t = string [@@deriving to_string]
+
+  let mangle mangler legalized = Mangler.mangle mangler (Legalized.to_string legalized)
+
+  let add mangler legalized =
+    let legalized = Legalized.to_string legalized in
+    Mangler.add_identifier mangler legalized
+  ;;
 end
 
 type t =
   { mangler : Mangler.t
-  ; instantiation_mangler : Mangler.t
-  ; lang : (module Language)
+  ; lang : Rtl_language.t
   }
 [@@deriving fields ~getters]
 
-let create (module Lang : Language) =
-  let mangler = Mangler.create ~case_sensitive:Lang.case_sensitive in
-  let instantiation_mangler = Mangler.create ~case_sensitive:Lang.case_sensitive in
-  Mangler.add_identifiers_exn mangler Lang.reserved_words;
-  { mangler; instantiation_mangler; lang = (module Lang) }
+let create (lang : Rtl_language.t) =
+  let mangler = Mangler.create ~case_sensitive:true in
+  let reserved_words =
+    match lang with
+    | Verilog -> Verilog.reserved_words
+    | Systemverilog -> Systemverilog.reserved_words
+    | Vhdl -> Vhdl.reserved_words
+  in
+  Mangler.add_identifiers_exn mangler reserved_words;
+  { mangler; lang }
 ;;
 
-let add_port_name { mangler; instantiation_mangler = _; lang = (module Lang) } signal name
-  =
-  let legal_name = Lang.legalize name in
-  if not (String.equal legal_name name)
-  then
-    raise_s
-      [%message
-        "[Rtl_name.add_port_name] illegal port name"
-          (name : string)
-          ~legal_name
-          ~note:"Hardcaml will not change ports names."
-          ~port:(signal : Signal.t)];
-  match Mangler.add_identifier mangler name with
-  | `Duplicate ->
-    raise_s
-      [%message
-        "[Rtl_name.add_port_name] port name has already been defined or matches a \
-         reserved identifier"
-          ~port:(signal : Signal.t)]
+let legalize t name = Legalized.legalize t.lang name
+let mangle t legalized = Mangled_and_legalized.mangle t.mangler legalized
+
+let[@cold] raise_illegal_port_name ?port name legal_name =
+  let port_str = if Option.is_some port then "port" else "phantom port" in
+  let msg = [%string {|[Illegal %{port_str} name|}] in
+  raise_s
+    [%message
+      msg
+        (name : string)
+        (legal_name : Legalized.t)
+        ~note:"Hardcaml will not change ports names."
+        (port : Signal.t option)]
+;;
+
+let[@cold] raise_duplicate_port_name ?port name =
+  let port_str = if Option.is_some port then "Port" else "Phantom port" in
+  let msg = [%string {|%{port_str} name has already been defined|}] in
+  raise_s [%message msg (name : string) (port : Signal.t option)]
+;;
+
+let[@inline] add_port_name' ?port t name =
+  let legal_name = legalize t name in
+  if not (Legalized.equal legal_name name)
+  then raise_illegal_port_name ?port name legal_name;
+  match Mangled_and_legalized.add t.mangler legal_name with
+  | `Duplicate -> raise_duplicate_port_name ?port name
   | `Ok -> ()
 ;;
 
-let add_phantom_port_name
-  { mangler; instantiation_mangler = _; lang = (module Lang) }
-  name
-  =
-  let legal_name = Lang.legalize name in
-  if not (String.equal legal_name name)
-  then
-    raise_s
-      [%message
-        "[Rtl_name.add_phantom_port_name] illegal port name"
-          (name : string)
-          ~legal_name
-          ~note:"Hardcaml will not change ports names."]
-  else (
-    match Mangler.add_identifier mangler name with
-    | `Duplicate ->
-      raise_s
-        [%message
-          "[Rtl_name.add_phantom_port_name] port name has already been defined or \
-           matches a reserved identifier"
-            (name : string)]
-    | `Ok -> ())
-;;
-
-let mangle_name { mangler; instantiation_mangler = _; lang = (module Lang) } name =
-  Mangler.mangle mangler name |> Lang.legalize
-;;
-
+let add_port_name t port name = add_port_name' t name ~port
+let add_phantom_port_name t name = add_port_name' t name
 let derived_name signal = "_" ^ Signal.Type.Uid.to_string (Signal.uid signal)
+let mangle_name t name = legalize t name |> mangle t |> Mangled_and_legalized.to_string
 
 let mangle_signal_names t signal =
   match Signal.names signal with
@@ -210,38 +206,24 @@ let mangle_signal_names t signal =
   | names -> List.map names ~f:(mangle_name t)
 ;;
 
-let mangle_instantiation_name
-  { mangler; instantiation_mangler = _; lang = (module Lang) }
-  signal
-  =
+let mangle_instantiation_name t signal =
   match signal with
-  | Signal.Type.Inst { instantiation; _ } ->
-    Mangler.mangle mangler instantiation.instance_label |> Lang.legalize
+  | Signal.Type.Inst { instantiation; _ } -> mangle_name t instantiation.instance_label
   | _ ->
     raise_s
       [%message
         "[Rtl_name.mangle_instantiation_name] requires an Inst signal" (signal : Signal.t)]
 ;;
 
-let mangle_multiport_mem_name
-  ({ mangler = _; instantiation_mangler = _; lang = (module Lang) } as t)
-  signal
-  =
+let mangle_multiport_mem_name t signal =
   match signal with
   | Signal.Type.Multiport_mem _ ->
     (match Signal.names signal with
      | [] ->
        (* memory nodes themselves do not have names (only the q_out) *)
        mangle_name t (derived_name signal), mangle_name t (derived_name signal ^ "_type")
-     | name :: _ ->
-       mangle_name t (Lang.legalize name), mangle_name t (Lang.legalize (name ^ "_type")))
+     | name :: _ -> mangle_name t name, mangle_name t (name ^ "_type"))
   | _ ->
     raise_s
       [%message "[Rtl_name.mangle_mem_name] requires a Mem signal" (signal : Signal.t)]
-;;
-
-let of_language = function
-  | Rtl_language.Verilog -> create (module Verilog)
-  | Systemverilog -> create (module Systemverilog)
-  | Vhdl -> create (module Vhdl_with_extended_identifiers)
 ;;

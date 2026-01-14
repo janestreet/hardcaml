@@ -29,28 +29,72 @@ let names s = if Signal.is_empty s then [] else Signal.names s
 let port_name s = names s |> List.hd_exn
 
 module Clocks = struct
+  module Cycle = struct
+    type t =
+      | Not_started
+      | Cycle of int
+    [@@deriving sexp_of]
+  end
+
   module Multi_domain = struct
     type t =
       { domains : Clock_domain.Group.t
       ; clocks_to_domains : (Clock_domain.indexed * Signal.t) Map.M(Signal.Type.Uid).t
-      ; mutable cycle : int
-      ; clocks_this_cycle : Clock_domain.Set.t
+      ; double_frequency : bool
+          (* True when we need to step two cycles per user cycle. This is necessary when
+             there are clocks with a odd period so that we can have them fall half way
+             through the period. *)
+      ; mutable cycle : Cycle.t
+          (* Clock periods and edges work as follows: the [before_edge] triggers at the
+             start of the period and the [at_edge] at the very end of the period.
+
+             For example:
+             - clock with period = 1: 0 (before and at), 1 (before and at),..
+             - clock with period = 2: 0 (before), 1 (at), 2 (before), 3 (at), ..
+             - clock with period = 3: 0 (before), 1, 2 (at), 3 (before), ...
+
+             Inputs are updated at the [before_edge] and memory/registers are updated at
+             the [at_edge].
+          *)
+      ; clocks_before_edge_this_cycle : Clock_domain.Set.t
+      ; clocks_at_edge_this_cycle : Clock_domain.Set.t
       }
     [@@deriving sexp_of]
 
-    let mark_cycle' t cycle =
-      t.cycle <- cycle;
-      Clock_domain.Group.elements t.domains
-      |> Iarray.iter ~f:(fun indexed ->
-        if Clock_domain.should_step (Clock_domain.domain indexed) ~cycle
-        then Clock_domain.Set.add t.clocks_this_cycle indexed
-        else Clock_domain.Set.remove t.clocks_this_cycle indexed)
+    let next_cycle t : Cycle.t =
+      match t.cycle with
+      | Cycle cycle -> Cycle (cycle + 1)
+      | Not_started -> Cycle 0
     ;;
 
-    let reset t = mark_cycle' t 0
-    let incr_cycle t = mark_cycle' t (t.cycle + 1)
+    let mark_cycle t cycle =
+      t.cycle <- cycle;
+      match cycle with
+      | Not_started ->
+        Clock_domain.Set.clear t.clocks_before_edge_this_cycle;
+        Clock_domain.Set.clear t.clocks_at_edge_this_cycle
+      | Cycle cycle ->
+        Clock_domain.Group.elements t.domains
+        |> Iarray.iter ~f:(fun indexed ->
+          let set set ~aligned_to =
+            if Clock_domain.aligned (Clock_domain.domain indexed) ~cycle:aligned_to
+            then Clock_domain.Set.add set indexed
+            else Clock_domain.Set.remove set indexed
+          in
+          set t.clocks_before_edge_this_cycle ~aligned_to:cycle;
+          set t.clocks_at_edge_this_cycle ~aligned_to:(cycle + 1))
+    ;;
 
-    let create circuit clocks =
+    let reset t = mark_cycle t Not_started
+    let incr_cycle t = mark_cycle t (next_cycle t)
+
+    let create circuit (clocks : Clock_domain.t list) =
+      let double_frequency, clocks =
+        if List.exists clocks ~f:(fun { period; _ } -> period % 2 <> 0)
+        then
+          true, List.map clocks ~f:(fun clock -> { clock with period = clock.period * 2 })
+        else false, clocks
+      in
       let domains =
         match Clock_domain.Group.create clocks with
         | `Ok group -> group
@@ -75,8 +119,10 @@ module Clocks = struct
       let t =
         { domains
         ; clocks_to_domains
-        ; cycle = 0
-        ; clocks_this_cycle = Clock_domain.Set.create domains ~default:false
+        ; double_frequency
+        ; cycle = Not_started
+        ; clocks_before_edge_this_cycle = Clock_domain.Set.create domains ~default:false
+        ; clocks_at_edge_this_cycle = Clock_domain.Set.create domains ~default:false
         }
       in
       reset t;
@@ -88,9 +134,26 @@ module Clocks = struct
     ;;
 
     let aligned t =
-      Clock_domain.Group.elements t.domains
-      |> Iarray.for_all ~f:(fun indexed ->
-        Clock_domain.should_step (Clock_domain.domain indexed) ~cycle:t.cycle)
+      match next_cycle t with
+      | Not_started -> false
+      | Cycle cycle ->
+        Clock_domain.Group.elements t.domains
+        |> Iarray.for_all ~f:(fun indexed ->
+          Clock_domain.aligned (Clock_domain.domain indexed) ~cycle)
+    ;;
+
+    let clock_multiple t = if t.double_frequency then 2 else 1
+
+    let is_true_cycle t side =
+      match t.cycle with
+      | Not_started -> false
+      | Cycle cycle ->
+        (match t.double_frequency with
+         | false -> true
+         | true ->
+           (match side with
+            | `Before_edge -> cycle % 2 = 0
+            | `At_edge -> (cycle + 1) % 2 = 0))
     ;;
   end
 
@@ -121,15 +184,30 @@ module Clocks = struct
     | Multi_domain { domains; _ } -> domains
   ;;
 
+  let cycle_multiple = function
+    | Single_domain _ -> 1
+    | Multi_domain multi -> Multi_domain.clock_multiple multi
+  ;;
+
+  let is_true_cycle t side =
+    match t with
+    | Single_domain _ -> true
+    | Multi_domain multi -> Multi_domain.is_true_cycle multi side
+  ;;
+
   let find_clock_exn t signal =
     match t with
     | Single_domain { indexed; _ } -> indexed
     | Multi_domain multi -> Multi_domain.find_clock_exn multi signal
   ;;
 
-  let clocks_this_cycle = function
+  let clocks_this_cycle t side =
+    match t with
     | Single_domain { set; _ } -> set
-    | Multi_domain { clocks_this_cycle; _ } -> clocks_this_cycle
+    | Multi_domain { clocks_before_edge_this_cycle; clocks_at_edge_this_cycle; _ } ->
+      (match side with
+       | `Before_edge -> clocks_before_edge_this_cycle
+       | `At_edge -> clocks_at_edge_this_cycle)
   ;;
 
   let reset = function
@@ -730,10 +808,16 @@ let compile_clock_update (t : Runtime.t) : (unit -> unit) list =
     Iarray.to_list (Clock_domain.Group.elements clocks.domains)
     |> List.map ~f:(fun clock ->
       let update_fn = Clock_domain.Table.get update_fns clock in
+      let period = (Clock_domain.domain clock).period in
+      let half_period = period / 2 in
       fun () ->
-        if Clock_domain.Set.mem clocks.clocks_this_cycle clock
-        then update_fn Bits.vdd
-        else update_fn Bits.gnd)
+        match clocks.cycle with
+        | Not_started -> ()
+        | Cycle cycle ->
+          if cycle % period = 0
+          then update_fn Bits.vdd
+          else if cycle % half_period = 0
+          then update_fn Bits.gnd)
 ;;
 
 (* Generate code for updating registers. *)
@@ -757,7 +841,8 @@ let compile_reg_update (t : Runtime.t) (dst : Node.t) : unit -> unit =
      | Single_domain _ -> update_fn
      | Multi_domain clocks ->
        let clock = Clocks.Multi_domain.find_clock_exn clocks register.clock.clock in
-       fun () -> if Clock_domain.Set.mem clocks.clocks_this_cycle clock then update_fn ())
+       fun () ->
+         if Clock_domain.Set.mem clocks.clocks_at_edge_this_cycle clock then update_fn ())
   | _ -> raise_s [%message "[compile_reg_update] expecting reg"]
 ;;
 
@@ -788,7 +873,8 @@ let compile_mem_update (t : Runtime.t) (dst : Node.t) : unit -> unit =
           | Multi_domain clocks ->
             let clock = Clocks.Multi_domain.find_clock_exn clocks write_clock in
             fun () ->
-              if Clock_domain.Set.mem clocks.clocks_this_cycle clock then update_fn ())
+              if Clock_domain.Set.mem clocks.clocks_at_edge_this_cycle clock
+              then update_fn ())
     in
     fun () -> Array.iter port_updates ~f:(fun f -> f ())
   | _ -> raise_s [%message "[compile_mem_update] expecting memory"]
@@ -903,10 +989,8 @@ let create_cyclesim circuit t (traced : Cyclesim0.Traced.t) =
       Array.iteri data ~f:(fun i data ->
         Bytes.unsafe_set_int64 bytes ((address + i) * 8) data))
   in
-  let reset_clocks () =
-    Clocks.reset clocks;
-    clock_update ()
-  in
+  let reset_clocks () = Clocks.reset clocks in
+  let is_true_cycle side = Clocks.is_true_cycle clocks side in
   set_consts init_consts;
   set_consts startup_consts;
   reset_clocks ();
@@ -916,45 +1000,53 @@ let create_cyclesim circuit t (traced : Cyclesim0.Traced.t) =
   in
   (* Simulation steps *)
   let cycle_check () =
-    List.iter in_ports ~f:(fun { Port.name; address = _; width; bits } ->
-      if Bits.width !bits <> width
-      then
-        raise_s
-          [%message
-            "Invalid input port width" (name : string) (width : int) (bits : Bits.t ref)])
+    if is_true_cycle `Before_edge
+    then
+      List.iter in_ports ~f:(fun { Port.name; address = _; width; bits } ->
+        if Bits.width !bits <> width
+        then
+          raise_s
+            [%message
+              "Invalid input port width" (name : string) (width : int) (bits : Bits.t ref)])
   in
   let cycle_before_clock_edge () =
-    (* copy in inputs *)
-    copy_in_ports t in_ports;
-    (* main combinational step *)
-    comb ();
-    (* grab outputs before clock edge *)
-    copy_out_ports t out_ports_before;
-    (* perform register updates *)
-    reg_update ()
+    Clocks.incr_cycle clocks;
+    clock_update ();
+    if is_true_cycle `Before_edge
+    then (
+      (* copy in inputs *)
+      copy_in_ports t in_ports;
+      (* main combinational step *)
+      comb ();
+      (* grab outputs before clock edge *)
+      copy_out_ports t out_ports_before)
   in
   let cycle_at_clock_edge () =
-    (* run memory writes *)
-    mem_update ();
-    (* copy back new register values *)
-    Clock_domain.Set.iter (Clocks.clocks_this_cycle clocks) ~f:(fun clock ->
-      let regs = Clock_domain.Table.get allocation.regs clock in
-      let regs_next = Clock_domain.Table.get allocation.regs_next clock in
-      Bytes.blito
-        ~dst:bytes
-        ~dst_pos:regs.byte_address
-        ~src:bytes
-        ~src_pos:regs_next.byte_address
-        ~src_len:regs.size_bytes
-        ())
+    if is_true_cycle `At_edge
+    then (
+      (* perform register updates *)
+      reg_update ();
+      (* run memory writes *)
+      mem_update ();
+      (* copy back new register values *)
+      Clock_domain.Set.iter (Clocks.clocks_this_cycle clocks `At_edge) ~f:(fun clock ->
+        let regs = Clock_domain.Table.get allocation.regs clock in
+        let regs_next = Clock_domain.Table.get allocation.regs_next clock in
+        Bytes.blito
+          ~dst:bytes
+          ~dst_pos:regs.byte_address
+          ~src:bytes
+          ~src_pos:regs_next.byte_address
+          ~src_len:regs.size_bytes
+          ()))
   in
   let cycle_after_clock_edge () =
-    (* update combinational outputs wrt to new register values *)
-    comb_last_layer ();
-    (* copy output ports *)
-    copy_out_ports t out_ports_after;
-    Clocks.incr_cycle clocks;
-    clock_update ()
+    if is_true_cycle `At_edge
+    then (
+      (* update combinational outputs wrt to new register values *)
+      comb_last_layer ();
+      (* copy output ports *)
+      copy_out_ports t out_ports_after)
   in
   let get_ports (ports : Port.t list) =
     List.map ports ~f:(fun { name; address = _; width = _; bits } -> name, bits)
@@ -971,6 +1063,7 @@ let create_cyclesim circuit t (traced : Cyclesim0.Traced.t) =
        | Single_domain _ -> `All_one_domain
        | Multi_domain _ -> `By_input_clocks)
     ~clocks_aligned
+    ~cycle_multiple:(Clocks.cycle_multiple clocks)
     ~cycle_check
     ~cycle_before_clock_edge
     ~cycle_at_clock_edge

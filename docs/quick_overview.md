@@ -12,12 +12,40 @@ Hardcaml is a library for designing and simulating Register Transfer Level (RTL)
 designs. Hardcaml designs can be converted to Verilog or VHDL for use with vendor
 synthesis and place and route tools.
 
+# Documentation overview
+
+We start here with a very brief outline of the most important concepts in Hardcaml.
+Following chapters will explain them in more detail and give code snippets and
+examples.
+
+We will be using the Janestreet [Base](https://opensource.janestreet.com/base/) standard
+library in our examples. We may not explicitly show it in the code snippets but you should
+assume that:
+
+```ocaml skip
+open Base
+```
+
+has been defined (and you should also open `Base` if you take a copy of the code to
+experiment with).
+
+## Relationship to `Core`
+
+The `Base` standard library is a slimmed down version of the more extensive
+[Core](https://opensource.janestreet.com/core/) standard library, also provided by
+Janestreet. You should feel free to choose to use either one - they will work equally
+well.
+
+Other standard libraries like `Containers` or `Batteries` (or the standard library
+distributed with OCaml) will also work, though you may need to adjust our code examples
+somewhat (i.e. the `List.map` function may or may not take a labeled function argument).
+
 # Library Overview
 
 ## `Comb.S`, `Bits`, and `Signal`
 
 The module type
-[`Comb.S`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Comb/module-type-S/index.html)
+[`Comb.S`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/comb_intf.ml)
 defines the [combinational logic](combinational_logic.md) primitives
 (i.e., logical operations, arithmetic, multiplexers, etc.) for Hardcaml.
 It is implemented by both the `Bits` and `Signal` modules. All
@@ -25,7 +53,7 @@ operations work over vectors with a given bit width. Each operation
 has rules about allowable argument widths and will raise an exception at
 run-time if violated.
 
-[`Bits`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Bits/index.html)
+[`Bits`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/bits_intf.ml)
 implements a shallow embedding of the `Comb.S` API. This means
 it is used to compute values directly.
 
@@ -45,7 +73,7 @@ val adder : t -> t -> t = <fun>
 - : t = 11
 ```
 
-[`Signal`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Signal/index.html)
+[`Signal`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/signal_intf.ml)
 implements a deep embedding. This means it records the structure of a
 computation as a graph.
 

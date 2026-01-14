@@ -24,9 +24,9 @@ val run : Signal.t -> unit = <fun>
 -->
 
 # Cyclesim Coverage
-[`Cyclesim`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Cyclesim/index.html) can
+[`Cyclesim`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/cyclesim_intf.ml) can
 optionally capture coverage for one or multiple simulations of a
-[`Circuit.t`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Circuit/index.html).
+[`Circuit.t`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/circuit.mli).
 
 ## Enabling coverage
 Coverage can be run over an executable or an `expect test` and coverage for `Circuit`s
@@ -75,7 +75,7 @@ Sample coverage for a mux signal with three outputs whose selector is only ever 
 <!--
 ```ocaml
 Cyclesim_coverage_expect_test.enable_and_maybe_reset ();
-run mux; 
+run mux;
 ```
 -->
 ```ocaml
@@ -89,7 +89,7 @@ Mux with id: 2
 ```
 
 #### Waiver
-You can add a waiver for mux coverage with the following function: 
+You can add a waiver for mux coverage with the following function:
 
 ```ocaml
 # Signal.add_mux_waiver_exn mux (Waiver.exclude [1])
@@ -98,7 +98,7 @@ You can add a waiver for mux coverage with the following function:
 <!--
 ```ocaml
 Cyclesim_coverage_expect_test.enable_and_maybe_reset ();
-run mux; 
+run mux;
 ```
 -->
 ```ocaml
@@ -134,7 +134,7 @@ position 1 is ever selected:
 <!--
 ```ocaml
 Cyclesim_coverage_expect_test.enable_and_maybe_reset ();
-run cases; 
+run cases;
 ```
 -->
 ```ocaml
@@ -148,7 +148,7 @@ Cases with id: 2
 ```
 
 #### Waiver
-You can add a waiver for cases coverage with the following function: 
+You can add a waiver for cases coverage with the following function:
 
 ```ocaml
 # Signal.add_cases_waiver_exn cases (Waiver.only_expect [Case.Positional 1; Default])
@@ -159,7 +159,7 @@ You can add a waiver for cases coverage with the following function:
 <!--
 ```ocaml
 Cyclesim_coverage_expect_test.enable_and_maybe_reset ();
-run cases; 
+run cases;
 ```
 -->
 ```ocaml
@@ -189,11 +189,11 @@ val reg : Signal.t =
 Register toggle coverage tracks which bits of a register are toggled. To get full coverage
 every bit must flip from 0 -> 1 __and__ 1 -> 0.
 
-Sample coverage for a 4 bit register that doesn't toggle any bits. 
+Sample coverage for a 4 bit register that doesn't toggle any bits.
 <!--
 ```ocaml
 Cyclesim_coverage_expect_test.enable_and_maybe_reset ();
-run reg; 
+run reg;
 ```
 -->
 ```ocaml
@@ -218,7 +218,7 @@ You can add a waiver for register coverage with the following function:
 <!--
 ```ocaml
 Cyclesim_coverage_expect_test.enable_and_maybe_reset ();
-run reg; 
+run reg;
 ```
 -->
 ```ocaml
@@ -239,7 +239,7 @@ Reg with id: 2
 module State :
   sig
     type t = A | B | C
-    val compare__local : local_ t -> local_ t -> int
+    val compare__local : t @ local -> t @ local -> int
     val compare : t -> t -> int
     val all : t list
     val sexp_of_t : t -> Sexp_type.Sexp.t
@@ -275,7 +275,7 @@ module State :
           b:(t Base.Variant.t -> 'c -> (unit -> 'b) * 'd) ->
           c:(t Base.Variant.t -> 'd -> (unit -> 'b) * 'e) ->
           'a -> (t -> 'b) * 'e
-        val to_rank : local_ t -> int
+        val to_rank : t @ local -> int
         val to_name : t -> string
         val descriptions : (string * int) list
       end
@@ -300,7 +300,7 @@ Sample coverage for a register with three states (A,B,C):
 <!--
 ```ocaml
 Cyclesim_coverage_expect_test.enable_and_maybe_reset ();
-run sm.current; 
+run sm.current;
 ```
 -->
 ```ocaml
@@ -326,7 +326,7 @@ You can add a waiver for statemachine coverage by either adding a state waiver o
 transition waiver to the register signal. Waivers applied to statemachine state registers
 carry over to switches performed on them.
 
-Transition waiver: 
+Transition waiver:
 
 ```ocaml
 # Signal.add_always_state_transition_waiver_exn sm.current (Waiver.exclude [ { Transition.from = "C"; to_ = "A"} ])
@@ -336,7 +336,7 @@ Transition waiver:
 <!--
 ```ocaml
 Cyclesim_coverage_expect_test.enable_and_maybe_reset ();
-run sm.current; 
+run sm.current;
 ```
 -->
 ```ocaml
@@ -356,7 +356,7 @@ Always state with id: 2
 - : unit = ()
 ```
 
-State waiver: 
+State waiver:
 
 ```ocaml
 # Signal.add_always_state_waiver_exn sm.current (Waiver.exclude ["C"])
@@ -366,7 +366,7 @@ State waiver:
 <!--
 ```ocaml
 Cyclesim_coverage_expect_test.enable_and_maybe_reset ();
-run sm.current; 
+run sm.current;
 ```
 -->
 ```ocaml
@@ -384,6 +384,3 @@ Always state with id: 2
 
 - : unit = ()
 ```
-
-
-

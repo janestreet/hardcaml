@@ -247,9 +247,8 @@ module Mutable = struct
       done
     else (
       (* The general case where next bit to write is not 64-bit aligned follows. *)
-      (* The below memory access is always safe, as (a_bits != 0 --> a_words > 0).
-         This buffers the first word in [a], to be bitwise OR-ed with data from
-         [b].
+      (* The below memory access is always safe, as (a_bits != 0 --> a_words > 0). This
+         buffers the first word in [a], to be bitwise OR-ed with data from [b].
       *)
       let x = ref (unsafe_get_int64 a (a_words - 1)) in
       (* The following loop takes the bottom [64 - a_bits] and OR it with [a_bits] from

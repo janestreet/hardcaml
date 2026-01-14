@@ -20,7 +20,7 @@ type t =
 
 let create ~name ~period = { name; period }
 let create_list ls = List.map ls ~f:(fun (name, period) -> create ~name ~period)
-let should_step { period; _ } ~cycle = cycle mod period = 0
+let aligned { period; _ } ~cycle = cycle mod period = 0
 
 type domain = t [@@deriving sexp_of]
 
@@ -87,6 +87,14 @@ module Set = struct
     { keys = Group.keys group; data = Table.create group default }
   ;;
 
+  let to_string t =
+    Iarray.filter t.keys ~f:(fun key -> Table.get t.data key)
+    |> Iarray.map ~f:(fun key -> key.domain.name)
+    |> Iarray.to_list
+    |> List.to_string ~f:Fn.id
+  ;;
+
+  let clear t = Array.map_inplace t.data ~f:(Fn.const false)
   let add t key = Table.set t.data ~key ~data:true
   let remove t key = Table.set t.data ~key ~data:false
   let mem t key = Table.get t.data key

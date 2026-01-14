@@ -1,11 +1,11 @@
 * test_comb_bits_primitives.exe
 
 : Test [Bits] module primitives.
-: 
-:   test_comb_bits_primitives.exe 
-: 
+:
+:   test_comb_bits_primitives.exe
+:
 : === flags ===
-: 
+:
 :   -bits MODULE               . bits implementation to test: intlist, boollist,
 :                                xlist, bits, bad
 :   [-bits-ref MODULE]         . reference bits implementation (default is [bits])

@@ -295,6 +295,11 @@ module Optimized : Comb.S with type t = t = Signal_builders.Const_prop (struct
 include (Optimized : Comb.S with type t := t)
 include Signal_builders.Conversion_functions (Optimized)
 
+let reset_names () =
+  set_names vdd [ { name = "vdd"; loc = [%here] } ];
+  set_names gnd [ { name = "gnd"; loc = [%here] } ]
+;;
+
 module Reg_spec_ = Reg_spec.Make (struct
     type nonrec t = t [@@deriving sexp_of]
 

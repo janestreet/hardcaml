@@ -537,7 +537,7 @@ let structural_compare
           mem_size0 = mem_size1
         | Inst { instantiation = i0; _ }, Inst { instantiation = i1; _ } ->
           String.equal i0.circuit_name i1.circuit_name
-          (*i0.inst_instance=i1.inst_instance &&*)
+          (* i0.inst_instance=i1.inst_instance && *)
           (* inst_inputs=??? *)
           && [%equal: Parameter.t list] i0.parameters i1.parameters
           && [%equal: Inst.Output.t list] i0.outputs i1.outputs

@@ -24,19 +24,27 @@ module type Arg_with_length = sig
   val length : int
 end
 
-module List (X : Arg_with_length) = struct
-  module Pre = struct
-    type 'a t = 'a List.t [@@deriving equal ~localize, compare ~localize, sexp_of]
+module type Interface_with_length = sig
+  include Interface.Pre
 
-    let init = List.init
-    let map = List.map
-    let iter = List.iter
-    let map2 = List.map2_exn
-    let iter2 = List.iter2_exn
-    let to_list = List.to_list
+  val length : int
+end
+
+module Interface_list (X : Interface_with_length) = struct
+  module Pre = struct
+    type 'a t = 'a X.t List.t [@@deriving equal ~localize, compare ~localize, sexp_of]
+
+    let map a ~f = List.map a ~f:(local_ fun a -> X.map a ~f) [@nontail]
+    let iter a ~f = List.iter a ~f:(local_ fun a -> X.iter a ~f) [@nontail]
+    let map2 a b ~f = List.map2_exn a b ~f:(local_ fun a b -> X.map2 a b ~f) [@nontail]
+    let iter2 a b ~f = List.iter2_exn a b ~f:(local_ fun a b -> X.iter2 a b ~f) [@nontail]
+    let to_list = List.concat_map ~f:X.to_list
 
     let port_names_and_widths =
-      init X.length ~f:(fun i -> [%string "%{X.port_name}%{i#Int}"], X.port_width)
+      List.init X.length ~f:(fun i ->
+        X.map
+          X.port_names_and_widths
+          ~f:(Tuple2.map_fst ~f:(fun name -> [%string "%{name}_%{i#Int}"])))
     ;;
   end
 
@@ -44,22 +52,38 @@ module List (X : Arg_with_length) = struct
   include Interface.Make (Pre)
 end
 
-module Array (X : Arg_with_length) = struct
+module Interface_array (X : Interface_with_length) = struct
   module Pre = struct
-    type 'a t = 'a Array.t [@@deriving equal ~localize, compare ~localize, sexp_of]
+    type 'a t = 'a X.t Array.t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
-    let init = Array.init
-    let map = Array.map
-    let iter = Array.iter
-    let map2 = Array.map2_exn
-    let iter2 = Array.iter2_exn
-    let to_list = Array.to_list
+    let map a ~f = Array.map a ~f:(local_ fun a -> X.map a ~f) [@nontail]
+    let iter a ~f = Array.iter a ~f:(local_ fun a -> X.iter a ~f) [@nontail]
+    let map2 a b ~f = Array.map2_exn a b ~f:(local_ fun a b -> X.map2 a b ~f) [@nontail]
+
+    let iter2 a b ~f =
+      Array.iter2_exn a b ~f:(local_ fun a b -> X.iter2 a b ~f) [@nontail]
+    ;;
+
+    let to_list a = Array.to_list a |> List.concat_map ~f:X.to_list
 
     let port_names_and_widths =
-      init X.length ~f:(fun i -> [%string "%{X.port_name}%{i#Int}"], X.port_width)
+      Array.init X.length ~f:(fun i ->
+        X.map
+          X.port_names_and_widths
+          ~f:(Tuple2.map_fst ~f:(fun name -> [%string "%{name}_%{i#Int}"])))
     ;;
   end
 
   include Pre
   include Interface.Make (Pre)
 end
+
+module List (X : Arg_with_length) = Interface_list (struct
+    include X
+    include Value (X)
+  end)
+
+module Array (X : Arg_with_length) = Interface_array (struct
+    include X
+    include Value (X)
+  end)

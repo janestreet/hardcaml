@@ -44,7 +44,8 @@ let expand_names_and_widths_init ~loc ~collection vname label_declaration =
   let init = Collection.init collection loc in
   [%expr
     [%e init] [%e length] ~f:(fun _i ->
-      ( Ppx_hardcaml_runtime0.concat [ [%e vname]; Ppx_hardcaml_runtime0.Int.to_string _i ]
+      ( Ppx_hardcaml_runtime0.concat
+          [ [%e vname]; "_"; Ppx_hardcaml_runtime0.Int.to_string _i ]
       , [%e nbits] ))]
 ;;
 
@@ -96,7 +97,10 @@ let expand_port_names_and_widths_label_array_like
     let mangled =
       [%expr
         Ppx_hardcaml_runtime0.concat
-          [ [%e mangle_name ~loc name mangle]; Ppx_hardcaml_runtime0.Int.to_string _i ]]
+          [ [%e mangle_name ~loc name mangle]
+          ; "_"
+          ; Ppx_hardcaml_runtime0.Int.to_string _i
+          ]]
     in
     let rtlident = mk_rtlident ~loc mangled prefix suffix in
     let mapid = pexp_ident ~loc (Located.mk ~loc (Ldot (mname, "map"))) in

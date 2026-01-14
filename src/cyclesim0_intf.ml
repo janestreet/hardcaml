@@ -20,6 +20,7 @@ module type Private = sig
     -> reset:task
     -> clock_mode:[ `All_one_domain | `By_input_clocks ]
     -> clocks_aligned:(unit -> bool)
+    -> cycle_multiple:int
     -> cycle_check:task
     -> cycle_before_clock_edge:task
     -> cycle_at_clock_edge:task
@@ -100,6 +101,7 @@ module type Cyclesim0 = sig
     ; reset : task
     ; clock_mode : [ `All_one_domain | `By_input_clocks ]
     ; clocks_aligned : unit -> bool
+    ; cycle_multiple : int
     ; cycle_check : task
     ; cycle_before_clock_edge : task
     ; cycle_at_clock_edge : task

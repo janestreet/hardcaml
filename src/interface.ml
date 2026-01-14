@@ -155,7 +155,10 @@ module Make_with_wave_formats (X : sig
       let acc', field = f !acc t in
       acc := acc';
       result := Some field);
-    map result ~f:(fun x -> Option.value_exn !x)
+    map2 port_names result ~f:(fun name x ->
+      match !x with
+      | Some x -> x
+      | None -> raise_s [%message "[Interface.Make.scan] missing result" (name : string)])
   ;;
 
   let scan2 a b ~init ~f = scan (zip a b) ~init ~f:(fun c (a, b) -> f c a b) [@nontail]

@@ -35,5 +35,18 @@ module type Arg_with_length = sig
   val length : int
 end
 
+module type Interface_with_length = sig
+  include Interface.Pre
+
+  val length : int
+end
+
 module List (A : Arg_with_length) : Interface.S with type 'a t = 'a list
+
+module Interface_list (X : Interface_with_length) :
+  Interface.S with type 'a t = 'a X.t list
+
 module Array (A : Arg_with_length) : Interface.S with type 'a t = 'a array
+
+module Interface_array (X : Interface_with_length) :
+  Interface.S with type 'a t = 'a X.t array

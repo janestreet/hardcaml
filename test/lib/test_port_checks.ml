@@ -125,7 +125,7 @@ module%test Wrong_length_list = struct
        "does not match number of provided output signals!"
        3
        "(are you using a wrong length list or array in the interface?)"
-       (port_names (l0 l1)))
+       (port_names (l_0 l_1)))
       |}]
   ;;
 end

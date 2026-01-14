@@ -89,7 +89,7 @@ module State :
   sig
     type t = A
     val sexp_of_t : t -> Sexp.t
-    val compare__local : local_ t -> local_ t -> int
+    val compare__local : t @ local -> t @ local -> int
     val compare : t -> t -> int
     val all : t list
   end

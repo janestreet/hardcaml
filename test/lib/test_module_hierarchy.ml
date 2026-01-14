@@ -90,19 +90,19 @@ let%expect_test "flattened" =
     module outer (
         b,
         a,
-        c0,
-        d0,
-        c1,
-        d1,
+        c_0,
+        d_0,
+        c_1,
+        d_1,
         x
     );
 
         input b;
         input a;
-        output c0;
-        output d0;
-        output c1;
-        output d1;
+        output c_0;
+        output d_0;
+        output c_1;
+        output d_1;
         output x;
 
         wire x_0;
@@ -115,10 +115,10 @@ let%expect_test "flattened" =
         assign _5 = b;
         assign _8 = a;
         assign a_1 = ~ _8;
-        assign c0 = a_1;
-        assign d0 = _5;
-        assign c1 = a_0;
-        assign d1 = _5;
+        assign c_0 = a_1;
+        assign d_0 = _5;
+        assign c_1 = a_0;
+        assign d_1 = _5;
         assign x = x_0;
 
     endmodule
@@ -129,19 +129,19 @@ let%expect_test "flattened" =
     module outer (
         b,
         a,
-        c0,
-        d0,
-        c1,
-        d1,
+        c_0,
+        d_0,
+        c_1,
+        d_1,
         x
     );
 
         input b;
         input a;
-        output c0;
-        output d0;
-        output c1;
-        output d1;
+        output c_0;
+        output d_0;
+        output c_1;
+        output d_1;
         output x;
 
         wire the_middle$x;
@@ -154,10 +154,10 @@ let%expect_test "flattened" =
         assign _5 = b;
         assign _8 = a;
         assign inner$a = ~ _8;
-        assign c0 = inner$a;
-        assign d0 = _5;
-        assign c1 = inner_1$a;
-        assign d1 = _5;
+        assign c_0 = inner$a;
+        assign d_0 = _5;
+        assign c_1 = inner_1$a;
+        assign d_1 = _5;
         assign x = the_middle$x;
 
     endmodule
@@ -168,19 +168,19 @@ let%expect_test "flattened" =
     module outer (
         b,
         a,
-        c0,
-        d0,
-        c1,
-        d1,
+        c_0,
+        d_0,
+        c_1,
+        d_1,
         x
     );
 
         input b;
         input a;
-        output c0;
-        output d0;
-        output c1;
-        output d1;
+        output c_0;
+        output d_0;
+        output c_1;
+        output d_1;
         output x;
 
         wire outer$the_middle$x;
@@ -193,10 +193,10 @@ let%expect_test "flattened" =
         assign _5 = b;
         assign _8 = a;
         assign outer$the_middle$inner$a = ~ _8;
-        assign c0 = outer$the_middle$inner$a;
-        assign d0 = _5;
-        assign c1 = outer$the_middle$inner_1$a;
-        assign d1 = _5;
+        assign c_0 = outer$the_middle$inner$a;
+        assign d_0 = _5;
+        assign c_1 = outer$the_middle$inner_1$a;
+        assign d_1 = _5;
         assign x = outer$the_middle$x;
 
     endmodule
@@ -241,19 +241,19 @@ let%expect_test "hierarchical" =
     module middle (
         b,
         a,
-        c0,
-        d0,
-        c1,
-        d1,
+        c_0,
+        d_0,
+        c_1,
+        d_1,
         x
     );
 
         input b;
         input a;
-        output c0;
-        output d0;
-        output c1;
-        output d1;
+        output c_0;
+        output d_0;
+        output c_1;
+        output d_1;
         output x;
 
         wire x_0;
@@ -276,29 +276,29 @@ let%expect_test "hierarchical" =
         assign _5 = b;
         assign _8 = a;
         assign a_0 = ~ _8;
-        assign c0 = a_0;
-        assign d0 = _5;
-        assign c1 = _13;
-        assign d1 = _12;
+        assign c_0 = a_0;
+        assign d_0 = _5;
+        assign c_1 = _13;
+        assign d_1 = _12;
         assign x = x_0;
 
     endmodule
     module outer (
         b,
         a,
-        c0,
-        d0,
-        c1,
-        d1,
+        c_0,
+        d_0,
+        c_1,
+        d_1,
         x
     );
 
         input b;
         input a;
-        output c0;
-        output d0;
-        output c1;
-        output d1;
+        output c_0;
+        output d_0;
+        output c_1;
+        output d_1;
         output x;
 
         wire _11;
@@ -319,16 +319,16 @@ let%expect_test "hierarchical" =
             the_middle
             ( .a(_8),
               .b(_6),
-              .c0(_10[0:0]),
-              .d0(_10[1:1]),
-              .c1(_10[2:2]),
-              .d1(_10[3:3]),
+              .c_0(_10[0:0]),
+              .d_0(_10[1:1]),
+              .c_1(_10[2:2]),
+              .d_1(_10[3:3]),
               .x(_10[4:4]) );
         assign _15 = _10[0:0];
-        assign c0 = _15;
-        assign d0 = _14;
-        assign c1 = _13;
-        assign d1 = _12;
+        assign c_0 = _15;
+        assign d_0 = _14;
+        assign c_1 = _13;
+        assign d_1 = _12;
         assign x = _11;
 
     endmodule
@@ -361,19 +361,19 @@ let%expect_test "hierarchical" =
     module middle (
         b,
         a,
-        c0,
-        d0,
-        c1,
-        d1,
+        c_0,
+        d_0,
+        c_1,
+        d_1,
         x
     );
 
         input b;
         input a;
-        output c0;
-        output d0;
-        output c1;
-        output d1;
+        output c_0;
+        output d_0;
+        output c_1;
+        output d_1;
         output x;
 
         wire the_middle$x;
@@ -396,29 +396,29 @@ let%expect_test "hierarchical" =
         assign _5 = b;
         assign _8 = a;
         assign inner$a = ~ _8;
-        assign c0 = inner$a;
-        assign d0 = _5;
-        assign c1 = _13;
-        assign d1 = _12;
+        assign c_0 = inner$a;
+        assign d_0 = _5;
+        assign c_1 = _13;
+        assign d_1 = _12;
         assign x = the_middle$x;
 
     endmodule
     module outer (
         b,
         a,
-        c0,
-        d0,
-        c1,
-        d1,
+        c_0,
+        d_0,
+        c_1,
+        d_1,
         x
     );
 
         input b;
         input a;
-        output c0;
-        output d0;
-        output c1;
-        output d1;
+        output c_0;
+        output d_0;
+        output c_1;
+        output d_1;
         output x;
 
         wire _11;
@@ -439,16 +439,16 @@ let%expect_test "hierarchical" =
             the_middle
             ( .a(_8),
               .b(_6),
-              .c0(_10[0:0]),
-              .d0(_10[1:1]),
-              .c1(_10[2:2]),
-              .d1(_10[3:3]),
+              .c_0(_10[0:0]),
+              .d_0(_10[1:1]),
+              .c_1(_10[2:2]),
+              .d_1(_10[3:3]),
               .x(_10[4:4]) );
         assign _15 = _10[0:0];
-        assign c0 = _15;
-        assign d0 = _14;
-        assign c1 = _13;
-        assign d1 = _12;
+        assign c_0 = _15;
+        assign d_0 = _14;
+        assign c_1 = _13;
+        assign d_1 = _12;
         assign x = _11;
 
     endmodule
@@ -481,19 +481,19 @@ let%expect_test "hierarchical" =
     module middle (
         b,
         a,
-        c0,
-        d0,
-        c1,
-        d1,
+        c_0,
+        d_0,
+        c_1,
+        d_1,
         x
     );
 
         input b;
         input a;
-        output c0;
-        output d0;
-        output c1;
-        output d1;
+        output c_0;
+        output d_0;
+        output c_1;
+        output d_1;
         output x;
 
         wire outer$the_middle$x;
@@ -516,29 +516,29 @@ let%expect_test "hierarchical" =
         assign _5 = b;
         assign _8 = a;
         assign outer$the_middle$inner$a = ~ _8;
-        assign c0 = outer$the_middle$inner$a;
-        assign d0 = _5;
-        assign c1 = _13;
-        assign d1 = _12;
+        assign c_0 = outer$the_middle$inner$a;
+        assign d_0 = _5;
+        assign c_1 = _13;
+        assign d_1 = _12;
         assign x = outer$the_middle$x;
 
     endmodule
     module outer (
         b,
         a,
-        c0,
-        d0,
-        c1,
-        d1,
+        c_0,
+        d_0,
+        c_1,
+        d_1,
         x
     );
 
         input b;
         input a;
-        output c0;
-        output d0;
-        output c1;
-        output d1;
+        output c_0;
+        output d_0;
+        output c_1;
+        output d_1;
         output x;
 
         wire _11;
@@ -559,16 +559,16 @@ let%expect_test "hierarchical" =
             the_middle
             ( .a(_8),
               .b(_6),
-              .c0(_10[0:0]),
-              .d0(_10[1:1]),
-              .c1(_10[2:2]),
-              .d1(_10[3:3]),
+              .c_0(_10[0:0]),
+              .d_0(_10[1:1]),
+              .c_1(_10[2:2]),
+              .d_1(_10[3:3]),
               .x(_10[4:4]) );
         assign _15 = _10[0:0];
-        assign c0 = _15;
-        assign d0 = _14;
-        assign c1 = _13;
-        assign d1 = _12;
+        assign c_0 = _15;
+        assign d_0 = _14;
+        assign c_1 = _13;
+        assign d_1 = _12;
         assign x = _11;
 
     endmodule
@@ -643,19 +643,19 @@ let%expect_test "[hierarchical_here] uses the file name as the module name" =
     module circuit (
         b,
         a,
-        c0,
-        d0,
-        c1,
-        d1,
+        c_0,
+        d_0,
+        c_1,
+        d_1,
         x
     );
 
         input b;
         input a;
-        output c0;
-        output d0;
-        output c1;
-        output d1;
+        output c_0;
+        output d_0;
+        output c_1;
+        output d_1;
         output x;
 
         wire x_0;
@@ -668,10 +668,10 @@ let%expect_test "[hierarchical_here] uses the file name as the module name" =
         assign _5 = b;
         assign _8 = a;
         assign inner$a = ~ _8;
-        assign c0 = inner$a;
-        assign d0 = _5;
-        assign c1 = test_module_hierarchy$a;
-        assign d1 = _5;
+        assign c_0 = inner$a;
+        assign d_0 = _5;
+        assign c_1 = test_module_hierarchy$a;
+        assign d_1 = _5;
         assign x = x_0;
 
     endmodule

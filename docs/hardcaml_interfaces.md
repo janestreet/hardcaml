@@ -10,7 +10,7 @@
 -->
 
 Abstractly, Hardcaml
-[interfaces](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Interface/index.html) are
+[interfaces](https://github.com/janestreet/hardcaml/blob/with-extensions/src/interface_intf.ml) are
 made up of a polymorphic type (with a single polymorphic variable) and a set of functions
 which can manipulate that type:
 
@@ -166,7 +166,7 @@ implementation. They often come with a specialized API for manipulating the valu
     'c Simple_interface.t ->
     'd Simple_interface.t ->
     'e Simple_interface.t ->
-    f:local_ ('a -> 'b -> 'c -> 'd -> 'e -> 'f) -> 'f Simple_interface.t
+    f:('a -> 'b -> 'c -> 'd -> 'e -> 'f) @ local -> 'f Simple_interface.t
 = <fun>
 ```
 
@@ -257,7 +257,7 @@ specialized to the types `Signal.t t` and `Bits.t t` respectively.
 ### Converting from Ints
 
 `of_unsigned_int`, `of_signed_int` and `of_int_trunc` set each field to the given value by
-converting from a given integer. 
+converting from a given integer.
 
 `of_unsigned_ints`, `of_signed_ints` and `of_ints_trunc` also convert from integers but each
 field may be specified individually.

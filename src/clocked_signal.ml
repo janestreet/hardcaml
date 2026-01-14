@@ -143,6 +143,7 @@ let validate_signals_are_consistent ~op_name alist =
 let set_names = pr_app Signal.set_names
 let names = pr_app Signal.names
 let names_and_locs = pr_app Signal.names_and_locs
+let reset_names = Signal.reset_names
 
 (* Signal.Attributes *)
 let add_attribute = pr_transform_extra Signal.add_attribute

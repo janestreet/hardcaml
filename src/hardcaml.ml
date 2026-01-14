@@ -63,6 +63,7 @@ module Signal_graph = Signal_graph
 (** {1 Misc types} *)
 
 module Architecture = Architecture
+module Before_and_after_edge = Before_and_after_edge
 module Binable_circuit = Binable_circuit
 module Build_mode = Build_mode
 module Clocking = Clocking

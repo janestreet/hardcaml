@@ -826,6 +826,7 @@ type 'a typed_fifo_read_result =
   ; nearly_full : Signal.t
   ; overflow : Signal.t
   ; read_when_empty : Signal.t
+  ; used : Signal.t
   }
 
 let typed_fifo
@@ -867,6 +868,7 @@ let typed_fifo
   ; nearly_full = fifo.nearly_full
   ; overflow = fifo.full &: input.valid
   ; read_when_empty = fifo.empty &: read
+  ; used = fifo.used
   }
 ;;
 
@@ -885,7 +887,8 @@ let cut_through_typed_fifo
   (module C : Interface.S_Of_signal with type Of_signal.t = a)
   =
   let cutting_through = wire 1 in
-  let fifo_input = { input with valid = input.valid &: ~:cutting_through } in
+  let cutting_through_and_reading = wire 1 in
+  let fifo_input = { input with valid = input.valid &: ~:cutting_through_and_reading } in
   let fifo_read = read &: ~:cutting_through in
   let underlying_fifo =
     typed_fifo
@@ -901,7 +904,8 @@ let cut_through_typed_fifo
       ~read:fifo_read
       (module C)
   in
-  cutting_through <-- (underlying_fifo.empty &: input.valid &: read);
+  cutting_through <-- (underlying_fifo.empty &: input.valid);
+  cutting_through_and_reading <-- (cutting_through &: read);
   let q =
     { With_valid.valid = input.valid |: underlying_fifo.q.valid
     ; value = C.Of_signal.mux2 underlying_fifo.empty input.value underlying_fifo.q.value
@@ -921,5 +925,6 @@ let cut_through_typed_fifo
   ; nearly_full = underlying_fifo.nearly_full
   ; overflow = underlying_fifo.overflow
   ; read_when_empty = empty &: read
+  ; used = underlying_fifo.used
   }
 ;;

@@ -58,8 +58,7 @@ let display_rules =
   Display_rule.(
     [ I.map I.port_names ~f:(port_name_is ~wave_format:(Bit_or Unsigned_int)) |> I.to_list
     ; O.map O.port_names ~f:(port_name_is ~wave_format:(Bit_or Unsigned_int)) |> O.to_list
-    ; [ port_name_matches Re.Posix.(re ".*" |> compile) ~wave_format:(Bit_or Unsigned_int)
-      ]
+    ; [ port_name_matches (Posix ".*") ~wave_format:(Bit_or Unsigned_int) ]
     ]
     |> List.concat)
 ;;
@@ -397,6 +396,8 @@ module%test Typed_tests = struct
       ; nearly_empty : 'a
       ; overflow : 'a
       ; read_when_empty : 'a
+      ; used : 'a [@bits 16]
+      (* Using more bits than necessary here to prevent needing a functor. *)
       }
     [@@deriving hardcaml]
   end
@@ -404,7 +405,16 @@ module%test Typed_tests = struct
   let wrap ~cut_through ?(capacity = 4) (i : _ I.t) =
     let open Signal in
     assert (num_bits_to_represent capacity <= used_bits);
-    let { Fifo.q; full; empty; nearly_full; nearly_empty; overflow; read_when_empty } =
+    let { Fifo.q
+        ; full
+        ; empty
+        ; nearly_full
+        ; nearly_empty
+        ; overflow
+        ; read_when_empty
+        ; used
+        }
+      =
       (if cut_through then Fifo.cut_through_typed_fifo else Fifo.typed_fifo)
         (module Data_entry)
         ~capacity
@@ -422,6 +432,7 @@ module%test Typed_tests = struct
       ; nearly_empty
       ; overflow
       ; read_when_empty
+      ; used = uextend used ~width:O.port_widths.used
       }
     in
     o
@@ -512,6 +523,9 @@ module%test Typed_tests = struct
       │                  ││────────────────────┘               └───────────────────         │
       │nearly_empty      ││────────────┐                               ┌───────────         │
       │                  ││            └───────────────────────────────┘                    │
+      │                  ││────────┬───┬───┬───┬───┬───────┬───┬───┬───┬───┬───────         │
+      │used              ││ 0      │1  │2  │3  │4  │5      │4  │3  │2  │1  │0               │
+      │                  ││────────┴───┴───┴───┴───┴───────┴───┴───┴───┴───┴───────         │
       │                  ││────┬───┬───┬───┬───┬───┬───────────────────────────────         │
       │a                 ││ 0  │10 │20 │30 │40 │50 │0                                       │
       │                  ││────┴───┴───┴───┴───┴───┴───────────────────────────────         │
@@ -556,6 +570,9 @@ module%test Typed_tests = struct
       │                  ││────────────────────┘               └───────────────────         │
       │nearly_empty      ││────────────┐                               ┌───────────         │
       │                  ││            └───────────────────────────────┘                    │
+      │                  ││────────┬───┬───┬───┬───┬───────┬───┬───┬───┬───┬───────         │
+      │used              ││ 0      │1  │2  │3  │4  │5      │4  │3  │2  │1  │0               │
+      │                  ││────────┴───┴───┴───┴───┴───────┴───┴───┴───┴───┴───────         │
       │                  ││────┬───┬───┬───┬───┬───┬───────────────────────────────         │
       │a                 ││ 0  │10 │20 │30 │40 │50 │0                                       │
       │                  ││────┴───┴───┴───┴───┴───┴───────────────────────────────         │
@@ -600,6 +617,9 @@ module%test Typed_tests = struct
       │                  ││────────────────────────────────────────────────────────         │
       │nearly_empty      ││────────────────────────────────────────────────────────         │
       │                  ││                                                                 │
+      │                  ││────────┬───────────────────────────────────────┬───────         │
+      │used              ││ 0      │1                                      │0               │
+      │                  ││────────┴───────────────────────────────────────┴───────         │
       │                  ││────┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───────────         │
       │a                 ││ 0  │10 │20 │30 │40 │50 │60 │70 │80 │90 │100│0                   │
       │                  ││────┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───────────         │
@@ -644,6 +664,9 @@ module%test Typed_tests = struct
       │                  ││────────────────────────────────────────────────────────         │
       │nearly_empty      ││────────────────────────────────────────────────────────         │
       │                  ││                                                                 │
+      │                  ││────────────────────────────────────────────────────────         │
+      │used              ││ 0                                                               │
+      │                  ││────────────────────────────────────────────────────────         │
       │                  ││────┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───────────         │
       │a                 ││ 0  │10 │20 │30 │40 │50 │60 │70 │80 │90 │100│0                   │
       │                  ││────┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───────────         │
