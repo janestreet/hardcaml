@@ -5,12 +5,13 @@ module type Lib = sig
 
   val reg
     :  clock:t
+    -> ?initialize_to:Bits.t
     -> ?clock_edge:Edge.t
     -> ?reset:t
     -> ?reset_edge:Edge.t
-    -> ?reset_value:t
+    -> ?reset_to:Bits.t
     -> ?clear:t
-    -> ?clear_value:t
+    -> ?clear_to:t
     -> ?enable:t
     -> t
     -> t

@@ -147,6 +147,7 @@ let validate_signals_are_consistent ~op_name alist =
 let set_names = pr_app Signal.set_names
 let names = pr_app Signal.names
 let names_and_locs = pr_app Signal.names_and_locs
+let reset_names = Signal.reset_names
 
 (* Signal.Attributes *)
 let add_attribute = pr_transform_extra Signal.add_attribute
@@ -313,8 +314,8 @@ module Reg_spec = Reg_spec.Make (struct
 module Reg = struct
   type 'a with_register_spec =
     ?enable:t
-    -> ?initialize_to:t
-    -> ?reset_to:t
+    -> ?initialize_to:Bits.t
+    -> ?reset_to:Bits.t
     -> ?clear:t
     -> ?clear_to:t
     -> Reg_spec.t
@@ -335,19 +336,25 @@ module Reg = struct
       ~clock:(Reg_spec.clock spec |> base)
   ;;
 
-  let reg ?enable ?initialize_to ?reset_to ?clear ?clear_to (spec : Reg_spec.t) t =
+  let reg__with_signal_reset
+    ?enable
+    ?initialize_to
+    ?reset_to
+    ?clear
+    ?clear_to
+    (spec : Reg_spec.t)
+    t
+    =
     let clock = Reg_spec.clock spec in
     let dom =
       [ "clock", Some clock
       ; "in", Some t
       ; "enable", enable
-      ; "reset_to", reset_to
       ; ( "clear"
         , match clear with
           | Some _ -> clear
           | _ -> Reg_spec.clear spec )
       ; "clear_to", clear_to
-      ; "initialize_to", initialize_to
       ]
       |> List.filter_map ~f:(fun (name, s) ->
         match s with
@@ -357,9 +364,9 @@ module Reg = struct
     in
     let base_spec = spec_to_base spec in
     { base =
-        Signal.reg
+        Signal.Expert.reg__with_signal_reset
           ?enable:(get_opt enable)
-          ?initialize_to:(get_opt initialize_to)
+          ?initialize_to
           ?reset_to:(get_opt reset_to)
           ?clear:(get_opt clear)
           ?clear_to:(get_opt clear_to)
@@ -376,7 +383,7 @@ module Reg = struct
       module Reg_spec = Reg_spec
 
       let add_attribute = add_attribute
-      let reg = reg
+      let reg__with_signal_reset = reg__with_signal_reset
       let wire = wire
       let assign = assign
       let update_rep = update_rep
@@ -485,4 +492,6 @@ module Expert = struct
       (validate_signals_are_consistent ~op_name:"Always.(<--)" [ "dst", dst; "src", src ]
        : Clock_domain.Runtime.t)
   ;;
+
+  let reg__with_signal_reset = reg__with_signal_reset
 end

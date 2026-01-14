@@ -1,32 +1,31 @@
 (* We have the following object types;
 
-   - MI module input {R}
-   - MO module output {W}
-   - MT module tristate {RW}
+   - MI module input [{R}]
+   - MO module output [{W}]
+   - MT module tristate [{RW}]
 
    - SI submodule input [<-MI, MT, W, C]
    - SO submodule output [->MO, MT, W]
    - ST submodule tristate [<-MI, MT, W, C ->MO, MT, W]
 
-   - W wires {RW} [<-MI, MT, W, C -> MO, MT, W]
-   - C constants {R} [->C, MO, MT]
+   - W wires [{RW}] [<-MI, MT, W, C -> MO, MT, W]
+   - C constants [{R}] [->C, MO, MT]
 
    Basic rules;
 
    - module IO's may connect to submodules
    - submodulues connect via wires or module IOs
-   - constants are currently included but are not needed - might be better to
-     detect them at generation time instead - similar for other simple RTL
-     operators.
+   - constants are currently included but are not needed - might be better to detect them
+     at generation time instead - similar for other simple RTL operators.
 
-   Multiple {RW}
+   Multiple [{RW}]
 
    - many things may read an object
    - in general only 1 thing may drive (write) and object
    - special case - multiple tristates may drive an object
 
-   NOTE: It would be nice if many of the rules below could be encoded into the
-   type system, but I dont know how or if it's possible. *)
+   NOTE: It would be nice if many of the rules below could be encoded into the type
+   system, but I dont know how or if it's possible. *)
 
 open! Core0
 
@@ -116,6 +115,8 @@ module Structural_rtl_component = struct
           { name : string
           ; clock_edge : Edge.t
           ; reset_edge : Edge.t
+          ; reset_to : Bits.t option
+          ; initialize_to : Bits.t option
           ; width : int
           }
     [@@deriving compare ~localize, sexp_of]
@@ -143,7 +144,7 @@ module Structural_rtl_component = struct
     | Mul { signed = true; name; width_a; width_b } ->
       Circuit.create_exn ~name [ output "o" (input "i0" width_a *+ input "i1" width_b) ]
     | Not { name; width } -> Circuit.create_exn ~name [ output "o" ~:(input "i" width) ]
-    | Reg { name; clock_edge; reset_edge; width } ->
+    | Reg { name; clock_edge; reset_edge; reset_to; initialize_to; width } ->
       Circuit.create_exn
         ~name
         [ output
@@ -157,7 +158,8 @@ module Structural_rtl_component = struct
                   ~clear:(input "clear" 1)
                   ())
                ~enable:(input "enable" 1)
-               ~reset_to:(input "reset_to" width)
+               ?reset_to
+               ?initialize_to
                ~clear_to:(input "clear_to" width)
                (input "d" width))
         ]
@@ -489,7 +491,6 @@ let select d ~high:hi ~low:lo =
 
 (* Configure how we want to generate structural instantiations from the Comb API. *)
 let prefix = "hardcaml_lib_"
-let use_generic_instantiations = false
 
 (* Comb primitives API. Also tracks a set of instantiations so they can be generated
    later. *)
@@ -514,44 +515,29 @@ module Base () = struct
   let binop0 name a b =
     if width a <> width b then raise (Binop_arg_widths_different name);
     let out = wire 1 in
-    let g = [ "b" ==> GInt (width a) ] in
     let i = [ "i0" ==> a; "i1" ==> b ] in
     let o = [ "o" ==> out ] in
-    let g, name =
-      if use_generic_instantiations
-      then g, [%string "%{prefix}%{name}"]
-      else [], [%string "%{prefix}%{name}_%{width a#Int}"]
-    in
-    inst name ~g ~i ~o;
+    let name = [%string "%{prefix}%{name}_%{width a#Int}"] in
+    inst name ~i ~o;
     out, name
   ;;
 
   let binop1 name a b =
     if width a <> width b then raise (Binop_arg_widths_different name);
     let out = wire (width a) in
-    let g = [ "b" ==> GInt (width a) ] in
     let i = [ "i0" ==> a; "i1" ==> b ] in
     let o = [ "o" ==> out ] in
-    let g, name =
-      if use_generic_instantiations
-      then g, [%string "%{prefix}%{name}"]
-      else [], [%string "%{prefix}%{name}_%{width a#Int}"]
-    in
-    inst name ~g ~i ~o;
+    let name = [%string "%{prefix}%{name}_%{width a#Int}"] in
+    inst name ~i ~o;
     out, name
   ;;
 
   let binop2 name a b =
     let out = wire (width a + width b) in
-    let g = [ "w0" ==> GInt (width a); "w1" ==> GInt (width b) ] in
     let i = [ "i0" ==> a; "i1" ==> b ] in
     let o = [ "o" ==> out ] in
-    let g, name =
-      if use_generic_instantiations
-      then g, [%string "%{prefix}%{name}"]
-      else [], [%string "%{prefix}%{name}_%{width a#Int}_%{width b#Int}"]
-    in
-    inst name ~g ~i ~o;
+    let name = [%string "%{prefix}%{name}_%{width a#Int}_%{width b#Int}"] in
+    inst name ~i ~o;
     out, name
   ;;
 
@@ -608,16 +594,11 @@ module Base () = struct
 
   let ( ~: ) a =
     let out = wire (width a) in
-    let g = [ "b" ==> GInt (width a) ] in
     let i = [ "i" ==> a ] in
     let o = [ "o" ==> out ] in
     let name = "not" in
-    let g, name =
-      if use_generic_instantiations
-      then g, [%string "%{prefix}%{name}"]
-      else [], [%string "%{prefix}%{name}_%{width a#Int}"]
-    in
-    inst name ~g ~i ~o;
+    let name = [%string "%{prefix}%{name}_%{width a#Int}"] in
+    inst name ~i ~o;
     add_structural_rtl_component (Not { name; width = width a });
     out
   ;;
@@ -678,12 +659,13 @@ module Lib () = struct
 
   let reg
     ~clock
+    ?initialize_to
     ?(clock_edge = Edge.Rising)
     ?reset
     ?(reset_edge = Edge.Rising)
-    ?reset_value
+    ?reset_to
     ?clear
-    ?clear_value
+    ?clear_to
     ?enable
     data
     =
@@ -692,10 +674,12 @@ module Lib () = struct
         | Edge.Rising -> "r"
         | Falling -> "f"
       ;;
-
-      let to_int = function
-        | Edge.Rising -> 1
-        | Falling -> 0
+    end
+    in
+    let module B = struct
+      let to_string = function
+        | None -> "X"
+        | Some bits -> Bits.to_string bits
       ;;
     end
     in
@@ -711,33 +695,24 @@ module Lib () = struct
       | Some x -> x
     in
     let q = mk_wire wd in
-    let g =
-      [ "w" ==> GInt (width data)
-      ; "ce" ==> GInt (E.to_int clock_edge)
-      ; "re" ==> GInt (E.to_int reset_edge)
-      ; "cl" ==> GInt 1
-      ]
-    in
     let i =
       [ "clock" ==> clock
       ; "reset" ==> or_edge reset_edge reset
-      ; "reset_value" ==> or_zero reset_value
       ; "clear" ==> or_gnd clear
-      ; "clear_value" ==> or_zero clear_value
+      ; "clear_to" ==> or_zero clear_to
       ; "enable" ==> or_vdd enable
       ; "d" ==> data
       ]
     in
     let o = [ "q" ==> q ] in
-    let g, name =
+    let name =
       let name = "reg" in
-      if use_generic_instantiations
-      then g, [%string "%{prefix}%{name}"]
-      else [], [%string "%{prefix}%{name}_%{wd#Int}_%{clock_edge#E}%{reset_edge#E}"]
+      [%string
+        "%{prefix}%{name}_%{wd#Int}_%{clock_edge#E}%{reset_edge#E}_%{reset_to#B}_%{initialize_to#B}"]
     in
     add_structural_rtl_component
-      (Reg { name; clock_edge; reset_edge; width = width data });
-    inst name ~g ~i ~o;
+      (Reg { name; clock_edge; reset_edge; initialize_to; reset_to; width = width data });
+    inst name ~i ~o;
     q
   ;;
 
@@ -755,27 +730,29 @@ end
 
 (* {[
      let remove_unconnected circuit =
-       let module IdSet = Set.Make
-                            (struct
-                              type t = int
-                              let compare = compare
-                            end)
+       let module IdSet =
+         Set.Make (struct
+           type t = int
+
+           let compare = compare
+         end)
        in
        let add set signal = IdSet.add (get_id signal) set in
        let add_list set signals = List.fold add set signals in
        let rec find (i, o, io, m_o, m_io, inst, rest) = function
-         | [] -> (i, o, io, m_o, m_io, inst, rest)
+         | [] -> i, o, io, m_o, m_io, inst, rest
          | s :: t ->
-           match s with
-           | Module_input _ -> add i s
-           | Module_output _ -> add o s
-           | Module_tristate _ -> add io s
-           | Instantiation_output _ -> add m_o s
-           | Instantiation_tristate _ -> add m_io s
-           | Instantiation _ -> add inst s
-           | _ -> s :: rest
+           (match s with
+            | Module_input _ -> add i s
+            | Module_output _ -> add o s
+            | Module_tristate _ -> add io s
+            | Instantiation_output _ -> add m_o s
+            | Instantiation_tristate _ -> add m_io s
+            | Instantiation _ -> add inst s
+            | _ -> s :: rest)
        in
        ()
+     ;;
    ]} *)
 
 let concat_map ?sep l ~f = Rope.concat ?sep (List.map l ~f)

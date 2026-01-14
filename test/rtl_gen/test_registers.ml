@@ -217,7 +217,7 @@ let%expect_test "clock" =
     |}];
   Testing.analyse_vhdl_and_verilog
     ~show:true
-    (of_spec spec ~initialize_to:(Signal.of_string "1"));
+    (of_spec spec ~initialize_to:(Bits.of_string "1"));
   [%expect
     {|
     module my_register (
@@ -230,13 +230,11 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        wire _4;
-        reg _5 = 1'b1;
-        assign _4 = 1'b1;
+        reg _4 = 1'b1;
         always @(negedge clock) begin
-            _5 <= d;
+            _4 <= d;
         end
-        assign q = _5;
+        assign q = _4;
 
     endmodule
     library ieee;
@@ -253,18 +251,16 @@ let%expect_test "clock" =
 
     architecture rtl of my_register is
 
-        signal \_4\ : std_logic;
-        signal \_5\ : std_logic := '1';
+        signal \_4\ : std_logic := '1';
 
     begin
 
-        \_4\ <= '1';
         process (clock) begin
             if falling_edge(clock) then
-                \_5\ <= d;
+                \_4\ <= d;
             end if;
         end process;
-        q <= \_5\;
+        q <= \_4\;
 
     end architecture;
     |}]
@@ -1038,7 +1034,7 @@ let%expect_test "clock + reset + clear" =
     |}];
   Testing.analyse_vhdl_and_verilog
     ~show:true
-    (of_spec spec ~enable ~reset_to:Signal.vdd ~clear_to:Signal.vdd);
+    (of_spec spec ~enable ~reset_to:Bits.vdd ~clear_to:Signal.vdd);
   [%expect
     {|
     module my_register (
@@ -1058,19 +1054,21 @@ let%expect_test "clock + reset + clear" =
         output q;
 
         wire vdd;
-        reg _8;
+        wire _7;
+        reg _9;
         assign vdd = 1'b1;
+        assign _7 = 1'b1;
         always @(negedge clock or negedge reset) begin
             if (reset == 0)
-                _8 <= vdd;
+                _9 <= _7;
             else
                 if (clear)
-                    _8 <= vdd;
+                    _9 <= vdd;
                 else
                     if (enable)
-                        _8 <= d;
+                        _9 <= d;
         end
-        assign q = _8;
+        assign q = _9;
 
     endmodule
     library ieee;
@@ -1091,27 +1089,29 @@ let%expect_test "clock + reset + clear" =
     architecture rtl of my_register is
 
         signal vdd : std_logic;
-        signal \_8\ : std_logic;
+        signal \_7\ : std_logic;
+        signal \_9\ : std_logic;
 
     begin
 
         vdd <= '1';
+        \_7\ <= '1';
         process (clock, reset) begin
             if falling_edge(reset) then
-                \_8\ <= vdd;
+                \_9\ <= \_7\;
             else
                 if falling_edge(clock) then
                     if clear = '1' then
-                        \_8\ <= vdd;
+                        \_9\ <= vdd;
                     else
                         if enable = '1' then
-                            \_8\ <= d;
+                            \_9\ <= d;
                         end if;
                     end if;
                 end if;
             end if;
         end process;
-        q <= \_8\;
+        q <= \_9\;
 
     end architecture;
     |}]

@@ -1,4 +1,4 @@
-(* Build adder circuits using NAND as the base gate.  Demonstrates the use of the
+(* Build adder circuits using NAND as the base gate. Demonstrates the use of the
    [Comb.Make_primitives] functor. *)
 
 open! Import

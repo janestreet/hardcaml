@@ -23,7 +23,7 @@ module Attribute_type = struct
   [@@deriving sexp_of]
 
   (* Map of all attributes in the design. An attribute may be present multiple times in
-     the design, but must only have one type.  The following ensures this. *)
+     the design, but must only have one type. The following ensures this. *)
   let add_if_unique (attrs : t Map.M(String.Caseless).t) (attr : Rtl_attribute.t) =
     Option.value_map ~default:attrs (Rtl_attribute.value attr) ~f:(function value ->
       let name = Rtl_attribute.name attr in
@@ -76,7 +76,7 @@ let to_integer (var : Rtl_ast.var) (two_state : bool) =
   else [%rope "to_integer(unsigned(%{var.name}))"]
 ;;
 
-(* Always convert to std_logic{,_vector} from the current variable (which may or may not
+(* Always convert to std_logic[{,_vector}] from the current variable (which may or may not
    be 2-state) *)
 let to_std_logic_vector (var : Rtl_ast.var) (two_state : bool) =
   if two_state

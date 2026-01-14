@@ -30,7 +30,7 @@ struct
     let ( -: ) a b =
       match is_const a, is_const b with
       | true, true -> cst (Bits.( -: ) (cv a) (cv b))
-      (* | true, false when eqs a 0 -> b *)
+      (*=| true, false when eqs a 0 -> b *)
       | false, true when eqs b 0 -> a (* a-0 *)
       | _ -> a -: b
     ;;
@@ -60,7 +60,7 @@ struct
     let ( *+ ) a b =
       match is_const a, is_const b with
       | true, true -> cst (Bits.( *+ ) (cv a) (cv b))
-      (* | we could do certain optimisations here *)
+      (*=| we could do certain optimisations here *)
       | _ -> a *+ b
     ;;
 
@@ -126,26 +126,25 @@ struct
     ;;
 
     (* {[
-         let is_rom els =
-           List.fold (fun b s -> b && is_const s) true els
+         let is_rom els = List.fold (fun b s -> b && is_const s) true els
 
          let opt_rom sel els =
            let len = List.length els in
-           let len' = 1 lsl (width sel) in
+           let len' = 1 lsl width sel in
            let els =
              if len' <> len
-             then
-               let e = List.nth els (len'-1) in
-               els @ linit (len'-len) (fun _ -> e)
-             else
-               els
+             then (
+               let e = List.nth els (len' - 1) in
+               els @ linit (len' - len) (fun _ -> e))
+             else els
            in
            mux sel els
+         ;;
        ]} *)
 
     let mux sel els =
       let len = List.length els in
-      (*let len' = 1 lsl (width sel) in*)
+      (* let len' = 1 lsl (width sel) in *)
       if is_const sel
       then (
         let x = Bits.to_int_trunc (cv sel) in
@@ -153,9 +152,9 @@ struct
         (* clip select *)
         List.nth_exn els x
         (* {[
-           else if is_rom els && len <= len'
-             then
-               opt_rom sel els
+             else if is_rom els && len <= len'
+               then
+                 opt_rom sel els
            ]} *))
       else mux sel els
     ;;
@@ -185,8 +184,8 @@ module Memories (Comb : sig
 
     val reg
       :  ?enable:t
-      -> ?initialize_to:t
-      -> ?reset_to:t
+      -> ?initialize_to:Bits.t
+      -> ?reset_to:Bits.t
       -> ?clear:t
       -> ?clear_to:t
       -> Reg_spec.t
@@ -249,9 +248,9 @@ module Registers (Pre : sig
 
     module Reg_spec : Reg_spec.S with type signal := t
 
-    val reg
+    val reg__with_signal_reset
       :  ?enable:t
-      -> ?initialize_to:t
+      -> ?initialize_to:Bits.t
       -> ?reset_to:t
       -> ?clear:t
       -> ?clear_to:t
@@ -266,6 +265,11 @@ module Registers (Pre : sig
   end) =
 struct
   open Pre
+
+  let reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
+    let reset_to = Option.map reset_to ~f:(Fn.compose of_constant Bits.to_constant) in
+    reg__with_signal_reset ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d
+  ;;
 
   let rec pipeline
     ?(attributes = [])

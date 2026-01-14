@@ -26,8 +26,8 @@ let rtlsuffix = create "rtlsuffix"
 let wave_format = create "wave_format"
 
 (* This represents the [ocaml.doc] attribute, which maps to documentation comments. The
-     leading [hardcaml.] token is required to bypass some compiler (or ppx) related
-     checks. I mention it because it's an undocumented hack. *)
+   leading [hardcaml.] token is required to bypass some compiler (or ppx) related checks.
+   I mention it because it's an undocumented hack. *)
 let doc = create "hardcaml.ocaml.doc"
 
 let has_exists ~loc:_ label_declaration =

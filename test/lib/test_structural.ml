@@ -421,7 +421,7 @@ let%expect_test "structural rtl reg components" =
       let q0 = mk_output "q0" 1 in
       q0 <-- reg ~clock d1;
       let q1 = mk_output "q1" 8 in
-      q1 <-- reg ~clock ~reset ~reset_value:(ones 8) d8;
+      q1 <-- reg ~clock ~reset ~reset_to:(Bits.ones 8) d8;
       let q2 = mk_output "q2" 1 in
       q2 <-- reg ~clock ~clear d1;
       let q3 = mk_output "q3" 1 in
@@ -432,7 +432,7 @@ let%expect_test "structural rtl reg components" =
             ~reset
             ~reset_edge:Falling
             ~clear
-            ~clear_value:(ones 8)
+            ~clear_to:(ones 8)
             ~enable
             d8)
   in
@@ -458,57 +458,53 @@ let%expect_test "structural rtl reg components" =
       wire _10;
       wire [7:0] _13;
       wire [7:0] _14;
-      wire [7:0] _15;
-      wire _18;
+      wire _17;
+      wire [7:0] _20;
       wire [7:0] _21;
       assign _1 = 1'b1;
       assign _2 = 1'b0;
-      assign _13 = 8'b11111111;
-      assign _15 = 8'b00000000;
+      assign _14 = 8'b00000000;
+      assign _20 = 8'b11111111;
       assign q0 = _10;
-      assign q1 = _14;
-      assign q2 = _18;
+      assign q1 = _13;
+      assign q2 = _17;
       assign q3 = _21;
-      hardcaml_lib_reg_1_rr _11
+      hardcaml_lib_reg_1_rr_X_X _11
       (
         .clock(clock),
         .reset(_2),
-        .reset_value(_2),
         .clear(_2),
-        .clear_value(_2),
+        .clear_to(_2),
         .enable(_1),
         .d(d1),
         .q(_10)
       );
-      hardcaml_lib_reg_8_rr _16
+      hardcaml_lib_reg_8_rr_11111111_X _15
       (
         .clock(clock),
         .reset(reset),
-        .reset_value(_13),
         .clear(_2),
-        .clear_value(_15),
+        .clear_to(_14),
         .enable(_1),
         .d(d8),
-        .q(_14)
+        .q(_13)
       );
-      hardcaml_lib_reg_1_rr _19
+      hardcaml_lib_reg_1_rr_X_X _18
       (
         .clock(clock),
         .reset(_2),
-        .reset_value(_2),
         .clear(clear),
-        .clear_value(_2),
+        .clear_to(_2),
         .enable(_1),
         .d(d1),
-        .q(_18)
+        .q(_17)
       );
-      hardcaml_lib_reg_8_ff _22
+      hardcaml_lib_reg_8_ff_X_X _22
       (
         .clock(clock),
         .reset(reset),
-        .reset_value(_15),
         .clear(clear),
-        .clear_value(_13),
+        .clear_to(_20),
         .enable(enable),
         .d(d8),
         .q(_21)
@@ -519,11 +515,10 @@ let%expect_test "structural rtl reg components" =
   |> Set.iter ~f:(fun c -> Structural_rtl_component.rtl_circuit c |> Rtl.print Verilog);
   [%expect
     {|
-    module hardcaml_lib_reg_1_rr (
+    module hardcaml_lib_reg_1_rr_X_X (
         enable,
         clear_to,
         clear,
-        reset_to,
         reset,
         clock,
         d,
@@ -533,16 +528,17 @@ let%expect_test "structural rtl reg components" =
         input enable;
         input clear_to;
         input clear;
-        input reset_to;
         input reset;
         input clock;
         input d;
         output q;
 
+        wire _8;
         reg _9;
+        assign _8 = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _9 <= reset_to;
+                _9 <= _8;
             else
                 if (clear)
                     _9 <= clear_to;
@@ -553,11 +549,10 @@ let%expect_test "structural rtl reg components" =
         assign q = _9;
 
     endmodule
-    module hardcaml_lib_reg_8_ff (
+    module hardcaml_lib_reg_8_ff_X_X (
         enable,
         clear_to,
         clear,
-        reset_to,
         reset,
         clock,
         d,
@@ -567,16 +562,17 @@ let%expect_test "structural rtl reg components" =
         input enable;
         input [7:0] clear_to;
         input clear;
-        input [7:0] reset_to;
         input reset;
         input clock;
         input [7:0] d;
         output [7:0] q;
 
+        wire [7:0] _8;
         reg [7:0] _9;
+        assign _8 = 8'b00000000;
         always @(negedge clock or negedge reset) begin
             if (reset == 0)
-                _9 <= reset_to;
+                _9 <= _8;
             else
                 if (clear)
                     _9 <= clear_to;
@@ -587,11 +583,10 @@ let%expect_test "structural rtl reg components" =
         assign q = _9;
 
     endmodule
-    module hardcaml_lib_reg_8_rr (
+    module hardcaml_lib_reg_8_rr_11111111_X (
         enable,
         clear_to,
         clear,
-        reset_to,
         reset,
         clock,
         d,
@@ -601,16 +596,17 @@ let%expect_test "structural rtl reg components" =
         input enable;
         input [7:0] clear_to;
         input clear;
-        input [7:0] reset_to;
         input reset;
         input clock;
         input [7:0] d;
         output [7:0] q;
 
+        wire [7:0] _8;
         reg [7:0] _9;
+        assign _8 = 8'b11111111;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _9 <= reset_to;
+                _9 <= _8;
             else
                 if (clear)
                     _9 <= clear_to;

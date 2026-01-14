@@ -60,8 +60,7 @@ let%expect_test "input -> output" =
 
 let reg_spec = Signal.Reg_spec.create () ~clock ~clear
 
-(* You require custom [deps] to express the fact that you may loop through certain
-   nodes. *)
+(* You require custom [deps] to express the fact that you may loop through certain nodes. *)
 let%expect_test "reg loop (standard deps)" =
   let b = Signal.reg_fb reg_spec ~width:1 ~f:Signal.(fun d -> d +:. 1) in
   let loop = topsort [ b ] in
@@ -100,7 +99,7 @@ let%expect_test "mem loop" =
   [%expect {| (Ok (0b1 memory_read_port multiport_memory clock wire)) |}]
 ;;
 
-(* This a combinational loop.  The read address is not synchronously read. *)
+(* This a combinational loop. The read address is not synchronously read. *)
 let%expect_test "mem loop, including read address, which isn't allowed" =
   let w = Signal.wire 1 in
   let q =

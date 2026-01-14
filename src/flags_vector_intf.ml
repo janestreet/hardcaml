@@ -41,7 +41,7 @@ module type S = sig
   val all : (module Comb.S with type t = 'a) -> 'a t
   val deref : 'a ref t -> 'a t
 
-  (** [iter_flags] calls [f] for each flag where [is_set] is true. **)
+  (** [iter_flags] calls [f] for each flag where [is_set] is true. *)
   val iter_flags : Flags.t -> f:(cases -> unit) -> unit
 
   (** Set a single flag without clearing others *)

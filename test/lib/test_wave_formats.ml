@@ -51,10 +51,7 @@ module%test [@name "Wave formats applied to signals are correctly rendered"] _ =
       inputs.a <--. i;
       Cyclesim.cycle sim
     done;
-    Waveform.print
-      ~display_rules:
-        [ Display_rule.port_name_matches (Re.Posix.compile (Re.Posix.re ".*_0")) ]
-      waves;
+    Waveform.print ~display_rules:[ Display_rule.port_name_matches (Posix ".*_0") ] waves;
     [%expect
       {|
       ┌Signals────────┐┌Waves──────────────────────────────────────────────┐

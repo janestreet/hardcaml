@@ -229,8 +229,7 @@ let bit_or_vec_of_signal s = bit_or_vec (Signal.width s)
 
 let initializer_of_reg (s : Signal.t) =
   match s with
-  | Reg { register = { initialize_to; _ }; _ } ->
-    Option.map initialize_to ~f:(fun s -> Signal.to_constant s |> Bits.of_constant)
+  | Reg { register = { initialize_to; _ }; _ } -> initialize_to
   | _ -> None
 ;;
 
@@ -281,7 +280,7 @@ let declaration_of_multiport_memory ~rtl_name signal =
   }
 ;;
 
-let var_of_io_port ~(config : Rtl_config.t) ~(rtl_name : Rtl_name.t) signal =
+let var_of_io_port ~(config : Rtl_config.t) ~rtl_name signal =
   match Signal.names signal with
   | [] ->
     raise_s
@@ -757,7 +756,7 @@ let create_outputs ~blackbox var_map outputs output_vars =
 ;;
 
 let of_circuit ~blackbox ~(language : Rtl_language.t) ~(config : Rtl_config.t) circuit =
-  let rtl_name = Rtl_name.of_language language in
+  let rtl_name = Rtl_name.create language in
   let module_name = Circuit.name circuit in
   let inputs = Circuit.inputs circuit |> List.map ~f:(var_of_io_port ~config ~rtl_name) in
   let phantom_inputs = create_phantom_inputs ~config ~rtl_name circuit in

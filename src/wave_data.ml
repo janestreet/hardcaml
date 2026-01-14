@@ -10,14 +10,15 @@ type t =
   ; mutable total_length : int
   ; width : int (* bit width *)
   ; rounded_width : int
-      (* bit width rounded up to the nearest power of 2 if [width<64], or a multiple of 64. *)
+      (* bit width rounded up to the nearest power of 2 if [width<64], or a multiple
+         of 64. *)
   ; log2_rounded_width : int
   ; mutable cached_bits : Bits.t
   ; mutable cached_sub_word : int
   ; cached_multi_word : Bytes.t
   ; cached_temp_multi_word : Bytes.t
       (* this is needed to compare the underlying values. This is because we cannot do a
-     [Bytes.compare] at arbitrary offsets within a buffer. *)
+         [Bytes.compare] at arbitrary offsets within a buffer. *)
   ; mutable non_cache_hits : int
       (* ; set : Bytes.t -> int -> Bits.t -> unit [@compare.ignore] *)
   ; setter_index : int
@@ -399,7 +400,7 @@ let create width =
   }
 ;;
 
-(* >= 64 bits *)
+(*=>= 64 bits *)
 let get_multi_word t index =
   let bytes_per_word = t.rounded_width lsr 3 in
   Bytes.blit

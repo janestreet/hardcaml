@@ -427,11 +427,11 @@ let%expect_test "Try to generate Verilog port names with dashes" =
       (circuit_name mod)
       (hierarchy_path (mod))
       (exn (
-        "[Rtl_name.add_port_name] illegal port name"
+        "[Illegal port name"
         (name       in-with-dash)
         (legal_name in_with_dash)
         (note       "Hardcaml will not change ports names.")
-        (port (wire (names (in-with-dash)) (width 32))))))
+        (port ((wire (names (in-with-dash)) (width 32)))))))
     |}]
 ;;
 
@@ -461,7 +461,7 @@ let%expect_test "Try to generate Verilog net names with dashes" =
 
 let%expect_test "initial value of resisters" =
   let spec = Reg_spec.create () ~clock in
-  let q = reg spec ~initialize_to:(Signal.of_string "00101011") ~enable d in
+  let q = reg spec ~initialize_to:(Bits.of_string "00101011") ~enable d in
   let circuit = Circuit.create_exn ~name:"reg" [ output "q" q ] in
   Rtl.print Verilog circuit;
   [%expect
@@ -478,14 +478,12 @@ let%expect_test "initial value of resisters" =
         input [7:0] d;
         output [7:0] q;
 
-        wire [7:0] _5;
-        reg [7:0] _6 = 8'b00101011;
-        assign _5 = 8'b00101011;
+        reg [7:0] _5 = 8'b00101011;
         always @(posedge clock) begin
             if (enable)
-                _6 <= d;
+                _5 <= d;
         end
-        assign q = _6;
+        assign q = _5;
 
     endmodule
     |}];
@@ -507,20 +505,18 @@ let%expect_test "initial value of resisters" =
 
     architecture rtl of reg is
 
-        signal \_5\ : std_logic_vector(7 downto 0);
-        signal \_6\ : std_logic_vector(7 downto 0) := "00101011";
+        signal \_5\ : std_logic_vector(7 downto 0) := "00101011";
 
     begin
 
-        \_5\ <= "00101011";
         process (clock) begin
             if rising_edge(clock) then
                 if enable = '1' then
-                    \_6\ <= d;
+                    \_5\ <= d;
                 end if;
             end if;
         end process;
-        q <= \_6\;
+        q <= \_5\;
 
     end architecture;
     |}]
@@ -528,7 +524,7 @@ let%expect_test "initial value of resisters" =
 
 let%expect_test "initial value of resisters with comment (only in Verilog)" =
   let spec = Reg_spec.create () ~clock in
-  let q = reg spec ~initialize_to:(Signal.of_string "00101011") ~enable d in
+  let q = reg spec ~initialize_to:(Bits.of_string "00101011") ~enable d in
   let q = set_comment q "some comment" in
   let circuit = Circuit.create_exn ~name:"reg" [ output "q" q ] in
   Rtl.print Verilog circuit;
@@ -546,14 +542,12 @@ let%expect_test "initial value of resisters with comment (only in Verilog)" =
         input [7:0] d;
         output [7:0] q;
 
-        wire [7:0] _5;
-        reg [7:0] _6/* some comment */ = 8'b00101011;
-        assign _5 = 8'b00101011;
+        reg [7:0] _5/* some comment */ = 8'b00101011;
         always @(posedge clock) begin
             if (enable)
-                _6 <= d;
+                _5 <= d;
         end
-        assign q = _6;
+        assign q = _5;
 
     endmodule
     |}]

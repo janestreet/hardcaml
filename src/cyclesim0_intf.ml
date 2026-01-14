@@ -18,6 +18,9 @@ module type Private = sig
     -> out_ports_before_clock_edge:port_list
     -> out_ports_after_clock_edge:port_list
     -> reset:task
+    -> clock_mode:[ `All_one_domain | `By_input_clocks ]
+    -> clocks_aligned:(unit -> bool)
+    -> cycle_multiple:int
     -> cycle_check:task
     -> cycle_before_clock_edge:task
     -> cycle_at_clock_edge:task
@@ -96,6 +99,9 @@ module type Cyclesim0 = sig
     ; outputs_after_clock_edge : 'o
     ; outputs_before_clock_edge : 'o
     ; reset : task
+    ; clock_mode : [ `All_one_domain | `By_input_clocks ]
+    ; clocks_aligned : unit -> bool
+    ; cycle_multiple : int
     ; cycle_check : task
     ; cycle_before_clock_edge : task
     ; cycle_at_clock_edge : task
@@ -137,6 +143,12 @@ module type Cyclesim0 = sig
       val randomize_all : Signal.t -> bool
     end
 
+    module Clock_mode : sig
+      type t =
+        | All_one_domain
+        | By_input_clocks of Cyclesim_clock_domain.t list
+    end
+
     type t =
       { is_internal_port : (Signal.t -> bool) option
       (** Passed each signal in the design which has a name. Returns [true] if the
@@ -153,6 +165,7 @@ module type Cyclesim0 = sig
       ; random_initializer : Random_initializer.t option
       (** How to initializer stateful circuit elements at the start of simulation. If not
           configured, all state starts at [0]. *)
+      ; clock_mode : Clock_mode.t
       }
 
     val default : t

@@ -41,6 +41,6 @@ module With_interface (I : Interface.S) (O : Interface.S) : sig
 end
 
 module Expert : sig
-  (* Check that name only contains alphanumeric or underscore characters.  *)
+  (* Check that name only contains alphanumeric or underscore characters. *)
   val validate_module_name : string -> unit
 end

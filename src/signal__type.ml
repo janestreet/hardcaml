@@ -202,7 +202,7 @@ module Reg = struct
       ; reset : 'signal Reset_spec.t option
       ; clear : 'signal Clear_spec.t option
       ; enable : 'signal option
-      ; initialize_to : 'signal option
+      ; initialize_to : Bits.t option
       }
     [@@deriving bin_io, sexp_of]
 
@@ -210,7 +210,6 @@ module Reg = struct
       let clock = Clock_spec.map clock ~f in
       let reset = Option.map reset ~f:(Reset_spec.map ~f) in
       let clear = Option.map clear ~f:(Clear_spec.map ~f) in
-      let initialize_to = Option.map initialize_to ~f in
       let enable = Option.map enable ~f in
       { clock; reset; clear; enable; initialize_to }
     ;;
@@ -349,7 +348,7 @@ type t =
          if (reset == reset_level) d <= reset_to;
          else if (clear) d <= clear_to;
          else if (enable) d <= ...;
-     v} *)
+   v} *)
 and reg_spec =
   { clock : t
   ; clock_edge : Edge.t
@@ -396,7 +395,12 @@ module Deps = Make_deps (struct
       | Select { arg; _ } -> f init arg
       | Reg
           { register =
-              { clock = { clock; clock_edge = _ }; reset; clear; enable; initialize_to }
+              { clock = { clock; clock_edge = _ }
+              ; reset
+              ; clear
+              ; enable
+              ; initialize_to = _
+              }
           ; d
           ; _
           } ->
@@ -415,7 +419,6 @@ module Deps = Make_deps (struct
             let arg = f arg clear in
             f arg clear_to)
         in
-        let arg = Option.value_map ~default:arg initialize_to ~f:(f arg) in
         let arg = Option.value_map ~default:arg enable ~f:(f arg) in
         arg
       | Multiport_mem { write_ports; _ } ->
@@ -534,7 +537,7 @@ let structural_compare
           mem_size0 = mem_size1
         | Inst { instantiation = i0; _ }, Inst { instantiation = i1; _ } ->
           String.equal i0.circuit_name i1.circuit_name
-          (*i0.inst_instance=i1.inst_instance &&*)
+          (* i0.inst_instance=i1.inst_instance && *)
           (* inst_inputs=??? *)
           && [%equal: Parameter.t list] i0.parameters i1.parameters
           && [%equal: Inst.Output.t list] i0.outputs i1.outputs
@@ -721,6 +724,8 @@ let rec sexp_of_instantiation_recursive
       ~inputs:(inst.inputs : inst_input list)
       ~outputs:(inst.outputs : inst_output list)]
 
+and sexp_of_bits_opt bits = Option.map bits ~f:Bits.sexp_of_t
+
 and sexp_of_register_recursive ?show_uids ?show_locs ~depth (reg : t Reg.Register.t) =
   let sexp_of_next s =
     sexp_of_signal_recursive ?show_uids ?show_locs ~depth:(depth - 1) s
@@ -730,8 +735,7 @@ and sexp_of_register_recursive ?show_uids ?show_locs ~depth (reg : t Reg.Registe
     ""
       ~clock:(sexp_of_next reg.clock.clock : Sexp.t)
       ~clock_edge:(reg.clock.clock_edge : Edge.t)
-      ~initialize_to:
-        (sexp_of_opt reg.initialize_to ~f:Fn.id : (Sexp.t option[@sexp.option]))
+      ~initialize_to:(sexp_of_bits_opt reg.initialize_to : (Sexp.t option[@sexp.option]))
       ~reset:
         (sexp_of_opt reg.reset ~f:(fun { reset; _ } -> reset)
          : (Sexp.t option[@sexp.option]))
@@ -1144,6 +1148,14 @@ module Register = struct
     | None | Some _ -> ()
   ;;
 
+  let assert_width_bits (bits : Bits.t) w msg =
+    if Bits.width bits <> w
+    then
+      raise_s
+        [%message
+          msg ~info:"bits has unexpected width" ~expected_width:(w : int) (bits : Bits.t)]
+  ;;
+
   let zero w = of_bits (Bits.zero w)
 
   let of_reg_spec (spec : reg_spec) ~enable ~initialize_to ~reset_to ~clear_to ~clear d =
@@ -1159,8 +1171,6 @@ module Register = struct
           | None -> zero (width d)
           | Some reset_to ->
             assert_width reset_to (width d) "reset_to is invalid";
-            (* if not (is_const reset_to)
-             * then raise_s [%message "Register reset_to is not constant" (reset_to : t)]; *)
             reset_to
         in
         { Reg.Reset_spec.reset; reset_edge = spec.reset_edge; reset_to })
@@ -1174,7 +1184,7 @@ module Register = struct
     assert_width_or_none clear 1 "clear signal is invalid";
     let clear =
       (* If there is a clear, ensure there is a clear_to of the correct width (default to
-       zero) *)
+         zero) *)
       Option.map clear ~f:(fun clear ->
         let clear_to =
           match clear_to with
@@ -1193,9 +1203,7 @@ module Register = struct
         if is_vdd enable then None else Some enable
     in
     Option.iter initialize_to ~f:(fun initialize_to ->
-      assert_width initialize_to (width d) "initial value is invalid";
-      if not (is_const initialize_to)
-      then raise_s [%message "Register initializer is not constant" (initialize_to : t)]);
+      assert_width_bits initialize_to (width d) "initial value is invalid");
     { Reg.Register.clock = { clock = spec.clock; clock_edge = spec.clock_edge }
     ; reset
     ; clear

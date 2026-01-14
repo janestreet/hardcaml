@@ -450,8 +450,8 @@ let%expect_test "phantom input" =
     |}]
 ;;
 
-(* Ensure (resolved) Std_{u}logic values are mapped to bit types in Verilog for the
-   (default) Vivado compatibility mode.  Tests above show the mapping for Modelsim. *)
+(* Ensure (resolved) Std_[{u}]logic values are mapped to bit types in Verilog for the
+   (default) Vivado compatibility mode. Tests above show the mapping for Modelsim. *)
 let%expect_test "vivado compatibility mode" =
   let module I = struct
     type 'a t =

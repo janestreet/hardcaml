@@ -43,10 +43,10 @@ let%expect_test "simple vcd file" =
       $var wire 1 # b $end
     $upscope $end
     $scope module outputs $end
-      $var wire 1 % c0 $end
-      $var wire 1 ' c1 $end
-      $var wire 1 & d0 $end
-      $var wire 1 ( d1 $end
+      $var wire 1 % c_0 $end
+      $var wire 1 ' c_1 $end
+      $var wire 1 & d_0 $end
+      $var wire 1 ( d_1 $end
       $var wire 1 ) x $end
     $upscope $end
     $scope module various $end
@@ -57,10 +57,10 @@ let%expect_test "simple vcd file" =
           $var wire 1 2 b $end
         $upscope $end
         $scope module -outputs $end
-          $var wire 1 * c0 $end
-          $var wire 1 3 c1 $end
-          $var wire 1 / d0 $end
-          $var wire 1 7 d1 $end
+          $var wire 1 * c_0 $end
+          $var wire 1 3 c_1 $end
+          $var wire 1 / d_0 $end
+          $var wire 1 7 d_1 $end
           $var wire 1 : x $end
         $upscope $end
         $scope module inner $end

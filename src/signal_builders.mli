@@ -26,8 +26,8 @@ module Memories (Comb : sig
 
     val reg
       :  ?enable:t
-      -> ?initialize_to:t
-      -> ?reset_to:t
+      -> ?initialize_to:Bits.t
+      -> ?reset_to:Bits.t
       -> ?clear:t
       -> ?clear_to:t
       -> Reg_spec.t
@@ -94,9 +94,9 @@ module Registers (Comb : sig
 
     module Reg_spec : Reg_spec.S with type signal := t
 
-    val reg
+    val reg__with_signal_reset
       :  ?enable:t
-      -> ?initialize_to:t
+      -> ?initialize_to:Bits.t
       -> ?reset_to:t
       -> ?clear:t
       -> ?clear_to:t
@@ -111,10 +111,20 @@ module Registers (Comb : sig
   end) : sig
   open Comb
 
+  val reg
+    :  ?enable:t
+    -> ?initialize_to:Bits.t
+    -> ?reset_to:Bits.t
+    -> ?clear:t
+    -> ?clear_to:t
+    -> Reg_spec.t
+    -> t
+    -> t
+
   val reg_fb
     :  ?enable:t
-    -> ?initialize_to:t
-    -> ?reset_to:t
+    -> ?initialize_to:Bits.t
+    -> ?reset_to:Bits.t
     -> ?clear:t
     -> ?clear_to:t
     -> Reg_spec.t
@@ -127,8 +137,8 @@ module Registers (Comb : sig
   val pipeline
     :  ?attributes:Rtl_attribute.t list
     -> ?enable:t
-    -> ?initialize_to:t
-    -> ?reset_to:t
+    -> ?initialize_to:Bits.t
+    -> ?reset_to:Bits.t
     -> ?clear:t
     -> ?clear_to:t
     -> Reg_spec.t
@@ -144,8 +154,8 @@ module Registers (Comb : sig
       maximum value of [n] exactly [n] registers are created. *)
   val prev
     :  ?enable:t
-    -> ?initialize_to:t
-    -> ?reset_to:t
+    -> ?initialize_to:Bits.t
+    -> ?reset_to:Bits.t
     -> ?clear:t
     -> ?clear_to:t
     -> Reg_spec.t
@@ -159,8 +169,8 @@ module Registers (Comb : sig
       bevahiour will also occur if enable is high during a clear (or even reset)
       operation. *)
   val cut_through_reg
-    :  ?initialize_to:t
-    -> ?reset_to:t
+    :  ?initialize_to:Bits.t
+    -> ?reset_to:Bits.t
     -> ?clear:t
     -> ?clear_to:t
     -> Reg_spec.t
@@ -171,8 +181,8 @@ module Registers (Comb : sig
   (** Basic counter. Adds [by] on each [enabled] cycle. Wraps on over/underflow. *)
   val counter
     :  ?enable:t
-    -> ?initialize_to:t
-    -> ?reset_to:t
+    -> ?initialize_to:Bits.t
+    -> ?reset_to:Bits.t
     -> ?clear:t
     -> ?clear_to:t
     -> ?by:int (** Default is [1] *)

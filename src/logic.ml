@@ -18,7 +18,7 @@ module Std_logic = struct
 
   let optimise_muxs = false
   let constant_only = true
-  let%template equal = [%compare_local.equal: t] [@@mode __ = (global, local)]
+  let%template equal = ([%compare.equal: t] [@mode local]) [@@mode __ = (global, local)]
 
   let to_char = function
     | U -> 'U'
@@ -93,7 +93,7 @@ module Four_state = struct
 
   let optimise_muxs = false
   let constant_only = true
-  let%template equal = [%compare_local.equal: t] [@@mode __ = (global, local)]
+  let%template equal = ([%compare.equal: t] [@mode local]) [@@mode __ = (global, local)]
 
   let to_char = function
     | X -> 'x'

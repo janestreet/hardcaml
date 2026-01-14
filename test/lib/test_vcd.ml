@@ -286,20 +286,19 @@ let%expect_test "test with wide signals to ensure byte comparison works properly
       (* Cycle twice to make sure the signal is only printed to the VCD when it changes *)
       S.cycle sim;
       S.cycle sim));
-  (*
-     This VCD should demonstrate the following behavior:
-       - Signals are initialized to X
-       - For the first signal, the following updates are seen (with one cycle of no updates
-              in between each update)
-         - All ones
-         - All zeros
-         - Only last bit is one
-         - All zeros
-         - Only first bit is one
-         - All zeros
-         - One bit in the middle is one
-         - All zeros
-       - For the second signal, the same sequence of updates is seen
+  (* This VCD should demonstrate the following behavior:
+     - Signals are initialized to X
+     - For the first signal, the following updates are seen (with one cycle of no updates
+       in between each update)
+       - All ones
+       - All zeros
+       - Only last bit is one
+       - All zeros
+       - Only first bit is one
+       - All zeros
+       - One bit in the middle is one
+       - All zeros
+     - For the second signal, the same sequence of updates is seen
   *)
   [%expect
     {|

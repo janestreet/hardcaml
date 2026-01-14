@@ -31,6 +31,14 @@ module type Cyclesim = sig
   (** Update combinatorial logic after clock edge *)
   val cycle_after_clock_edge : _ t -> unit
 
+  (** Clock mode specified in the config. See the [Cyclesim0.Config] of an explanation of
+      each mode *)
+  val clock_mode : _ t -> [ `All_one_domain | `By_input_clocks ]
+
+  (** Repeatedly call cycle until all clocks specified in the config are aligned with
+      their periods. *)
+  val cycle_until_clocks_aligned : _ t -> unit
+
   (** Reset simulator *)
   val reset : _ t -> unit
 

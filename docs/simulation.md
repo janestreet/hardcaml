@@ -8,10 +8,10 @@
 -->
 
 The simplest way to simulate a Hardcaml circuit is to use the
-[`Cyclesim`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Cyclesim/index.html)
+[`Cyclesim`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/cyclesim_intf.ml)
 module.
 
-This will take a [`Circuit.t`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Circuit/index.html)
+This will take a [`Circuit.t`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/circuit.mli)
 and perform various transformations in
 order to produce an executable model of the design.
 
@@ -74,7 +74,7 @@ outputs.
 ```
 
 Input and output ports are of type
-[`Bits.t ref`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Bits/index.html).
+[`Bits.t ref`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/bits_intf.ml).
 We set an input as follows:
 
 ```ocaml

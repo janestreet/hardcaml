@@ -149,6 +149,7 @@ module type Of_signal_functions = sig
   module Signal : Signal.S
 
   type t
+  type bits_t
 
   (** Create a wire for each field. If [named] is true then wires are given the RTL field
       name. If [from] is provided the wire is attached to each given field in [from]. *)
@@ -159,10 +160,11 @@ module type Of_signal_functions = sig
     -> t
 
   (** Defines a register over values in this interface. [enable] defaults to vdd. *)
+
   val reg
     :  ?enable:Signal.t
-    -> ?initialize_to:t
-    -> ?reset_to:t
+    -> ?initialize_to:bits_t
+    -> ?reset_to:bits_t
     -> ?clear:Signal.t
     -> ?clear_to:t
     -> Signal.Reg_spec.t
@@ -171,8 +173,8 @@ module type Of_signal_functions = sig
 
   (** Defines a cut through register over values in this interface. *)
   val cut_through_reg
-    :  ?initialize_to:t
-    -> ?reset_to:t
+    :  ?initialize_to:bits_t
+    -> ?reset_to:bits_t
     -> ?clear:Signal.t
     -> ?clear_to:t
     -> Signal.Reg_spec.t
@@ -185,8 +187,8 @@ module type Of_signal_functions = sig
   val pipeline
     :  ?attributes:Rtl_attribute.t list
     -> ?enable:Signal.t
-    -> ?initialize_to:t
-    -> ?reset_to:t
+    -> ?initialize_to:bits_t
+    -> ?reset_to:bits_t
     -> ?clear:Signal.t
     -> ?clear_to:t
     -> Signal.Reg_spec.t
@@ -310,8 +312,15 @@ module type S = sig
   module Of_bits : Comb with type comb = Bits.t
 
   module Of_signal : sig
+    type 'a interface := 'a t
+
     include Comb with type comb = Signal.t
-    include Of_signal_functions with type t := t and module Signal := Signal
+
+    include
+      Of_signal_functions
+      with type t := t
+       and type bits_t = Bits.t interface
+       and module Signal := Signal
   end
 
   module Of_clocked_signal : sig
@@ -350,8 +359,8 @@ module type S = sig
     (** Creates a interface container with register variables. *)
     val reg
       :  ?enable:Signal.t
-      -> ?initialize_to:Signal.t t
-      -> ?reset_to:Signal.t t
+      -> ?initialize_to:Bits.t t
+      -> ?reset_to:Bits.t t
       -> ?clear:Signal.t
       -> ?clear_to:Signal.t t
       -> Signal.Reg_spec.t
@@ -360,8 +369,8 @@ module type S = sig
     (** Creates a interface container of cut through register variables. *)
     val cut_through_reg
       :  ?enable:Signal.t
-      -> ?initialize_to:Signal.t t
-      -> ?reset_to:Signal.t t
+      -> ?initialize_to:Bits.t t
+      -> ?reset_to:Bits.t t
       -> ?clear:Signal.t
       -> ?clear_to:Signal.t t
       -> Signal.Reg_spec.t

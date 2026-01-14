@@ -100,6 +100,10 @@ val topological_sort
 
 val topological_sort_exn : deps:(module Signal.Type.Deps) -> t -> Signal.t list
 
+(** Map all clock signals to their driving input signals. This mapping can be used to
+    identify clock domains of Registers and Memories. *)
+val resolve_clock_domains : t -> Signal.t Map.M(Signal.Type.Uid).t
+
 (** For rtl generation the case matches are written explicitly and do not need to be
     tracked. *)
 module Deps_without_case_matches : Signal.Type.Deps

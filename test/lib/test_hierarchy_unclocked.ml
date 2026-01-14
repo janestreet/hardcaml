@@ -104,7 +104,7 @@ let%expect_test "valid examples" =
          (loc lib/hardcaml/hardcaml/test/lib/test_hierarchy_unclocked.ml:LINE:COL)))))
     |}];
   (* Multiple clock domains in specification, but in runtime, both of them map to the same
-       concrete clock domain.
+     concrete clock domain.
   *)
   print_concrete_domains
     (instantiate

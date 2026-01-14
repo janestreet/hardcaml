@@ -35,12 +35,21 @@ let cycle_at_clock_edge (sim : _ t) = sim.cycle_at_clock_edge ()
 let cycle_after_clock_edge (sim : _ t) = sim.cycle_after_clock_edge ()
 let reset (sim : _ t) = sim.reset ()
 
-let cycle ?(n = 1) sim =
+let cycle ?(n = 1) (sim : _ t) =
+  let n = n * sim.cycle_multiple in
   for _ = 1 to n do
     cycle_check sim;
     cycle_before_clock_edge sim;
     cycle_at_clock_edge sim;
     cycle_after_clock_edge sim
+  done
+;;
+
+let clock_mode (sim : _ t) = sim.clock_mode
+
+let cycle_until_clocks_aligned (sim : _ t) =
+  while not (sim.clocks_aligned ()) do
+    cycle sim
   done
 ;;
 

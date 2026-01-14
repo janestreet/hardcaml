@@ -217,8 +217,8 @@ module Base = struct
   let ( <: ) a b = op2 Lt 1 a b
 
   let mux select cases =
-    (* We are a bit more lax about this in [Comb], but RTL generation requires 2 cases
-       so ensure it here. *)
+    (* We are a bit more lax about this in [Comb], but RTL generation requires 2 cases so
+       ensure it here. *)
     if List.length cases < 2
     then raise_s [%message "[Signal.mux] requires a minimum of 2 cases"];
     match cases with
@@ -295,6 +295,11 @@ module Optimized : Comb.S with type t = t = Signal_builders.Const_prop (struct
 include (Optimized : Comb.S with type t := t)
 include Signal_builders.Conversion_functions (Optimized)
 
+let reset_names () =
+  set_names vdd [ { name = "vdd"; loc = [%here] } ];
+  set_names gnd [ { name = "gnd"; loc = [%here] } ]
+;;
+
 module Reg_spec_ = Reg_spec.Make (struct
     type nonrec t = t [@@deriving sexp_of]
 
@@ -318,14 +323,14 @@ end
 
 type 'a with_register_spec =
   ?enable:t
-  -> ?initialize_to:t
-  -> ?reset_to:t
+  -> ?initialize_to:Bits.t
+  -> ?reset_to:Bits.t
   -> ?clear:t
   -> ?clear_to:t
   -> Reg_spec.t
   -> 'a
 
-let reg ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
+let reg__with_signal_reset ?enable ?initialize_to ?reset_to ?clear ?clear_to spec d =
   (* if width d = 0 then raise_s [%message "[Signal.reg] width of data input is 0"]; *)
   let spec =
     Type.Register.of_reg_spec
@@ -347,7 +352,7 @@ include Signal_builders.Registers (struct
     module Reg_spec = Reg_spec
 
     let add_attribute = add_attribute
-    let reg = reg
+    let reg__with_signal_reset = reg__with_signal_reset
     let wire = wire
     let assign = assign
     let update_rep = update_rep
@@ -406,6 +411,8 @@ let pp fmt t = Stdlib.Format.fprintf fmt "%s" ([%sexp (t : t)] |> Sexp.to_string
 
 module Expert = struct
   include Memory_prim
+
+  let reg__with_signal_reset = reg__with_signal_reset
 end
 
 module (* Install pretty printer in top level *) _ = Pretty_printer.Register (struct

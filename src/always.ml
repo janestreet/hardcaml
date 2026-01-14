@@ -27,8 +27,8 @@ struct
     let compare t1 t2 = Type.Uid.compare (uid t1) (uid t2)
     let equal = [%compare.equal: t]
 
-    (* Explicitly use Comparator.Make because Comparator.make will force this
-       functor to be applicative. *)
+    (* Explicitly use Comparator.Make because Comparator.make will force this functor to
+       be applicative. *)
     include Comparator.Make (struct
         type nonrec t = t
 
@@ -91,7 +91,7 @@ struct
         (* use a wire - need to derive the default value *)
         match reset_to with
         | None -> wire' ~default:(Signal.zero width) debug_info
-        | Some default -> wire ~default ())
+        | Some default -> wire ~default:(Signal.of_bits default) ())
       else (
         let r =
           reg' ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~width debug_info
@@ -308,8 +308,8 @@ struct
           signal
         | Assign { value = _, d; internal = _ } -> d
         | Switch { value = sel, cases; internal = switch_internal } ->
-          (* Encode the matches as a linear chain of mux's. Can be used when the matches are
-           not constants. *)
+          (* Encode the matches as a linear chain of mux's. Can be used when the matches
+             are not constants. *)
           let rec build_generic t ~position =
             match t with
             | [] -> default
@@ -392,12 +392,12 @@ struct
       let attributes =
         Option.value
           ~default:
-            [ (* We choose a pretty aggressive default which is to code ALL statemachines as
-               one-hot by default. The experiments we performed showed better performance
-               and smaller area (more registers but fewer CLBs overall) for both very
-               small and very large statemachines. Which is not to say this is the final
-               word on the best possible design choice - users may still want to
-               selectively configure certain statemachines to a different encoding. *)
+            [ (* We choose a pretty aggressive default which is to code ALL statemachines
+                 as one-hot by default. The experiments we performed showed better
+                 performance and smaller area (more registers but fewer CLBs overall) for
+                 both very small and very large statemachines. Which is not to say this is
+                 the final word on the best possible design choice - users may still want
+                 to selectively configure certain statemachines to a different encoding. *)
               Rtl_attribute.Vivado.fsm_encoding `one_hot
             ]
           attributes
@@ -478,7 +478,7 @@ struct
           Variable_.reg' (* must be reset to get into state 0 *)
             reg_spec
             ~clear_to:(Signal.one nstates)
-            ~reset_to:(Signal.one nstates)
+            ~reset_to:(Bits.one nstates)
             ~enable
             ~width:nstates
             debug_info

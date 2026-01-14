@@ -96,8 +96,8 @@ let output_source_loc ?title oc config loc ~indent =
 ;;
 
 let output_names ?(indent = 0) oc (names : Name_and_loc.t list) ~title =
-  (* For now don't output the locations as well, it doesn't seem that helpful in
-     addition to the name. *)
+  (* For now don't output the locations as well, it doesn't seem that helpful in addition
+     to the name. *)
   match names with
   | [] -> ()
   | [ { name; loc = _ } ] -> output_line oc [%string {|%{title}: %{name}|}] ~indent

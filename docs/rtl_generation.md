@@ -10,8 +10,8 @@
 ```
 -->
 
-You can [convert](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Rtl/index.html) a
-Hardcaml [`Circuit`](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Circuit/index.html)
+You can [convert](https://github.com/janestreet/hardcaml/blob/with-extensions/src/rtl_intf.ml) a
+Hardcaml [`Circuit`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/circuit.mli)
 to either Verilog or VHDL.
 
 The following is a trivial example.
@@ -95,8 +95,8 @@ It starts with the `create` function.
 
 ```ocaml
 # Rtl.create
-- : ?database:Circuit_database.t ->
-    ?config:Rtl.Config.t ->
+- : ?database:Hardcaml.Circuit_database.t ->
+    ?config:Hardcaml__Rtl_config.t ->
     Rtl.Language.t -> Circuit.t list -> Rtl.Hierarchical_circuits.t list
 = <fun>
 ```
@@ -236,11 +236,11 @@ endmodule
 Find `inner2` within the hierarchy and print that directly.
 
 ```ocaml
-# let inner2 = 
+# let inner2 =
     Rtl.Hierarchical_circuits.subcircuits rtl
-    |> List.find_exn ~f:(fun sub -> String.equal (Rtl.Circuit_instance.module_name sub) "inner2") 
-    |> Rtl.Circuit_instance.rtl 
-    |> Rope.to_string 
+    |> List.find_exn ~f:(fun sub -> String.equal (Rtl.Circuit_instance.module_name sub) "inner2")
+    |> Rtl.Circuit_instance.rtl
+    |> Rope.to_string
     |> Stdio.print_endline
 module inner2 (
     x,
@@ -263,4 +263,3 @@ endmodule
 
 val inner2 : unit = ()
 ```
-

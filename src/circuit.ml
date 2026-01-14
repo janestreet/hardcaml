@@ -161,8 +161,8 @@ let create_exn ?(config = Config.default) ~name outputs =
   (* We have to filter out the assertions that are already in the output because they are
      from [Cyclesim_with_properties.With_interface.create]
 
-     We add the assertions as output to make sure they show up on the waveform and their signals
-     are not optimized away *)
+     We add the assertions as output to make sure they show up on the waveform and their
+     signals are not optimized away *)
   let output_assertions =
     assertions
     |> Map.to_alist
@@ -224,8 +224,8 @@ let create_exn ?(config = Config.default) ~name outputs =
 ;;
 
 let set_phantom_inputs circuit phantom_inputs =
-  (* Remove phantom inputs that are already inputs, and disallow phantom inputs
-     that have the same name as an output. *)
+  (* Remove phantom inputs that are already inputs, and disallow phantom inputs that have
+     the same name as an output. *)
   let module Port = struct
     module T = struct
       type t = string * (int[@compare.ignore]) [@@deriving compare ~localize, sexp_of]

@@ -101,7 +101,7 @@ and gen_register width depth inputs =
     if want_clear then gen_signal_opt width (depth - 1) inputs else return None
   in
   (* cyclesim only supports global reset signal *)
-  let%bind reset_to = gen_const width in
+  let%bind reset_to = gen_bits width in
   let reg_spec =
     Reg_spec.create
       ~clock

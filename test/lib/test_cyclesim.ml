@@ -10,8 +10,8 @@ let%expect_test "Initial values, resets and clears of registers" =
   let q =
     reg_fb
       (Reg_spec.create ~clock ~reset ~clear ())
-      ~initialize_to:(Signal.of_int_trunc ~width:8 16)
-      ~reset_to:(Signal.of_int_trunc ~width:8 32)
+      ~initialize_to:(Bits.of_int_trunc ~width:8 16)
+      ~reset_to:(Bits.of_int_trunc ~width:8 32)
       ~clear_to:(Signal.of_int_trunc ~width:8 48)
       ~width:8
       ~f:(fun d -> d +:. 1)

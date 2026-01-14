@@ -160,13 +160,16 @@ let%expect_test "invalid reset" =
 ;;
 
 let%expect_test "invalid reset_value" =
-  reg_error [%here] ~reset:vdd ~reset_to:(input "not_a_reset_value" 2);
+  reg_error [%here] ~reset:vdd ~reset_to:(Bits.ones 2);
   [%expect
     {|
     ("reset_to is invalid"
       (info           "signal has unexpected width")
       (expected_width 8)
-      (signal (wire (names (not_a_reset_value)) (width 2))))
+      (signal (
+        const
+        (width 2)
+        (value 0b11))))
     |}]
 ;;
 

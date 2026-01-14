@@ -148,8 +148,8 @@ module Write_port = struct
     ; address : 'a [@bits 4]
     ; data : 'a Dcomplex.t
     }
-  (* We use ~rtlmangle:false here to improve the readability of the printed waveform.
-     This is fine to do here since this is a small module used only for demonstration. *)
+  (* We use ~rtlmangle:false here to improve the readability of the printed waveform. This
+     is fine to do here since this is a small module used only for demonstration. *)
   [@@deriving hardcaml ~rtlmangle:false]
 end
 

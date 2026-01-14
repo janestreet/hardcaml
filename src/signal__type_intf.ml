@@ -291,7 +291,7 @@ module type Type = sig
         ; reset : 'a Reset_spec.t option
         ; clear : 'a Clear_spec.t option
         ; enable : 'a option
-        ; initialize_to : 'a option
+        ; initialize_to : Bits.t option
         }
       [@@deriving bin_io, sexp_of]
 
@@ -429,7 +429,7 @@ module type Register = sig
   val of_reg_spec
     :  reg_spec
     -> enable:signal option
-    -> initialize_to:signal option
+    -> initialize_to:Bits.t option
     -> reset_to:signal option
     -> clear_to:signal option
     -> clear:signal option

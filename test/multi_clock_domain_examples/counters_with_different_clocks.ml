@@ -52,7 +52,7 @@ let inverted_clock ({ clock; enable } : _ I.t) =
 ;;
 
 let run_cyclesim_test circuit =
-  let module Cyclesim_waveform = Hardcaml_waveterm_cyclesim.Waveform in
+  let module Cyclesim_waveform = Hardcaml_waveterm.For_cyclesim.Waveform in
   let waves, sim =
     let module Sim = Cyclesim.With_interface (I) (O) in
     let sim = Sim.create circuit in
@@ -158,8 +158,8 @@ let%expect_test "falling edge" =
 ;;
 
 let%expect_test "inverted clock" =
-  (* Cyclesim still writes to [reg_out] on the Rising edge because it doesn't know that the
-     register is clocked with ~clock. *)
+  (* Cyclesim still writes to [reg_out] on the Rising edge because it doesn't know that
+     the register is clocked with ~clock. *)
   run_test inverted_clock;
   [%expect
     {|

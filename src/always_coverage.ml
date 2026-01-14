@@ -77,8 +77,8 @@ module Make (Prim : Always_prim.S) = struct
         (Switch_mux { creation_pos; target = target_metadata target; case }))
   ;;
 
-  (* Module for computing cycle level state transitions from an always DSL. Transitions are
-     tracked by walking the statements and computing the following.
+  (* Module for computing cycle level state transitions from an always DSL. Transitions
+     are tracked by walking the statements and computing the following.
 
      Possible starting states.
 
@@ -87,12 +87,10 @@ module Make (Prim : Always_prim.S) = struct
      between. There is some complexity in this tracking to handle both restricted subsets
      of all possible starting states and explicitly known states.
 
-
      Possible ending states.
 
      We need to know all states that can be produced at the end of a cycle so that we can
      accurately compute the full set of possible starting states.
-
 
      Possible transitions.
 

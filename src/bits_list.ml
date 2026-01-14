@@ -159,10 +159,9 @@ module X = struct
   let vdd = T
   let gnd = F
 
-  (* In the following, we assume the result of an operation with an X argument, is X.
-     But, for example, [1 |: X] we know can only be [1]. Perhaps a [U] (unknown)
-     constructor should work like that? Should check the resolution function rules of
-     VHDL to be sure. *)
+  (* In the following, we assume the result of an operation with an X argument, is X. But,
+     for example, [1 |: X] we know can only be [1]. Perhaps a [U] (unknown) constructor
+     should work like that? Should check the resolution function rules of VHDL to be sure. *)
   let ( &: ) a b =
     match a, b with
     | X, _ | _, X -> X

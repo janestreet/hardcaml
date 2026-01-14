@@ -84,10 +84,10 @@ module Fields = struct
     module Pre = struct
       type nonrec 'a t = 'a t M.t [@@deriving equal ~localize, compare ~localize, sexp_of]
 
-      let map t ~f = M.map ~f:(map ~f) t
-      let iter (t : 'a t) ~(f : 'a -> unit) = M.iter ~f:(iter ~f) t
-      let map2 a b ~f = M.map2 a b ~f:(map2 ~f)
-      let iter2 a b ~f = M.iter2 a b ~f:(iter2 ~f)
+      let map t ~f = M.map ~f:(map ~f) t [@nontail]
+      let iter (t : 'a t) ~(f : 'a -> unit) = M.iter ~f:(iter ~f) t [@nontail]
+      let map2 a b ~f = M.map2 a b ~f:(map2 ~f) [@nontail]
+      let iter2 a b ~f = M.iter2 a b ~f:(iter2 ~f) [@nontail]
 
       let port_names_and_widths =
         M.map M.port_names_and_widths ~f:(fun (n, w) ->

@@ -51,7 +51,7 @@ There are some downsides, of course:
 - Generated HDL code (for use with vendor tooling like Vivado or Quartus) is computer
   generated and nothing like what a human would write.
 - Hardcaml makes up names in generated code that look like `_8277`. This isn't very
-  helpful when reading the logs from vendor tools. We have some tricks we can play here to
-  make things a bit easier.
+  helpful when reading the logs from vendor tools. We have a syntax shorthand available to
+  automatically apply more reasonable names though.
 
 Of course the above is all a matter of opinion and you should make up your own!

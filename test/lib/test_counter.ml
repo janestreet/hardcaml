@@ -57,7 +57,7 @@ let%expect_test "counter" =
     │               ││────┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───       │
     └───────────────┘└───────────────────────────────────────────────────┘
     |}];
-  test (fun spec _enable -> counter ~initialize_to:(ones 4) spec ~width:4 ~by:1);
+  test (fun spec _enable -> counter ~initialize_to:(Bits.ones 4) spec ~width:4 ~by:1);
   [%expect
     {|
     ┌Signals────────┐┌Waves──────────────────────────────────────────────┐

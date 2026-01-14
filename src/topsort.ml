@@ -40,9 +40,9 @@ module Node_info = struct
   let create node = { node; state = Unvisited; outgoing = [] }
   let add_edge { Edge.from; to_ } = from.outgoing <- to_ :: from.outgoing
 
-  (* [visit t ~visiting ~visited] visits all nodes reachable from [t], returning all
-     newly visited nodes added to the front of [visited] in topological order.
-     [visiting] is the list of nodes with [state = Visiting]. *)
+  (* [visit t ~visiting ~visited] visits all nodes reachable from [t], returning all newly
+     visited nodes added to the front of [visited] in topological order. [visiting] is the
+     list of nodes with [state = Visiting]. *)
   let rec visit t ~visiting ~visited =
     match t.state with
     | Visited -> visited

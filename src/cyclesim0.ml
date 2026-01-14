@@ -91,6 +91,9 @@ type ('i, 'o) t =
   ; outputs_after_clock_edge : 'o
   ; outputs_before_clock_edge : 'o
   ; reset : task
+  ; clock_mode : [ `All_one_domain | `By_input_clocks ]
+  ; clocks_aligned : unit -> bool
+  ; cycle_multiple : int
   ; cycle_check : task
   ; cycle_before_clock_edge : task
   ; cycle_at_clock_edge : task
@@ -139,12 +142,19 @@ module Config = struct
     let randomize_all s = randomize_regs s || randomize_memories s
   end
 
+  module Clock_mode = struct
+    type t =
+      | All_one_domain
+      | By_input_clocks of Cyclesim_clock_domain.t list
+  end
+
   type t =
     { is_internal_port : (Signal.t -> bool) option
     ; combinational_ops_database : Combinational_ops_database.t
     ; deduplicate_signals : bool
     ; store_circuit : bool
     ; random_initializer : Random_initializer.t option
+    ; clock_mode : Clock_mode.t
     }
 
   let empty_ops_database = Combinational_ops_database.create ()
@@ -155,6 +165,7 @@ module Config = struct
     ; deduplicate_signals = false
     ; store_circuit = false
     ; random_initializer = None
+    ; clock_mode = All_one_domain
     }
   ;;
 
@@ -168,6 +179,7 @@ module Config = struct
     ; deduplicate_signals = false
     ; store_circuit = false
     ; random_initializer = None
+    ; clock_mode = All_one_domain
     }
   ;;
 
@@ -214,6 +226,9 @@ module Private = struct
     ~out_ports_before_clock_edge
     ~out_ports_after_clock_edge
     ~reset
+    ~clock_mode
+    ~clocks_aligned
+    ~cycle_multiple
     ~cycle_check
     ~cycle_before_clock_edge
     ~cycle_at_clock_edge
@@ -233,6 +248,9 @@ module Private = struct
     ; outputs_before_clock_edge = out_ports_before_clock_edge
     ; outputs_after_clock_edge = out_ports_after_clock_edge
     ; reset
+    ; clock_mode
+    ; clocks_aligned
+    ; cycle_multiple
     ; cycle_check
     ; cycle_before_clock_edge
     ; cycle_at_clock_edge

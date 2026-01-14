@@ -17,11 +17,11 @@ let%expect_test "Port names must be legal" =
       (circuit_name test)
       (hierarchy_path (test))
       (exn (
-        "[Rtl_name.add_port_name] illegal port name"
+        "[Illegal port name"
         (name       1^7)
         (legal_name _1_7)
         (note       "Hardcaml will not change ports names.")
-        (port (wire (names (1^7)) (width 1))))))
+        (port ((wire (names (1^7)) (width 1)))))))
     |}]
 ;;
 
@@ -33,12 +33,13 @@ let%expect_test "Port name clashes with reserved name" =
       (circuit_name test)
       (hierarchy_path (test))
       (exn (
-        "[Rtl_name.add_port_name] port name has already been defined or matches a reserved identifier"
-        (port (
+        "Port name has already been defined"
+        (name generate)
+        (port ((
           wire
           (names (generate))
           (width   1)
-          (data_in x))))))
+          (data_in x)))))))
     |}]
 ;;
 

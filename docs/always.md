@@ -7,7 +7,7 @@
 ```
 -->
 
-The [`Always` DSL](https://ocaml.org/p/hardcaml/latest/doc/Hardcaml/Always/index.html)
+The [`Always` DSL](https://github.com/janestreet/hardcaml/blob/with-extensions/src/always_intf.ml)
 in Hardcaml lets one describe circuits
 in a similar style to a Verilog `always` block. Always blocks allow
 hardware multiplexer structures to be described in a somewhat

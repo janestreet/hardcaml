@@ -127,9 +127,13 @@ module Make_with_wave_formats (X : sig
     map2 (zip3 a b c) (zip d e) ~f:(fun (a, b, c) (d, e) -> a, b, c, d, e)
   ;;
 
-  let map3 a b c ~f = map ~f:(fun (a, b, c) -> f a b c) (zip3 a b c)
-  let map4 a b c d ~f = map ~f:(fun (a, b, c, d) -> f a b c d) (zip4 a b c d)
-  let map5 a b c d e ~f = map ~f:(fun (a, b, c, d, e) -> f a b c d e) (zip5 a b c d e)
+  let map3 a b c ~f = map ~f:(fun (a, b, c) -> f a b c) (zip3 a b c) [@nontail]
+  let map4 a b c d ~f = map ~f:(fun (a, b, c, d) -> f a b c d) (zip4 a b c d) [@nontail]
+
+  let map5 a b c d e ~f =
+    map ~f:(fun (a, b, c, d, e) -> f a b c d e) (zip5 a b c d e) [@nontail]
+  ;;
+
   let iter3 a b c ~f = ignore @@ map3 ~f a b c
   let iter4 a b c d ~f = ignore @@ map4 ~f a b c d
   let iter5 a b c d e ~f = ignore @@ map5 ~f a b c d e
@@ -140,7 +144,7 @@ module Make_with_wave_formats (X : sig
     !init
   ;;
 
-  let fold2 a b ~init ~f = fold (zip a b) ~init ~f:(fun c (a, b) -> f c a b)
+  let fold2 a b ~init ~f = fold (zip a b) ~init ~f:(fun c (a, b) -> f c a b) [@nontail]
   let sum_of_port_widths = fold port_widths ~init:0 ~f:( + )
 
   let scan t ~init ~f =
@@ -151,10 +155,13 @@ module Make_with_wave_formats (X : sig
       let acc', field = f !acc t in
       acc := acc';
       result := Some field);
-    map result ~f:(fun x -> Option.value_exn !x)
+    map2 port_names result ~f:(fun name x ->
+      match !x with
+      | Some x -> x
+      | None -> raise_s [%message "[Interface.Make.scan] missing result" (name : string)])
   ;;
 
-  let scan2 a b ~init ~f = scan (zip a b) ~init ~f:(fun c (a, b) -> f c a b)
+  let scan2 a b ~init ~f = scan (zip a b) ~init ~f:(fun c (a, b) -> f c a b) [@nontail]
   let tags = scan port_names ~init:0 ~f:(fun acc _ -> acc + 1, acc)
   let to_alist x = to_list (map2 tags x ~f:(fun tag x -> tag, x))
   let field_by_tag t tag = List.Assoc.find (to_alist t) tag ~equal:Int.equal
@@ -247,6 +254,7 @@ module Make_with_wave_formats (X : sig
   module Make_comb (Comb : Comb.S) = struct
     type comb = Comb.t [@@deriving sexp_of]
     type t = Comb.t X.t [@@deriving sexp_of]
+    type bits_t = Bits.t X.t [@@deriving sexp_of]
 
     let widths t = map t ~f:Comb.width
 
