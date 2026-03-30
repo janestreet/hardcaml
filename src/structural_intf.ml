@@ -8,7 +8,7 @@ module type Lib = sig
     -> ?initialize_to:Bits.t
     -> ?clock_edge:Edge.t
     -> ?reset:t
-    -> ?reset_edge:Edge.t
+    -> ?reset_level:Level.t
     -> ?reset_to:Bits.t
     -> ?clear:t
     -> ?clear_to:t

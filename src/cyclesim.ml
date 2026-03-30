@@ -189,3 +189,42 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
     coerce sim
   ;;
 end
+
+module Sim_bits = struct
+  include Comb.Make (struct
+      type t = Bits.t ref [@@deriving sexp_of, equal ~localize, compare ~localize]
+
+      let empty = ref Bits.empty
+      let is_empty t = Bits.is_empty !t
+      let width t = Bits.width !t
+      let of_constant t = ref (Bits.of_constant t)
+      let to_constant t = Bits.to_constant !t
+      let vdd = ref Bits.vdd
+      let gnd = ref Bits.gnd
+      let concat_msb t = ref (Bits.concat_msb (List.map t ~f:( ! )))
+      let ( -- ) ?(loc = Stdlib.Lexing.dummy_pos) t name = ref (Bits.( -- ) ~loc !t name)
+      let select t ~high ~low = ref (Bits.select !t ~high ~low)
+      let op2 f a b = ref (f !a !b)
+      let ( &: ) = op2 Bits.( &: )
+      let ( |: ) = op2 Bits.( |: )
+      let ( ^: ) = op2 Bits.( ^: )
+      let ( ~: ) a = ref (Bits.( ~: ) !a)
+      let to_string t = Bits.to_string !t
+      let mux sel lst = ref (Bits.mux !sel (List.map lst ~f:( ! )))
+      let ( +: ) = op2 Bits.( +: )
+      let ( -: ) = op2 Bits.( -: )
+      let ( <: ) = op2 Bits.( <: )
+      let ( ==: ) = op2 Bits.( ==: )
+      let ( *: ) = op2 Bits.( *: )
+      let ( *+ ) = op2 Bits.( *+ )
+
+      let cases ~default select t =
+        ref (Bits.cases ~default:!default !select (List.map t ~f:(fun (s, d) -> !s, !d)))
+      ;;
+    end)
+
+  let ( <-- ) (a : t) (b : t) = a := !b
+  let ( <--. ) = Bits.( <--. )
+  let ( <-:. ) = Bits.( <-:. )
+  let ( <-+. ) = Bits.( <-+. )
+end

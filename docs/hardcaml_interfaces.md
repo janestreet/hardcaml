@@ -10,7 +10,7 @@
 -->
 
 Abstractly, Hardcaml
-[interfaces](https://github.com/janestreet/hardcaml/blob/with-extensions/src/interface_intf.ml) are
+[interfaces](https://github.com/janestreet/hardcaml/blob/oxcaml/src/interface_intf.ml) are
 made up of a polymorphic type (with a single polymorphic variable) and a set of functions
 which can manipulate that type:
 

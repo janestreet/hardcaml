@@ -138,6 +138,15 @@ module type Cyclesim = sig
     val coerce : t_port_list -> t
   end
 
+  module Sim_bits : sig
+    include Comb.S with type t = Bits.t ref
+
+    val ( <-- ) : t -> t -> unit
+    val ( <--. ) : t -> int -> unit
+    val ( <-:. ) : t -> int -> unit
+    val ( <-+. ) : t -> int -> unit
+  end
+
   module Private : sig
     include
       Cyclesim0.Private

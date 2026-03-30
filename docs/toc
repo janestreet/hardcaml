@@ -2,6 +2,7 @@ introduction
     why {path: "../why.mdx"}
     installing_with_opam {path: "../installing_with_opam.mdx"}
     quick_overview {path: "../quick_overview.mdx"}
+    faq {path: "../faq.mdx"}
 designing-circuits
     combinational_logic {path: "../combinational_logic.mdx"}
     rom {path: "../rom.mdx"}

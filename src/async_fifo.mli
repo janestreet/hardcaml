@@ -16,6 +16,12 @@ module type S = sig
   val optimize_for_same_clock_rate_and_always_reading : bool
 end
 
+module Fifo_memory_type : sig
+  type t =
+    | Distributed
+    | Registers
+end
+
 module Make (M : S) : sig
   module I : sig
     type 'a t =
@@ -44,6 +50,7 @@ module Make (M : S) : sig
     :  ?name:string
     -> ?use_negedge_sync_chain:bool
     -> ?sync_stages:int
+    -> ?memory_type:Fifo_memory_type.t
     -> Scope.t
     -> Signal.t I.t
     -> Signal.t O.t
@@ -55,6 +62,7 @@ module Make (M : S) : sig
     -> ?sync_stages:int
          (** The number of synchronization stages to use for the gray coded registers
              (default is 2). *)
+    -> ?memory_type:Fifo_memory_type.t (** Which style of ram to implement. *)
     -> ?scope:Scope.t
     -> Signal.t I.t
     -> Signal.t O.t
@@ -66,6 +74,7 @@ module Make (M : S) : sig
     -> ?sync_stages:int
          (** The number of synchronization stages to use for the gray coded registers
              (default is 2). *)
+    -> ?memory_type:Fifo_memory_type.t (** Which style of ram to implement. *)
     -> ?scope:Scope.t
     -> Clocked_signal.t I.t
     -> Clocked_signal.t O.t

@@ -133,7 +133,7 @@ let%expect_test "reg, clock, reset, clear + enable" =
 
         \_8\ <= "00000000";
         process (clock, reset) begin
-            if rising_edge(reset) then
+            if reset = '1' then
                 \_9\ <= \_8\;
             else
                 if rising_edge(clock) then
@@ -355,12 +355,12 @@ let%expect_test "Try generate a Verilog circuit with a signal using a reserved n
         input [7:0] d;
         output [7:0] q;
 
-        reg [7:0] signed_0;
+        reg [7:0] \signed ;
         always @(posedge clock) begin
             if (enable)
-                signed_0 <= d;
+                \signed  <= d;
         end
-        assign q = signed_0;
+        assign q = \signed ;
 
     endmodule
     |}]
@@ -418,20 +418,23 @@ let%expect_test "Try to generate Verilog port names with dashes" =
   let input = input "in-with-dash" 32 in
   let a = wire 32 -- "a" in
   a <-- input;
-  Expect_test_helpers_base.require_does_raise (fun () ->
-    let circuit = Circuit.create_exn ~name:"mod" [ output "out-with-dash" a ] in
-    Rtl.print Verilog circuit);
+  let circuit = Circuit.create_exn ~name:"mod" [ output "out-with-dash" a ] in
+  Rtl.print Verilog circuit;
   [%expect
     {|
-    ("Error while writing circuit"
-      (circuit_name mod)
-      (hierarchy_path (mod))
-      (exn (
-        "[Illegal port name"
-        (name       in-with-dash)
-        (legal_name in_with_dash)
-        (note       "Hardcaml will not change ports names.")
-        (port ((wire (names (in-with-dash)) (width 32)))))))
+    module mod (
+        \in-with-dash ,
+        \out-with-dash
+    );
+
+        input [31:0] \in-with-dash ;
+        output [31:0] \out-with-dash ;
+
+        wire [31:0] a;
+        assign a = \in-with-dash ;
+        assign \out-with-dash  = a;
+
+    endmodule
     |}]
 ;;
 
@@ -451,9 +454,9 @@ let%expect_test "Try to generate Verilog net names with dashes" =
         input [31:0] in;
         output [31:0] out;
 
-        wire [31:0] a_with_dash;
-        assign a_with_dash = in;
-        assign out = a_with_dash;
+        wire [31:0] \a-with-dash ;
+        assign \a-with-dash  = in;
+        assign out = \a-with-dash ;
 
     endmodule
     |}]
@@ -585,10 +588,35 @@ let%expect_test "detects system verilog keyword" =
         input d;
         output q;
 
-        wire virtual_0;
-        assign virtual_0 = d;
-        assign q = virtual_0;
+        wire \virtual ;
+        assign \virtual  = d;
+        assign q = \virtual ;
 
     endmodule
+    |}];
+  Rtl.print Vhdl circuit;
+  [%expect
+    {|
+    library ieee;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_std.all;
+
+    entity test is
+        port (
+            d : in std_logic;
+            q : out std_logic
+        );
+    end entity;
+
+    architecture rtl of test is
+
+        signal virtual : std_logic;
+
+    begin
+
+        virtual <= d;
+        q <= virtual;
+
+    end architecture;
     |}]
 ;;

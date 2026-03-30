@@ -417,3 +417,55 @@ let resolve_clock_domains t =
           resolve_clock acc port.write_clock)
       | _ -> acc)
 ;;
+
+let count_regs_between ~from ~to_ =
+  let from_uid = Signal.uid from in
+  let to_uid = Signal.uid to_ in
+  let graph = create ~upto:[ from ] [ to_ ] in
+  (* Pre-populate the distance map with [from] having distance 0. [from] won't be visited
+     by depth_first_search since it's in [upto]. No key in map means no path to [from]. *)
+  let distance_map = Map.singleton (module Signal.Type.Uid) from_uid 0 in
+  let result_map =
+    depth_first_search graph ~init:distance_map ~f_after:(fun map signal ->
+      let signal_uid = Signal.uid signal in
+      (* Calculate the increment for this signal: 1 for Reg, 0 otherwise. Raise if we
+         encounter an Inst. *)
+      let this_increment =
+        match (signal : Signal.t) with
+        | Reg _ -> 1
+        | Inst { instantiation; _ } ->
+          raise_s
+            [%message
+              "Instantiation found on path between signals - not supported"
+                ~circuit_name:(instantiation.circuit_name : string)]
+        | _ -> 0
+      in
+      (* Collect distances from all dependencies that have a path to [from] *)
+      let distances =
+        Signal.Type.Deps.fold signal ~init:[] ~f:(fun acc dep ->
+          match Map.find map (Signal.uid dep) with
+          | None (* DFS couldn't find a path from [dep] to [from] *) -> acc
+          | Some d -> (d + this_increment) :: acc)
+      in
+      match distances with
+      | [] -> map
+      | d :: rest ->
+        if List.for_all rest ~f:(Int.equal d)
+        then Map.set map ~key:signal_uid ~data:d
+        else
+          raise_s
+            [%message
+              "Multiple paths with different register counts"
+                ~from_signal:(from : Signal.t)
+                ~to_signal:(to_ : Signal.t)
+                ~counts:(d :: rest : int list)])
+  in
+  match Map.find result_map to_uid with
+  | None ->
+    raise_s
+      [%message
+        "No path found between signals"
+          ~from_signal:(from : Signal.t)
+          ~to_signal:(to_ : Signal.t)]
+  | Some count -> count
+;;

@@ -66,31 +66,32 @@ let display_rules =
 let fill_then_empty ?(wave_width = 1) (waves, sim) =
   let inputs : _ I.t = Cyclesim.inputs sim in
   let outputs : _ O.t = Cyclesim.outputs sim in
-  inputs.clear := Bits.vdd;
+  let open Cyclesim.Sim_bits in
+  inputs.clear <-- vdd;
   Cyclesim.cycle sim;
-  inputs.clear := Bits.gnd;
-  inputs.wr := Bits.vdd;
+  inputs.clear <-- gnd;
+  inputs.wr <-- vdd;
   let rec write i =
-    if not (Bits.to_bool !(outputs.full))
+    if not (to_bool outputs.full)
     then (
-      inputs.d := Bits.of_int_trunc ~width:32 ((i + 1) * 10);
+      inputs.d <-- of_int_trunc ~width:32 ((i + 1) * 10);
       Cyclesim.cycle sim;
       write (i + 1))
     else i
   in
   let wr_count = write 0 in
-  inputs.wr := Bits.gnd;
-  inputs.d := Bits.of_int_trunc ~width:32 0;
+  inputs.wr <-- gnd;
+  inputs.d <-- of_int_trunc ~width:32 0;
   Cyclesim.cycle sim;
-  inputs.rd := Bits.vdd;
+  inputs.rd <-- vdd;
   let rd_count = ref 0 in
   let timeout = ref 100 in
   while !rd_count <> wr_count && !timeout <> 0 do
-    if not (Bits.to_bool !(outputs.empty)) then Int.incr rd_count;
+    if not (to_bool outputs.empty) then Int.incr rd_count;
     Cyclesim.cycle sim;
     Int.decr timeout
   done;
-  inputs.rd := Bits.gnd;
+  inputs.rd <-- gnd;
   Cyclesim.cycle sim;
   Cyclesim.cycle sim;
   Waveform.print ~display_width:87 ~wave_width ~display_rules waves
@@ -440,24 +441,25 @@ module%test Typed_tests = struct
 
   let fill_while_reading ?(wave_width = 1) (waves, sim) =
     let inputs : _ I.t = Cyclesim.inputs sim in
-    inputs.clear := Bits.vdd;
+    let open Cyclesim.Sim_bits in
+    inputs.clear <-- vdd;
     Cyclesim.cycle sim;
-    inputs.clear := Bits.gnd;
-    inputs.wr := Bits.vdd;
-    inputs.rd := Bits.vdd;
+    inputs.clear <-- gnd;
+    inputs.wr <-- vdd;
+    inputs.rd <-- vdd;
     let rec write i =
       if i < 10
       then (
-        inputs.a := Bits.of_int_trunc ~width:16 ((i + 1) * 10);
-        inputs.b := Bits.of_int_trunc ~width:16 (150 - ((i + 1) * 10));
+        inputs.a <--. (i + 1) * 10;
+        inputs.b <--. 150 - ((i + 1) * 10);
         Cyclesim.cycle sim;
         write (i + 1))
       else ()
     in
     write 0;
-    inputs.wr := Bits.gnd;
-    inputs.a := Bits.of_int_trunc ~width:16 0;
-    inputs.b := Bits.of_int_trunc ~width:16 0;
+    inputs.wr <-- gnd;
+    inputs.a <--. 0;
+    inputs.b <--. 0;
     (* The typed fifo currently does not handle read delays so we don't need to worry
        about counting reads, they should all flush in a few cycles. *)
     Cyclesim.cycle ~n:3 sim;
@@ -469,33 +471,34 @@ module%test Typed_tests = struct
   let fill_then_empty ?(wave_width = 1) (waves, sim) =
     let inputs : _ I.t = Cyclesim.inputs sim in
     let outputs : _ O.t = Cyclesim.outputs sim in
-    inputs.clear := Bits.vdd;
+    let open Cyclesim.Sim_bits in
+    inputs.clear <-- vdd;
     Cyclesim.cycle sim;
-    inputs.clear := Bits.gnd;
-    inputs.wr := Bits.vdd;
+    inputs.clear <-- gnd;
+    inputs.wr <-- vdd;
     let rec write i =
-      if not (Bits.to_bool !(outputs.full))
+      if not (to_bool outputs.full)
       then (
-        inputs.a := Bits.of_int_trunc ~width:16 ((i + 1) * 10);
-        inputs.b := Bits.of_int_trunc ~width:16 (150 - ((i + 1) * 10));
+        inputs.a <--. (i + 1) * 10;
+        inputs.b <--. 150 - ((i + 1) * 10);
         Cyclesim.cycle sim;
         write (i + 1))
       else i
     in
     let wr_count = write 0 in
-    inputs.wr := Bits.gnd;
-    inputs.a := Bits.of_int_trunc ~width:16 0;
-    inputs.b := Bits.of_int_trunc ~width:16 0;
+    inputs.wr <-- gnd;
+    inputs.a <--. 0;
+    inputs.b <--. 0;
     Cyclesim.cycle sim;
-    inputs.rd := Bits.vdd;
+    inputs.rd <-- vdd;
     let rd_count = ref 0 in
     let timeout = ref 100 in
     while !rd_count <> wr_count && !timeout <> 0 do
-      if not (Bits.to_bool !(outputs.empty)) then Int.incr rd_count;
+      if not (to_bool outputs.empty) then Int.incr rd_count;
       Cyclesim.cycle sim;
       Int.decr timeout
     done;
-    inputs.rd := Bits.gnd;
+    inputs.rd <-- gnd;
     Cyclesim.cycle sim;
     Cyclesim.cycle sim;
     Waveform.print ~display_width:87 ~wave_width ~display_rules waves

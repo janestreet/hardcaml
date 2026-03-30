@@ -267,7 +267,7 @@ module type Type = sig
     module Reset_spec : sig
       type 'a t =
         { reset : 'a
-        ; reset_edge : Edge.t
+        ; reset_level : Level.t
         ; reset_to : 'a
         }
       [@@deriving bin_io, sexp_of]
@@ -414,7 +414,7 @@ module type Type = sig
     { clock : t
     ; clock_edge : Edge.t
     ; reset : t option
-    ; reset_edge : Edge.t
+    ; reset_level : Level.t
     ; clear : t option
     }
 end

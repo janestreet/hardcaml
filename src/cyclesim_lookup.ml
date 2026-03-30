@@ -69,6 +69,8 @@ module T = struct
     value
   ;;
 
+  let sexp_of_t t = [%sexp (to_bits t : Bits.t)]
+
   let of_bits t value =
     check_writable t;
     check_width t (Bits.width value);

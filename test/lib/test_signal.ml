@@ -115,7 +115,7 @@ let reg_error
   ?clock
   ?clock_edge
   ?reset
-  ?reset_edge
+  ?reset_level
   ?reset_to
   ?clear
   ?clear_to
@@ -128,7 +128,7 @@ let reg_error
          ~clock:(Option.value clock ~default:g_clock)
          ?clock_edge
          ?reset
-         ?reset_edge
+         ?reset_level
          ?clear
          ())
       ?clear_to

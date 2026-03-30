@@ -10,8 +10,8 @@
 ```
 -->
 
-You can [convert](https://github.com/janestreet/hardcaml/blob/with-extensions/src/rtl_intf.ml) a
-Hardcaml [`Circuit`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/circuit.mli)
+You can [convert](https://github.com/janestreet/hardcaml/blob/oxcaml/src/rtl_intf.ml) a
+Hardcaml [`Circuit`](https://github.com/janestreet/hardcaml/blob/oxcaml/src/circuit.mli)
 to either Verilog or VHDL.
 
 The following is a trivial example.

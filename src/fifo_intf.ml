@@ -24,13 +24,29 @@ module T = struct
     create ~clock:(f clock) ~clear:(f clear) ~wr:(f wr) ~d:(f d) ~rd:(f rd)
   ;;
 
+  (** A type for specifying the RAM primitive to be used internally by the FIFO. *)
+  type create_ram_primitive =
+    ?name:string
+    -> ?attributes:Rtl_attribute.t list
+    -> write_port:Signal.t Write_port.t
+    -> read_port:Signal.t Read_port.t
+    -> int
+    -> Signal.t
+
   type 'a create_params =
     ?nearly_empty:int (** default is [1] *)
     -> ?nearly_full:int (** default is [depth-1] *)
     -> ?overflow_check:bool (** default is [true] *)
     -> ?underflow_check:bool (** default is [true] *)
     -> ?ram_attributes:Rtl_attribute.t list (** default is blockram *)
-    -> ?scope:Scope.t (* to override naming prefix *)
+    -> ?scope:Scope.t (** to override naming prefix *)
+    -> ?ram_primitive:create_ram_primitive
+         (** default is the Hardcaml ram_wbr primitive.
+
+             Note that specifying [~ram_primitive:ram_wbr] and [?ram_primitive:None] has
+             slightly different semantics when the ram attributes includes the distributed
+             ram attribute. In the case of [?ram_primitive:None], the [create] function
+             will avoid inserting address collision logic since it's already implied. *)
     -> 'a
 
   type 'signal create_fifo =

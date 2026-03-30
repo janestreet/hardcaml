@@ -572,36 +572,37 @@ let%expect_test "simulation - write and read data on both ports" =
   let read_enable1 = Cyclesim.in_port simulator "read_enable1" in
   let read_address2 = Cyclesim.in_port simulator "read_address2" in
   let read_enable2 = Cyclesim.in_port simulator "read_enable2" in
+  let open Cyclesim.Sim_bits in
   Cyclesim.reset simulator;
   (* write on port 1 and 2 *)
-  write_enable1 := Bits.vdd;
-  write_address1 := Bits.of_int_trunc ~width:5 3;
-  write_data1 := Bits.of_int_trunc ~width:15 100;
+  write_enable1 <-- vdd;
+  write_address1 <--. 3;
+  write_data1 <--. 100;
   Cyclesim.cycle simulator;
-  write_address1 := Bits.of_int_trunc ~width:5 4;
-  write_data1 := Bits.of_int_trunc ~width:15 640;
+  write_address1 <--. 4;
+  write_data1 <--. 640;
   Cyclesim.cycle simulator;
-  write_enable1 := Bits.gnd;
+  write_enable1 <-- gnd;
   (* read on port 1 *)
   Cyclesim.cycle simulator;
-  read_address1 := Bits.of_int_trunc ~width:5 3;
-  read_enable1 := Bits.vdd;
+  read_address1 <--. 3;
+  read_enable1 <-- vdd;
   Cyclesim.cycle simulator;
   (* read on port 2 *)
-  read_enable1 := Bits.gnd;
-  read_address2 := Bits.of_int_trunc ~width:5 3;
-  read_enable2 := Bits.vdd;
+  read_enable1 <-- gnd;
+  read_address2 <--. 3;
+  read_enable2 <-- vdd;
   Cyclesim.cycle simulator;
-  read_enable2 := Bits.gnd;
+  read_enable2 <-- gnd;
   Cyclesim.cycle simulator;
   (* read on ports 1 and 2 *)
-  read_enable1 := Bits.vdd;
-  read_enable2 := Bits.vdd;
-  read_address1 := Bits.of_int_trunc ~width:5 4;
-  read_address2 := Bits.of_int_trunc ~width:5 4;
+  read_enable1 <-- vdd;
+  read_enable2 <-- vdd;
+  read_address1 <--. 4;
+  read_address2 <--. 4;
   Cyclesim.cycle simulator;
-  read_enable1 := Bits.gnd;
-  read_enable2 := Bits.gnd;
+  read_enable1 <-- gnd;
+  read_enable2 <-- gnd;
   Cyclesim.cycle simulator;
   Waveform.print ~display_width:86 ~wave_width:2 waves;
   [%expect
@@ -665,24 +666,25 @@ let%expect_test "simulation - write on both ports - highest indexed port wins" =
   let read_enable1 = Cyclesim.in_port simulator "read_enable1" in
   let read_address2 = Cyclesim.in_port simulator "read_address2" in
   let read_enable2 = Cyclesim.in_port simulator "read_enable2" in
+  let open Cyclesim.Sim_bits in
   Cyclesim.reset simulator;
-  write_enable1 := Bits.vdd;
-  write_address1 := Bits.of_int_trunc ~width:5 9;
-  write_data1 := Bits.of_int_trunc ~width:15 100;
-  write_enable2 := Bits.vdd;
-  write_address2 := Bits.of_int_trunc ~width:5 9;
-  write_data2 := Bits.of_int_trunc ~width:15 200;
+  write_enable1 <-- vdd;
+  write_address1 <--. 9;
+  write_data1 <--. 100;
+  write_enable2 <-- vdd;
+  write_address2 <--. 9;
+  write_data2 <--. 200;
   Cyclesim.cycle simulator;
-  write_enable1 := Bits.gnd;
-  write_enable2 := Bits.gnd;
+  write_enable1 <-- gnd;
+  write_enable2 <-- gnd;
   Cyclesim.cycle simulator;
-  read_enable1 := Bits.vdd;
-  read_address1 := Bits.of_int_trunc ~width:5 9;
-  read_enable2 := Bits.vdd;
-  read_address2 := Bits.of_int_trunc ~width:5 9;
+  read_enable1 <-- vdd;
+  read_address1 <--. 9;
+  read_enable2 <-- vdd;
+  read_address2 <--. 9;
   Cyclesim.cycle simulator;
-  read_enable1 := Bits.gnd;
-  read_enable2 := Bits.gnd;
+  read_enable1 <-- gnd;
+  read_enable2 <-- gnd;
   Cyclesim.cycle simulator;
   Waveform.print ~display_width:60 ~wave_width:2 waves;
   [%expect
@@ -742,19 +744,20 @@ let%expect_test "simulation - demonstrate collision modes" =
     let write_data1 = Cyclesim.in_port simulator "write_data1" in
     let read_address1 = Cyclesim.in_port simulator "read_address1" in
     let read_enable1 = Cyclesim.in_port simulator "read_enable1" in
+    let open Cyclesim.Sim_bits in
     Cyclesim.reset simulator;
-    write_enable1 := Bits.vdd;
-    write_address1 := Bits.of_int_trunc ~width:5 13;
-    write_data1 := Bits.of_int_trunc ~width:15 10;
+    write_enable1 <-- vdd;
+    write_address1 <--. 13;
+    write_data1 <--. 10;
     Cyclesim.cycle simulator;
-    write_enable1 := Bits.vdd;
-    write_address1 := Bits.of_int_trunc ~width:5 13;
-    write_data1 := Bits.of_int_trunc ~width:15 20;
-    read_enable1 := Bits.vdd;
-    read_address1 := Bits.of_int_trunc ~width:5 13;
+    write_enable1 <-- vdd;
+    write_address1 <--. 13;
+    write_data1 <--. 20;
+    read_enable1 <-- vdd;
+    read_address1 <--. 13;
     Cyclesim.cycle simulator;
-    write_enable1 := Bits.gnd;
-    read_enable1 := Bits.gnd;
+    write_enable1 <-- gnd;
+    read_enable1 <-- gnd;
     Cyclesim.cycle simulator;
     Waveform.print ~display_width:60 ~wave_width:2 waves
   in
@@ -1068,20 +1071,21 @@ let%expect_test "initialized memory" =
   let sim = Cyclesim.create circuit in
   let waves, sim = Waveform.create sim in
   let read_address = Cyclesim.in_port sim "read_address" in
+  let open Cyclesim.Sim_bits in
   for i = 0 to memory_size - 1 do
-    read_address := Bits.of_int_trunc ~width:address_width i;
+    read_address <--. i;
     Cyclesim.cycle sim
   done;
-  read_address := Bits.of_int_trunc ~width:address_width 4;
-  Cyclesim.in_port sim "write_address" := Bits.of_int_trunc ~width:address_width 4;
-  Cyclesim.in_port sim "write_enable" := Bits.vdd;
-  Cyclesim.in_port sim "write_data" := Bits.of_int_trunc ~width:data_width 255;
+  read_address <--. 4;
+  Cyclesim.in_port sim "write_address" <--. 4;
+  Cyclesim.in_port sim "write_enable" <-- vdd;
+  Cyclesim.in_port sim "write_data" <--. 255;
   Cyclesim.cycle sim;
-  Cyclesim.in_port sim "write_address" := Bits.of_int_trunc ~width:address_width 5;
-  Cyclesim.in_port sim "write_enable" := Bits.vdd;
-  Cyclesim.in_port sim "write_data" := Bits.of_int_trunc ~width:data_width 254;
+  Cyclesim.in_port sim "write_address" <--. 5;
+  Cyclesim.in_port sim "write_enable" <-- vdd;
+  Cyclesim.in_port sim "write_data" <--. 254;
   Cyclesim.cycle sim;
-  Cyclesim.in_port sim "write_enable" := Bits.gnd;
+  Cyclesim.in_port sim "write_enable" <-- gnd;
   Cyclesim.cycle sim;
   Cyclesim.cycle sim;
   Waveform.print ~display_width:88 ~wave_width:1 waves;
@@ -1112,7 +1116,7 @@ let%expect_test "initialized memory" =
 ;;
 
 let%expect_test "rom" =
-  let test address_width data_width =
+  let test ?(show_rtl = false) address_width data_width =
     let memory_size = 1 lsl address_width in
     let read_address = Signal.input "read_address" address_width in
     let read_data =
@@ -1126,14 +1130,19 @@ let%expect_test "rom" =
         (List.mapi (Array.to_list read_data) ~f:(fun i q ->
            Signal.output ("q" ^ Int.to_string i) q))
     in
-    let sim = Cyclesim.create circuit in
-    let waves, sim = Waveform.create sim in
-    let read_address = Cyclesim.in_port sim "read_address" in
-    for i = 0 to memory_size - 1 do
-      read_address := Bits.of_int_trunc ~width:address_width i;
-      Cyclesim.cycle sim
-    done;
-    Waveform.print ~display_width:88 ~wave_width:1 waves
+    if show_rtl
+    then (
+      Rtl.print Verilog circuit;
+      Rtl.print Vhdl circuit)
+    else (
+      let sim = Cyclesim.create circuit in
+      let waves, sim = Waveform.create sim in
+      let read_address = Cyclesim.in_port sim "read_address" in
+      for i = 0 to memory_size - 1 do
+        read_address := Bits.of_int_trunc ~width:address_width i;
+        Cyclesim.cycle sim
+      done;
+      Waveform.print ~display_width:88 ~wave_width:1 waves)
   in
   test 2 4;
   [%expect
@@ -1164,5 +1173,77 @@ let%expect_test "rom" =
     │q1                ││ 01 │02 │03 │04 │05 │06 │07 │08 │09 │0A │0B │0C │0D │0E │0F │00   │
     │                  ││────┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───┴───  │
     └──────────────────┘└──────────────────────────────────────────────────────────────────┘
+    |}];
+  (* Show that we generate appropriate rtl (in particular, no write port or clock) *)
+  test ~show_rtl:true 2 4;
+  [%expect
+    {|
+    module rom (
+        read_address,
+        q0,
+        q1
+    );
+
+        input [1:0] read_address;
+        output [3:0] q0;
+        output [3:0] q1;
+
+        wire [1:0] _4;
+        wire [1:0] _5;
+        wire [3:0] _7;
+        reg [3:0] _6[0:3];
+        wire [3:0] _8;
+        assign _4 = 2'b01;
+        assign _5 = read_address + _4;
+        assign _7 = _6[_5];
+        initial begin
+            _6[0] <= 4'b0000;
+            _6[1] <= 4'b0001;
+            _6[2] <= 4'b0010;
+            _6[3] <= 4'b0011;
+        end
+        assign _8 = _6[read_address];
+        assign q0 = _8;
+        assign q1 = _7;
+
+    endmodule
+    library ieee;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_std.all;
+
+    entity rom is
+        port (
+            read_address : in std_logic_vector(1 downto 0);
+            q0 : out std_logic_vector(3 downto 0);
+            q1 : out std_logic_vector(3 downto 0)
+        );
+    end entity;
+
+    architecture rtl of rom is
+
+        signal \_4\ : std_logic_vector(1 downto 0);
+        signal \_5\ : std_logic_vector(1 downto 0);
+        signal \_7\ : std_logic_vector(3 downto 0);
+        type \_6_type\ is array (0 to 3) of std_logic_vector(3 downto 0);
+        signal \_6\ : \_6_type\;
+        signal \_8\ : std_logic_vector(3 downto 0);
+
+    begin
+
+        \_4\ <= "01";
+        \_5\ <= std_logic_vector(unsigned(read_address) + unsigned(\_4\));
+        \_7\ <= \_6\(to_integer(unsigned(\_5\)));
+        process begin
+            \_6\(0) <= "0000";
+            \_6\(1) <= "0001";
+            \_6\(2) <= "0010";
+            \_6\(3) <= "0011";
+            wait;
+        end process;
+        \_8\ <= \_6\(to_integer(unsigned(read_address)));
+        q0 <= \_8\;
+        q1 <= \_7\;
+
+    end architecture;
     |}]
 ;;

@@ -119,3 +119,17 @@ module Deps_for_loop_checking : Signal.Type.Deps
 (** Final layer of combinational nodes which sit on the path between the outputs and any
     driving register or memory. *)
 val last_layer_of_nodes : is_input:(Signal.t -> bool) -> t -> Signal.Type.Uid.t List.t
+
+(** [count_regs_between ~from ~to_] counts the number of register nodes on the path from
+    [from] to [to_], traversing backwards through signal dependencies starting from [to_].
+    This measures the latency between signals - [to_] is counted if it's a register, but
+    [from] is not counted even if it's a register. For example:
+    - [input -> reg]: returns 1 (the reg is counted)
+    - [reg1 -> reg2]: returns 1 (reg2 is counted, reg1 is not)
+    - [input -> reg1 -> reg2]: returns 2 (both regs counted)
+
+    Raises if:
+    - There is no path from [to_] back to [from]
+    - Multiple paths exist with different numbers of registers
+    - An instantiation is encountered on the path *)
+val count_regs_between : from:Signal.t -> to_:Signal.t -> int

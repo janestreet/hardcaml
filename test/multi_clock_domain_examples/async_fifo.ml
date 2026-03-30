@@ -237,8 +237,7 @@ module%test [@tags "runtime5-only"] Cyclesim_tests = struct
     ;;
 
     module Functional = struct
-      module Step =
-        Hardcaml_step_testbench_effectful.Functional.Cyclesim.Make (Fifo.I) (Fifo.O)
+      module Step = Hardcaml_step_testbench.Functional.Cyclesim.Make (Fifo.I) (Fifo.O)
 
       type finished_event = (unit, Step.I_data.t) Step.finished_event
 
@@ -254,7 +253,6 @@ module%test [@tags "runtime5-only"] Cyclesim_tests = struct
         let write_one handler _ =
           print_s [%message "start write"];
           Step.delay
-            ~num_cycles:1
             handler
             { Step.input_hold with
               data_in = Bits.of_int_trunc ~width:4 5
@@ -262,7 +260,6 @@ module%test [@tags "runtime5-only"] Cyclesim_tests = struct
             };
           print_s [%message "end write"];
           Step.delay
-            ~num_cycles:1
             handler
             { Step.input_hold with data_in = Bits.zero 4; write_enable = Bits.gnd }
         in
@@ -276,7 +273,7 @@ module%test [@tags "runtime5-only"] Cyclesim_tests = struct
           do
             o := Step.cycle handler Step.input_hold
           done;
-          Step.delay ~num_cycles:1 handler { Step.input_hold with read_enable = Bits.gnd };
+          Step.delay handler { Step.input_hold with read_enable = Bits.gnd };
           !o.before_edge.data_out
         in
         run_test ~count ~print_waves (fun handler _ ->
@@ -287,7 +284,7 @@ module%test [@tags "runtime5-only"] Cyclesim_tests = struct
     end
 
     module Imperative = struct
-      module Step = Hardcaml_step_testbench_effectful.Imperative.Cyclesim
+      module Step = Hardcaml_step_testbench.Imperative.Cyclesim
 
       type finished_event = (unit, Step.I_data.t) Step.finished_event
 
@@ -308,29 +305,29 @@ module%test [@tags "runtime5-only"] Cyclesim_tests = struct
       ;;
 
       let read_write_test ~count ~print_waves =
-        let write_one handler ~(inputs : _ Fifo.I.t) ~outputs:_ () =
+        let write_one handler ~(inputs : _ Fifo.I.t) ~outputs:_ =
           print_s [%message "start write"];
           inputs.data_in := Bits.of_int_trunc ~width:4 5;
           inputs.write_enable := Bits.vdd;
-          Step.cycle handler ();
+          Step.cycle handler;
           print_s [%message "end write"];
           inputs.write_enable := Bits.gnd;
           inputs.data_in := Bits.zero 4;
-          Step.cycle handler ()
+          Step.cycle handler
         in
-        let read_one handler ~(inputs : _ Fifo.I.t) ~(outputs : _ Fifo.O.t) () =
+        let read_one handler ~(inputs : _ Fifo.I.t) ~(outputs : _ Fifo.O.t) =
           inputs.read_enable := Bits.vdd;
-          Step.cycle handler ();
+          Step.cycle handler;
           let rec loop () =
             print_s [%message "check read"];
             if Bits.to_bool !(outputs.valid)
             then (
               let data_out = !(outputs.data_out) in
               inputs.read_enable := Bits.gnd;
-              Step.cycle handler ();
+              Step.cycle handler;
               data_out)
             else (
-              Step.cycle handler ();
+              Step.cycle handler;
               loop ())
           in
           loop () [@nontail]

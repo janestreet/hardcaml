@@ -528,7 +528,7 @@ let reset_consts (regs : Node.t list) =
   List.filter_map regs ~f:(fun reg ->
     match reg.signal with
     | Reg { register = { reset; _ }; _ } ->
-      Option.map reset ~f:(fun { reset = _; reset_edge = _; reset_to } ->
+      Option.map reset ~f:(fun { reset = _; reset_level = _; reset_to } ->
         if Signal.Type.is_const reset_to
         then (
           let constant = Signal.to_constant reset_to |> Bits.of_constant in

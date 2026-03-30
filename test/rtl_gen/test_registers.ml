@@ -330,7 +330,7 @@ let%expect_test "clock + reset" =
 
         \_5\ <= '0';
         process (clock, reset) begin
-            if rising_edge(reset) then
+            if reset = '1' then
                 \_6\ <= \_5\;
             else
                 if rising_edge(clock) then
@@ -391,7 +391,7 @@ let%expect_test "clock + reset" =
 
         \_5\ <= '0';
         process (clock, reset) begin
-            if rising_edge(reset) then
+            if reset = '1' then
                 \_6\ <= \_5\;
             else
                 if rising_edge(clock) then
@@ -456,7 +456,7 @@ let%expect_test "clock + reset" =
 
         \_6\ <= '0';
         process (clock, reset) begin
-            if rising_edge(reset) then
+            if reset = '1' then
                 \_7\ <= \_6\;
             else
                 if rising_edge(clock) then
@@ -470,7 +470,7 @@ let%expect_test "clock + reset" =
 
     end architecture;
     |}];
-  let spec = Signal.Reg_spec.override spec ~reset_edge:Falling in
+  let spec = Signal.Reg_spec.override spec ~reset_level:Low in
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
@@ -524,7 +524,7 @@ let%expect_test "clock + reset" =
 
         \_6\ <= '0';
         process (clock, reset) begin
-            if falling_edge(reset) then
+            if reset = '0' then
                 \_7\ <= \_6\;
             else
                 if rising_edge(clock) then
@@ -790,7 +790,7 @@ let%expect_test "clock + reset + clear" =
 
         \_7\ <= '0';
         process (clock, reset) begin
-            if rising_edge(reset) then
+            if reset = '1' then
                 \_8\ <= \_7\;
             else
                 if rising_edge(clock) then
@@ -861,7 +861,7 @@ let%expect_test "clock + reset + clear" =
 
         \_7\ <= '0';
         process (clock, reset) begin
-            if rising_edge(reset) then
+            if reset = '1' then
                 \_8\ <= \_7\;
             else
                 if rising_edge(clock) then
@@ -936,7 +936,7 @@ let%expect_test "clock + reset + clear" =
 
         \_8\ <= '0';
         process (clock, reset) begin
-            if rising_edge(reset) then
+            if reset = '1' then
                 \_9\ <= \_8\;
             else
                 if rising_edge(clock) then
@@ -954,7 +954,7 @@ let%expect_test "clock + reset + clear" =
 
     end architecture;
     |}];
-  let spec = Signal.Reg_spec.override spec ~clock_edge:Falling ~reset_edge:Falling in
+  let spec = Signal.Reg_spec.override spec ~clock_edge:Falling ~reset_level:Low in
   Testing.analyse_vhdl_and_verilog ~show:true (of_spec spec ~enable);
   [%expect
     {|
@@ -1014,7 +1014,7 @@ let%expect_test "clock + reset + clear" =
 
         \_8\ <= '0';
         process (clock, reset) begin
-            if falling_edge(reset) then
+            if reset = '0' then
                 \_9\ <= \_8\;
             else
                 if falling_edge(clock) then
@@ -1097,7 +1097,7 @@ let%expect_test "clock + reset + clear" =
         vdd <= '1';
         \_7\ <= '1';
         process (clock, reset) begin
-            if falling_edge(reset) then
+            if reset = '0' then
                 \_9\ <= \_7\;
             else
                 if falling_edge(clock) then
@@ -1189,7 +1189,7 @@ let%expect_test "multiple reg names" =
 
         \_8\ <= '0';
         process (clock, reset) begin
-            if rising_edge(reset) then
+            if reset = '1' then
                 c <= \_8\;
             else
                 if rising_edge(clock) then

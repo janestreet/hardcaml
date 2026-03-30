@@ -24,9 +24,9 @@ val run : Signal.t -> unit = <fun>
 -->
 
 # Cyclesim Coverage
-[`Cyclesim`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/cyclesim_intf.ml) can
+[`Cyclesim`](https://github.com/janestreet/hardcaml/blob/oxcaml/src/cyclesim_intf.ml) can
 optionally capture coverage for one or multiple simulations of a
-[`Circuit.t`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/circuit.mli).
+[`Circuit.t`](https://github.com/janestreet/hardcaml/blob/oxcaml/src/circuit.mli).
 
 ## Enabling coverage
 Coverage can be run over an executable or an `expect test` and coverage for `Circuit`s

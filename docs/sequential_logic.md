@@ -17,7 +17,7 @@ holds its value throughout the clock cycle.
 # Reg_spec
 
 The clock and related reset and clear signals are grouped together in
-a type called a [`Reg_spec.t`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/reg_spec_intf.ml).
+a type called a [`Reg_spec.t`](https://github.com/janestreet/hardcaml/blob/oxcaml/src/reg_spec_intf.ml).
 
 ```ocaml
 # open Hardcaml
@@ -120,7 +120,7 @@ Two words of caution when using wires.
    forget to assign a value to a wire, but the error will not be
    especially useful in finding out where. You can
    enable an extra level of debugging information by setting the
-   following [value](https://github.com/janestreet/hardcaml/blob/with-extensions/src/caller_id.mli),
+   following [value](https://github.com/janestreet/hardcaml/blob/oxcaml/src/caller_id.mli),
    which will help track down where the wire was originally defined.
 
 <!-- Dont execute this -->
@@ -184,7 +184,7 @@ val q : Signal.t array =
 ## RAMs
 
 On their own, `multiport_memory`s are not that useful. Instead, we
-provide the [`Ram`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/ram.mli)
+provide the [`Ram`](https://github.com/janestreet/hardcaml/blob/oxcaml/src/ram.mli)
 module, which can target the physical RAM blocks in
 FPGAs (i.e. BlockRAM or UltraRAM in Xilinx devices).
 

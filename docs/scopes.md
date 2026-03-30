@@ -7,7 +7,7 @@
 ```
 -->
 
-A [`Scope.t`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/scope.mli) is a
+A [`Scope.t`](https://github.com/janestreet/hardcaml/blob/oxcaml/src/scope.mli) is a
 (mutable) object passed between the circuits that form a complete Hardcaml design. It
 performs a number of roles
 

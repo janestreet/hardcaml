@@ -52,6 +52,72 @@ module type Typed_math = sig
   val truncate : t -> width:int -> t with_valid
 end
 
+module type For_collection = sig
+  type t
+  type 'a collection
+
+  (** [concat_msb ts] concatenates a list of signals - the msb of the head of the list
+      will become the msb of the result.
+
+      [let c = concat_msb [ a; b; c ] in ...]
+
+      [concat_msb] raises if [ts] is empty or if any [t] in [ts] is empty. *)
+  val concat_msb : t collection -> t
+
+  (** Similar to [concat_msb] except the lsb of the head of the list will become the lsb
+      of the result. *)
+  val concat_lsb : t collection -> t
+
+  (** convert signal to a list of bits with msb at head of list *)
+  val bits_msb : t -> t collection
+
+  (** convert signal to a list of bits with lsb at head of list *)
+  val bits_lsb : t -> t collection
+
+  (** Split signal into a list of signals with width equal to [part_width]. The least
+      significant bits are at the head of the returned list. If [exact] is [true] the
+      input signal width must be exactly divisable by [part_width]. When [exact] is
+      [false] and the input signal width is not exactly divisible by [part_width], the
+      last element will contains residual bits.
+
+      eg:
+
+      {v
+        split_lsb ~part_width:4 16b0001_0010_0011_0100 =
+          [ 4b0100; 4b0011; 4b0010; 4b0001 ]
+
+        split_lsb ~exact:false ~part_width:4 17b11_0001_0010_0011_0100 =
+          [ 4b0100; 4b0011; 4b0010; 4b0001; 2b11 ]
+      v} *)
+  val split_lsb : ?exact:bool -> part_width:int -> t -> t collection
+
+  (** Like [split_lsb] except the most significant bits are at the head of the returned
+      list. Residual bits when [exact] is [false] goes to the last element of the list, so
+      in the general case [split_lsb] is not necessarily equivalent to
+      [split_msb |> List.rev]. *)
+  val split_msb : ?exact:bool -> part_width:int -> t -> t collection
+
+  (** multiplexer.
+
+      [let m = mux sel inputs in ...]
+
+      Given [l] = [List.length inputs] and [w] = [width sel] the following conditions must
+      hold:
+
+      [l] <= [Int.pow 2 w], [l] >= 1
+
+      If [l] < [Int.pow 2 w], the last input is repeated.
+
+      All inputs provided must have the same width, which will in turn be equal to the
+      width of [m]. *)
+  val mux : t -> t collection -> t
+
+  (** Same as [mux] except requires:
+
+      [l] = [Int.pow 2 w] *)
+  val mux_strict : t -> t collection -> t
+end
+
 module type Gates = sig
   type t [@@deriving sexp_of]
 
@@ -272,17 +338,12 @@ module type S = sig
   (** convert the signal to a constant *)
   val to_constant : t -> Constant.t
 
-  (** [concat ts] concatenates a list of signals - the msb of the head of the list will
-      become the msb of the result.
+  module type For_collection = For_collection with type t := t
 
-      [let c = concat [ a; b; c ] in ...]
+  include For_collection with type 'a collection := t list (** @inline *)
 
-      [concat] raises if [ts] is empty or if any [t] in [ts] is empty. *)
-  val concat_msb : t list -> t
-
-  (** Similar to [concat_msb] except the lsb of the head of the list will become the lsb
-      of the result. *)
-  val concat_lsb : t list -> t
+  module For_array : For_collection with type 'a collection := 'a array
+  module For_iarray : For_collection with type 'a collection := 'a iarray
 
   (** concatenate two signals.
 
@@ -345,26 +406,6 @@ module type S = sig
 
   (** [insert ~into:t x ~at_offset] insert [x] into [t] at given offet *)
   val insert : into:t -> t -> at_offset:int -> t
-
-  (** multiplexer.
-
-      [let m = mux sel inputs in ...]
-
-      Given [l] = [List.length inputs] and [w] = [width sel] the following conditions must
-      hold:
-
-      [l] <= [Int.pow 2 w], [l] >= 1
-
-      If [l] < [Int.pow 2 w], the last input is repeated.
-
-      All inputs provided must have the same width, which will in turn be equal to the
-      width of [m]. *)
-  val mux : t -> t list -> t
-
-  (** Same as [mux] except requires:
-
-      [l] = [Int.pow 2 w] *)
-  val mux_strict : t -> t list -> t
 
   (** [mux2 c t f] 2 input multiplexer. Selects [t] if [c] is high otherwise [f].
 
@@ -557,12 +598,6 @@ module type S = sig
   (** convert signal to a list of bits with lsb at head of list *)
   val bits_lsb : t -> t list
 
-  (** [to_array s] convert signal [s] to array of bits with lsb at index 0 *)
-  val to_array : t -> t array
-
-  (** [of_array a] convert array [a] of bits to signal with lsb at index 0 *)
-  val of_array : t array -> t
-
   (** repeat signal [count] times *)
   val repeat : t -> count:int -> t
 
@@ -581,29 +616,6 @@ module type S = sig
 
       The most significant bits will still be in the left half of the tuple. *)
   val split_in_half_lsb : ?lsbs:int -> t -> t * t
-
-  (** Split signal into a list of signals with width equal to [part_width]. The least
-      significant bits are at the head of the returned list. If [exact] is [true] the
-      input signal width must be exactly divisable by [part_width]. When [exact] is
-      [false] and the input signal width is not exactly divisible by [part_width], the
-      last element will contains residual bits.
-
-      eg:
-
-      {v
-        split_lsb ~part_width:4 16b0001_0010_0011_0100 =
-          [ 4b0100; 4b0011; 4b0010; 4b0001 ]
-
-        split_lsb ~exact:false ~part_width:4 17b11_0001_0010_0011_0100 =
-          [ 4b0100; 4b0011; 4b0010; 4b0001; 2b11 ]
-      v} *)
-  val split_lsb : ?exact:bool (** default is [true] *) -> part_width:int -> t -> t list
-
-  (** Like [split_lsb] except the most significant bits are at the head of the returned
-      list. Residual bits when [exact] is [false] goes to the last element of the list, so
-      in the general case [split_lsb] is not necessarily equivalent to
-      [split_msb |> List.rev]. *)
-  val split_msb : ?exact:bool (** default is [true] *) -> part_width:int -> t -> t list
 
   val bswap : t -> t
 

@@ -51,7 +51,7 @@ let create (i : Signal.t I.t) : Signal.t O.t =
 ```
 
 To simulate this, we can use the
-[`Cyclesim.With_interface`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/cyclesim_intf.ml)
+[`Cyclesim.With_interface`](https://github.com/janestreet/hardcaml/blob/oxcaml/src/cyclesim_intf.ml)
 functor. This will automatically create a circuit with the input and output ports
 labeled, build a simulator, and then construct input and output records for driving the
 simulator. All this and we never have to worry about the underlying string names of ports.
@@ -65,7 +65,7 @@ val create_sim : unit -> (Bits.t ref I.t, Bits.t ref O.t) Cyclesim.t = <fun>
 ```
 
 Notice the type signature of `(_, _) Cyclesim.t`. The parametric type arguments to
-[`Cyclesim.t`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/cyclesim_intf.ml)
+[`Cyclesim.t`](https://github.com/janestreet/hardcaml/blob/oxcaml/src/cyclesim_intf.ml)
 encode the types returned when retrieving the inputs and output values from the simulator
 object.
 
