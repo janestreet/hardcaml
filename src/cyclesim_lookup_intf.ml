@@ -8,7 +8,7 @@
 open! Core0
 
 module type READ = sig
-  type t
+  type t [@@deriving sexp_of]
 
   val data : t -> Bytes.t
 
@@ -47,7 +47,7 @@ module type Cyclesim_lookup = sig
   module Node : READ
 
   module Reg : sig
-    type t
+    type t [@@deriving sexp_of]
 
     include READ with type t := t
     include WRITE with type t := t

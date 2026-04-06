@@ -5,15 +5,36 @@ let%expect_test "rtl name legalization" =
     let alignment = 15 in
     let padding n = String.init n ~f:(fun _ -> ' ') in
     print_endline [%string {|%{padding alignment} %{name}|}];
-    List.iter Rtl.Language.all ~f:(fun lang ->
-      let scope = Rtl.Name.create lang in
-      let lang = Rtl.Language.to_string lang in
+    List.iter Rtl.Language.all ~f:(fun language ->
+      let scope = Rtl.Name.Scope.create () in
+      let name = Rtl.Name.Scope.mangle_name scope name |> Rtl.Name.legalize ~language in
+      let lang = Rtl.Language.to_string language in
       let padding = padding (max 0 (alignment - String.length lang)) in
-      print_endline [%string {|%{lang}%{padding} %{Rtl.Name.mangle_name scope name }|}]);
+      print_endline [%string {|%{lang}%{padding} %{name}|}]);
     print_endline ""
   in
-  require_does_raise ~cr:CR_someday (fun () -> show "");
-  [%expect {| "[Rtl_name.legalize] string is empty" |}];
+  [%expect {| |}];
+  let invalid_identifiers =
+    [ ""; "foo!\"£$%^&*()\""; [%string {|\|}]; [%string {|\\|}]; "a name with spaces" ]
+  in
+  List.iter invalid_identifiers ~f:(fun identifier ->
+    require_does_raise ~cr:CR_someday (fun () -> show identifier));
+  [%expect
+    {|
+    "[Rtl_name] string must not be empty"
+                    foo!"£$%^&*()"
+    ("[Rtl_name]s must only contain printable characters and may not contain spaces or back slashes"
+     (identifier "foo!\"\194\163$%^&*()\""))
+                    \
+    ("[Rtl_name]s must only contain printable characters and may not contain spaces or back slashes"
+     (identifier \))
+                    \\
+    ("[Rtl_name]s must only contain printable characters and may not contain spaces or back slashes"
+     (identifier "\\\\"))
+                    a name with spaces
+    ("[Rtl_name]s must only contain printable characters and may not contain spaces or back slashes"
+     (identifier "a name with spaces"))
+    |}];
   List.iter
     [ "_" (* underscore really is a valid verilog name... *)
     ; "__"
@@ -21,10 +42,10 @@ let%expect_test "rtl name legalization" =
     ; "_1"
     ; "1_"
     ; "$"
-    ; "foo!\"£$%^&*()\""
-    ; [%string {|\|}]
-    ; [%string {|\\|}]
-    ; "a name with spaces"
+    ; "foo!\"$%^&*()\""
+    ; "entity"
+    ; "module"
+    ; "for"
     ]
     ~f:show;
   [%expect
@@ -40,8 +61,8 @@ let%expect_test "rtl name legalization" =
     Vhdl            \__\
 
                     1
-    Verilog         _1
-    Systemverilog   _1
+    Verilog         \1
+    Systemverilog   \1
     Vhdl            \1\
 
                     _1
@@ -50,33 +71,33 @@ let%expect_test "rtl name legalization" =
     Vhdl            \_1\
 
                     1_
-    Verilog         _1_
-    Systemverilog   _1_
+    Verilog         \1_
+    Systemverilog   \1_
     Vhdl            \1_\
 
                     $
-    Verilog         _$
-    Systemverilog   _$
+    Verilog         \$
+    Systemverilog   \$
     Vhdl            \$\
 
-                    foo!"£$%^&*()"
-    Verilog         foo____$_______
-    Systemverilog   foo____$_______
-    Vhdl            \foo!"£$%^&*()"\
+                    foo!"$%^&*()"
+    Verilog         \foo!"$%^&*()"
+    Systemverilog   \foo!"$%^&*()"
+    Vhdl            \foo!"$%^&*()"\
 
-                    \
-    Verilog         __
-    Systemverilog   __
-    Vhdl            \\\\
+                    entity
+    Verilog         entity
+    Systemverilog   entity
+    Vhdl            \entity\
 
-                    \\
-    Verilog         ___
-    Systemverilog   ___
-    Vhdl            \\\\\\
+                    module
+    Verilog         \module
+    Systemverilog   \module
+    Vhdl            module
 
-                    a name with spaces
-    Verilog         a_name_with_spaces
-    Systemverilog   a_name_with_spaces
-    Vhdl            \a_name_with_spaces\
+                    for
+    Verilog         \for
+    Systemverilog   \for
+    Vhdl            \for\
     |}]
 ;;

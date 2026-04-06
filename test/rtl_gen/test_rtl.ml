@@ -219,7 +219,7 @@ let%expect_test "simple example" =
         \_13\ <= foo;
         \_19\ <= (unsigned(std_logic_vector'("" & \_13\)) + unsigned(std_logic_vector'("" & \_11\))) ?= "1";
         process (\_9\, \_7\) begin
-            if rising_edge(\_7\) then
+            if \_7\ = '1' then
                 \_33\ <= \_32\;
             else
                 if rising_edge(\_9\) then
@@ -435,7 +435,7 @@ let%expect_test "apply port mangling to " =
         \_13\ <= foo;
         \_19\ <= (unsigned'("" & \_13\) + unsigned'("" & \_11\)) ?= "1";
         process (\_9\, \_7\) begin
-            if rising_edge(\_7\) then
+            if \_7\ = '1' then
                 \_33\ <= \_32\;
             else
                 if rising_edge(\_9\) then

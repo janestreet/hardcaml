@@ -326,7 +326,7 @@ module Reg = struct
     Signal.Reg_spec.create
       ~clock_edge:(Reg_spec.clock_edge spec)
       ?reset:(Reg_spec.reset spec |> get_opt)
-      ~reset_edge:(Reg_spec.reset_edge spec)
+      ~reset_level:(Reg_spec.reset_level spec)
       ?clear:(Reg_spec.clear spec |> get_opt)
       ()
       ~clock:(Reg_spec.clock spec |> base)
@@ -468,7 +468,7 @@ module Unsafe = struct
       ~clock:(Reg_spec.clock t |> unwrap)
       ~clock_edge:(Reg_spec.clock_edge t)
       ?reset:(Reg_spec.reset t |> maybe_unwrap)
-      ~reset_edge:(Reg_spec.reset_edge t)
+      ~reset_level:(Reg_spec.reset_level t)
       ?clear:(Reg_spec.clear t |> maybe_unwrap)
       ()
   ;;

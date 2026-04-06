@@ -233,11 +233,12 @@ let initializer_of_reg (s : Signal.t) =
   | _ -> None
 ;;
 
-let declaration_of_logic ~reg_or_wire ~rtl_name signal =
-  let names = Rtl_name.mangle_signal_names rtl_name signal in
+let declaration_of_logic ~reg_or_wire ~rtl_name language signal =
+  let names = Rtl_name.Scope.mangle_signal_names rtl_name signal in
   let range = bit_or_vec_of_signal signal in
   let initialize_to = initializer_of_reg signal in
   let var name =
+    let name = Rtl_name.legalize name ~language in
     { name = Rope.of_string name
     ; range
     ; reg_or_wire
@@ -255,32 +256,37 @@ let declaration_of_logic ~reg_or_wire ~rtl_name signal =
     }
 ;;
 
-let declaration_of_inst ~rtl_name signal =
-  let logic = declaration_of_logic ~reg_or_wire:Wire ~rtl_name signal in
-  Inst { logic; instance_name = Rtl_name.mangle_instantiation_name rtl_name signal }
+let declaration_of_inst ~rtl_name language signal =
+  let logic = declaration_of_logic ~reg_or_wire:Wire ~rtl_name language signal in
+  Inst
+    { logic
+    ; instance_name =
+        Rtl_name.Scope.mangle_instantiation_name rtl_name signal
+        |> Rtl_name.legalize ~language
+    }
 ;;
 
-let declaration_of_multiport_memory ~rtl_name signal =
-  let array, type_ = Rtl_name.mangle_multiport_mem_name rtl_name signal in
+let declaration_of_multiport_memory ~rtl_name language signal =
+  let array, type_ = Rtl_name.Scope.mangle_multiport_mem_name rtl_name signal in
   let depth =
     match signal with
     | Multiport_mem { size; _ } -> size
     | _ -> assert false
   in
   { memory =
-      { name = Rope.of_string array
+      { name = Rope.of_string (Rtl_name.legalize array ~language)
       ; range = bit_or_vec_of_signal signal
       ; reg_or_wire = Reg
       ; attributes = Signal.attributes signal
       ; comment = Signal.comment signal
       }
-  ; memory_type = type_
+  ; memory_type = Rtl_name.legalize type_ ~language
   ; depth
   ; range = bit_or_vec (Signal.width signal)
   }
 ;;
 
-let var_of_io_port ~(config : Rtl_config.t) ~rtl_name signal =
+let var_of_io_port ~rtl_name language signal =
   match Signal.names signal with
   | [] ->
     raise_s
@@ -290,11 +296,7 @@ let var_of_io_port ~(config : Rtl_config.t) ~rtl_name signal =
           ~port:(signal : Signal.t)]
   | [ name ] ->
     let name =
-      if config.mangle_io_port_names
-      then Rtl_name.mangle_name rtl_name name
-      else (
-        Rtl_name.add_port_name rtl_name signal name;
-        name)
+      Rtl_name.Scope.add_port_name rtl_name signal name |> Rtl_name.legalize ~language
     in
     ( Signal.uid signal
     , { name = Rope.of_string name
@@ -373,10 +375,10 @@ let always_of_reg var_map (register : _ Signal.Type.Reg.Register.t) ~q ~d =
     Option.value_map
       register.reset
       ~default:clocked
-      ~f:(fun { reset; reset_edge; reset_to } ->
+      ~f:(fun { reset; reset_level; reset_to } ->
         let reset_to = q_of reset_to in
         If
-          { condition = Edge { edge = reset_edge; var = (find reset).read }
+          { condition = Level { level = reset_level; var = (find reset).read }
           ; on_true = [ reset_to ]
           ; on_false = [ clocked ]
           })
@@ -386,11 +388,15 @@ let always_of_reg var_map (register : _ Signal.Type.Reg.Register.t) ~q ~d =
       | Edge.Rising -> { edge = Rising; var = (find signal).read }
       | Falling -> { edge = Falling; var = (find signal).read }
     in
+    let edge_of_level = function
+      | Level.High -> Edge.Rising
+      | Low -> Falling
+    in
     Edges
       (List.filter_opt
          [ Some (at_edge register.clock.clock register.clock.clock_edge)
-         ; Option.map register.reset ~f:(fun { reset; reset_edge; _ } ->
-             at_edge reset reset_edge)
+         ; Option.map register.reset ~f:(fun { reset; reset_level; _ } ->
+             at_edge reset (edge_of_level reset_level))
          ])
   in
   Always { sensitivity_list; always = clock_and_reset }
@@ -440,15 +446,11 @@ let initial_of_multiport_mem ~multiport_memory_declaration ~initialize_to =
     }
 ;;
 
-let create_phantom_inputs ~(config : Rtl_config.t) ~rtl_name circuit =
+let create_phantom_inputs ~rtl_name language circuit =
   Circuit.phantom_inputs circuit
   |> List.map ~f:(fun (name, width) ->
     let name =
-      if config.mangle_io_port_names
-      then Rtl_name.mangle_name rtl_name name
-      else (
-        Rtl_name.add_phantom_port_name rtl_name name;
-        name)
+      Rtl_name.Scope.add_phantom_port_name rtl_name name |> Rtl_name.legalize ~language
     in
     { name = Rope.of_string name
     ; range = bit_or_vec width
@@ -464,7 +466,7 @@ let is_mux2 = function
   | _ -> false
 ;;
 
-let create_vars ~rtl_name internal =
+let create_vars ~rtl_name language internal =
   let rec f var_map shared_constants_map decls internal signals =
     match signals with
     | [] -> var_map, decls, internal
@@ -479,11 +481,13 @@ let create_vars ~rtl_name internal =
       in
       if Signal.Type.is_mem signal
       then (
-        let decl = Multiport_memory (declaration_of_multiport_memory ~rtl_name signal) in
+        let decl =
+          Multiport_memory (declaration_of_multiport_memory ~rtl_name language signal)
+        in
         add_to_decl_map signal decl)
       else if Signal.Type.is_inst signal
       then (
-        let decl = declaration_of_inst ~rtl_name signal in
+        let decl = declaration_of_inst ~rtl_name language signal in
         add_to_decl_map signal decl)
       else if Signal.Type.is_const signal && List.is_empty (Signal.names signal)
       then (
@@ -497,7 +501,9 @@ let create_vars ~rtl_name internal =
             internal
             signals
         | None ->
-          let decl = Logic (declaration_of_logic ~reg_or_wire:Wire ~rtl_name signal) in
+          let decl =
+            Logic (declaration_of_logic ~reg_or_wire:Wire ~rtl_name language signal)
+          in
           f
             (Map.add_exn var_map ~key:(Signal.uid signal) ~data:decl)
             (Map.add_exn shared_constants_map ~key:const ~data:decl)
@@ -512,7 +518,7 @@ let create_vars ~rtl_name internal =
           then Reg
           else Wire
         in
-        let decl = Logic (declaration_of_logic ~reg_or_wire ~rtl_name signal) in
+        let decl = Logic (declaration_of_logic ~reg_or_wire ~rtl_name language signal) in
         add_to_decl_map signal decl)
   in
   let map, decls, internal =
@@ -687,13 +693,15 @@ let create_statement ~(rtl_config : Rtl_config.t) ~language var_map (signal : Si
   | Inst { info = _; instantiation } ->
     let input_ports =
       List.map instantiation.inputs ~f:(fun { name = port_name; input_signal = signal } ->
-        { port_name; connection = (find ("Inst.input_port: " ^ port_name) signal).read })
+        { port_name = Rtl_name.legalize_bare_name port_name ~language
+        ; connection = (find ("Inst.input_port: " ^ port_name) signal).read
+        })
     in
     let output_ports =
       List.map
         instantiation.outputs
         ~f:(fun { name = port_name; output_width; output_low_index = low } ->
-          { port_name
+          { port_name = Rtl_name.legalize_bare_name port_name ~language
           ; connection = (find ("Inst.output_port: " ^ port_name) signal).read
           ; high = low + output_width - 1
           ; low
@@ -756,12 +764,14 @@ let create_outputs ~blackbox var_map outputs output_vars =
 ;;
 
 let of_circuit ~blackbox ~(language : Rtl_language.t) ~(config : Rtl_config.t) circuit =
-  let rtl_name = Rtl_name.create language in
+  let rtl_name = Rtl_name.Scope.create () in
   let module_name = Circuit.name circuit in
-  let inputs = Circuit.inputs circuit |> List.map ~f:(var_of_io_port ~config ~rtl_name) in
-  let phantom_inputs = create_phantom_inputs ~config ~rtl_name circuit in
+  let inputs =
+    Circuit.inputs circuit |> List.map ~f:(var_of_io_port ~rtl_name language)
+  in
+  let phantom_inputs = create_phantom_inputs ~rtl_name language circuit in
   let outputs = Circuit.outputs circuit in
-  let output_vars = List.map outputs ~f:(var_of_io_port ~config ~rtl_name) in
+  let output_vars = List.map outputs ~f:(var_of_io_port ~rtl_name language) in
   if blackbox
   then (
     let var_map = create_var_map inputs [] in
@@ -782,7 +792,7 @@ let of_circuit ~blackbox ~(language : Rtl_language.t) ~(config : Rtl_config.t) c
         signal_graph
         ~f:(is_internal_signal_of_circuit circuit)
     in
-    let var_map, declarations, internal = create_vars ~rtl_name internal in
+    let var_map, declarations, internal = create_vars ~rtl_name language internal in
     let var_map = add_io_vars ~var_map inputs in
     let statements = create_statements ~rtl_config:config ~language var_map internal in
     let outputs, var_map = create_outputs ~blackbox var_map outputs output_vars in

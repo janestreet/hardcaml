@@ -17,7 +17,7 @@ capture and print waveforms from Hardcaml simulations.
 ## Printing results as waveforms
 
 We can make a waveform with
-[`Waveform.create`](https://github.com/janestreet/hardcaml_waveterm/blob/with-extensions/cyclesim/hardcaml_waveterm_cyclesim.mli).
+[`Waveform.create`](https://github.com/janestreet/hardcaml_waveterm/blob/oxcaml/cyclesim/hardcaml_waveterm_cyclesim.mli).
 It takes as an argument a simulator and returns a waveform and modified simulator that
 captures the input and output port values.
 

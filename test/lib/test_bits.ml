@@ -207,6 +207,112 @@ let%expect_test "[Bits.of_bit_string]" =
     |}]
 ;;
 
+module%test Test_for_collection = struct
+  open Core
+
+  let gen_bits =
+    let open Quickcheck.Generator.Let_syntax in
+    let%bind width = Int.gen_incl 1 20 in
+    let%bind data = Int.gen_incl 0 ((1 lsl width) - 1) in
+    return (Bits.of_unsigned_int ~width data)
+  ;;
+
+  let gen_bits_list =
+    let open Quickcheck.Generator.Let_syntax in
+    let%bind cnt = Int.gen_incl 1 8 in
+    List.gen_with_length cnt gen_bits
+  ;;
+
+  let gen_bits_and_part_width =
+    let open Quickcheck.Generator.Let_syntax in
+    let%bind width = Int.gen_incl 1 40 in
+    let%bind data = Int.gen_incl 0 ((1 lsl min width 30) - 1) in
+    let%bind part_width = Int.gen_incl 1 width in
+    return (Bits.of_unsigned_int ~width data, part_width)
+  ;;
+
+  (* Test mux, mux_strict *)
+  let gen_mux_inputs =
+    let open Core.Quickcheck.Generator.Let_syntax in
+    let%bind sel_width = Int.gen_incl 1 4 in
+    let num_cases = 1 lsl sel_width in
+    let%bind sel_val = Int.gen_incl 0 (num_cases - 1) in
+    let%bind data_width = Int.gen_incl 1 16 in
+    let%bind cases =
+      List.gen_with_length num_cases (Int.gen_incl 0 ((1 lsl data_width) - 1))
+    in
+    return
+      ( Bits.of_unsigned_int ~width:sel_width sel_val
+      , List.map cases ~f:(fun v -> Bits.of_unsigned_int ~width:data_width v) )
+  ;;
+
+  module type For_collection = sig
+    include Bits.For_collection
+
+    val of_list : Bits.t list -> Bits.t collection
+    val to_list : Bits.t collection -> Bits.t list
+  end
+
+  let test (module For_collection : For_collection) =
+    Quickcheck.test gen_bits_list ~f:(fun values_list ->
+      let values_array = For_collection.of_list values_list in
+      let list_msb = Bits.concat_msb values_list in
+      [%test_result: Bits.t] (For_collection.concat_msb values_array) ~expect:list_msb;
+      let list_lsb = Bits.concat_lsb values_list in
+      [%test_result: Bits.t] (For_collection.concat_lsb values_array) ~expect:list_lsb);
+    Quickcheck.test gen_bits ~f:(fun bits ->
+      let list_msb = Bits.bits_msb bits in
+      let list_lsb = Bits.bits_lsb bits in
+      [%test_result: Bits.t list]
+        (For_collection.to_list (For_collection.bits_msb bits))
+        ~expect:list_msb;
+      [%test_result: Bits.t list]
+        (For_collection.to_list (For_collection.bits_lsb bits))
+        ~expect:list_lsb);
+    Quickcheck.test gen_bits_and_part_width ~f:(fun (bits, part_width) ->
+      let list_lsb = Bits.split_lsb ~exact:false ~part_width bits in
+      let list_msb = Bits.split_msb ~exact:false ~part_width bits in
+      [%test_result: Bits.t list]
+        (For_collection.to_list (For_collection.split_lsb ~exact:false ~part_width bits))
+        ~expect:list_lsb;
+      [%test_result: Bits.t list]
+        (For_collection.to_list (For_collection.split_msb ~exact:false ~part_width bits))
+        ~expect:list_msb);
+    Quickcheck.test gen_mux_inputs ~f:(fun (sel, cases_list) ->
+      let cases_array = For_collection.of_list cases_list in
+      let list_mux = Bits.mux sel cases_list in
+      let list_mux_strict = Bits.mux_strict sel cases_list in
+      [%test_result: Bits.t] (For_collection.mux sel cases_array) ~expect:list_mux;
+      [%test_result: Bits.t]
+        (For_collection.mux_strict sel cases_array)
+        ~expect:list_mux_strict)
+  ;;
+
+  let%expect_test "For_array" =
+    test
+      (module struct
+        type 'a collection = 'a array
+
+        let of_list = Array.of_list
+        let to_list = Array.to_list
+
+        include Bits.For_array
+      end)
+  ;;
+
+  let%expect_test "For_iarray" =
+    test
+      (module struct
+        type 'a collection = 'a iarray
+
+        let of_list = Iarray.of_list
+        let to_list = Iarray.to_list
+
+        include Bits.For_iarray
+      end)
+  ;;
+end
+
 module Primitive_op = struct
   type t =
     | Add

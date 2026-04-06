@@ -10,36 +10,51 @@ let%expect_test "Port names must be unique" =
 ;;
 
 let%expect_test "Port names must be legal" =
-  require_does_raise (fun () -> rtl_write_null [ output "a" (input "1^7" 1) ]);
+  require_does_raise (fun () -> rtl_write_null [ output "a" (input "1 7" 1) ]);
   [%expect
     {|
     ("Error while writing circuit"
       (circuit_name test)
       (hierarchy_path (test))
       (exn (
-        "[Illegal port name"
-        (name       1^7)
-        (legal_name _1_7)
-        (note       "Hardcaml will not change ports names.")
-        (port ((wire (names (1^7)) (width 1)))))))
+        "[Rtl_name]s must only contain printable characters and may not contain spaces or back slashes"
+        (identifier "1 7"))))
+    |}]
+;;
+
+let%expect_test "Port names can use extended identifiers" =
+  rtl_write_null [ output "a" (input "1^7" 1) ];
+  [%expect
+    {|
+    module test (
+        \1^7 ,
+        a
+    );
+
+        input \1^7 ;
+        output a;
+
+        assign a = \1^7 ;
+
+    endmodule
     |}]
 ;;
 
 let%expect_test "Port name clashes with reserved name" =
-  require_does_raise (fun () -> rtl_write_null [ output "generate" (input "x" 1) ]);
+  rtl_write_null [ output "generate" (input "x" 1) ];
   [%expect
     {|
-    ("Error while writing circuit"
-      (circuit_name test)
-      (hierarchy_path (test))
-      (exn (
-        "Port name has already been defined"
-        (name generate)
-        (port ((
-          wire
-          (names (generate))
-          (width   1)
-          (data_in x)))))))
+    module test (
+        x,
+        \generate
+    );
+
+        input x;
+        output \generate ;
+
+        assign \generate  = x;
+
+    endmodule
     |}]
 ;;
 
@@ -183,4 +198,66 @@ let%expect_test "multiple circuits - inner component is shared" =
 let%expect_test "same name in multiple top level circuits" =
   require_does_raise (fun () -> test_multiple_circuits [ "top"; "top" ]);
   [%expect {| ("Top level circuit name has already been used" (name top)) |}]
+;;
+
+let%expect_test "Instantiations are written with extended identifiers" =
+  let x = input "x&x" 1 in
+  let b =
+    let inst =
+      Instantiation.create () ~name:"inside" ~inputs:[ "a&a", x ] ~outputs:[ "b&b", 1 ]
+    in
+    Instantiation.output inst "b&b"
+  in
+  let y = output "y&y" b in
+  Circuit.create_exn ~name:"example" [ y ] |> Rtl.print Verilog;
+  [%expect
+    {|
+    module example (
+        \x&x ,
+        \y&y
+    );
+
+        input \x&x ;
+        output \y&y ;
+
+        wire _4;
+        wire _2;
+        inside
+            the_inside
+            ( .\a&a (\x&x ),
+              .\b&b (_4) );
+        assign _2 = _4;
+        assign \y&y  = _2;
+
+    endmodule
+    |}];
+  Circuit.create_exn ~name:"example" [ y ] |> Rtl.print Vhdl;
+  [%expect
+    {|
+    library ieee;
+    use ieee.std_logic_1164.all;
+    use ieee.numeric_std.all;
+
+    entity example is
+        port (
+            \x&x\ : in std_logic;
+            \y&y\ : out std_logic
+        );
+    end entity;
+
+    architecture rtl of example is
+
+        signal \_4\ : std_logic;
+        signal \_2\ : std_logic;
+
+    begin
+
+        the_inside: entity work.inside (rtl)
+            port map ( \a&a\ => \x&x\,
+                       \b&b\ => \_4\ );
+        \_2\ <= \_4\;
+        \y&y\ <= \_2\;
+
+    end architecture;
+    |}]
 ;;

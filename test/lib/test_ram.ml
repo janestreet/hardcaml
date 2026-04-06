@@ -14,22 +14,22 @@ let%expect_test "simple dual port" =
   let sim = Sim.create (Sdp.create scope) in
   let waves, sim = Waveform.create sim in
   let inputs = Cyclesim.inputs sim in
-  let open Bits in
+  let open Cyclesim.Sim_bits in
   let cycle () =
     Cyclesim.cycle sim;
-    inputs.port_a.write := gnd;
-    inputs.port_b.write := gnd;
-    inputs.port_a.enable := gnd;
-    inputs.port_b.enable := gnd
+    inputs.port_a.write <-- gnd;
+    inputs.port_b.write <-- gnd;
+    inputs.port_a.enable <-- gnd;
+    inputs.port_b.enable <-- gnd
   in
   let write (port : _ Sdp.Port.t) address data =
-    port.write := vdd;
-    port.enable := vdd;
+    port.write <-- vdd;
+    port.enable <-- vdd;
     port.address <--. address;
     port.data <--. data
   in
   let read (port : _ Sdp.Port.t) address =
-    port.enable := vdd;
+    port.enable <-- vdd;
     port.address <--. address
   in
   (* write on port a *)

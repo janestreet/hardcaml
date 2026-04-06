@@ -13,11 +13,12 @@ module type S = sig
   type signal [@@deriving sexp_of]
 
   (** Create a [Reg_spec.t]. You must at a minimum provide a clock. [clear] and [reset]
-      are optional. The [clock_edge] and [reset_edge] default to [Rising]. *)
+      are optional. [clock_edge] defaults to [Rising] and [reset_level] defaults to
+      [High]. *)
   val create
     :  ?clock_edge:Edge.t
     -> ?reset:signal
-    -> ?reset_edge:Edge.t
+    -> ?reset_level:Level.t
     -> ?clear:signal
     -> unit
     -> clock:signal
@@ -28,7 +29,7 @@ module type S = sig
     :  ?clock:signal
     -> ?clock_edge:Edge.t
     -> ?reset:signal
-    -> ?reset_edge:Edge.t
+    -> ?reset_level:Level.t
     -> ?clear:signal
     -> t
     -> t
@@ -37,7 +38,7 @@ module type S = sig
   val clock_edge : t -> Edge.t
   val reset : t -> signal option
   val reset_exn : t -> signal
-  val reset_edge : t -> Edge.t
+  val reset_level : t -> Level.t
   val clear : t -> signal option
   val clear_exn : t -> signal
 end

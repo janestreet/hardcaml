@@ -310,7 +310,7 @@ let to_signal_type_reg_spec (spec : Reg_spec_.t) =
   { Signal__type.clock = Reg_spec_.clock spec
   ; clock_edge = Reg_spec_.clock_edge spec
   ; reset = Reg_spec_.reset spec
-  ; reset_edge = Reg_spec_.reset_edge spec
+  ; reset_level = Reg_spec_.reset_level spec
   ; clear = Reg_spec_.clear spec
   }
 ;;

@@ -430,7 +430,7 @@ let%expect_test "structural rtl reg components" =
             ~clock
             ~clock_edge:Falling
             ~reset
-            ~reset_edge:Falling
+            ~reset_level:Low
             ~clear
             ~clear_to:(ones 8)
             ~enable
@@ -469,7 +469,7 @@ let%expect_test "structural rtl reg components" =
       assign q1 = _13;
       assign q2 = _17;
       assign q3 = _21;
-      hardcaml_lib_reg_1_rr_X_X _11
+      hardcaml_lib_reg_1_rh_X_X _11
       (
         .clock(clock),
         .reset(_2),
@@ -479,7 +479,7 @@ let%expect_test "structural rtl reg components" =
         .d(d1),
         .q(_10)
       );
-      hardcaml_lib_reg_8_rr_11111111_X _15
+      hardcaml_lib_reg_8_rh_11111111_X _15
       (
         .clock(clock),
         .reset(reset),
@@ -489,7 +489,7 @@ let%expect_test "structural rtl reg components" =
         .d(d8),
         .q(_13)
       );
-      hardcaml_lib_reg_1_rr_X_X _18
+      hardcaml_lib_reg_1_rh_X_X _18
       (
         .clock(clock),
         .reset(_2),
@@ -499,7 +499,7 @@ let%expect_test "structural rtl reg components" =
         .d(d1),
         .q(_17)
       );
-      hardcaml_lib_reg_8_ff_X_X _22
+      hardcaml_lib_reg_8_fl_X_X _22
       (
         .clock(clock),
         .reset(reset),
@@ -515,7 +515,7 @@ let%expect_test "structural rtl reg components" =
   |> Set.iter ~f:(fun c -> Structural_rtl_component.rtl_circuit c |> Rtl.print Verilog);
   [%expect
     {|
-    module hardcaml_lib_reg_1_rr_X_X (
+    module hardcaml_lib_reg_1_rh_X_X (
         enable,
         clear_to,
         clear,
@@ -549,7 +549,7 @@ let%expect_test "structural rtl reg components" =
         assign q = _9;
 
     endmodule
-    module hardcaml_lib_reg_8_ff_X_X (
+    module hardcaml_lib_reg_8_fl_X_X (
         enable,
         clear_to,
         clear,
@@ -583,7 +583,7 @@ let%expect_test "structural rtl reg components" =
         assign q = _9;
 
     endmodule
-    module hardcaml_lib_reg_8_rr_11111111_X (
+    module hardcaml_lib_reg_8_rh_11111111_X (
         enable,
         clear_to,
         clear,

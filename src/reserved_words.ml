@@ -131,7 +131,7 @@ let verilog =
        xor |}
 ;;
 
-let vhdl =
+let vhdl_keywords =
   keywords
     {| abs
        access
@@ -229,6 +229,25 @@ let vhdl =
        xnor
        xor |}
 ;;
+
+let vhdl_types_and_functions =
+  keywords
+    {| to_integer
+       to_stdlogic
+       to_stdlogicvector
+       to_bit
+       to_bitvector
+       integer
+       boolean
+       string
+       std_logic
+       bit_vector
+       std_logic_vector
+       unsigned
+       signed |}
+;;
+
+let vhdl = List.concat [ vhdl_keywords; vhdl_types_and_functions ]
 
 (* From the OCaml source code: src/parsing/lexer.mll:38 *)
 let ocaml =

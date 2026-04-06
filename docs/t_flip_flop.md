@@ -74,7 +74,7 @@ end architecture;
   let t_flip_flop_1 ~clock ~reset_n ~t =
     let q =
       Always.Variable.reg
-        (Reg_spec.create ~clock ~reset:reset_n ~reset_edge:Falling ())
+        (Reg_spec.create ~clock ~reset:reset_n ~reset_level:Low ())
         ~width:1
     in
     Always.(compile [ if_ t [ q <-- ~:(q.value) ] [ q <-- q.value ] ]);
@@ -88,7 +88,7 @@ end architecture;
 ```ocaml
   let t_flip_flop_2 ~clock ~reset_n ~t =
     reg_fb
-      (Reg_spec.create ~clock ~reset:reset_n ~reset_edge:Falling ())
+      (Reg_spec.create ~clock ~reset:reset_n ~reset_level:Low ())
       ~width:1
       ~enable:t
       ~f:( ~: )

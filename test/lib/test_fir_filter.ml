@@ -38,20 +38,21 @@ let%expect_test "testbench" =
   let module S = Cyclesim in
   let sim = G.create (f (List.map ~f:(Signal.of_int_trunc ~width:16) [ 3; 5; 2; 1 ])) in
   let i, o = S.inputs sim, S.outputs sim in
+  let open Cyclesim.Sim_bits in
   S.reset sim;
-  i.enable := Bits.vdd;
-  i.d := Bits.of_int_trunc ~width:16 1;
+  i.enable <-- vdd;
+  i.d <-- of_int_trunc ~width:16 1;
   S.cycle sim;
-  print_s [%message "" ~q:(Bits.to_int_trunc !(o.q) : int)];
-  i.d := Bits.of_int_trunc ~width:16 2;
+  print_s [%message "" ~q:(to_int_trunc o.q : int)];
+  i.d <-- of_int_trunc ~width:16 2;
   S.cycle sim;
-  print_s [%message "" ~q:(Bits.to_int_trunc !(o.q) : int)];
-  i.d := Bits.of_int_trunc ~width:16 1;
+  print_s [%message "" ~q:(to_int_trunc o.q : int)];
+  i.d <-- of_int_trunc ~width:16 1;
   S.cycle sim;
-  print_s [%message "" ~q:(Bits.to_int_trunc !(o.q) : int)];
-  i.d := Bits.of_int_trunc ~width:16 3;
+  print_s [%message "" ~q:(to_int_trunc o.q : int)];
+  i.d <-- of_int_trunc ~width:16 3;
   S.cycle sim;
-  print_s [%message "" ~q:(Bits.to_int_trunc !(o.q) : int)];
+  print_s [%message "" ~q:(to_int_trunc o.q : int)];
   [%expect
     {|
     (q 1)

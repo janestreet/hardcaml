@@ -154,7 +154,7 @@ semantic interpretation of the result differs.
 
 The following describes several key functions. See the
 documentation for
-[`Comb.S`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/comb_intf.ml)
+[`Comb.S`](https://github.com/janestreet/hardcaml/blob/oxcaml/src/comb_intf.ml)
 for other useful functions.
 
 ## Arithmetic

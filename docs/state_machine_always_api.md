@@ -9,10 +9,10 @@
 
 # Writing State Machines
 
-The [Always DSL](https://github.com/janestreet/hardcaml/blob/with-extensions/src/always_intf.ml)
+The [Always DSL](https://github.com/janestreet/hardcaml/blob/oxcaml/src/always_intf.ml)
 is most commonly used to construct state machines or
 non-trivial sequential logic. Hardcaml is shipped with an
-[`Always.State_machine`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/always_intf.ml)
+[`Always.State_machine`](https://github.com/janestreet/hardcaml/blob/oxcaml/src/always_intf.ml)
 module to help create state machines.
 
 A state machine is constructed with the following function:
@@ -120,7 +120,7 @@ assignment.
 
 ## Simulation
 
-[Simulating](https://github.com/janestreet/hardcaml/blob/with-extensions/src/cyclesim_intf.ml)
+[Simulating](https://github.com/janestreet/hardcaml/blob/oxcaml/src/cyclesim_intf.ml)
 a state machine is no different from simulating any other
 Hardcaml circuit. Let's walk through an example to see the
 Always DSL in action.
@@ -165,7 +165,7 @@ Always DSL in action.
 # Metaprogramming with the Always DSL
 
 As mentioned above, the
-[Always DSL](https://github.com/janestreet/hardcaml/blob/with-extensions/src/always_intf.ml)
+[Always DSL](https://github.com/janestreet/hardcaml/blob/oxcaml/src/always_intf.ml)
 is simply an `Always.t list`. The gives room for several creative behaviors.
 
 ## Function abstractions

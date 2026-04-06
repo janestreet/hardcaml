@@ -12,7 +12,7 @@ module Make (Signal : Signal) = struct
     { clock : signal
     ; clock_edge : Edge.t
     ; reset : signal option
-    ; reset_edge : Edge.t
+    ; reset_level : Level.t
     ; clear : signal option
     }
   [@@deriving fields ~getters, sexp_of]
@@ -27,7 +27,7 @@ module Make (Signal : Signal) = struct
 
   let assert_non_empty_or_option typ_ t = Option.iter t ~f:(assert_non_empty typ_)
 
-  let validate { clock; clock_edge = _; reset; reset_edge = _; clear } =
+  let validate { clock; clock_edge = _; reset; reset_level = _; clear } =
     assert_non_empty "clock" clock;
     assert_non_empty_or_option "reset" reset;
     assert_non_empty_or_option "clear" clear
@@ -36,17 +36,17 @@ module Make (Signal : Signal) = struct
   let create
     ?(clock_edge = Edge.Rising)
     ?reset
-    ?(reset_edge = Edge.Rising)
+    ?(reset_level = Level.High)
     ?clear
     ()
     ~clock
     =
-    let t = { clock; clock_edge; reset; reset_edge; clear } in
+    let t = { clock; clock_edge; reset; reset_level; clear } in
     validate t;
     t
   ;;
 
-  let override ?clock ?clock_edge ?reset ?reset_edge ?clear (spec : t) =
+  let override ?clock ?clock_edge ?reset ?reset_level ?clear (spec : t) =
     let t =
       { clock =
           (match clock with
@@ -57,7 +57,7 @@ module Make (Signal : Signal) = struct
           (match reset with
            | None -> spec.reset
            | Some reset -> Some reset)
-      ; reset_edge = Option.value reset_edge ~default:spec.reset_edge
+      ; reset_level = Option.value reset_level ~default:spec.reset_level
       ; clear =
           (match clear with
            | None -> spec.clear

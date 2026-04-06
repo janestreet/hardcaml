@@ -3,4 +3,4 @@
  (public_name hardcaml.ppx_hardcaml_runtime0)
  (libraries core)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

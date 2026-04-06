@@ -3,7 +3,7 @@
 Hardcaml can be installed with opam. We highly recommend using Hardcaml with OxCaml (a
 bleeding-edge OCaml compiler), which includes some Jane Street compiler extensions and
 maintains the latest version of Hardcaml. Note that when looking at Hardcaml GitHub
-repositories, the OxCaml version is in a branch named `with-extensions`.
+repositories, the OxCaml version is in a branch named `oxcaml`.
 
 Install [opam, the OxCaml compiler, and some basic developer
 tools](https://oxcaml.org/get-oxcaml/) to get started.

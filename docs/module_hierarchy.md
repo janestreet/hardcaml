@@ -10,7 +10,7 @@
 *Prerequisite: [Hardcaml interfaces](hardcaml_interfaces.md)*
 
 In Hardcaml, module
-[hierarchy](https://github.com/janestreet/hardcaml/blob/with-extensions/src/hierarchy.mli) allows
+[hierarchy](https://github.com/janestreet/hardcaml/blob/oxcaml/src/hierarchy.mli) allows
 us to partition a design into a tree of sub-circuits, each generated as its own Verilog or
 VHDL module when producing RTL output.
 

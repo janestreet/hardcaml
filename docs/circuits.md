@@ -10,7 +10,7 @@
 -->
 
 A Hardcaml
-[`Circuit.t`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/circuit.mli) encodes
+[`Circuit.t`](https://github.com/janestreet/hardcaml/blob/oxcaml/src/circuit.mli) encodes
 both the RTL logic for a hardware design along with named input and output ports. Circuits
 can be converted into various different forms:
 

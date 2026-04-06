@@ -23,4 +23,4 @@
  (deps)
  (action
   (bash
-    "cat <<EOF > tools_config.ml\nlet iverilog = \"iverilog\"\nlet ghdl = \"ghdl\"\nlet verilator_v4 = \"verilator\"\nlet verilator_v5 = \"verilator\"\nlet default_verilator_version = 4\nlet minisat = \"minisat\"\nlet picosat = \"picosat\"\nlet z3 = \"z3\"\nlet nusmv = \"NuSMV\"\nlet yosys = \"yosys\"\nEOF")))
+    "cat <<EOF > tools_config.ml\nlet iverilog = \"iverilog\"\nlet ghdl = \"ghdl\"\nlet verilator = \"verilator\"\nlet minisat = \"minisat\"\nlet picosat = \"picosat\"\nlet z3 = \"z3\"\nlet nusmv = \"NuSMV\"\nlet yosys = \"yosys\"\nEOF")))

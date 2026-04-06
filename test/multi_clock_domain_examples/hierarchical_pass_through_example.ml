@@ -66,9 +66,7 @@ module Dut = struct
   ;;
 end
 
-module Harness =
-  Hardcaml_test_harness.Step_harness.Imperative.Make_effectful (Dut.I) (Dut.O)
-
+module Harness = Hardcaml_test_harness.Step_harness.Imperative.Make (Dut.I) (Dut.O)
 module Step = Harness.Step
 module Display_rule = Hardcaml_waveterm.Display_rule
 
@@ -101,20 +99,20 @@ let test ?(wave_width = 0) ~fast_period () =
     (fun h sim ->
       let inputs = Cyclesim.inputs sim in
       let task_in_fast_clock =
-        Step.spawn h ~period:fast_period (fun h () ->
+        Step.spawn h ~period:fast_period (fun h ->
           for _ = 0 to 8 do
-            Step.cycle h ();
+            Step.cycle h;
             inputs.fast_incr := Bits.vdd;
-            Step.cycle h ();
+            Step.cycle h;
             inputs.fast_incr := Bits.gnd
           done)
       in
       let task_in_slow_clock =
-        Step.spawn h ~period:slow_period (fun h () ->
+        Step.spawn h ~period:slow_period (fun h ->
           for _ = 0 to 4 do
-            Step.cycle h ();
+            Step.cycle h;
             inputs.slow_incr := Bits.vdd;
-            Step.cycle h ();
+            Step.cycle h;
             inputs.slow_incr := Bits.gnd
           done)
       in

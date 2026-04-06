@@ -83,9 +83,9 @@ val trace_properties : t -> bool
 (** [naming_scheme t] returns the {!Naming.t} that [t] was constructed with. *)
 val naming_scheme : t -> Naming_scheme.t
 
-(** [name ?sep t signal string] creates a heirarchical name based on the path of [t] and
+(** [name ?sep t signal string] creates a hierarchical name based on the path of [t] and
     [string]. [sep], when provided, determines the separator for path components in the
-    heirarchical name (default is [$]). *)
+    hierarchical name (default is [$]). *)
 val name : ?sep:string -> t -> string -> string
 
 (** Return the current (mangled) instance name. The top level module has no instance name,

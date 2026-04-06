@@ -114,7 +114,7 @@ module Structural_rtl_component = struct
       | Reg of
           { name : string
           ; clock_edge : Edge.t
-          ; reset_edge : Edge.t
+          ; reset_level : Level.t
           ; reset_to : Bits.t option
           ; initialize_to : Bits.t option
           ; width : int
@@ -144,7 +144,7 @@ module Structural_rtl_component = struct
     | Mul { signed = true; name; width_a; width_b } ->
       Circuit.create_exn ~name [ output "o" (input "i0" width_a *+ input "i1" width_b) ]
     | Not { name; width } -> Circuit.create_exn ~name [ output "o" ~:(input "i" width) ]
-    | Reg { name; clock_edge; reset_edge; reset_to; initialize_to; width } ->
+    | Reg { name; clock_edge; reset_level; reset_to; initialize_to; width } ->
       Circuit.create_exn
         ~name
         [ output
@@ -154,7 +154,7 @@ module Structural_rtl_component = struct
                   ~clock:(input "clock" 1)
                   ~clock_edge
                   ~reset:(input "reset" 1)
-                  ~reset_edge
+                  ~reset_level
                   ~clear:(input "clear" 1)
                   ())
                ~enable:(input "enable" 1)
@@ -662,7 +662,7 @@ module Lib () = struct
     ?initialize_to
     ?(clock_edge = Edge.Rising)
     ?reset
-    ?(reset_edge = Edge.Rising)
+    ?(reset_level = Level.High)
     ?reset_to
     ?clear
     ?clear_to
@@ -676,6 +676,13 @@ module Lib () = struct
       ;;
     end
     in
+    let module L = struct
+      let to_string = function
+        | Level.High -> "h"
+        | Low -> "l"
+      ;;
+    end
+    in
     let module B = struct
       let to_string = function
         | None -> "X"
@@ -686,9 +693,9 @@ module Lib () = struct
     let wd = width data in
     let or_gnd = Option.value ~default:gnd in
     let or_vdd = Option.value ~default:vdd in
-    let or_edge = function
-      | Edge.Rising -> or_gnd
-      | Falling -> or_vdd
+    let or_level = function
+      | Level.High -> or_gnd
+      | Low -> or_vdd
     in
     let or_zero = function
       | None -> zero wd
@@ -697,7 +704,7 @@ module Lib () = struct
     let q = mk_wire wd in
     let i =
       [ "clock" ==> clock
-      ; "reset" ==> or_edge reset_edge reset
+      ; "reset" ==> or_level reset_level reset
       ; "clear" ==> or_gnd clear
       ; "clear_to" ==> or_zero clear_to
       ; "enable" ==> or_vdd enable
@@ -708,10 +715,10 @@ module Lib () = struct
     let name =
       let name = "reg" in
       [%string
-        "%{prefix}%{name}_%{wd#Int}_%{clock_edge#E}%{reset_edge#E}_%{reset_to#B}_%{initialize_to#B}"]
+        "%{prefix}%{name}_%{wd#Int}_%{clock_edge#E}%{reset_level#L}_%{reset_to#B}_%{initialize_to#B}"]
     in
     add_structural_rtl_component
-      (Reg { name; clock_edge; reset_edge; initialize_to; reset_to; width = width data });
+      (Reg { name; clock_edge; reset_level; initialize_to; reset_to; width = width data });
     inst name ~i ~o;
     q
   ;;

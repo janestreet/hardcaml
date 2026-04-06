@@ -1,7 +1,6 @@
 [@@@ocaml.flambda_o3]
 
 open! Core0
-open Cyclesim
 module Out_channel = Stdio.Out_channel
 
 let vcdcycle = 10
@@ -396,11 +395,11 @@ let wrap chan sim =
          nonexistent node, handle this case by ignoring it. *)
       |> Option.value_map ~default:[] ~f:(fun s ->
         List.map mangled_names ~f:(fun name ->
-          create_var ~wave_format name (Node.width_in_bits s) s)))
+          create_var ~wave_format name (Cyclesim.Node.width_in_bits s) s)))
   in
-  let trace_in = trace (in_ports sim) in
-  let trace_out = trace (out_ports sim ~clock_edge:Before) in
-  let trace_internal = trace_internal (traced sim).internal_signals in
+  let trace_in = trace (Cyclesim.in_ports sim) in
+  let trace_out = trace (Cyclesim.out_ports sim ~clock_edge:Before) in
+  let trace_internal = trace_internal (Cyclesim.traced sim).internal_signals in
   (* filter out 'clock' and 'reset' *)
   let trace_in =
     List.filter trace_in ~f:(fun s ->
@@ -465,17 +464,19 @@ let wrap chan sim =
         write_var_fast t.var (Bits.to_bstr !(t.data));
         Bits.Mutable.copy_bits ~src:!(t.data) ~dst:t.prev));
     List.iter trace_internal ~f:(fun t ->
-      if !first || not (Node.equal_bits_mutable t.data t.prev)
+      if !first || not (Cyclesim.Node.equal_bits_mutable t.data t.prev)
       then (
         let bits = Cyclesim.Node.to_bits t.data in
         (match t.var.wave_format with
          | Binary -> write_var_fast t.var (Bits.to_bstr bits)
          | _ -> Var.write_bits chan t.var bits);
-        Node.to_bits_mutable t.data t.prev));
+        Cyclesim.Node.to_bits_mutable t.data t.prev));
     write_time chan (!time + (vcdcycle / 2));
     write_var_fast clock "0";
     first := false;
     time := !time + vcdcycle
   in
-  Private.modify sim [ After, Reset, write_reset; Before, At_clock_edge, write_cycle ]
+  Cyclesim.Private.modify
+    sim
+    [ After, Reset, write_reset; Before, At_clock_edge, write_cycle ]
 ;;

@@ -45,7 +45,7 @@ somewhat (i.e. the `List.map` function may or may not take a labeled function ar
 ## `Comb.S`, `Bits`, and `Signal`
 
 The module type
-[`Comb.S`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/comb_intf.ml)
+[`Comb.S`](https://github.com/janestreet/hardcaml/blob/oxcaml/src/comb_intf.ml)
 defines the [combinational logic](combinational_logic.md) primitives
 (i.e., logical operations, arithmetic, multiplexers, etc.) for Hardcaml.
 It is implemented by both the `Bits` and `Signal` modules. All
@@ -53,7 +53,7 @@ operations work over vectors with a given bit width. Each operation
 has rules about allowable argument widths and will raise an exception at
 run-time if violated.
 
-[`Bits`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/bits_intf.ml)
+[`Bits`](https://github.com/janestreet/hardcaml/blob/oxcaml/src/bits_intf.ml)
 implements a shallow embedding of the `Comb.S` API. This means
 it is used to compute values directly.
 
@@ -73,7 +73,7 @@ val adder : t -> t -> t = <fun>
 - : t = 11
 ```
 
-[`Signal`](https://github.com/janestreet/hardcaml/blob/with-extensions/src/signal_intf.ml)
+[`Signal`](https://github.com/janestreet/hardcaml/blob/oxcaml/src/signal_intf.ml)
 implements a deep embedding. This means it records the structure of a
 computation as a graph.
 

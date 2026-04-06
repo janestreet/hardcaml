@@ -12,6 +12,12 @@ module type S = sig
   val optimize_for_same_clock_rate_and_always_reading : bool
 end
 
+module Fifo_memory_type = struct
+  type t =
+    | Distributed
+    | Registers
+end
+
 module Make (M : S) = struct
   open Clocked_design
   open Signal
@@ -60,7 +66,7 @@ module Make (M : S) = struct
     ;;
   end
 
-  module Async_distributed_ram = struct
+  module Ram = struct
     type t =
       { clock_write : Signal.t
       ; clock_read : Signal.t
@@ -73,7 +79,7 @@ module Make (M : S) = struct
       ; read_address : Signal.t
       }
 
-    let create_clocked ~name ~clock_write ~clock_read =
+    let create_clocked ~(memory_type : Fifo_memory_type.t) ~name ~clock_write ~clock_read =
       let read_dom = Signal.get_domain clock_read in
       let write_dom = Signal.get_domain clock_write in
       let write_data = Signal.wire M.width ~dom:write_dom in
@@ -83,7 +89,11 @@ module Make (M : S) = struct
       let multiport_mem =
         Signal.multiport_memory
           ~name
-          ~attributes:[ Rtl_attribute.Vivado.Ram_style.distributed ]
+          ~attributes:
+            [ (match memory_type with
+               | Distributed -> Rtl_attribute.Vivado.Ram_style.distributed
+               | Registers -> Rtl_attribute.Vivado.Ram_style.registers)
+            ]
           ~write_ports:
             [| { write_clock = clock_write
                ; write_data
@@ -137,6 +147,7 @@ module Make (M : S) = struct
     ?(use_synchronous_clear_semantics = false)
     ?(use_negedge_sync_chain = false)
     ?(sync_stages = 2)
+    ?(memory_type = Fifo_memory_type.Distributed)
     ?scope
     (i : _ I.t)
     =
@@ -257,10 +268,11 @@ module Make (M : S) = struct
       current |: one_ahead |: two_ahead_if_possible
     in
     let ram =
-      Async_distributed_ram.create_clocked
+      Ram.create_clocked
         ~name:(Option.value_map scope ~default:"ram" ~f:(fun s -> Scope.name s "ram"))
         ~clock_write:i.clock_write
         ~clock_read:i.clock_read
+        ~memory_type
     in
     let raddr_rd_next =
       let read_enable =
@@ -300,11 +312,11 @@ module Make (M : S) = struct
         ; (* @(posedge clk_write) *)
           when_
             (i.write_enable &: ~:full)
-            [ Async_distributed_ram.write ram ~address:waddr_wd.value ~data:i.data_in
+            [ Ram.write ram ~address:waddr_wd.value ~data:i.data_in
             ; waddr_wd <-- gray_inc ~by:1 waddr_wd.value
             ]
         ; (* @(posedge clk_read) *)
-          data_out <-- Async_distributed_ram.read ram ~address:raddr_rd_next
+          data_out <-- Ram.read ram ~address:raddr_rd_next
         ; (* @(posedge clk_read) *)
           raddr_rd <-- raddr_rd_next
         ]);
@@ -361,6 +373,7 @@ module Make (M : S) = struct
     ?name
     ?use_negedge_sync_chain
     ?sync_stages
+    ?memory_type
     ?scope
     input
     =
@@ -379,6 +392,7 @@ module Make (M : S) = struct
           ~use_synchronous_clear_semantics
           ?use_negedge_sync_chain
           ?sync_stages
+          ?memory_type
           ~scope
           input)
       input
@@ -409,13 +423,21 @@ module Make (M : S) = struct
       ~how_to_instantiate:Inlined
   ;;
 
-  let hierarchical ?(name = base_name) ?use_negedge_sync_chain ?sync_stages scope i =
+  let hierarchical
+    ?(name = base_name)
+    ?use_negedge_sync_chain
+    ?sync_stages
+    ?memory_type
+    scope
+    i
+    =
     make_create_or_hierarchical_basic
       ~how_to_instantiate:Hierarchical_or_inlined_by_scope
       ~use_synchronous_clear_semantics:false
       ~name
       ?use_negedge_sync_chain
       ?sync_stages
+      ?memory_type
       ~scope
       i
   ;;

@@ -12,6 +12,7 @@ comparison.
    * 1.1 [Why Hardcaml](why.md)
    * 1.2 [Installing the opensource release](installing_with_opam.md)
    * 1.3 [Quick overview](quick_overview.md)
+   * 1.4 [FAQ](faq.md)
 2. [Designing Circuits](designing_circuits.md)
    * 2.1 [Combinational Logic](combinational_logic.md)
        - 2.1.1 [ROM](rom.md)

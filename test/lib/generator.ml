@@ -103,13 +103,7 @@ and gen_register width depth inputs =
   (* cyclesim only supports global reset signal *)
   let%bind reset_to = gen_bits width in
   let reg_spec =
-    Reg_spec.create
-      ~clock
-      ~clock_edge:Rising
-      ?reset:reset_sig
-      ~reset_edge:Rising
-      ?clear
-      ()
+    Reg_spec.create ~clock ~clock_edge:Rising ?reset:reset_sig ~reset_level:High ?clear ()
   in
   (* reg_fb *)
   let d = wire width in

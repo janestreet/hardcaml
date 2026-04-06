@@ -251,11 +251,11 @@ let%expect_test "reg r_async" =
     {|
     (register
       (width 1)
-      ((clock      clock)
-       (clock_edge Rising)
-       (reset      reset)
-       (reset_edge Rising)
-       (reset_to   0b0))
+      ((clock       clock)
+       (clock_edge  Rising)
+       (reset       reset)
+       (reset_level High)
+       (reset_to    0b0))
       (data_in a))
     |}]
 ;;
@@ -283,13 +283,13 @@ let%expect_test "reg r_full" =
     {|
     (register
       (width 1)
-      ((clock      clock)
-       (clock_edge Rising)
-       (reset      reset)
-       (reset_edge Rising)
-       (reset_to   0b0)
-       (clear      clear)
-       (clear_to   0b0))
+      ((clock       clock)
+       (clock_edge  Rising)
+       (reset       reset)
+       (reset_level High)
+       (reset_to    0b0)
+       (clear       clear)
+       (clear_to    0b0))
       (data_in a))
     |}]
 ;;

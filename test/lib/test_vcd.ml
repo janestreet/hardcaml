@@ -3,8 +3,6 @@
 open! Import
 
 let%expect_test "simple vcd file" =
-  let module Sim = Cyclesim in
-  let module S = Cyclesim in
   let open Signal in
   let reg_spec = Reg_spec.create () ~clock ~clear in
   let a, b = input "a" 8, input "b" 8 in
@@ -13,14 +11,15 @@ let%expect_test "simple vcd file" =
   in
   let c, d = output "c" c, output "d" d in
   let circ = Circuit.create_exn ~name:"test" [ c; d ] in
-  let sim = Sim.create circ in
+  let sim = Cyclesim.create circ in
   let sim = Vcd.wrap Stdio.stdout sim in
-  let a, b = S.in_port sim "a", S.in_port sim "b" in
+  let a, b = Cyclesim.in_port sim "a", Cyclesim.in_port sim "b" in
+  let open Cyclesim.Sim_bits in
   for i = 0 to 2 do
     for j = 0 to 2 do
-      a := Bits.of_int_trunc ~width:8 (i * 10);
-      b := Bits.of_int_trunc ~width:8 (j * 10);
-      S.cycle sim
+      a <-- of_int_trunc ~width:8 (i * 10);
+      b <-- of_int_trunc ~width:8 (j * 10);
+      Cyclesim.cycle sim
     done
   done;
   [%expect
@@ -250,8 +249,6 @@ let%expect_test "validate generated identifiers" =
 ;;
 
 let%expect_test "test with wide signals to ensure byte comparison works properly" =
-  let module Sim = Cyclesim in
-  let module S = Cyclesim in
   let open Signal in
   let ports = [ "a", 127; "b", 128 ] in
   (* Prevent the input from being optimized out *)
@@ -263,10 +260,10 @@ let%expect_test "test with wide signals to ensure byte comparison works properly
     |> output "out"
   in
   let circ = Circuit.create_exn ~name:"test" [ output ] in
-  let sim = Sim.create circ in
+  let sim = Cyclesim.create circ in
   let sim = Vcd.wrap Stdio.stdout sim in
   List.iter ports ~f:(fun (name, width) ->
-    let port = S.in_port sim name in
+    let port = Cyclesim.in_port sim name in
     let values =
       [ Bits.ones width
       ; Bits.zero width
@@ -284,8 +281,8 @@ let%expect_test "test with wide signals to ensure byte comparison works properly
     List.iter values ~f:(fun value ->
       port := value;
       (* Cycle twice to make sure the signal is only printed to the VCD when it changes *)
-      S.cycle sim;
-      S.cycle sim));
+      Cyclesim.cycle sim;
+      Cyclesim.cycle sim));
   (* This VCD should demonstrate the following behavior:
      - Signals are initialized to X
      - For the first signal, the following updates are seen (with one cycle of no updates
@@ -513,8 +510,6 @@ let%expect_test "test with wide signals to ensure byte comparison works properly
 ;;
 
 let%expect_test "custom wave format to string" =
-  let module Sim = Cyclesim in
-  let module S = Cyclesim in
   let open Signal in
   let reg_spec = Reg_spec.create () ~clock ~clear in
   let a = input "a" 4 in
@@ -525,9 +520,9 @@ let%expect_test "custom wave format to string" =
   let b = reg reg_spec tmp in
   let b = output "b" b in
   let circ = Circuit.create_exn ~name:"test" [ b ] in
-  let sim = Sim.create ~config:Sim.Config.trace_all circ in
+  let sim = Cyclesim.create ~config:Cyclesim.Config.trace_all circ in
   let sim = Vcd.wrap Stdio.stdout sim in
-  let a = S.in_port sim "a" in
+  let a = Cyclesim.in_port sim "a" in
   [%expect
     {|
     $date
@@ -562,12 +557,13 @@ let%expect_test "custom wave format to string" =
     bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx '
     $end
     |}];
-  a := Bits.of_int_trunc ~width:4 0;
-  S.cycle sim;
-  a := Bits.of_int_trunc ~width:4 2;
-  S.cycle sim;
-  a := Bits.of_int_trunc ~width:4 4;
-  S.cycle sim;
+  let open Cyclesim.Sim_bits in
+  a <-- of_int_trunc ~width:4 0;
+  Cyclesim.cycle sim;
+  a <-- of_int_trunc ~width:4 2;
+  Cyclesim.cycle sim;
+  a <-- of_int_trunc ~width:4 4;
+  Cyclesim.cycle sim;
   (* Strings are 'hello', 'test', and '?' as expected. They are padded with zeros on the
      left, which is empirically consistent with SystemVerilog and works in GTKwave *)
   [%expect

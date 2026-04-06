@@ -170,15 +170,15 @@ module Reg = struct
   module Reset_spec = struct
     type 'signal t =
       { reset : 'signal
-      ; reset_edge : Edge.t
+      ; reset_level : Level.t
       ; reset_to : 'signal
       }
     [@@deriving bin_io, sexp_of]
 
-    let map { reset; reset_edge; reset_to } ~f =
+    let map { reset; reset_level; reset_to } ~f =
       let reset = f reset in
       let reset_to = f reset_to in
-      { reset; reset_edge : Edge.t; reset_to }
+      { reset; reset_level : Level.t; reset_to }
     ;;
   end
 
@@ -353,7 +353,7 @@ and reg_spec =
   { clock : t
   ; clock_edge : Edge.t
   ; reset : t option
-  ; reset_edge : Edge.t
+  ; reset_level : Level.t
   ; clear : t option
   }
 
@@ -410,7 +410,7 @@ module Deps = Make_deps (struct
           Option.value_map
             ~default:arg
             reset
-            ~f:(fun { reset; reset_edge = _; reset_to } ->
+            ~f:(fun { reset; reset_level = _; reset_to } ->
               let arg = f arg reset in
               f arg reset_to)
         in
@@ -739,9 +739,9 @@ and sexp_of_register_recursive ?show_uids ?show_locs ~depth (reg : t Reg.Registe
       ~reset:
         (sexp_of_opt reg.reset ~f:(fun { reset; _ } -> reset)
          : (Sexp.t option[@sexp.option]))
-      ~reset_edge:
-        (Option.map reg.reset ~f:(fun { reset_edge; _ } -> reset_edge)
-         : (Edge.t option[@sexp.option]))
+      ~reset_level:
+        (Option.map reg.reset ~f:(fun { reset_level; _ } -> reset_level)
+         : (Level.t option[@sexp.option]))
       ~reset_to:
         (sexp_of_opt reg.reset ~f:(fun { reset_to; _ } -> reset_to)
          : (Sexp.t option[@sexp.option]))
@@ -758,14 +758,14 @@ and sexp_of_reg_spec_recursive ?show_uids ?show_locs ~depth spec =
     sexp_of_signal_recursive ?show_uids ?show_locs ~depth:(depth - 1) s
   in
   let sexp_of_opt s = Option.map s ~f:(fun s -> sexp_of_next s) in
-  let sexp_of_edge g s = Option.map g ~f:(fun _ -> Edge.sexp_of_t s) in
+  let sexp_of_level g s = Option.map g ~f:(fun _ -> Level.sexp_of_t s) in
   [%message
     ""
       ~clock:(sexp_of_next spec.clock : Sexp.t)
       ~clock_edge:(spec.clock_edge : Edge.t)
       ~reset:(sexp_of_opt spec.reset : (Sexp.t option[@sexp.option]))
-      ~reset_edge:
-        (sexp_of_edge spec.reset spec.reset_edge : (Sexp.t option[@sexp.option]))
+      ~reset_level:
+        (sexp_of_level spec.reset spec.reset_level : (Sexp.t option[@sexp.option]))
       ~clear:(sexp_of_opt spec.clear : (Sexp.t option[@sexp.option]))]
 
 and sexp_of_memory_recursive
@@ -1173,7 +1173,7 @@ module Register = struct
             assert_width reset_to (width d) "reset_to is invalid";
             reset_to
         in
-        { Reg.Reset_spec.reset; reset_edge = spec.reset_edge; reset_to })
+        { Reg.Reset_spec.reset; reset_level = spec.reset_level; reset_to })
     in
     (* override the clear if required. *)
     let clear =

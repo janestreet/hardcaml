@@ -739,8 +739,6 @@ module Make (Prims : Primitives) = struct
   let sexp_of_t = Prims.sexp_of_t
   let bits_lsb s = List.init (width s) ~f:(fun pos -> s.:(pos))
   let bits_msb s = bits_lsb s |> List.rev
-  let to_array b = Array.of_list (bits_lsb b)
-  let of_array l = concat_lsb (Array.to_list l)
   let to_bigint b = to_constant b |> Constant.to_bigint
   let of_bool b = if b then vdd else gnd
 
@@ -844,6 +842,41 @@ module Make (Prims : Primitives) = struct
   ;;
 
   let split_msb ?exact ~part_width = split ?exact ~part_width ~sel:sel_top ~drop:drop_top
+
+  module type For_collection = For_collection with type t := t
+
+  module Make_for_collection (M : sig
+      type 'a collection
+
+      val of_list : 'a list -> 'a collection
+      val to_list : 'a collection -> 'a list
+    end) =
+  struct
+    open M
+
+    let concat_msb s = concat_msb (to_list s)
+    let concat_lsb s = concat_lsb (to_list s)
+    let bits_msb s = of_list (bits_msb s)
+    let bits_lsb s = of_list (bits_lsb s)
+    let split_lsb ?exact ~part_width s = of_list (split_lsb ?exact ~part_width s)
+    let split_msb ?exact ~part_width s = of_list (split_msb ?exact ~part_width s)
+    let mux sel s = mux sel (to_list s)
+    let mux_strict sel s = mux_strict sel (to_list s)
+  end
+
+  module For_array = Make_for_collection (struct
+      type 'a collection = 'a array
+
+      let to_list = Array.to_list
+      let of_list = Array.of_list
+    end)
+
+  module For_iarray = Make_for_collection (struct
+      type 'a collection = 'a iarray
+
+      let to_list = Iarray.to_list
+      let of_list = Iarray.of_list
+    end)
 
   let bswap x =
     let actual_width = width x in
