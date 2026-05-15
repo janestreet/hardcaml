@@ -39,7 +39,7 @@ module Clocks = struct
   module Multi_domain = struct
     type t =
       { domains : Clock_domain.Group.t
-      ; clocks_to_domains : (Clock_domain.indexed * Signal.t) Map.M(Signal.Type.Uid).t
+      ; clocks_to_domains : (Clock_domain.indexed * Signal.t) Signal.Type.Map.t
       ; double_frequency : bool
           (* True when we need to step two cycles per user cycle. This is necessary when
              there are clocks with a odd period so that we can have them fall half way
@@ -107,14 +107,20 @@ module Clocks = struct
         Signal_graph.resolve_clock_domains (Circuit.signal_graph circuit)
       in
       let clocks_to_domains =
-        Map.map resolved_clock_signals ~f:(fun signal ->
-          let name = port_name signal |> Clock_domain.Name.of_string in
-          match Clock_domain.Group.get domains name with
-          | Some indexed -> indexed, signal
-          | None ->
-            raise_s
-              [%message
-                "No clock domain given for clock signal" (name : Clock_domain.Name.t)])
+        Map.mapi
+          resolved_clock_signals
+          ~f:(fun ~key:dest_clock_pin ~data:input_clock_pin ->
+            match input_clock_pin with
+            | None ->
+              raise_s [%message "No input clock pin found" (dest_clock_pin : Signal.t)]
+            | Some input_clock_pin ->
+              let name = port_name input_clock_pin |> Clock_domain.Name.of_string in
+              (match Clock_domain.Group.get domains name with
+               | Some indexed -> indexed, input_clock_pin
+               | None ->
+                 raise_s
+                   [%message
+                     "No clock domain given for clock signal" (name : Clock_domain.Name.t)]))
       in
       let t =
         { domains
@@ -130,7 +136,7 @@ module Clocks = struct
     ;;
 
     let find_clock_exn t clock_signal =
-      Map.find_exn t.clocks_to_domains (Signal.Type.uid clock_signal) |> fst
+      Map.find_exn t.clocks_to_domains clock_signal |> fst
     ;;
 
     let aligned t =
@@ -245,12 +251,12 @@ module Nodes_and_addresses = struct
     module Constant = struct
       type t =
         { node : node
-        ; references : Signal.Type.Uid_set.t
+        ; references : Signal.Type.Uid.Set.t
         (* Additional signals that reference the same bits *)
         }
 
       let create signal size =
-        { node = { signal; size }; references = Set.empty (module Signal.Type.Uid) }
+        { node = { signal; size }; references = Signal.Type.Uid.Set.empty }
       ;;
 
       let add t signal = { t with references = Set.add t.references (Signal.uid signal) }
@@ -258,11 +264,11 @@ module Nodes_and_addresses = struct
 
     type t =
       { clocks : Clocks.t
-      ; comb : node list
+      ; mutable comb : node list
       ; regs : node list Clock_domain.Table.t
-      ; mems : node list
-      ; consts : Constant.t Map.M(Bits).t
-      ; wires : driven_wire list
+      ; mutable mems : node list
+      ; mutable consts : Constant.t Map.M(Bits).t
+      ; mutable wires : driven_wire list
       }
 
     let empty clocks =
@@ -281,15 +287,14 @@ module Nodes_and_addresses = struct
       { signal; size } :: section
     ;;
 
-    let add_comb t comb size = { t with comb = add_to_section t.comb comb size }
+    let add_comb t comb size = t.comb <- add_to_section t.comb comb size
 
     let add_reg t reg clock size =
       let section = Clock_domain.Table.get t.regs clock in
-      Clock_domain.Table.set t.regs ~key:clock ~data:(add_to_section section reg size);
-      t
+      Clock_domain.Table.set t.regs ~key:clock ~data:(add_to_section section reg size)
     ;;
 
-    let add_mem t mem size = { t with mems = add_to_section t.mems mem size }
+    let add_mem t mem size = t.mems <- add_to_section t.mems mem size
 
     let add_const t (signal : Signal.t) size =
       match signal with
@@ -300,7 +305,7 @@ module Nodes_and_addresses = struct
             | None -> Constant.create signal size
             | Some const -> Constant.add const signal)
         in
-        { t with consts }
+        t.consts <- consts
       | _ -> raise_s [%message "[add_const] not constant" (signal : Signal.t)]
     ;;
 
@@ -310,7 +315,7 @@ module Nodes_and_addresses = struct
         | Wire { driver = Some driver; _ } -> find_driver driver
         | _ -> signal
       in
-      { t with wires = { wire; driver = find_driver wire } :: t.wires }
+      t.wires <- { wire; driver = find_driver wire } :: t.wires
     ;;
   end
 
@@ -326,9 +331,7 @@ module Nodes_and_addresses = struct
     ; regs_next : section Clock_domain.Table.t
     ; mems : section
     ; consts : section
-    ; regs_next_nodes : Node.t list
-    ; regs_nodes : Node.t list
-    ; map : Node.t Map.M(Signal.Type.Uid).t
+    ; map : Node.t Signal.Type.Uid.Map.t
     }
 
   let create_section nodes ~offset ~new_offset =
@@ -383,7 +386,7 @@ module Nodes_and_addresses = struct
   ;;
 
   let build (builder : Builder.t) =
-    let map = Map.empty (module Signal.Type.Uid) in
+    let map = Signal.Type.Uid.Map.empty in
     let map, comb, offset = allocate_nodes map builder.comb ~offset:0 in
     let map, regs, offset = allocate_regs map builder.regs ~offset in
     let map, regs_next, offset =
@@ -396,27 +399,10 @@ module Nodes_and_addresses = struct
         let driver = Map.find_exn map (Signal.uid driver) in
         Map.add_exn map ~key:(Signal.uid wire) ~data:driver)
     in
-    let compute_reg_nodes reg_section =
-      Clock_domain.Group.elements (Clocks.domains builder.clocks)
-      |> Iarray.to_list
-      |> List.concat_map ~f:(fun clock ->
-        let { nodes; _ } = Clock_domain.Table.get reg_section clock in
-        nodes)
-    in
-    { comb
-    ; regs
-    ; regs_next
-    ; mems
-    ; consts
-    ; regs_nodes = compute_reg_nodes regs
-    ; regs_next_nodes = compute_reg_nodes regs_next
-    ; map
-    }
+    { comb; regs; regs_next; mems; consts; map }
   ;;
 
-  let total_size_bytes
-    { comb; regs; regs_next; mems; consts; regs_nodes = _; regs_next_nodes = _; map = _ }
-    =
+  let total_size_bytes { comb; regs; regs_next; mems; consts; map = _ } =
     let sum_list l ~f = List.sum (module Int) l ~f in
     let section_size (section : section) = section.size_bytes in
     let reg_section_size sections =
@@ -463,23 +449,21 @@ type t =
 
 (* Create nodes with addresses for each signal in the circuit. *)
 let allocate_addresses (schedule : Signal.t list) clocks =
-  List.fold
-    schedule
-    ~init:(Nodes_and_addresses.Builder.empty clocks)
-    ~f:(fun acc signal ->
-      match signal with
-      | Empty -> acc
-      | Const _ -> Nodes_and_addresses.Builder.add_const acc signal (num_words signal)
-      | Reg { register; _ } ->
-        let clock = Clocks.find_clock_exn clocks register.clock.clock in
-        Nodes_and_addresses.Builder.add_reg acc signal clock (num_words signal)
-      | Multiport_mem mem ->
-        let num_words = num_words signal in
-        let mem_size_in_words = num_words * mem.size in
-        Nodes_and_addresses.Builder.add_mem acc signal mem_size_in_words
-      | Wire { driver = Some _; _ } -> Nodes_and_addresses.Builder.add_wire acc signal
-      | _ -> Nodes_and_addresses.Builder.add_comb acc signal (num_words signal))
-  |> Nodes_and_addresses.build
+  let builder = Nodes_and_addresses.Builder.empty clocks in
+  List.iter schedule ~f:(fun signal ->
+    match signal with
+    | Empty -> ()
+    | Const _ -> Nodes_and_addresses.Builder.add_const builder signal (num_words signal)
+    | Reg { register; _ } ->
+      let clock = Clocks.find_clock_exn clocks register.clock.clock in
+      Nodes_and_addresses.Builder.add_reg builder signal clock (num_words signal)
+    | Multiport_mem mem ->
+      let num_words = num_words signal in
+      let mem_size_in_words = num_words * mem.size in
+      Nodes_and_addresses.Builder.add_mem builder signal mem_size_in_words
+    | Wire { driver = Some _; _ } -> Nodes_and_addresses.Builder.add_wire builder signal
+    | _ -> Nodes_and_addresses.Builder.add_comb builder signal (num_words signal));
+  Nodes_and_addresses.build builder
 ;;
 
 let port allocation signal =
@@ -524,32 +508,40 @@ let init_consts (consts : Node.t list) =
   |> Array.of_list
 ;;
 
-let reset_consts (regs : Node.t list) =
-  List.filter_map regs ~f:(fun reg ->
-    match reg.signal with
-    | Reg { register = { reset; _ }; _ } ->
-      Option.map reset ~f:(fun { reset = _; reset_level = _; reset_to } ->
-        if Signal.Type.is_const reset_to
-        then (
-          let constant = Signal.to_constant reset_to |> Bits.of_constant in
-          let size_in_words = num_words reg.signal in
-          let reset = Array.init size_in_words ~f:(Bits.unsafe_get_int64 constant) in
-          reg.word_address, reset)
-        else raise_s [%message "Reset values must be constants" (reg : Node.t)])
-    | _ -> raise_s [%message "[reset_consts] expecting reg"])
-  |> Array.of_list
+let reset_consts (regs : Nodes_and_addresses.section Clock_domain.Table.t) =
+  let reset_consts (regs : Node.t list) =
+    List.filter_map regs ~f:(fun reg ->
+      match reg.signal with
+      | Reg { register = { reset; _ }; _ } ->
+        Option.map reset ~f:(fun { reset = _; reset_level = _; reset_to } ->
+          if Signal.Type.is_const reset_to
+          then (
+            let constant = Signal.to_constant reset_to |> Bits.of_constant in
+            let size_in_words = num_words reg.signal in
+            let reset = Array.init size_in_words ~f:(Bits.unsafe_get_int64 constant) in
+            reg.word_address, reset)
+          else raise_s [%message "Reset values must be constants" (reg : Node.t)])
+      | _ -> raise_s [%message "[reset_consts] expecting reg"])
+    |> Array.of_list
+  in
+  Clock_domain.Table.map regs ~f:(fun regs -> reset_consts regs.nodes)
+  |> Clock_domain.Table.concat
 ;;
 
-let startup_consts (regs : Node.t list) =
-  List.filter_map regs ~f:(fun reg ->
-    match reg.signal with
-    | Reg { register = { initialize_to; _ }; _ } ->
-      Option.map initialize_to ~f:(fun initialize_to ->
-        let size_in_words = num_words reg.signal in
-        let reset = Array.init size_in_words ~f:(Bits.unsafe_get_int64 initialize_to) in
-        reg.word_address, reset)
-    | _ -> raise_s [%message "[startup_consts] expecting reg"])
-  |> Array.of_list
+let startup_consts (regs : Nodes_and_addresses.section Clock_domain.Table.t) =
+  let startup_consts (regs : Node.t list) =
+    List.filter_map regs ~f:(fun reg ->
+      match reg.signal with
+      | Reg { register = { initialize_to; _ }; _ } ->
+        Option.map initialize_to ~f:(fun initialize_to ->
+          let size_in_words = num_words reg.signal in
+          let reset = Array.init size_in_words ~f:(Bits.unsafe_get_int64 initialize_to) in
+          reg.word_address, reset)
+      | _ -> raise_s [%message "[startup_consts] expecting reg"])
+    |> Array.of_list
+  in
+  Clock_domain.Table.map regs ~f:(fun regs -> startup_consts regs.nodes)
+  |> Clock_domain.Table.concat
 ;;
 
 let mem_consts (mems : Node.t list) =
@@ -885,7 +877,7 @@ let last_layer circuit (t : Runtime.t) =
     Signal_graph.last_layer_of_nodes
       ~is_input:(Circuit.is_input circuit)
       (Circuit.signal_graph circuit)
-    |> Set.of_list (module Signal.Type.Uid)
+    |> Signal.Type.Uid.Set.of_list
   in
   List.filter t.allocation.comb.nodes ~f:(fun alloc ->
     Set.mem nodes (Signal.uid alloc.signal))
@@ -1083,13 +1075,12 @@ let compile circuit (t : Runtime.t) config =
     (* We must reset both the current and next values - if the register is not enabled in
        the subsequent cycle it wont change the 'reg_next' value - and the reset gets lost.
     *)
-    Array.concat
-      [ reset_consts t.allocation.regs_nodes; reset_consts t.allocation.regs_next_nodes ]
+    Array.concat [ reset_consts t.allocation.regs; reset_consts t.allocation.regs_next ]
   in
   let startup_consts =
     Array.concat
-      [ startup_consts t.allocation.regs_nodes
-      ; startup_consts t.allocation.regs_next_nodes
+      [ startup_consts t.allocation.regs
+      ; startup_consts t.allocation.regs_next
       ; mem_consts t.allocation.mems.nodes
       ]
   in
@@ -1098,7 +1089,10 @@ let compile circuit (t : Runtime.t) config =
     List.filter_map (last_layer circuit t) ~f:(compile_comb t config)
   in
   let clock_update = compile_clock_update t in
-  let reg_update = List.map t.allocation.regs_next_nodes ~f:(compile_reg_update t) in
+  let reg_update =
+    Clock_domain.Table.map t.allocation.regs_next ~f:(fun regs_next ->
+      List.map regs_next.nodes ~f:(compile_reg_update t))
+  in
   let mem_update = List.map t.allocation.mems.nodes ~f:(compile_mem_update t) in
   let run tasks =
     let tasks = Array.of_list tasks in
@@ -1108,13 +1102,17 @@ let compile circuit (t : Runtime.t) config =
         (Array.unsafe_get tasks i) ()
       done
   in
+  let run_by_domain tasks =
+    let tasks = Clock_domain.Table.map tasks ~f:run in
+    fun () -> Clock_domain.Table.iter tasks ~f:(fun t -> t ())
+  in
   { Compiled_updates.init_consts
   ; reset_consts
   ; startup_consts
   ; comb = run comb
   ; comb_last_layer = run comb_last_layer
   ; clock_update = run clock_update
-  ; reg_update = run reg_update
+  ; reg_update = run_by_domain reg_update
   ; mem_update = run mem_update
   }
 ;;
@@ -1153,16 +1151,14 @@ let initialize_state
   ~random_initializer:
     ({ random_state; initialize } : Cyclesim0.Config.Random_initializer.t)
   =
-  List.iter
-    ~f:(fun reg ->
+  Clock_domain.Table.iter allocation.regs ~f:(fun regs ->
+    List.iter regs.nodes ~f:(fun reg ->
       if initialize reg.signal
-      then pseudorandomly_initialize_register ~random_state ~bytes reg)
-    allocation.regs_nodes;
-  List.iter
-    ~f:(fun reg ->
+      then pseudorandomly_initialize_register ~random_state ~bytes reg));
+  Clock_domain.Table.iter allocation.regs_next ~f:(fun regs_next ->
+    List.iter regs_next.nodes ~f:(fun reg ->
       if initialize reg.signal
-      then pseudorandomly_initialize_register ~random_state ~bytes reg)
-    allocation.regs_next_nodes;
+      then pseudorandomly_initialize_register ~random_state ~bytes reg));
   List.iter
     ~f:(fun mem ->
       if initialize mem.signal

@@ -1,11 +1,10 @@
 open! Core0
-module I = Int
 
 module type S = Uid_builder_intf.S
 
 module Make () = struct
   module T = struct
-    type t = I.t [@@deriving bin_io, compare ~localize, sexp]
+    type t = Int.t [@@deriving bin_io, compare ~localize, sexp]
 
     (* We need a hash function compatible with native code and javascript. Currently the
        only type which allows this is [Int64]. So we perform a conversion to int64 here,
@@ -29,16 +28,16 @@ module Make () = struct
 
   include%template Comparable.Make [@mode local] (T)
 
-  let zero = I.of_int 0
-  let one = I.of_int 1
-  let to_int t = I.to_int_exn t
-  let to_string t = I.to_string t
+  let zero = Int.of_int 0
+  let one = Int.of_int 1
+  let to_int t = Int.to_int_exn t
+  let to_string t = Int.to_string t
 
   let generator () =
     let id = ref one in
     let new_id () =
       let x = !id in
-      (id := I.(!id + one));
+      (id := Int.(!id + one));
       x
     in
     let reset_id () = id := one in

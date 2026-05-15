@@ -73,20 +73,20 @@ let%expect_test "Signal attributes on top of signals in Verilog for circuits con
         (* mark_debug="TRUE" *)
         output [3:0] c;
 
-        wire [3:0] _2;
-        wire _4;
-        wire [3:0] _6;
+        wire [3:0] signal_wire;
+        wire signal_wire_1;
+        wire [3:0] signal_wire_2;
         (* dont_touch="TRUE" *)
         reg [3:0] hello;
-        wire [3:0] _9;
-        assign _2 = b;
-        assign _4 = clk;
-        assign _6 = a;
-        always @(posedge _4) begin
-            hello <= _6;
+        wire [3:0] signal_add;
+        assign signal_wire = b;
+        assign signal_wire_1 = clk;
+        assign signal_wire_2 = a;
+        always @(posedge signal_wire_1) begin
+            hello <= signal_wire_2;
         end
-        assign _9 = hello + _2;
-        assign c = _9;
+        assign signal_add = hello + signal_wire;
+        assign c = signal_add;
 
     endmodule
     |}]
@@ -108,13 +108,13 @@ let%expect_test "Signal attributes on top of signals in Verilog" =
         input [3:0] a;
         output [3:0] result;
 
-        wire [3:0] _5;
-        wire [3:0] _4;
+        wire [3:0] signal_const;
+        wire [3:0] signal_add;
         (* hello="world" *)
         wire [3:0] tmp;
-        assign _5 = 4'b0011;
-        assign _4 = a + b;
-        assign tmp = _4 + _5;
+        assign signal_const = 4'b0011;
+        assign signal_add = a + b;
+        assign tmp = signal_add + signal_const;
         assign result = tmp;
 
     endmodule
@@ -144,16 +144,16 @@ let%expect_test "Signal attributes on top of signals in VHDL" =
 
     architecture rtl of test is
 
-        signal \_5\ : std_logic_vector(3 downto 0);
-        signal \_4\ : std_logic_vector(3 downto 0);
+        signal signal_const : std_logic_vector(3 downto 0);
+        signal signal_add : std_logic_vector(3 downto 0);
         signal tmp : std_logic_vector(3 downto 0);
         attribute hello of tmp : signal is "world";
 
     begin
 
-        \_5\ <= "0011";
-        \_4\ <= std_logic_vector(unsigned(a) + unsigned(b));
-        tmp <= std_logic_vector(unsigned(\_4\) + unsigned(\_5\));
+        signal_const <= "0011";
+        signal_add <= std_logic_vector(unsigned(a) + unsigned(b));
+        tmp <= std_logic_vector(unsigned(signal_add) + unsigned(signal_const));
         result <= tmp;
 
     end architecture;
@@ -202,26 +202,26 @@ let%expect_test "Test Rtl attributes on the pipeline construct" =
         input [3:0] a;
         output [3:0] b;
 
-        wire _2;
-        wire [3:0] _4;
+        wire signal_wire;
+        wire [3:0] signal_wire_1;
         (* SRL_STYLE="register" *)
-        reg [3:0] _6;
+        reg [3:0] signal_reg;
         (* SRL_STYLE="register" *)
-        reg [3:0] _7;
+        reg [3:0] signal_reg_1;
         (* SRL_STYLE="register" *)
-        reg [3:0] _8;
-        assign _2 = clk;
-        assign _4 = a;
-        always @(posedge _2) begin
-            _6 <= _4;
+        reg [3:0] signal_reg_2;
+        assign signal_wire = clk;
+        assign signal_wire_1 = a;
+        always @(posedge signal_wire) begin
+            signal_reg <= signal_wire_1;
         end
-        always @(posedge _2) begin
-            _7 <= _6;
+        always @(posedge signal_wire) begin
+            signal_reg_1 <= signal_reg;
         end
-        always @(posedge _2) begin
-            _8 <= _7;
+        always @(posedge signal_wire) begin
+            signal_reg_2 <= signal_reg_1;
         end
-        assign b = _8;
+        assign b = signal_reg_2;
 
     endmodule
     |}]

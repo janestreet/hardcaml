@@ -132,7 +132,7 @@ let fibonacci_testbench (sim : (_ I.t, _ O.t) Cyclesim.t) =
 let test () =
   let module Sim = Cyclesim.With_interface (I) (O) in
   let sim = Sim.create create in
-  let waves, sim = Waveform.create sim in
+  let waves, sim = Cyclesim.Waveform.create sim in
   fibonacci_testbench sim;
   waves
 ;;

@@ -1,6 +1,6 @@
 open Core
 open Hardcaml
-open Hardcaml_waveterm_cyclesim
+open Hardcaml_waveterm_kernel
 
 let%expect_test "incr/decr" =
   let test f x = Bits.of_unsigned_int ~width:3 x |> f |> Bits.to_unsigned_int in
@@ -25,7 +25,7 @@ let%expect_test "counter" =
     let sim =
       Cyclesim.create (Circuit.create_exn ~name:"counter" [ output "q" (f spec enable) ])
     in
-    let waves, sim = Waveform.create sim in
+    let waves, sim = Cyclesim.Waveform.create sim in
     let enable =
       try Cyclesim.in_port sim "enable" with
       | _ -> ref Bits.gnd

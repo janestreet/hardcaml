@@ -145,11 +145,11 @@ let%expect_test "multiple circuits - inner component is shared" =
         input a;
         output b;
 
-        wire _2;
-        wire _4;
-        assign _2 = a;
-        assign _4 = ~ _2;
-        assign b = _4;
+        wire signal_wire;
+        wire signal_not;
+        assign signal_wire = a;
+        assign signal_not = ~ signal_wire;
+        assign b = signal_not;
 
     endmodule
     module top1 (
@@ -160,16 +160,16 @@ let%expect_test "multiple circuits - inner component is shared" =
         input a;
         output b;
 
-        wire _2;
-        wire _5;
-        wire _3;
-        assign _2 = a;
+        wire signal_wire;
+        wire signal_inst;
+        wire signal_wire_1;
+        assign signal_wire = a;
         inner
             inner
-            ( .a(_2),
-              .b(_5) );
-        assign _3 = _5;
-        assign b = _3;
+            ( .a(signal_wire),
+              .b(signal_inst) );
+        assign signal_wire_1 = signal_inst;
+        assign b = signal_wire_1;
 
     endmodule
     module top2 (
@@ -180,16 +180,16 @@ let%expect_test "multiple circuits - inner component is shared" =
         input a;
         output b;
 
-        wire _2;
-        wire _5;
-        wire _3;
-        assign _2 = a;
+        wire signal_wire;
+        wire signal_inst;
+        wire signal_wire_1;
+        assign signal_wire = a;
         inner
             inner_1
-            ( .a(_2),
-              .b(_5) );
-        assign _3 = _5;
-        assign b = _3;
+            ( .a(signal_wire),
+              .b(signal_inst) );
+        assign signal_wire_1 = signal_inst;
+        assign b = signal_wire_1;
 
     endmodule
     |}]
@@ -220,14 +220,14 @@ let%expect_test "Instantiations are written with extended identifiers" =
         input \x&x ;
         output \y&y ;
 
-        wire _4;
-        wire _2;
+        wire signal_inst;
+        wire signal_wire;
         inside
             the_inside
             ( .\a&a (\x&x ),
-              .\b&b (_4) );
-        assign _2 = _4;
-        assign \y&y  = _2;
+              .\b&b (signal_inst) );
+        assign signal_wire = signal_inst;
+        assign \y&y  = signal_wire;
 
     endmodule
     |}];
@@ -247,16 +247,16 @@ let%expect_test "Instantiations are written with extended identifiers" =
 
     architecture rtl of example is
 
-        signal \_4\ : std_logic;
-        signal \_2\ : std_logic;
+        signal signal_inst : std_logic;
+        signal signal_wire : std_logic;
 
     begin
 
         the_inside: entity work.inside (rtl)
             port map ( \a&a\ => \x&x\,
-                       \b&b\ => \_4\ );
-        \_2\ <= \_4\;
-        \y&y\ <= \_2\;
+                       \b&b\ => signal_inst );
+        signal_wire <= signal_inst;
+        \y&y\ <= signal_wire;
 
     end architecture;
     |}]

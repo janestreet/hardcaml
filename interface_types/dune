@@ -1,0 +1,6 @@
+(library
+ (name hardcaml_interface_types)
+ (public_name hardcaml.interface_types)
+ (libraries core)
+ (preprocess
+  (pps ppx_jane)))

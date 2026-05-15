@@ -311,9 +311,9 @@ let%expect_test "structural rtl comb components" =
         input [7:0] i0;
         output [7:0] o;
 
-        wire [7:0] _4;
-        assign _4 = i0 & i1;
-        assign o = _4;
+        wire [7:0] signal_and;
+        assign signal_and = i0 & i1;
+        assign o = signal_and;
 
     endmodule
     module hardcaml_lib_or_8 (
@@ -326,9 +326,9 @@ let%expect_test "structural rtl comb components" =
         input [7:0] i0;
         output [7:0] o;
 
-        wire [7:0] _4;
-        assign _4 = i0 | i1;
-        assign o = _4;
+        wire [7:0] signal_or;
+        assign signal_or = i0 | i1;
+        assign o = signal_or;
 
     endmodule
     module hardcaml_lib_xor_16 (
@@ -341,9 +341,9 @@ let%expect_test "structural rtl comb components" =
         input [15:0] i0;
         output [15:0] o;
 
-        wire [15:0] _4;
-        assign _4 = i0 ^ i1;
-        assign o = _4;
+        wire [15:0] signal_xor;
+        assign signal_xor = i0 ^ i1;
+        assign o = signal_xor;
 
     endmodule
     module hardcaml_lib_add_8 (
@@ -356,9 +356,9 @@ let%expect_test "structural rtl comb components" =
         input [7:0] i0;
         output [7:0] o;
 
-        wire [7:0] _4;
-        assign _4 = i0 + i1;
-        assign o = _4;
+        wire [7:0] signal_add;
+        assign signal_add = i0 + i1;
+        assign o = signal_add;
 
     endmodule
     module hardcaml_lib_lt_16 (
@@ -371,9 +371,9 @@ let%expect_test "structural rtl comb components" =
         input [15:0] i0;
         output o;
 
-        wire _4;
-        assign _4 = i0 < i1;
-        assign o = _4;
+        wire signal_lt;
+        assign signal_lt = i0 < i1;
+        assign o = signal_lt;
 
     endmodule
     module hardcaml_lib_not_8 (
@@ -384,9 +384,9 @@ let%expect_test "structural rtl comb components" =
         input [7:0] i;
         output [7:0] o;
 
-        wire [7:0] _3;
-        assign _3 = ~ i;
-        assign o = _3;
+        wire [7:0] signal_not;
+        assign signal_not = ~ i;
+        assign o = signal_not;
 
     endmodule
     module hardcaml_lib_muls_8_8 (
@@ -399,9 +399,9 @@ let%expect_test "structural rtl comb components" =
         input [7:0] i0;
         output [15:0] o;
 
-        wire [15:0] _4;
-        assign _4 = $signed(i0) * $signed(i1);
-        assign o = _4;
+        wire [15:0] signal_muls;
+        assign signal_muls = $signed(i0) * $signed(i1);
+        assign o = signal_muls;
 
     endmodule
     |}]
@@ -533,20 +533,20 @@ let%expect_test "structural rtl reg components" =
         input d;
         output q;
 
-        wire _8;
-        reg _9;
-        assign _8 = 1'b0;
+        wire signal_const;
+        reg signal_reg;
+        assign signal_const = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _9 <= _8;
+                signal_reg <= signal_const;
             else
                 if (clear)
-                    _9 <= clear_to;
+                    signal_reg <= clear_to;
                 else
                     if (enable)
-                        _9 <= d;
+                        signal_reg <= d;
         end
-        assign q = _9;
+        assign q = signal_reg;
 
     endmodule
     module hardcaml_lib_reg_8_fl_X_X (
@@ -567,20 +567,20 @@ let%expect_test "structural rtl reg components" =
         input [7:0] d;
         output [7:0] q;
 
-        wire [7:0] _8;
-        reg [7:0] _9;
-        assign _8 = 8'b00000000;
+        wire [7:0] signal_const;
+        reg [7:0] signal_reg;
+        assign signal_const = 8'b00000000;
         always @(negedge clock or negedge reset) begin
             if (reset == 0)
-                _9 <= _8;
+                signal_reg <= signal_const;
             else
                 if (clear)
-                    _9 <= clear_to;
+                    signal_reg <= clear_to;
                 else
                     if (enable)
-                        _9 <= d;
+                        signal_reg <= d;
         end
-        assign q = _9;
+        assign q = signal_reg;
 
     endmodule
     module hardcaml_lib_reg_8_rh_11111111_X (
@@ -601,20 +601,20 @@ let%expect_test "structural rtl reg components" =
         input [7:0] d;
         output [7:0] q;
 
-        wire [7:0] _8;
-        reg [7:0] _9;
-        assign _8 = 8'b11111111;
+        wire [7:0] signal_const;
+        reg [7:0] signal_reg;
+        assign signal_const = 8'b11111111;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _9 <= _8;
+                signal_reg <= signal_const;
             else
                 if (clear)
-                    _9 <= clear_to;
+                    signal_reg <= clear_to;
                 else
                     if (enable)
-                        _9 <= d;
+                        signal_reg <= d;
         end
-        assign q = _9;
+        assign q = signal_reg;
 
     endmodule
     |}]

@@ -45,7 +45,7 @@ let test ?(wave_width = 0) ~fast_period () =
   let slow_period = 2 * fast_period in
   Harness.run_advanced
     ~print_waves_after_test:
-      (Hardcaml_waveterm.For_cyclesim.Waveform.print ~display_width:100 ~wave_width)
+      (Hardcaml_waveterm.Waveform.print ~display_width:100 ~wave_width)
     ~clock_mode:
       (By_input_clocks
          [ { name = Cyclesim_clock_domain.Name.of_string "clock_fast"

@@ -120,7 +120,7 @@ let rewrite t ~f ~f_upto =
   let not_expecting_a_wire signal =
     raise_s [%message "not expecting a wire (internal error)" (signal : Signal.t)]
   in
-  let new_signal_by_old_uid = Hashtbl.create (module Signal.Type.Uid) in
+  let new_signal_by_old_uid = Signal.Type.Uid.Table.create () in
   let add_mapping ~old_signal ~new_signal =
     Hashtbl.add_exn new_signal_by_old_uid ~key:(uid old_signal) ~data:new_signal
   in
@@ -141,7 +141,7 @@ let rewrite t ~f ~f_upto =
          raise_s
            [%message
              "Encountered a loop when rewriting signals"
-               (seen_uids : Set.M(Signal.Type.Uid).t)
+               (seen_uids : Signal.Type.Uid.Set.t)
                (uid : Signal.Type.Uid.t)]
        | false ->
          let new_signal =
@@ -160,7 +160,7 @@ let rewrite t ~f ~f_upto =
          new_signal)
   in
   let rewrite_signal_upto_wires =
-    rewrite_signal_upto_wires ~seen_uids:(Set.empty (module Signal.Type.Uid))
+    rewrite_signal_upto_wires ~seen_uids:Signal.Type.Uid.Set.empty
   in
   (* find wires *)
   let old_wires = filter t ~f:Type.is_wire in
@@ -198,7 +198,7 @@ let rewrite t ~f ~f_upto =
   in
   let signal_graph = { outputs = List.map t.outputs ~f:new_signal; upto } in
   let new_signal_by_old_uid =
-    Hashtbl.to_alist new_signal_by_old_uid |> Map.of_alist_exn (module Signal.Type.Uid)
+    Hashtbl.to_alist new_signal_by_old_uid |> Signal.Type.Uid.Map.of_alist_exn
   in
   signal_graph, new_signal_by_old_uid
 ;;
@@ -226,28 +226,22 @@ let compute_normalized_uids t =
 ;;
 
 let fan_out_map t =
-  depth_first_search
-    t
-    ~init:(Map.empty (module Signal.Type.Uid))
-    ~f_before:(fun map signal ->
-      let target = Signal.uid signal in
-      (* [signal] is in the fan_out of all of its [deps] *)
-      Signal.Type.Deps.fold signal ~init:map ~f:(fun map source ->
-        let source = Signal.uid source in
-        let fan_out =
-          Map.find map source |> Option.value ~default:Signal.Type.Uid_set.empty
-        in
-        Map.set map ~key:source ~data:(Set.add fan_out target)))
+  depth_first_search t ~init:Signal.Type.Uid.Map.empty ~f_before:(fun map signal ->
+    let target = Signal.uid signal in
+    (* [signal] is in the fan_out of all of its [deps] *)
+    Signal.Type.Deps.fold signal ~init:map ~f:(fun map source ->
+      let source = Signal.uid source in
+      let fan_out =
+        Map.find map source |> Option.value ~default:Signal.Type.Uid.Set.empty
+      in
+      Map.set map ~key:source ~data:(Set.add fan_out target)))
 ;;
 
 let fan_in_map t =
-  depth_first_search
-    t
-    ~init:(Map.empty (module Signal.Type.Uid))
-    ~f_before:(fun map signal ->
-      Signal.Type.Deps.rev_map signal ~f:Signal.uid
-      |> Set.of_list (module Signal.Type.Uid)
-      |> fun data -> Map.set map ~key:(Signal.uid signal) ~data)
+  depth_first_search t ~init:Signal.Type.Uid.Map.empty ~f_before:(fun map signal ->
+    Signal.Type.Deps.rev_map signal ~f:Signal.uid
+    |> Signal.Type.Uid.Set.of_list
+    |> fun data -> Map.set map ~key:(Signal.uid signal) ~data)
 ;;
 
 let topological_sort ~deps (graph : t) =
@@ -339,7 +333,7 @@ let last_layer_of_nodes ~is_input graph =
 
      Note that the same map that keeps track of the whether the signal is in the last
      layer also doubles as a visited set for the DFS. *)
-  let rec visit_signal ((in_layer, _) : bool Map.M(Signal.Type.Uid).t * bool) signal =
+  let rec visit_signal ((in_layer, _) : bool Signal.Type.Uid.Map.t * bool) signal =
     match Map.find in_layer (uid signal) with
     | Some is_in_layer -> in_layer, is_in_layer
     | None ->
@@ -367,10 +361,7 @@ let last_layer_of_nodes ~is_input graph =
       in_layer, is_in_layer || is_in_layer')
   in
   let in_layer, _ =
-    List.fold
-      ~init:(Map.empty (module Signal.Type.Uid), false)
-      graph.outputs
-      ~f:visit_signal
+    List.fold ~init:(Signal.Type.Uid.Map.empty, false) graph.outputs ~f:visit_signal
   in
   (* Drop nodes not in the final layer. That will track back to an input or constant but
      not be affected by a register or memory. *)
@@ -383,7 +374,7 @@ let resolve_clock_domains t =
     match signal with
     | Wire { info = _; driver } ->
       (match driver with
-       | None -> signal
+       | None -> Some signal
        | Some otherwise -> transitively_resolve otherwise)
     | Empty
     | Op2 _
@@ -396,26 +387,22 @@ let resolve_clock_domains t =
     | Reg _
     | Multiport_mem _
     | Mem_read_port _
-    | Inst _ -> raise_s [%message "Invalid clock driver" (signal : Signal.t)]
+    | Inst _ -> None
   in
   let resolve_clock clock_domains signal =
-    let uid = uid signal in
-    if Map.mem clock_domains uid
+    if Map.mem clock_domains signal
     then clock_domains
     else (
       let clock_domain = transitively_resolve signal in
-      Map.add_exn clock_domains ~key:uid ~data:clock_domain)
+      Map.add_exn clock_domains ~key:signal ~data:clock_domain)
   in
-  depth_first_search
-    t
-    ~init:(Map.empty (module Signal.Type.Uid))
-    ~f_before:(fun acc signal ->
-      match signal with
-      | Reg reg -> resolve_clock acc reg.register.clock.clock
-      | Multiport_mem { write_ports; _ } ->
-        Array.fold write_ports ~init:acc ~f:(fun acc port ->
-          resolve_clock acc port.write_clock)
-      | _ -> acc)
+  depth_first_search t ~init:Signal.Type.Map.empty ~f_before:(fun acc signal ->
+    match signal with
+    | Reg reg -> resolve_clock acc reg.register.clock.clock
+    | Multiport_mem { write_ports; _ } ->
+      Array.fold write_ports ~init:acc ~f:(fun acc port ->
+        resolve_clock acc port.write_clock)
+    | _ -> acc)
 ;;
 
 let count_regs_between ~from ~to_ =
@@ -424,7 +411,7 @@ let count_regs_between ~from ~to_ =
   let graph = create ~upto:[ from ] [ to_ ] in
   (* Pre-populate the distance map with [from] having distance 0. [from] won't be visited
      by depth_first_search since it's in [upto]. No key in map means no path to [from]. *)
-  let distance_map = Map.singleton (module Signal.Type.Uid) from_uid 0 in
+  let distance_map = Signal.Type.Uid.Map.singleton from_uid 0 in
   let result_map =
     depth_first_search graph ~init:distance_map ~f_after:(fun map signal ->
       let signal_uid = Signal.uid signal in

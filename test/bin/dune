@@ -9,10 +9,7 @@
 
 (rule
  (targets test_instantiate_verilog.v test_instantiate_vhdl.vhd)
+ (alias runtest)
  (deps test_parameters.exe)
  (action
   (bash ./test_parameters.exe)))
-
-(alias
- (name runtest)
- (deps test_instantiate_verilog.v test_instantiate_vhdl.vhd))

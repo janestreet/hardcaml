@@ -13,6 +13,7 @@ val create
   -> ?instance:string
   -> ?parameters:Parameter.t list
   -> ?attributes:Rtl_attribute.t list
+  -> ?user_metadata:(string, Sexp.t) Hashtbl.t
   -> unit
   -> name:string
   -> inputs:(string * Signal.t) list
@@ -36,6 +37,7 @@ module With_interface (I : Interface.S) (O : Interface.S) : sig
     -> ?instance:string
     -> ?parameters:Parameter.t list
     -> ?attributes:Rtl_attribute.t list
+    -> ?user_metadata:Sexp.t String.Table.t
     -> name:string
     -> Interface.Create_fn(I)(O).t
 end

@@ -216,9 +216,21 @@ module Make (Prims : Primitives) = struct
 
   let of_int = of_int_trunc
 
+  module type Int_for_conversion = sig
+    type t [@@deriving sexp_of]
+
+    val one : t
+    val zero : t
+    val ( lsl ) : t -> int -> t
+    val ( - ) : t -> t -> t
+    val ( > ) : t -> t -> bool
+    val ( < ) : t -> t -> bool
+  end
+
   let of_unsigned
     (type a)
-    (module Int : Base.Int.S with type t = a)
+    (module Int : Int_for_conversion with type t = a)
+    ~num_bits
     (f : width:int -> a -> t)
     ~width
     x
@@ -226,9 +238,12 @@ module Make (Prims : Primitives) = struct
     if Int.( < ) x Int.zero
     then raise_s [%message "[of_unsigned_int] input value is less than 0" (x : Int.t)];
     let max_value =
-      if width >= Int.(num_bits |> to_int_exn) - 1
-      then Int.max_value
-      else Int.((Int.one lsl width) - Int.one)
+      let width_for_int =
+        match num_bits with
+        | None -> width
+        | Some int_num_bits -> Core.Int.min width (int_num_bits - 1)
+      in
+      Int.((one lsl width_for_int) - one)
     in
     if Int.( > ) x max_value
     then
@@ -243,17 +258,19 @@ module Make (Prims : Primitives) = struct
 
   let of_signed
     (type a)
-    (module Int : Base.Int.S with type t = a)
+    (module Int : Int_for_conversion with type t = a)
+    ~num_bits
     (f : width:int -> a -> t)
     ~width
     x
     =
     let max_value, min_value =
-      if width >= Int.(num_bits |> to_int_exn)
-      then Int.max_value, Int.min_value
-      else (
-        let width = width - 1 in
-        Int.((Int.one lsl width) - Int.one), Int.(-(Int.one lsl width)))
+      let width_for_int =
+        match num_bits with
+        | None -> width - 1
+        | Some int_num_bits -> Core.Int.min (width - 1) (int_num_bits - 1)
+      in
+      Int.((one lsl width_for_int) - one), Int.(zero - (one lsl width_for_int))
     in
     if Int.( > ) x max_value
     then
@@ -287,12 +304,19 @@ module Make (Prims : Primitives) = struct
   ;;
 
   let of_int64 = of_int64_trunc
-  let of_unsigned_int = of_unsigned (module Int) of_int_trunc
-  let of_unsigned_int32 = of_unsigned (module Int32) of_int32_trunc
-  let of_unsigned_int64 = of_unsigned (module Int64) of_int64_trunc
-  let of_signed_int = of_signed (module Int) of_int_trunc
-  let of_signed_int32 = of_signed (module Int32) of_int32_trunc
-  let of_signed_int64 = of_signed (module Int64) of_int64_trunc
+  let of_bigint_trunc ~width v = of_constant (Constant.of_bigint_trunc ~width v)
+
+  let of_unsigned_int =
+    of_unsigned (module Int) ~num_bits:(Some Int.num_bits) of_int_trunc
+  ;;
+
+  let of_unsigned_int32 = of_unsigned (module Int32) ~num_bits:(Some 32) of_int32_trunc
+  let of_unsigned_int64 = of_unsigned (module Int64) ~num_bits:(Some 64) of_int64_trunc
+  let of_unsigned_bigint = of_unsigned (module Bigint) ~num_bits:None of_bigint_trunc
+  let of_signed_int = of_signed (module Int) ~num_bits:(Some Int.num_bits) of_int_trunc
+  let of_signed_int32 = of_signed (module Int32) ~num_bits:(Some 32) of_int32_trunc
+  let of_signed_int64 = of_signed (module Int64) ~num_bits:(Some 64) of_int64_trunc
+  let of_signed_bigint = of_signed (module Bigint) ~num_bits:None of_bigint_trunc
 
   let of_hex ?(signedness = Signedness.Unsigned) ~width v =
     if width <= 0 then raise_const_width_greater_than_zero (module String) width v;
@@ -303,8 +327,6 @@ module Make (Prims : Primitives) = struct
     if width <= 0 then raise_const_width_greater_than_zero (module String) width v;
     of_constant (Constant.of_octal_string ~signedness ~width v)
   ;;
-
-  let of_bigint ~width v = of_constant (Constant.of_bigint ~width v)
 
   let of_bit_list b =
     if List.length b = 0
@@ -1152,6 +1174,19 @@ module Make (Prims : Primitives) = struct
       (List.map (bits_msb t) ~f:(fun d -> uresize d ~width:result_width))
   ;;
 
+  let binary_to_byte_qualifier ~num_bytes t =
+    mux_init
+      ~f:(fun t ->
+        if t = 0
+        then zero num_bytes
+        else if t >= num_bytes
+        then ones num_bytes
+        else concat_lsb [ ones t; zero (num_bytes - t) ])
+      t
+      (* Zero inclusive *)
+      (num_bytes + 1)
+  ;;
+
   let leading_zeros_of_bits_list ?branching_factor d =
     let result_width = num_bits_to_represent (List.length d) in
     List.mapi d ~f:(fun i valid -> { valid; value = of_int_trunc ~width:result_width i })
@@ -1274,7 +1309,7 @@ module Make (Prims : Primitives) = struct
   let of_decimal_string ~width v =
     if String.is_empty v
     then raise_of_decimal_string_empty_string ()
-    else of_bigint ~width (Bigint.of_string v)
+    else of_bigint_trunc ~width (Bigint.of_string v)
   ;;
 
   let[@cold] raise_of_verilog_format_missing_tick s =
@@ -1591,6 +1626,23 @@ module Make (Prims : Primitives) = struct
       | Some t, n -> Some (repeat t ~count:n)
     ;;
 
+    let width = function
+      | None -> 0
+      | Some t -> width t
+    ;;
+
+    let split_in_half_msb ?msbs t =
+      let w = width t in
+      let msbs = Option.value msbs ~default:((w + 1) / 2) in
+      sel_top t ~width:msbs, drop_top t ~width:msbs
+    ;;
+
+    let split_in_half_lsb ?lsbs t =
+      let w = width t in
+      let lsbs = Option.value lsbs ~default:((w + 1) / 2) in
+      drop_bottom t ~width:lsbs, sel_bottom t ~width:lsbs
+    ;;
+
     let raise_too_many_mux_inputs () =
       raise_s
         [%message
@@ -1699,6 +1751,12 @@ module Make (Prims : Primitives) = struct
         { valid; value = bottom })
     ;;
   end
+
+  let type_equal_id =
+    (* This is still safe because every functor application creates a new [type_equal_id],
+       and the name parameter is only used for printing. *)
+    Type_equal.Id.create ~name:"Comb" sexp_of_t
+  ;;
 end
 
 module Expert = struct

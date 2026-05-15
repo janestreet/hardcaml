@@ -62,71 +62,71 @@ let%expect_test "Instantiation blackbox" =
         input [15:0] d;
         output [31:0] q;
 
-        wire [15:0] _25;
-        wire [31:0] _26;
-        wire [15:0] _23;
-        wire [31:0] _24;
-        wire [31:0] _27;
-        wire [15:0] _20;
-        wire [31:0] _21;
-        wire [15:0] _18;
-        wire [15:0] _16;
-        wire _2;
-        wire _4;
-        wire _6;
-        wire [15:0] _8;
-        reg [15:0] _11;
-        reg [15:0] _13;
-        reg [15:0] _15;
-        reg [15:0] _17;
-        wire [31:0] _19;
-        wire [31:0] _22;
-        wire [31:0] _28;
-        assign _25 = 16'b1001000110011010;
-        assign _26 = $signed(_11) * $signed(_25);
-        assign _23 = 16'b0000010001101110;
-        assign _24 = $signed(_13) * $signed(_23);
-        assign _27 = _24 + _26;
-        assign _20 = 16'b1011100100000110;
-        assign _21 = $signed(_15) * $signed(_20);
-        assign _18 = 16'b0101011010100001;
-        assign _16 = 16'b0000000000000000;
-        assign _2 = enable;
-        assign _4 = clr;
-        assign _6 = clk;
-        assign _8 = d;
-        always @(posedge _6) begin
-            if (_4)
-                _11 <= _16;
+        wire [15:0] signal_const;
+        wire [31:0] signal_muls;
+        wire [15:0] signal_const_1;
+        wire [31:0] signal_muls_1;
+        wire [31:0] signal_add;
+        wire [15:0] signal_const_2;
+        wire [31:0] signal_muls_2;
+        wire [15:0] signal_const_3;
+        wire [15:0] signal_const_4;
+        wire signal_wire;
+        wire signal_wire_1;
+        wire signal_wire_2;
+        wire [15:0] signal_wire_3;
+        reg [15:0] signal_reg;
+        reg [15:0] signal_reg_1;
+        reg [15:0] signal_reg_2;
+        reg [15:0] signal_reg_3;
+        wire [31:0] signal_muls_3;
+        wire [31:0] signal_add_1;
+        wire [31:0] signal_add_2;
+        assign signal_const = 16'b1001000110011010;
+        assign signal_muls = $signed(signal_reg) * $signed(signal_const);
+        assign signal_const_1 = 16'b0000010001101110;
+        assign signal_muls_1 = $signed(signal_reg_1) * $signed(signal_const_1);
+        assign signal_add = signal_muls_1 + signal_muls;
+        assign signal_const_2 = 16'b1011100100000110;
+        assign signal_muls_2 = $signed(signal_reg_2) * $signed(signal_const_2);
+        assign signal_const_3 = 16'b0101011010100001;
+        assign signal_const_4 = 16'b0000000000000000;
+        assign signal_wire = enable;
+        assign signal_wire_1 = clr;
+        assign signal_wire_2 = clk;
+        assign signal_wire_3 = d;
+        always @(posedge signal_wire_2) begin
+            if (signal_wire_1)
+                signal_reg <= signal_const_4;
             else
-                if (_2)
-                    _11 <= _8;
+                if (signal_wire)
+                    signal_reg <= signal_wire_3;
         end
-        always @(posedge _6) begin
-            if (_4)
-                _13 <= _16;
+        always @(posedge signal_wire_2) begin
+            if (signal_wire_1)
+                signal_reg_1 <= signal_const_4;
             else
-                if (_2)
-                    _13 <= _11;
+                if (signal_wire)
+                    signal_reg_1 <= signal_reg;
         end
-        always @(posedge _6) begin
-            if (_4)
-                _15 <= _16;
+        always @(posedge signal_wire_2) begin
+            if (signal_wire_1)
+                signal_reg_2 <= signal_const_4;
             else
-                if (_2)
-                    _15 <= _13;
+                if (signal_wire)
+                    signal_reg_2 <= signal_reg_1;
         end
-        always @(posedge _6) begin
-            if (_4)
-                _17 <= _16;
+        always @(posedge signal_wire_2) begin
+            if (signal_wire_1)
+                signal_reg_3 <= signal_const_4;
             else
-                if (_2)
-                    _17 <= _15;
+                if (signal_wire)
+                    signal_reg_3 <= signal_reg_2;
         end
-        assign _19 = $signed(_17) * $signed(_18);
-        assign _22 = _19 + _21;
-        assign _28 = _22 + _27;
-        assign q = _28;
+        assign signal_muls_3 = $signed(signal_reg_3) * $signed(signal_const_3);
+        assign signal_add_1 = signal_muls_3 + signal_muls_2;
+        assign signal_add_2 = signal_add_1 + signal_add;
+        assign q = signal_add_2;
 
     endmodule
     module fir_filter_top (
@@ -143,25 +143,25 @@ let%expect_test "Instantiation blackbox" =
         input clk;
         output [31:0] q;
 
-        wire [15:0] _2;
-        wire _4;
-        wire _6;
-        wire _8;
-        wire [31:0] _11;
-        wire [31:0] _9;
-        assign _2 = d;
-        assign _4 = enable;
-        assign _6 = clr;
-        assign _8 = clk;
+        wire [15:0] signal_wire;
+        wire signal_wire_1;
+        wire signal_wire_2;
+        wire signal_wire_3;
+        wire [31:0] signal_inst;
+        wire [31:0] signal_wire_4;
+        assign signal_wire = d;
+        assign signal_wire_1 = enable;
+        assign signal_wire_2 = clr;
+        assign signal_wire_3 = clk;
         fir_filter
             fir_filter
-            ( .clk(_8),
-              .clr(_6),
-              .enable(_4),
-              .d(_2),
-              .q(_11[31:0]) );
-        assign _9 = _11;
-        assign q = _9;
+            ( .clk(signal_wire_3),
+              .clr(signal_wire_2),
+              .enable(signal_wire_1),
+              .d(signal_wire),
+              .q(signal_inst[31:0]) );
+        assign signal_wire_4 = signal_inst;
+        assign q = signal_wire_4;
 
     endmodule
     |}];
@@ -199,25 +199,25 @@ let%expect_test "Instantiation blackbox" =
         input clk;
         output [31:0] q;
 
-        wire [15:0] _2;
-        wire _4;
-        wire _6;
-        wire _8;
-        wire [31:0] _11;
-        wire [31:0] _9;
-        assign _2 = d;
-        assign _4 = enable;
-        assign _6 = clr;
-        assign _8 = clk;
+        wire [15:0] signal_wire;
+        wire signal_wire_1;
+        wire signal_wire_2;
+        wire signal_wire_3;
+        wire [31:0] signal_inst;
+        wire [31:0] signal_wire_4;
+        assign signal_wire = d;
+        assign signal_wire_1 = enable;
+        assign signal_wire_2 = clr;
+        assign signal_wire_3 = clk;
         fir_filter
             fir_filter
-            ( .clk(_8),
-              .clr(_6),
-              .enable(_4),
-              .d(_2),
-              .q(_11[31:0]) );
-        assign _9 = _11;
-        assign q = _9;
+            ( .clk(signal_wire_3),
+              .clr(signal_wire_2),
+              .enable(signal_wire_1),
+              .d(signal_wire),
+              .q(signal_inst[31:0]) );
+        assign signal_wire_4 = signal_inst;
+        assign q = signal_wire_4;
 
     endmodule
     |}]

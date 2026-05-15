@@ -1,1 +1,1 @@
-include Wave_data_intf.Data
+include Wave_data_intf.Wave_data

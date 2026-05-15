@@ -4,10 +4,11 @@ type ('a, 'b) t2 = ('a, 'b) Comb.with_valid2 =
   { valid : 'a
   ; value : 'b
   }
-[@@deriving sexp, bin_io, equal ~localize, compare ~localize]
+[@@deriving sexp, bin_io, equal ~localize, compare ~localize, hash]
 
 module T = struct
-  type 'a t = ('a, 'a) t2 [@@deriving sexp, bin_io, equal ~localize, compare ~localize]
+  type 'a t = ('a, 'a) t2
+  [@@deriving sexp, bin_io, equal ~localize, compare ~localize, hash]
 
   let valid { valid; value = _ } = valid
   let value { valid = _; value } = value

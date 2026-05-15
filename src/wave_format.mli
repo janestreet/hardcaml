@@ -23,3 +23,13 @@ include%template Equal.S [@mode local] with type t := t
 val to_string : t -> (Bits.t -> string) Staged.t
 
 val default : t
+
+(** Parse a short, case-insensitive format name. Accepted aliases:
+    - [Binary]: "b", "bin", "binary"
+    - [Hex]: "h", "hex"
+    - [Unsigned_int]: "u", "uint", "unsigned", "unsigned-int"
+    - [Int]: "s", "int", "sint", "signed", "signed-int"
+
+    Only these basic formats are supported; compound formats like [Bit_or] are not
+    supported. Raises on an unknown name. *)
+val of_string_exn : string -> t

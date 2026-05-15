@@ -1,7 +1,7 @@
 open! Import
 open! Signal
 open! Always
-open Hardcaml_waveterm_cyclesim
+open Hardcaml_waveterm_kernel
 
 let%expect_test "guarded assignment width mistmatch" =
   require_does_raise (fun () ->
@@ -206,7 +206,7 @@ let%expect_test "test statemachine encodings" =
          else [ ok ])
     in
     let sim = Cyclesim.create circuit in
-    let waves, sim = Waveform.create sim in
+    let waves, sim = Cyclesim.Waveform.create sim in
     let port_nickel, port_dime =
       Cyclesim.in_port sim "nickel", Cyclesim.in_port sim "dime"
     in

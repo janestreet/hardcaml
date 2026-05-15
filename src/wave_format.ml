@@ -104,3 +104,12 @@ let rec to_string t =
 ;;
 
 let default = Bit_or Hex
+
+let of_string_exn s =
+  match String.lowercase s with
+  | "b" | "bin" | "binary" -> Binary
+  | "h" | "hex" -> Hex
+  | "u" | "uint" | "unsigned" | "unsigned-int" -> Unsigned_int
+  | "s" | "int" | "sint" | "signed" | "signed-int" -> Int
+  | s -> raise_s [%message "Invalid wave_format" (s : string)]
+;;

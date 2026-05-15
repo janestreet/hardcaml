@@ -1,5 +1,5 @@
 open! Import
-open! Hardcaml_waveterm_cyclesim
+open! Hardcaml_waveterm_kernel
 
 let write_port address_width data_width enable_width =
   { Write_port.write_clock = Signal.gnd
@@ -183,7 +183,7 @@ let sim ~initialize_to ~address_width ~data_width ~enable_widths =
   let open Bits in
   let circ = circ ~initialize_to ~address_width ~data_width ~enable_widths in
   let sim = Cyclesim.create circ in
-  let waves, sim = Waveform.create sim in
+  let waves, sim = Cyclesim.Waveform.create sim in
   let write_ports = Array.init (Array.length enable_widths) ~f:(get_write_port sim) in
   let read_address = Cyclesim.in_port sim "read_address" in
   let q = Cyclesim.out_port sim "q0" in
@@ -390,121 +390,121 @@ let%expect_test "show verilog" =
         input [8:0] read_address;
         output [31:0] q0;
 
-        wire [1:0] _48;
-        wire [10:0] _49;
-        wire [7:0] _50;
-        wire [1:0] _45;
-        wire [10:0] _46;
-        wire [7:0] _47;
-        wire [1:0] _42;
-        wire [10:0] _43;
-        wire [7:0] _44;
-        wire [7:0] _39;
-        wire [1:0] _37;
-        wire [10:0] _38;
-        wire [7:0] _36;
-        wire [10:0] _35;
-        wire [7:0] _33;
-        wire [10:0] _32;
-        wire [7:0] _30;
-        wire [10:0] _29;
-        wire _27;
-        wire [7:0] _26;
-        wire [10:0] _25;
-        wire _23;
-        wire [7:0] _22;
-        wire [10:0] _21;
-        wire _19;
-        wire [7:0] _18;
-        wire [10:0] _17;
-        wire _15;
-        wire [7:0] _14;
-        wire [10:0] _13;
-        reg [7:0] _40[0:2047];
-        wire [10:0] _11;
-        wire [7:0] _41;
-        wire [31:0] _51;
-        assign _48 = 2'b00;
-        assign _49 = { read_address,
-                       _48 };
-        assign _50 = _40[_49];
-        assign _45 = 2'b01;
-        assign _46 = { read_address,
-                       _45 };
-        assign _47 = _40[_46];
-        assign _42 = 2'b10;
-        assign _43 = { read_address,
-                       _42 };
-        assign _44 = _40[_43];
-        assign _39 = write_data1[31:24];
-        assign _37 = 2'b11;
-        assign _38 = { write_address1,
-                       _37 };
-        assign _36 = write_data1[23:16];
-        assign _35 = { write_address1,
-                       _42 };
-        assign _33 = write_data1[15:8];
-        assign _32 = { write_address1,
-                       _45 };
-        assign _30 = write_data1[7:0];
-        assign _29 = { write_address1,
-                       _48 };
-        assign _27 = write_enable0[3:3];
-        assign _26 = write_data0[31:24];
-        assign _25 = { write_address0,
-                       _37 };
-        assign _23 = write_enable0[2:2];
-        assign _22 = write_data0[23:16];
-        assign _21 = { write_address0,
-                       _42 };
-        assign _19 = write_enable0[1:1];
-        assign _18 = write_data0[15:8];
-        assign _17 = { write_address0,
-                       _45 };
-        assign _15 = write_enable0[0:0];
-        assign _14 = write_data0[7:0];
-        assign _13 = { write_address0,
-                       _48 };
+        wire [1:0] signal_const;
+        wire [10:0] signal_cat;
+        wire [7:0] signal_mem_read_port;
+        wire [1:0] signal_const_1;
+        wire [10:0] signal_cat_1;
+        wire [7:0] signal_mem_read_port_1;
+        wire [1:0] signal_const_2;
+        wire [10:0] signal_cat_2;
+        wire [7:0] signal_mem_read_port_2;
+        wire [7:0] signal_select;
+        wire [1:0] signal_const_3;
+        wire [10:0] signal_cat_3;
+        wire [7:0] signal_select_1;
+        wire [10:0] signal_cat_4;
+        wire [7:0] signal_select_2;
+        wire [10:0] signal_cat_5;
+        wire [7:0] signal_select_3;
+        wire [10:0] signal_cat_6;
+        wire signal_select_4;
+        wire [7:0] signal_select_5;
+        wire [10:0] signal_cat_7;
+        wire signal_select_6;
+        wire [7:0] signal_select_7;
+        wire [10:0] signal_cat_8;
+        wire signal_select_8;
+        wire [7:0] signal_select_9;
+        wire [10:0] signal_cat_9;
+        wire signal_select_10;
+        wire [7:0] signal_select_11;
+        wire [10:0] signal_cat_10;
+        reg [7:0] signal_multiport_mem[0:2047];
+        wire [10:0] signal_cat_11;
+        wire [7:0] signal_mem_read_port_3;
+        wire [31:0] signal_cat_12;
+        assign signal_const = 2'b00;
+        assign signal_cat = { read_address,
+                              signal_const };
+        assign signal_mem_read_port = signal_multiport_mem[signal_cat];
+        assign signal_const_1 = 2'b01;
+        assign signal_cat_1 = { read_address,
+                                signal_const_1 };
+        assign signal_mem_read_port_1 = signal_multiport_mem[signal_cat_1];
+        assign signal_const_2 = 2'b10;
+        assign signal_cat_2 = { read_address,
+                                signal_const_2 };
+        assign signal_mem_read_port_2 = signal_multiport_mem[signal_cat_2];
+        assign signal_select = write_data1[31:24];
+        assign signal_const_3 = 2'b11;
+        assign signal_cat_3 = { write_address1,
+                                signal_const_3 };
+        assign signal_select_1 = write_data1[23:16];
+        assign signal_cat_4 = { write_address1,
+                                signal_const_2 };
+        assign signal_select_2 = write_data1[15:8];
+        assign signal_cat_5 = { write_address1,
+                                signal_const_1 };
+        assign signal_select_3 = write_data1[7:0];
+        assign signal_cat_6 = { write_address1,
+                                signal_const };
+        assign signal_select_4 = write_enable0[3:3];
+        assign signal_select_5 = write_data0[31:24];
+        assign signal_cat_7 = { write_address0,
+                                signal_const_3 };
+        assign signal_select_6 = write_enable0[2:2];
+        assign signal_select_7 = write_data0[23:16];
+        assign signal_cat_8 = { write_address0,
+                                signal_const_2 };
+        assign signal_select_8 = write_enable0[1:1];
+        assign signal_select_9 = write_data0[15:8];
+        assign signal_cat_9 = { write_address0,
+                                signal_const_1 };
+        assign signal_select_10 = write_enable0[0:0];
+        assign signal_select_11 = write_data0[7:0];
+        assign signal_cat_10 = { write_address0,
+                                 signal_const };
         always @(posedge write_clock) begin
-            if (_15)
-                _40[_13] <= _14;
+            if (signal_select_10)
+                signal_multiport_mem[signal_cat_10] <= signal_select_11;
         end
         always @(posedge write_clock) begin
-            if (_19)
-                _40[_17] <= _18;
+            if (signal_select_8)
+                signal_multiport_mem[signal_cat_9] <= signal_select_9;
         end
         always @(posedge write_clock) begin
-            if (_23)
-                _40[_21] <= _22;
+            if (signal_select_6)
+                signal_multiport_mem[signal_cat_8] <= signal_select_7;
         end
         always @(posedge write_clock) begin
-            if (_27)
-                _40[_25] <= _26;
-        end
-        always @(posedge write_clock) begin
-            if (write_enable1)
-                _40[_29] <= _30;
+            if (signal_select_4)
+                signal_multiport_mem[signal_cat_7] <= signal_select_5;
         end
         always @(posedge write_clock) begin
             if (write_enable1)
-                _40[_32] <= _33;
+                signal_multiport_mem[signal_cat_6] <= signal_select_3;
         end
         always @(posedge write_clock) begin
             if (write_enable1)
-                _40[_35] <= _36;
+                signal_multiport_mem[signal_cat_5] <= signal_select_2;
         end
         always @(posedge write_clock) begin
             if (write_enable1)
-                _40[_38] <= _39;
+                signal_multiport_mem[signal_cat_4] <= signal_select_1;
         end
-        assign _11 = { read_address,
-                       _37 };
-        assign _41 = _40[_11];
-        assign _51 = { _41,
-                       _44,
-                       _47,
-                       _50 };
-        assign q0 = _51;
+        always @(posedge write_clock) begin
+            if (write_enable1)
+                signal_multiport_mem[signal_cat_3] <= signal_select;
+        end
+        assign signal_cat_11 = { read_address,
+                                 signal_const_3 };
+        assign signal_mem_read_port_3 = signal_multiport_mem[signal_cat_11];
+        assign signal_cat_12 = { signal_mem_read_port_3,
+                                 signal_mem_read_port_2,
+                                 signal_mem_read_port_1,
+                                 signal_mem_read_port };
+        assign q0 = signal_cat_12;
 
     endmodule
     |}];
@@ -531,68 +531,68 @@ let%expect_test "show verilog" =
         input [8:0] read_address;
         output [8:0] q0;
 
-        wire [1:0] _34;
-        wire [10:0] _35;
-        wire [2:0] _36;
-        wire [10:0] _31;
-        wire [10:0] _30;
-        wire [10:0] _32;
-        wire [2:0] _33;
-        wire _26;
-        wire [2:0] _25;
-        wire [10:0] _23;
-        wire [10:0] _22;
-        wire [10:0] _24;
-        wire _20;
-        wire [2:0] _19;
-        wire [10:0] _16;
-        wire [10:0] _18;
-        wire _14;
-        wire [2:0] _13;
-        wire [10:0] _12;
-        reg [2:0] _27[0:1535];
-        wire [10:0] _8;
-        wire [10:0] _10;
-        wire [2:0] _28;
-        wire [8:0] _37;
-        assign _34 = 2'b11;
-        assign _35 = read_address * _34;
-        assign _36 = _27[_35];
-        assign _31 = 11'b00000000001;
-        assign _30 = read_address * _34;
-        assign _32 = _30 + _31;
-        assign _33 = _27[_32];
-        assign _26 = write_enable0[2:2];
-        assign _25 = write_data0[8:6];
-        assign _23 = 11'b00000000010;
-        assign _22 = write_address0 * _34;
-        assign _24 = _22 + _23;
-        assign _20 = write_enable0[1:1];
-        assign _19 = write_data0[5:3];
-        assign _16 = write_address0 * _34;
-        assign _18 = _16 + _31;
-        assign _14 = write_enable0[0:0];
-        assign _13 = write_data0[2:0];
-        assign _12 = write_address0 * _34;
+        wire [1:0] signal_const;
+        wire [10:0] signal_mulu;
+        wire [2:0] signal_mem_read_port;
+        wire [10:0] signal_const_1;
+        wire [10:0] signal_mulu_1;
+        wire [10:0] signal_add;
+        wire [2:0] signal_mem_read_port_1;
+        wire signal_select;
+        wire [2:0] signal_select_1;
+        wire [10:0] signal_const_3;
+        wire [10:0] signal_mulu_2;
+        wire [10:0] signal_add_1;
+        wire signal_select_2;
+        wire [2:0] signal_select_3;
+        wire [10:0] signal_mulu_3;
+        wire [10:0] signal_add_2;
+        wire signal_select_4;
+        wire [2:0] signal_select_5;
+        wire [10:0] signal_mulu_4;
+        reg [2:0] signal_multiport_mem[0:1535];
+        wire [10:0] signal_mulu_5;
+        wire [10:0] signal_add_3;
+        wire [2:0] signal_mem_read_port_2;
+        wire [8:0] signal_cat;
+        assign signal_const = 2'b11;
+        assign signal_mulu = read_address * signal_const;
+        assign signal_mem_read_port = signal_multiport_mem[signal_mulu];
+        assign signal_const_1 = 11'b00000000001;
+        assign signal_mulu_1 = read_address * signal_const;
+        assign signal_add = signal_mulu_1 + signal_const_1;
+        assign signal_mem_read_port_1 = signal_multiport_mem[signal_add];
+        assign signal_select = write_enable0[2:2];
+        assign signal_select_1 = write_data0[8:6];
+        assign signal_const_3 = 11'b00000000010;
+        assign signal_mulu_2 = write_address0 * signal_const;
+        assign signal_add_1 = signal_mulu_2 + signal_const_3;
+        assign signal_select_2 = write_enable0[1:1];
+        assign signal_select_3 = write_data0[5:3];
+        assign signal_mulu_3 = write_address0 * signal_const;
+        assign signal_add_2 = signal_mulu_3 + signal_const_1;
+        assign signal_select_4 = write_enable0[0:0];
+        assign signal_select_5 = write_data0[2:0];
+        assign signal_mulu_4 = write_address0 * signal_const;
         always @(posedge write_clock) begin
-            if (_14)
-                _27[_12] <= _13;
+            if (signal_select_4)
+                signal_multiport_mem[signal_mulu_4] <= signal_select_5;
         end
         always @(posedge write_clock) begin
-            if (_20)
-                _27[_18] <= _19;
+            if (signal_select_2)
+                signal_multiport_mem[signal_add_2] <= signal_select_3;
         end
         always @(posedge write_clock) begin
-            if (_26)
-                _27[_24] <= _25;
+            if (signal_select)
+                signal_multiport_mem[signal_add_1] <= signal_select_1;
         end
-        assign _8 = read_address * _34;
-        assign _10 = _8 + _23;
-        assign _28 = _27[_10];
-        assign _37 = { _28,
-                       _33,
-                       _36 };
-        assign q0 = _37;
+        assign signal_mulu_5 = read_address * signal_const;
+        assign signal_add_3 = signal_mulu_5 + signal_const_3;
+        assign signal_mem_read_port_2 = signal_multiport_mem[signal_add_3];
+        assign signal_cat = { signal_mem_read_port_2,
+                              signal_mem_read_port_1,
+                              signal_mem_read_port };
+        assign q0 = signal_cat;
 
     endmodule
     |}]

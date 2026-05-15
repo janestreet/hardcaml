@@ -1,6 +1,6 @@
 open Core
 open Hardcaml
-open Hardcaml_waveterm_cyclesim
+open Hardcaml_waveterm_kernel
 
 let%expect_test "simple dual port" =
   let module Sdp =
@@ -12,7 +12,7 @@ let%expect_test "simple dual port" =
   let module Sim = Cyclesim.With_interface (Sdp.I) (Sdp.O) in
   let scope = Scope.create ~flatten_design:true () in
   let sim = Sim.create (Sdp.create scope) in
-  let waves, sim = Waveform.create sim in
+  let waves, sim = Cyclesim.Waveform.create sim in
   let inputs = Cyclesim.inputs sim in
   let open Cyclesim.Sim_bits in
   let cycle () =

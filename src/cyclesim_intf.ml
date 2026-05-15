@@ -162,4 +162,12 @@ module type Cyclesim = sig
 
     module Traced_nodes : module type of Cyclesim0.Traced_nodes
   end
+
+  module Waveform : sig
+    (** Create a waveform from the given simulator *)
+    val create : ('i, 'o) t -> Wave_data.t * ('i, 'o) t
+
+    (** Create a waveform if [enabled] is true. Otherwise waves are not traced. *)
+    val create_if : enabled:bool -> ('i, 'o) t -> Wave_data.t option * ('i, 'o) t
+  end
 end

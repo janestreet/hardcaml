@@ -62,8 +62,8 @@ let%expect_test "C" =
         input C_port_i;
         output C_port_o;
 
-        wire _14;
-        wire _2;
+        wire signal_const;
+        wire signal_wire;
         wire C$i$C_port_i;
         wire C$B$i$B_port_i;
         wire C$B$A$i$A_port_i;
@@ -73,16 +73,16 @@ let%expect_test "C" =
         wire C$B$o$B_port_o;
         wire C$C_internal;
         wire C$o$C_port_o;
-        assign _14 = 1'b1;
-        assign _2 = C_port_i;
-        assign C$i$C_port_i = _2;
+        assign signal_const = 1'b1;
+        assign signal_wire = C_port_i;
+        assign C$i$C_port_i = signal_wire;
         assign C$B$i$B_port_i = C$i$C_port_i;
         assign C$B$A$i$A_port_i = C$B$i$B_port_i;
-        assign C$B$A$A_internal = C$B$A$i$A_port_i + _14;
+        assign C$B$A$A_internal = C$B$A$i$A_port_i + signal_const;
         assign C$B$A$o$A_port_o = C$B$A$A_internal;
-        assign C$B$B_internal = C$B$A$o$A_port_o + _14;
+        assign C$B$B_internal = C$B$A$o$A_port_o + signal_const;
         assign C$B$o$B_port_o = C$B$B_internal;
-        assign C$C_internal = C$B$o$B_port_o + _14;
+        assign C$C_internal = C$B$o$B_port_o + signal_const;
         assign C$o$C_port_o = C$C_internal;
         assign C_port_o = C$o$C_port_o;
 
@@ -101,7 +101,7 @@ let sim () =
       ()
   in
   let sim = Sim.create ~config:Cyclesim.Config.trace_all (C.hierarchy scope) in
-  let waves, sim = Hardcaml_waveterm_cyclesim.Waveform.create sim in
+  let waves, sim = Cyclesim.Waveform.create sim in
   for _ = 0 to 10 do
     Cyclesim.cycle sim
   done;

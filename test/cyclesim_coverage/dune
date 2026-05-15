@@ -1,6 +1,5 @@
 (library
  (name cyclesim_coverage_test)
- (libraries core expect_test_helpers_core.expect_test_helpers_base hardcaml
-   re)
+ (libraries core expect_test_helpers_base hardcaml re)
  (preprocess
   (pps ppx_jane ppx_hardcaml)))

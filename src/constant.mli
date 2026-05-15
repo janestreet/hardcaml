@@ -57,7 +57,7 @@ val of_int64 : width:int -> int64 -> t
 val of_int64_array : width:int -> int64 array -> t
 
 (** Convert from an arbitrary precision integer. *)
-val of_bigint : width:int -> Bigint.t -> t
+val of_bigint_trunc : width:int -> Bigint.t -> t
 
 (** Create from a hex encoded string. *)
 val of_hex_string : signedness:Signedness.t -> width:int -> string -> t

@@ -1,5 +1,5 @@
 open! Import
-open! Hardcaml_waveterm_cyclesim
+open! Hardcaml_waveterm_kernel
 
 let write_port address_width data_width enable_width =
   { Write_port.write_clock = Signal.gnd
@@ -145,7 +145,7 @@ let sim ~initialize_to ~write_bits ~read_bits =
   let open Bits in
   let circ = circ ~initialize_to ~write_bits ~read_bits in
   let sim = Cyclesim.create circ in
-  let waves, sim = Waveform.create sim in
+  let waves, sim = Cyclesim.Waveform.create sim in
   let write_ports = Array.init (Array.length write_bits) ~f:(get_write_port sim) in
   let read_addresses =
     Array.init (Array.length read_bits) ~f:(fun idx ->

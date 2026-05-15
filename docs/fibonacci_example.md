@@ -165,14 +165,14 @@ let fibonacci_testbench (sim : (_ I.t, _ O.t) Cyclesim.t) =
 let test () =
   let module Sim = Cyclesim.With_interface (I) (O) in
   let sim = Sim.create create in
-  let waves, sim = Waveform.create sim in
+  let waves, sim = Cyclesim.Waveform.create sim in
   fibonacci_testbench sim;
   waves
 ;;
 ```
 
 ```ocaml
-# let waves = test ()
+# ignore (test () : Waveform.t);;
 ((state S_wait) (done_ false) (result 0))
 ((state S_counting) (done_ false) (result 0))
 ((state S_counting) (done_ false) (result 0))
@@ -180,7 +180,7 @@ let test () =
 ((state S_counting) (done_ false) (result 0))
 ((state S_write_result) (done_ true) (result 5))
 ((state S_wait) (done_ false) (result 0))
-val waves : Waveform.t = <abstr>
+- : unit = ()
 ```
 
 ## Seeing the computation in a waveform
@@ -220,10 +220,17 @@ Showing the waveform.
 
 ```ocaml
 # let () =
-    Waveform.print waves
+    Waveform.print (test())
       ~display_width:94
       ~display_rules
   ;;
+((state S_wait) (done_ false) (result 0))
+((state S_counting) (done_ false) (result 0))
+((state S_counting) (done_ false) (result 0))
+((state S_counting) (done_ false) (result 0))
+((state S_counting) (done_ false) (result 0))
+((state S_write_result) (done_ true) (result 5))
+((state S_wait) (done_ false) (result 0))
 ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────────────┐
 │clock             ││┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   │
 │                  ││    └───┘   └───┘   └───┘   └───┘   └───┘   └───┘   └───┘   └───┘   └───│

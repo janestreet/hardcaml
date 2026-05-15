@@ -125,9 +125,9 @@ module my_adder (
     input [7:0] a;
     output [7:0] c;
 
-    wire [7:0] _4;
-    assign _4 = a + b;
-    assign c = _4;
+    wire [7:0] signal_add;
+    assign signal_add = a + b;
+    assign c = signal_add;
 
 endmodule
 - : unit = ()

@@ -102,82 +102,82 @@ let%expect_test "operators" =
         output [7:0] o_mux2;
         output [7:0] o_mux;
 
-        wire [7:0] _25;
-        wire [7:0] _24;
-        wire [1:0] _23;
-        reg [7:0] _26;
-        wire _27;
-        wire [7:0] _28;
-        wire [25:0] _29;
-        wire [15:0] _30;
-        wire [5:0] _31;
-        wire [1:0] _32;
-        wire _33;
-        wire _34;
-        wire [17:0] _35;
-        wire [9:0] _11;
-        wire [17:0] _36;
-        wire [7:0] _37;
-        wire [7:0] _38;
-        wire [7:0] _39;
+        wire [7:0] signal_const;
+        wire [7:0] signal_select;
+        wire [1:0] signal_select_1;
+        reg [7:0] signal_mux;
+        wire signal_select_2;
+        wire [7:0] signal_mux_1;
+        wire [25:0] signal_cat;
+        wire [15:0] signal_cat_1;
+        wire [5:0] signal_select_3;
+        wire [1:0] signal_select_4;
+        wire signal_lt;
+        wire signal_eq;
+        wire [17:0] signal_muls;
+        wire [9:0] signal_wire;
+        wire [17:0] signal_mulu;
+        wire [7:0] signal_sub;
+        wire [7:0] signal_add;
+        wire [7:0] signal_not;
         wire [7:0] \a.b ;
         wire [7:0] \module ;
-        wire [7:0] _19;
-        wire [7:0] _21;
-        wire [7:0] _42;
-        assign _25 = 8'b10101011;
-        assign _24 = _11[7:0];
-        assign _23 = _21[2:1];
+        wire [7:0] signal_wire_1;
+        wire [7:0] signal_wire_2;
+        wire [7:0] signal_and;
+        assign signal_const = 8'b10101011;
+        assign signal_select = signal_wire[7:0];
+        assign signal_select_1 = signal_wire_2[2:1];
         always @* begin
-            case (_23)
+            case (signal_select_1)
             0:
-                _26 <= _21;
+                signal_mux <= signal_wire_2;
             1:
-                _26 <= _19;
+                signal_mux <= signal_wire_1;
             2:
-                _26 <= _24;
+                signal_mux <= signal_select;
             default:
-                _26 <= _25;
+                signal_mux <= signal_const;
             endcase
         end
-        assign _27 = _21[0:0];
-        assign _28 = _27 ? _21 : _19;
-        assign _29 = { _21,
-                       _19,
-                       _11 };
-        assign _30 = { _21,
-                       _19 };
-        assign _31 = _11[9:4];
-        assign _32 = _21[4:3];
-        assign _33 = _21 < _19;
-        assign _34 = _21 == _19;
-        assign _35 = $signed(_21) * $signed(_11);
-        assign _11 = i_c;
-        assign _36 = _21 * _11;
-        assign _37 = _21 - _19;
-        assign _38 = _21 + _19;
-        assign _39 = ~ _21;
-        assign \a.b  = _21 ^ _19;
-        assign \module  = _21 | _19;
-        assign _19 = i_b;
-        assign _21 = i_a;
-        assign _42 = _21 & _19;
-        assign o_and = _42;
+        assign signal_select_2 = signal_wire_2[0:0];
+        assign signal_mux_1 = signal_select_2 ? signal_wire_2 : signal_wire_1;
+        assign signal_cat = { signal_wire_2,
+                              signal_wire_1,
+                              signal_wire };
+        assign signal_cat_1 = { signal_wire_2,
+                                signal_wire_1 };
+        assign signal_select_3 = signal_wire[9:4];
+        assign signal_select_4 = signal_wire_2[4:3];
+        assign signal_lt = signal_wire_2 < signal_wire_1;
+        assign signal_eq = signal_wire_2 == signal_wire_1;
+        assign signal_muls = $signed(signal_wire_2) * $signed(signal_wire);
+        assign signal_wire = i_c;
+        assign signal_mulu = signal_wire_2 * signal_wire;
+        assign signal_sub = signal_wire_2 - signal_wire_1;
+        assign signal_add = signal_wire_2 + signal_wire_1;
+        assign signal_not = ~ signal_wire_2;
+        assign \a.b  = signal_wire_2 ^ signal_wire_1;
+        assign \module  = signal_wire_2 | signal_wire_1;
+        assign signal_wire_1 = i_b;
+        assign signal_wire_2 = i_a;
+        assign signal_and = signal_wire_2 & signal_wire_1;
+        assign o_and = signal_and;
         assign o_or = \module ;
         assign o_xor = \a.b ;
-        assign o_not = _39;
-        assign o_add = _38;
-        assign o_sub = _37;
-        assign o_mul = _36;
-        assign o_smul = _35;
-        assign o_eq = _34;
-        assign o_lt = _33;
-        assign o_select1 = _32;
-        assign o_select2 = _31;
-        assign o_cat1 = _30;
-        assign o_cat2 = _29;
-        assign o_mux2 = _28;
-        assign o_mux = _26;
+        assign o_not = signal_not;
+        assign o_add = signal_add;
+        assign o_sub = signal_sub;
+        assign o_mul = signal_mulu;
+        assign o_smul = signal_muls;
+        assign o_eq = signal_eq;
+        assign o_lt = signal_lt;
+        assign o_select1 = signal_select_4;
+        assign o_select2 = signal_select_3;
+        assign o_cat1 = signal_cat_1;
+        assign o_cat2 = signal_cat;
+        assign o_mux2 = signal_mux_1;
+        assign o_mux = signal_mux;
 
     endmodule
     library ieee;
@@ -210,77 +210,77 @@ let%expect_test "operators" =
 
     architecture rtl of operators is
 
-        signal \_25\ : std_logic_vector(7 downto 0);
-        signal \_24\ : std_logic_vector(7 downto 0);
-        signal \_23\ : std_logic_vector(1 downto 0);
-        signal \_26\ : std_logic_vector(7 downto 0);
-        signal \_27\ : std_logic;
-        signal \_28\ : std_logic_vector(7 downto 0);
-        signal \_29\ : std_logic_vector(25 downto 0);
-        signal \_30\ : std_logic_vector(15 downto 0);
-        signal \_31\ : std_logic_vector(5 downto 0);
-        signal \_32\ : std_logic_vector(1 downto 0);
-        signal \_33\ : std_logic;
-        signal \_34\ : std_logic;
-        signal \_35\ : std_logic_vector(17 downto 0);
-        signal \_11\ : std_logic_vector(9 downto 0);
-        signal \_36\ : std_logic_vector(17 downto 0);
-        signal \_37\ : std_logic_vector(7 downto 0);
-        signal \_38\ : std_logic_vector(7 downto 0);
-        signal \_39\ : std_logic_vector(7 downto 0);
+        signal signal_const : std_logic_vector(7 downto 0);
+        signal signal_select : std_logic_vector(7 downto 0);
+        signal signal_select_1 : std_logic_vector(1 downto 0);
+        signal signal_mux : std_logic_vector(7 downto 0);
+        signal signal_select_2 : std_logic;
+        signal signal_mux_1 : std_logic_vector(7 downto 0);
+        signal signal_cat : std_logic_vector(25 downto 0);
+        signal signal_cat_1 : std_logic_vector(15 downto 0);
+        signal signal_select_3 : std_logic_vector(5 downto 0);
+        signal signal_select_4 : std_logic_vector(1 downto 0);
+        signal signal_lt : std_logic;
+        signal signal_eq : std_logic;
+        signal signal_muls : std_logic_vector(17 downto 0);
+        signal signal_wire : std_logic_vector(9 downto 0);
+        signal signal_mulu : std_logic_vector(17 downto 0);
+        signal signal_sub : std_logic_vector(7 downto 0);
+        signal signal_add : std_logic_vector(7 downto 0);
+        signal signal_not : std_logic_vector(7 downto 0);
         signal \a.b\ : std_logic_vector(7 downto 0);
         signal module : std_logic_vector(7 downto 0);
-        signal \_19\ : std_logic_vector(7 downto 0);
-        signal \_21\ : std_logic_vector(7 downto 0);
-        signal \_42\ : std_logic_vector(7 downto 0);
+        signal signal_wire_1 : std_logic_vector(7 downto 0);
+        signal signal_wire_2 : std_logic_vector(7 downto 0);
+        signal signal_and : std_logic_vector(7 downto 0);
 
     begin
 
-        \_25\ <= "10101011";
-        \_24\ <= \_11\(7 downto 0);
-        \_23\ <= \_21\(2 downto 1);
-        with to_integer(unsigned(\_23\)) select \_26\ <=
-            \_21\ when 0,
-            \_19\ when 1,
-            \_24\ when 2,
-            \_25\ when others;
-        \_27\ <= \_21\(0);
-        with to_integer(unsigned(std_logic_vector'("" & \_27\))) select \_28\ <=
-            \_19\ when 0,
-            \_21\ when others;
-        \_29\ <= \_21\ & \_19\ & \_11\;
-        \_30\ <= \_21\ & \_19\;
-        \_31\ <= \_11\(9 downto 4);
-        \_32\ <= \_21\(4 downto 3);
-        \_33\ <= unsigned(\_21\) ?< unsigned(\_19\);
-        \_34\ <= unsigned(\_21\) ?= unsigned(\_19\);
-        \_35\ <= std_logic_vector(signed(\_21\) * signed(\_11\));
-        \_11\ <= i_c;
-        \_36\ <= std_logic_vector(unsigned(\_21\) * unsigned(\_11\));
-        \_37\ <= std_logic_vector(unsigned(\_21\) - unsigned(\_19\));
-        \_38\ <= std_logic_vector(unsigned(\_21\) + unsigned(\_19\));
-        \_39\ <= not \_21\;
-        \a.b\ <= \_21\ xor \_19\;
-        module <= \_21\ or \_19\;
-        \_19\ <= i_b;
-        \_21\ <= i_a;
-        \_42\ <= \_21\ and \_19\;
-        o_and <= \_42\;
+        signal_const <= "10101011";
+        signal_select <= signal_wire(7 downto 0);
+        signal_select_1 <= signal_wire_2(2 downto 1);
+        with to_integer(unsigned(signal_select_1)) select signal_mux <=
+            signal_wire_2 when 0,
+            signal_wire_1 when 1,
+            signal_select when 2,
+            signal_const when others;
+        signal_select_2 <= signal_wire_2(0);
+        with to_integer(unsigned(std_logic_vector'("" & signal_select_2))) select signal_mux_1 <=
+            signal_wire_1 when 0,
+            signal_wire_2 when others;
+        signal_cat <= signal_wire_2 & signal_wire_1 & signal_wire;
+        signal_cat_1 <= signal_wire_2 & signal_wire_1;
+        signal_select_3 <= signal_wire(9 downto 4);
+        signal_select_4 <= signal_wire_2(4 downto 3);
+        signal_lt <= unsigned(signal_wire_2) ?< unsigned(signal_wire_1);
+        signal_eq <= unsigned(signal_wire_2) ?= unsigned(signal_wire_1);
+        signal_muls <= std_logic_vector(signed(signal_wire_2) * signed(signal_wire));
+        signal_wire <= i_c;
+        signal_mulu <= std_logic_vector(unsigned(signal_wire_2) * unsigned(signal_wire));
+        signal_sub <= std_logic_vector(unsigned(signal_wire_2) - unsigned(signal_wire_1));
+        signal_add <= std_logic_vector(unsigned(signal_wire_2) + unsigned(signal_wire_1));
+        signal_not <= not signal_wire_2;
+        \a.b\ <= signal_wire_2 xor signal_wire_1;
+        module <= signal_wire_2 or signal_wire_1;
+        signal_wire_1 <= i_b;
+        signal_wire_2 <= i_a;
+        signal_and <= signal_wire_2 and signal_wire_1;
+        o_and <= signal_and;
         o_or <= module;
         o_xor <= \a.b\;
-        o_not <= \_39\;
-        o_add <= \_38\;
-        o_sub <= \_37\;
-        o_mul <= \_36\;
-        o_smul <= \_35\;
-        o_eq <= \_34\;
-        o_lt <= \_33\;
-        o_select1 <= \_32\;
-        o_select2 <= \_31\;
-        o_cat1 <= \_30\;
-        o_cat2 <= \_29\;
-        o_mux2 <= \_28\;
-        o_mux <= \_26\;
+        o_not <= signal_not;
+        o_add <= signal_add;
+        o_sub <= signal_sub;
+        o_mul <= signal_mulu;
+        o_smul <= signal_muls;
+        o_eq <= signal_eq;
+        o_lt <= signal_lt;
+        o_select1 <= signal_select_4;
+        o_select2 <= signal_select_3;
+        o_cat1 <= signal_cat_1;
+        o_cat2 <= signal_cat;
+        o_mux2 <= signal_mux_1;
+        o_mux <= signal_mux;
 
     end architecture;
     |}]

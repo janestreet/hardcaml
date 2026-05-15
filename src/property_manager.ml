@@ -10,7 +10,7 @@ type t =
 let create () =
   { ltl = Hashtbl.create (module String)
   ; is_finalized = false
-  ; aps = Hashtbl.create (module Signal.Type.Uid)
+  ; aps = Signal.Type.Uid.Table.create ()
   }
 ;;
 

@@ -422,6 +422,8 @@ module (* Install pretty printer in top level *) _ = Pretty_printer.Register (st
     let to_string = to_bstr
   end)
 
+let type_equal_id = Type_equal.Id.create ~name:"Signal" sexp_of_t
+
 (* For tests - we have a mode in ppx_hardcaml0 which is supposed to work without linking
    Hardcaml. We can use this value in tests to tell one way of the other - it will become
    true if hardcaml is linked. *)

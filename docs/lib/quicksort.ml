@@ -767,13 +767,7 @@ let check_result data_in result =
 let setup_test ?(waves = false) ?(debug = false) () =
   let scope = Scope.create ~flatten_design:true () in
   let sim = Sim.create ~config:Cyclesim.Config.trace_all (Qsort.create scope) in
-  let waves, sim =
-    if waves
-    then (
-      let waves, sim = Hardcaml_waveterm.Waveform.create sim in
-      Some waves, sim)
-    else None, sim
-  in
+  let waves, sim = Cyclesim.Waveform.create_if ~enabled:waves sim in
   let debug = if debug then Some (Debug.create sim) else None in
   (* reset registers *)
   clear_core sim;

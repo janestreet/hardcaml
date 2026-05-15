@@ -1,5 +1,5 @@
 open! Import
-open Hardcaml_waveterm_cyclesim
+open Hardcaml_waveterm_kernel
 
 let write_port address_width data_width =
   { Write_port.write_clock = Signal.gnd
@@ -206,14 +206,14 @@ let%expect_test "verilog, async memory, 1 port" =
         input [4:0] read_address;
         output [14:0] q0;
 
-        reg [14:0] _7[0:31];
-        wire [14:0] _8;
+        reg [14:0] signal_multiport_mem[0:31];
+        wire [14:0] signal_mem_read_port;
         always @(posedge clock) begin
             if (write_enable)
-                _7[write_address] <= write_data;
+                signal_multiport_mem[write_address] <= write_data;
         end
-        assign _8 = _7[read_address];
-        assign q0 = _8;
+        assign signal_mem_read_port = signal_multiport_mem[read_address];
+        assign q0 = signal_mem_read_port;
 
     endmodule
     |}]
@@ -274,21 +274,21 @@ let%expect_test "verilog, async memory, 2 ports" =
         output [14:0] q0;
         output [14:0] q1;
 
-        wire [14:0] _14;
-        reg [14:0] _13[0:31];
-        wire [14:0] _15;
-        assign _14 = _13[read_address2];
+        wire [14:0] signal_mem_read_port;
+        reg [14:0] signal_multiport_mem[0:31];
+        wire [14:0] signal_mem_read_port_1;
+        assign signal_mem_read_port = signal_multiport_mem[read_address2];
         always @(posedge clock) begin
             if (write_enable)
-                _13[write_address] <= write_data;
+                signal_multiport_mem[write_address] <= write_data;
         end
         always @(posedge clock2) begin
             if (write_enable2)
-                _13[write_address2] <= write_data2;
+                signal_multiport_mem[write_address2] <= write_data2;
         end
-        assign _15 = _13[read_address];
-        assign q0 = _15;
-        assign q1 = _14;
+        assign signal_mem_read_port_1 = signal_multiport_mem[read_address];
+        assign q0 = signal_mem_read_port_1;
+        assign q1 = signal_mem_read_port;
 
     endmodule
     |}]
@@ -371,15 +371,15 @@ let%expect_test "dual port Verilog" =
         output [14:0] q0;
         output [14:0] q1;
 
-        wire [14:0] _18;
-        reg [14:0] _19;
+        wire [14:0] signal_mem_read_port;
+        reg [14:0] signal_reg;
         reg [14:0] foo[0:31];
-        wire [14:0] _20;
-        reg [14:0] _21;
-        assign _18 = foo[read_address2];
+        wire [14:0] signal_mem_read_port_1;
+        reg [14:0] signal_reg_1;
+        assign signal_mem_read_port = foo[read_address2];
         always @(posedge read_clock2) begin
             if (read_enable2)
-                _19 <= _18;
+                signal_reg <= signal_mem_read_port;
         end
         always @(posedge write_clock1) begin
             if (write_enable1)
@@ -389,13 +389,13 @@ let%expect_test "dual port Verilog" =
             if (write_enable2)
                 foo[write_address2] <= write_data2;
         end
-        assign _20 = foo[read_address1];
+        assign signal_mem_read_port_1 = foo[read_address1];
         always @(posedge read_clock1) begin
             if (read_enable1)
-                _21 <= _20;
+                signal_reg_1 <= signal_mem_read_port_1;
         end
-        assign q0 = _21;
-        assign q1 = _19;
+        assign q0 = signal_reg_1;
+        assign q1 = signal_reg;
 
     endmodule
     |}]
@@ -433,20 +433,20 @@ let%expect_test "dual port VHDL" =
 
     architecture rtl of multi_port_memory is
 
-        signal \_18\ : std_logic_vector(14 downto 0);
-        signal \_19\ : std_logic_vector(14 downto 0);
+        signal signal_mem_read_port : std_logic_vector(14 downto 0);
+        signal signal_reg : std_logic_vector(14 downto 0);
         type foo_type is array (0 to 31) of std_logic_vector(14 downto 0);
         signal foo : foo_type;
-        signal \_20\ : std_logic_vector(14 downto 0);
-        signal \_21\ : std_logic_vector(14 downto 0);
+        signal signal_mem_read_port_1 : std_logic_vector(14 downto 0);
+        signal signal_reg_1 : std_logic_vector(14 downto 0);
 
     begin
 
-        \_18\ <= foo(to_integer(unsigned(read_address2)));
+        signal_mem_read_port <= foo(to_integer(unsigned(read_address2)));
         process (read_clock2) begin
             if rising_edge(read_clock2) then
                 if read_enable2 = '1' then
-                    \_19\ <= \_18\;
+                    signal_reg <= signal_mem_read_port;
                 end if;
             end if;
         end process;
@@ -462,16 +462,16 @@ let%expect_test "dual port VHDL" =
                 end if;
             end if;
         end process;
-        \_20\ <= foo(to_integer(unsigned(read_address1)));
+        signal_mem_read_port_1 <= foo(to_integer(unsigned(read_address1)));
         process (read_clock1) begin
             if rising_edge(read_clock1) then
                 if read_enable1 = '1' then
-                    \_21\ <= \_20\;
+                    signal_reg_1 <= signal_mem_read_port_1;
                 end if;
             end if;
         end process;
-        q0 <= \_21\;
-        q1 <= \_19\;
+        q0 <= signal_reg_1;
+        q1 <= signal_reg;
 
     end architecture;
     |}];
@@ -514,20 +514,20 @@ let%expect_test "dual port VHDL" =
             end if;
         end function;
 
-        signal \_18\ : bit_vector(14 downto 0);
-        signal \_19\ : bit_vector(14 downto 0);
+        signal signal_mem_read_port : bit_vector(14 downto 0);
+        signal signal_reg : bit_vector(14 downto 0);
         type foo_type is array (0 to 31) of std_logic_vector(14 downto 0);
         signal foo : foo_type;
-        signal \_20\ : bit_vector(14 downto 0);
-        signal \_21\ : bit_vector(14 downto 0);
+        signal signal_mem_read_port_1 : bit_vector(14 downto 0);
+        signal signal_reg_1 : bit_vector(14 downto 0);
 
     begin
 
-        \_18\ <= to_bitvector(foo(to_integer(unsigned(read_address2))));
+        signal_mem_read_port <= to_bitvector(foo(to_integer(unsigned(read_address2))));
         process (read_clock2) begin
             if rising_edge(read_clock2) then
                 if read_enable2 = '1' then
-                    \_19\ <= \_18\;
+                    signal_reg <= signal_mem_read_port;
                 end if;
             end if;
         end process;
@@ -543,16 +543,16 @@ let%expect_test "dual port VHDL" =
                 end if;
             end if;
         end process;
-        \_20\ <= to_bitvector(foo(to_integer(unsigned(read_address1))));
+        signal_mem_read_port_1 <= to_bitvector(foo(to_integer(unsigned(read_address1))));
         process (read_clock1) begin
             if rising_edge(read_clock1) then
                 if read_enable1 = '1' then
-                    \_21\ <= \_20\;
+                    signal_reg_1 <= signal_mem_read_port_1;
                 end if;
             end if;
         end process;
-        q0 <= \_21\;
-        q1 <= \_19\;
+        q0 <= signal_reg_1;
+        q1 <= signal_reg;
 
     end architecture;
     |}]
@@ -561,7 +561,7 @@ let%expect_test "dual port VHDL" =
 let%expect_test "simulation - write and read data on both ports" =
   let circuit = dual_port () in
   let simulator = Cyclesim.create circuit in
-  let waves, simulator = Waveform.create simulator in
+  let waves, simulator = Cyclesim.Waveform.create simulator in
   let write_enable1 = Cyclesim.in_port simulator "write_enable1" in
   let write_address1 = Cyclesim.in_port simulator "write_address1" in
   let write_data1 = Cyclesim.in_port simulator "write_data1" in
@@ -655,7 +655,7 @@ let%expect_test "simulation - write and read data on both ports" =
 let%expect_test "simulation - write on both ports - highest indexed port wins" =
   let circuit = dual_port () in
   let simulator = Cyclesim.create circuit in
-  let waves, simulator = Waveform.create simulator in
+  let waves, simulator = Cyclesim.Waveform.create simulator in
   let write_enable1 = Cyclesim.in_port simulator "write_enable1" in
   let write_address1 = Cyclesim.in_port simulator "write_address1" in
   let write_data1 = Cyclesim.in_port simulator "write_data1" in
@@ -738,7 +738,7 @@ let%expect_test "simulation - demonstrate collision modes" =
   let test collision_mode =
     let circuit = dual_port ~collision_mode () in
     let simulator = Cyclesim.create circuit in
-    let waves, simulator = Waveform.create simulator in
+    let waves, simulator = Cyclesim.Waveform.create simulator in
     let write_enable1 = Cyclesim.in_port simulator "write_enable1" in
     let write_address1 = Cyclesim.in_port simulator "write_address1" in
     let write_data1 = Cyclesim.in_port simulator "write_data1" in
@@ -886,26 +886,26 @@ let%expect_test "memory initialization" =
         input [1:0] read_address;
         output [7:0] q0;
 
-        wire [7:0] _5;
-        wire [1:0] _4;
+        wire [7:0] signal_const;
+        wire [1:0] signal_const_1;
         wire gnd;
-        reg [7:0] _6[0:3];
-        wire [7:0] _7;
-        assign _5 = 8'b00000000;
-        assign _4 = 2'b00;
+        reg [7:0] signal_multiport_mem[0:3];
+        wire [7:0] signal_mem_read_port;
+        assign signal_const = 8'b00000000;
+        assign signal_const_1 = 2'b00;
         assign gnd = 1'b0;
         always @(posedge gnd) begin
             if (gnd)
-                _6[_4] <= _5;
+                signal_multiport_mem[signal_const_1] <= signal_const;
         end
         initial begin
-            _6[0] <= 8'b00000000;
-            _6[1] <= 8'b00000001;
-            _6[2] <= 8'b00000010;
-            _6[3] <= 8'b00000011;
+            signal_multiport_mem[0] <= 8'b00000000;
+            signal_multiport_mem[1] <= 8'b00000001;
+            signal_multiport_mem[2] <= 8'b00000010;
+            signal_multiport_mem[3] <= 8'b00000011;
         end
-        assign _7 = _6[read_address];
-        assign q0 = _7;
+        assign signal_mem_read_port = signal_multiport_mem[read_address];
+        assign q0 = signal_mem_read_port;
 
     endmodule
     library ieee;
@@ -921,34 +921,34 @@ let%expect_test "memory initialization" =
 
     architecture rtl of initialized_memory is
 
-        signal \_5\ : std_logic_vector(7 downto 0);
-        signal \_4\ : std_logic_vector(1 downto 0);
+        signal signal_const : std_logic_vector(7 downto 0);
+        signal signal_const_1 : std_logic_vector(1 downto 0);
         signal gnd : std_logic;
-        type \_6_type\ is array (0 to 3) of std_logic_vector(7 downto 0);
-        signal \_6\ : \_6_type\;
-        signal \_7\ : std_logic_vector(7 downto 0);
+        type signal_multiport_mem_type is array (0 to 3) of std_logic_vector(7 downto 0);
+        signal signal_multiport_mem : signal_multiport_mem_type;
+        signal signal_mem_read_port : std_logic_vector(7 downto 0);
 
     begin
 
-        \_5\ <= "00000000";
-        \_4\ <= "00";
+        signal_const <= "00000000";
+        signal_const_1 <= "00";
         gnd <= '0';
         process (gnd) begin
             if rising_edge(gnd) then
                 if gnd = '1' then
-                    \_6\(to_integer(unsigned(\_4\))) <= \_5\;
+                    signal_multiport_mem(to_integer(unsigned(signal_const_1))) <= signal_const;
                 end if;
             end if;
         end process;
         process begin
-            \_6\(0) <= "00000000";
-            \_6\(1) <= "00000001";
-            \_6\(2) <= "00000010";
-            \_6\(3) <= "00000011";
+            signal_multiport_mem(0) <= "00000000";
+            signal_multiport_mem(1) <= "00000001";
+            signal_multiport_mem(2) <= "00000010";
+            signal_multiport_mem(3) <= "00000011";
             wait;
         end process;
-        \_7\ <= \_6\(to_integer(unsigned(read_address)));
-        q0 <= \_7\;
+        signal_mem_read_port <= signal_multiport_mem(to_integer(unsigned(read_address)));
+        q0 <= signal_mem_read_port;
 
     end architecture;
     |}];
@@ -963,30 +963,30 @@ let%expect_test "memory initialization" =
         input [2:0] read_address;
         output q0;
 
-        wire _5;
-        wire [2:0] _4;
+        wire signal_const;
+        wire [2:0] signal_const_1;
         wire gnd;
-        reg [0:0] _6[0:7];
-        wire _7;
-        assign _5 = 1'b0;
-        assign _4 = 3'b000;
+        reg [0:0] signal_multiport_mem[0:7];
+        wire signal_mem_read_port;
+        assign signal_const = 1'b0;
+        assign signal_const_1 = 3'b000;
         assign gnd = 1'b0;
         always @(posedge gnd) begin
             if (gnd)
-                _6[_4] <= _5;
+                signal_multiport_mem[signal_const_1] <= signal_const;
         end
         initial begin
-            _6[0] <= 1'b0;
-            _6[1] <= 1'b1;
-            _6[2] <= 1'b0;
-            _6[3] <= 1'b1;
-            _6[4] <= 1'b0;
-            _6[5] <= 1'b1;
-            _6[6] <= 1'b0;
-            _6[7] <= 1'b1;
+            signal_multiport_mem[0] <= 1'b0;
+            signal_multiport_mem[1] <= 1'b1;
+            signal_multiport_mem[2] <= 1'b0;
+            signal_multiport_mem[3] <= 1'b1;
+            signal_multiport_mem[4] <= 1'b0;
+            signal_multiport_mem[5] <= 1'b1;
+            signal_multiport_mem[6] <= 1'b0;
+            signal_multiport_mem[7] <= 1'b1;
         end
-        assign _7 = _6[read_address];
-        assign q0 = _7;
+        assign signal_mem_read_port = signal_multiport_mem[read_address];
+        assign q0 = signal_mem_read_port;
 
     endmodule
     library ieee;
@@ -1002,38 +1002,38 @@ let%expect_test "memory initialization" =
 
     architecture rtl of initialized_memory is
 
-        signal \_5\ : std_logic;
-        signal \_4\ : std_logic_vector(2 downto 0);
+        signal signal_const : std_logic;
+        signal signal_const_1 : std_logic_vector(2 downto 0);
         signal gnd : std_logic;
-        type \_6_type\ is array (0 to 7) of std_logic;
-        signal \_6\ : \_6_type\;
-        signal \_7\ : std_logic;
+        type signal_multiport_mem_type is array (0 to 7) of std_logic;
+        signal signal_multiport_mem : signal_multiport_mem_type;
+        signal signal_mem_read_port : std_logic;
 
     begin
 
-        \_5\ <= '0';
-        \_4\ <= "000";
+        signal_const <= '0';
+        signal_const_1 <= "000";
         gnd <= '0';
         process (gnd) begin
             if rising_edge(gnd) then
                 if gnd = '1' then
-                    \_6\(to_integer(unsigned(\_4\))) <= \_5\;
+                    signal_multiport_mem(to_integer(unsigned(signal_const_1))) <= signal_const;
                 end if;
             end if;
         end process;
         process begin
-            \_6\(0) <= '0';
-            \_6\(1) <= '1';
-            \_6\(2) <= '0';
-            \_6\(3) <= '1';
-            \_6\(4) <= '0';
-            \_6\(5) <= '1';
-            \_6\(6) <= '0';
-            \_6\(7) <= '1';
+            signal_multiport_mem(0) <= '0';
+            signal_multiport_mem(1) <= '1';
+            signal_multiport_mem(2) <= '0';
+            signal_multiport_mem(3) <= '1';
+            signal_multiport_mem(4) <= '0';
+            signal_multiport_mem(5) <= '1';
+            signal_multiport_mem(6) <= '0';
+            signal_multiport_mem(7) <= '1';
             wait;
         end process;
-        \_7\ <= \_6\(to_integer(unsigned(read_address)));
-        q0 <= \_7\;
+        signal_mem_read_port <= signal_multiport_mem(to_integer(unsigned(read_address)));
+        q0 <= signal_mem_read_port;
 
     end architecture;
     |}]
@@ -1069,7 +1069,7 @@ let%expect_test "initialized memory" =
          Signal.output ("q" ^ Int.to_string i) q))
   in
   let sim = Cyclesim.create circuit in
-  let waves, sim = Waveform.create sim in
+  let waves, sim = Cyclesim.Waveform.create sim in
   let read_address = Cyclesim.in_port sim "read_address" in
   let open Cyclesim.Sim_bits in
   for i = 0 to memory_size - 1 do
@@ -1136,7 +1136,7 @@ let%expect_test "rom" =
       Rtl.print Vhdl circuit)
     else (
       let sim = Cyclesim.create circuit in
-      let waves, sim = Waveform.create sim in
+      let waves, sim = Cyclesim.Waveform.create sim in
       let read_address = Cyclesim.in_port sim "read_address" in
       for i = 0 to memory_size - 1 do
         read_address := Bits.of_int_trunc ~width:address_width i;
@@ -1188,23 +1188,23 @@ let%expect_test "rom" =
         output [3:0] q0;
         output [3:0] q1;
 
-        wire [1:0] _4;
-        wire [1:0] _5;
-        wire [3:0] _7;
-        reg [3:0] _6[0:3];
-        wire [3:0] _8;
-        assign _4 = 2'b01;
-        assign _5 = read_address + _4;
-        assign _7 = _6[_5];
+        wire [1:0] signal_const;
+        wire [1:0] signal_add;
+        wire [3:0] signal_mem_read_port;
+        reg [3:0] signal_multiport_mem[0:3];
+        wire [3:0] signal_mem_read_port_1;
+        assign signal_const = 2'b01;
+        assign signal_add = read_address + signal_const;
+        assign signal_mem_read_port = signal_multiport_mem[signal_add];
         initial begin
-            _6[0] <= 4'b0000;
-            _6[1] <= 4'b0001;
-            _6[2] <= 4'b0010;
-            _6[3] <= 4'b0011;
+            signal_multiport_mem[0] <= 4'b0000;
+            signal_multiport_mem[1] <= 4'b0001;
+            signal_multiport_mem[2] <= 4'b0010;
+            signal_multiport_mem[3] <= 4'b0011;
         end
-        assign _8 = _6[read_address];
-        assign q0 = _8;
-        assign q1 = _7;
+        assign signal_mem_read_port_1 = signal_multiport_mem[read_address];
+        assign q0 = signal_mem_read_port_1;
+        assign q1 = signal_mem_read_port;
 
     endmodule
     library ieee;
@@ -1221,28 +1221,28 @@ let%expect_test "rom" =
 
     architecture rtl of rom is
 
-        signal \_4\ : std_logic_vector(1 downto 0);
-        signal \_5\ : std_logic_vector(1 downto 0);
-        signal \_7\ : std_logic_vector(3 downto 0);
-        type \_6_type\ is array (0 to 3) of std_logic_vector(3 downto 0);
-        signal \_6\ : \_6_type\;
-        signal \_8\ : std_logic_vector(3 downto 0);
+        signal signal_const : std_logic_vector(1 downto 0);
+        signal signal_add : std_logic_vector(1 downto 0);
+        signal signal_mem_read_port : std_logic_vector(3 downto 0);
+        type signal_multiport_mem_type is array (0 to 3) of std_logic_vector(3 downto 0);
+        signal signal_multiport_mem : signal_multiport_mem_type;
+        signal signal_mem_read_port_1 : std_logic_vector(3 downto 0);
 
     begin
 
-        \_4\ <= "01";
-        \_5\ <= std_logic_vector(unsigned(read_address) + unsigned(\_4\));
-        \_7\ <= \_6\(to_integer(unsigned(\_5\)));
+        signal_const <= "01";
+        signal_add <= std_logic_vector(unsigned(read_address) + unsigned(signal_const));
+        signal_mem_read_port <= signal_multiport_mem(to_integer(unsigned(signal_add)));
         process begin
-            \_6\(0) <= "0000";
-            \_6\(1) <= "0001";
-            \_6\(2) <= "0010";
-            \_6\(3) <= "0011";
+            signal_multiport_mem(0) <= "0000";
+            signal_multiport_mem(1) <= "0001";
+            signal_multiport_mem(2) <= "0010";
+            signal_multiport_mem(3) <= "0011";
             wait;
         end process;
-        \_8\ <= \_6\(to_integer(unsigned(read_address)));
-        q0 <= \_8\;
-        q1 <= \_7\;
+        signal_mem_read_port_1 <= signal_multiport_mem(to_integer(unsigned(read_address)));
+        q0 <= signal_mem_read_port_1;
+        q1 <= signal_mem_read_port;
 
     end architecture;
     |}]

@@ -1,5 +1,4 @@
 open! Core0
-module Ast = Interface.Ast
 
 type ('a, 'b) with_valid2 = ('a, 'b) Comb_intf.with_valid2
 
@@ -39,16 +38,6 @@ module Make_enums (Cases : Enum_intf.Cases) = struct
     let iter a ~f = f a
     let iter2 a b ~f = f a b
     let port_names_and_widths = port_name, width
-
-    let ast : Ast.t =
-      [ { Ast.Field.name = port_name
-        ; type_ = Signal { bits = width; rtlname = port_name }
-        ; sequence = None
-        ; doc = None
-        }
-      ]
-    ;;
-
     let[@inline always] to_raw t = t
 
     let of_raw (type a) (module Comb : Comb.S with type t = a) (t : a) =
@@ -187,7 +176,7 @@ module Make_enums (Cases : Enum_intf.Cases) = struct
       | `One_hot ->
         Wave_format.Map
           (List.mapi case_names ~f:(fun i s ->
-             Bits.of_bigint ~width Bigint.(one lsl i), s))
+             Bits.of_bigint_trunc ~width Bigint.(one lsl i), s))
     ;;
 
     (* Testbench functions. *)

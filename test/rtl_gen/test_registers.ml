@@ -27,11 +27,11 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        reg _4;
+        reg signal_reg;
         always @(posedge clock) begin
-            _4 <= d;
+            signal_reg <= d;
         end
-        assign q = _4;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -48,16 +48,16 @@ let%expect_test "clock" =
 
     architecture rtl of my_register is
 
-        signal \_4\ : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
         process (clock) begin
             if rising_edge(clock) then
-                \_4\ <= d;
+                signal_reg <= d;
             end if;
         end process;
-        q <= \_4\;
+        q <= signal_reg;
 
     end architecture;
     |}];
@@ -74,11 +74,11 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        reg _4;
+        reg signal_reg;
         always @(posedge clock) begin
-            _4 <= d;
+            signal_reg <= d;
         end
-        assign q = _4;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -95,16 +95,16 @@ let%expect_test "clock" =
 
     architecture rtl of my_register is
 
-        signal \_4\ : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
         process (clock) begin
             if rising_edge(clock) then
-                \_4\ <= d;
+                signal_reg <= d;
             end if;
         end process;
-        q <= \_4\;
+        q <= signal_reg;
 
     end architecture;
     |}];
@@ -123,12 +123,12 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        reg _5;
+        reg signal_reg;
         always @(posedge clock) begin
             if (enable)
-                _5 <= d;
+                signal_reg <= d;
         end
-        assign q = _5;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -146,18 +146,18 @@ let%expect_test "clock" =
 
     architecture rtl of my_register is
 
-        signal \_5\ : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
         process (clock) begin
             if rising_edge(clock) then
                 if enable = '1' then
-                    \_5\ <= d;
+                    signal_reg <= d;
                 end if;
             end if;
         end process;
-        q <= \_5\;
+        q <= signal_reg;
 
     end architecture;
     |}];
@@ -177,12 +177,12 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        reg _5;
+        reg signal_reg;
         always @(negedge clock) begin
             if (enable)
-                _5 <= d;
+                signal_reg <= d;
         end
-        assign q = _5;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -200,18 +200,18 @@ let%expect_test "clock" =
 
     architecture rtl of my_register is
 
-        signal \_5\ : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
         process (clock) begin
             if falling_edge(clock) then
                 if enable = '1' then
-                    \_5\ <= d;
+                    signal_reg <= d;
                 end if;
             end if;
         end process;
-        q <= \_5\;
+        q <= signal_reg;
 
     end architecture;
     |}];
@@ -230,11 +230,11 @@ let%expect_test "clock" =
         input d;
         output q;
 
-        reg _4 = 1'b1;
+        reg signal_reg = 1'b1;
         always @(negedge clock) begin
-            _4 <= d;
+            signal_reg <= d;
         end
-        assign q = _4;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -251,16 +251,16 @@ let%expect_test "clock" =
 
     architecture rtl of my_register is
 
-        signal \_4\ : std_logic := '1';
+        signal signal_reg : std_logic := '1';
 
     begin
 
         process (clock) begin
             if falling_edge(clock) then
-                \_4\ <= d;
+                signal_reg <= d;
             end if;
         end process;
-        q <= \_4\;
+        q <= signal_reg;
 
     end architecture;
     |}]
@@ -296,16 +296,16 @@ let%expect_test "clock + reset" =
         input d;
         output q;
 
-        wire _5;
-        reg _6;
-        assign _5 = 1'b0;
+        wire signal_const;
+        reg signal_reg;
+        assign signal_const = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _6 <= _5;
+                signal_reg <= signal_const;
             else
-                _6 <= d;
+                signal_reg <= d;
         end
-        assign q = _6;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -323,22 +323,22 @@ let%expect_test "clock + reset" =
 
     architecture rtl of my_register is
 
-        signal \_5\ : std_logic;
-        signal \_6\ : std_logic;
+        signal signal_const : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
-        \_5\ <= '0';
+        signal_const <= '0';
         process (clock, reset) begin
             if reset = '1' then
-                \_6\ <= \_5\;
+                signal_reg <= signal_const;
             else
                 if rising_edge(clock) then
-                    \_6\ <= d;
+                    signal_reg <= d;
                 end if;
             end if;
         end process;
-        q <= \_6\;
+        q <= signal_reg;
 
     end architecture;
     |}];
@@ -357,16 +357,16 @@ let%expect_test "clock + reset" =
         input d;
         output q;
 
-        wire _5;
-        reg _6;
-        assign _5 = 1'b0;
+        wire signal_const;
+        reg signal_reg;
+        assign signal_const = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _6 <= _5;
+                signal_reg <= signal_const;
             else
-                _6 <= d;
+                signal_reg <= d;
         end
-        assign q = _6;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -384,22 +384,22 @@ let%expect_test "clock + reset" =
 
     architecture rtl of my_register is
 
-        signal \_5\ : std_logic;
-        signal \_6\ : std_logic;
+        signal signal_const : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
-        \_5\ <= '0';
+        signal_const <= '0';
         process (clock, reset) begin
             if reset = '1' then
-                \_6\ <= \_5\;
+                signal_reg <= signal_const;
             else
                 if rising_edge(clock) then
-                    \_6\ <= d;
+                    signal_reg <= d;
                 end if;
             end if;
         end process;
-        q <= \_6\;
+        q <= signal_reg;
 
     end architecture;
     |}];
@@ -420,17 +420,17 @@ let%expect_test "clock + reset" =
         input d;
         output q;
 
-        wire _6;
-        reg _7;
-        assign _6 = 1'b0;
+        wire signal_const;
+        reg signal_reg;
+        assign signal_const = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _7 <= _6;
+                signal_reg <= signal_const;
             else
                 if (enable)
-                    _7 <= d;
+                    signal_reg <= d;
         end
-        assign q = _7;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -449,24 +449,24 @@ let%expect_test "clock + reset" =
 
     architecture rtl of my_register is
 
-        signal \_6\ : std_logic;
-        signal \_7\ : std_logic;
+        signal signal_const : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
-        \_6\ <= '0';
+        signal_const <= '0';
         process (clock, reset) begin
             if reset = '1' then
-                \_7\ <= \_6\;
+                signal_reg <= signal_const;
             else
                 if rising_edge(clock) then
                     if enable = '1' then
-                        \_7\ <= d;
+                        signal_reg <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= \_7\;
+        q <= signal_reg;
 
     end architecture;
     |}];
@@ -488,17 +488,17 @@ let%expect_test "clock + reset" =
         input d;
         output q;
 
-        wire _6;
-        reg _7;
-        assign _6 = 1'b0;
+        wire signal_const;
+        reg signal_reg;
+        assign signal_const = 1'b0;
         always @(posedge clock or negedge reset) begin
             if (reset == 0)
-                _7 <= _6;
+                signal_reg <= signal_const;
             else
                 if (enable)
-                    _7 <= d;
+                    signal_reg <= d;
         end
-        assign q = _7;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -517,24 +517,24 @@ let%expect_test "clock + reset" =
 
     architecture rtl of my_register is
 
-        signal \_6\ : std_logic;
-        signal \_7\ : std_logic;
+        signal signal_const : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
-        \_6\ <= '0';
+        signal_const <= '0';
         process (clock, reset) begin
             if reset = '0' then
-                \_7\ <= \_6\;
+                signal_reg <= signal_const;
             else
                 if rising_edge(clock) then
                     if enable = '1' then
-                        \_7\ <= d;
+                        signal_reg <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= \_7\;
+        q <= signal_reg;
 
     end architecture;
     |}]
@@ -557,16 +557,16 @@ let%expect_test "clock + clear" =
         input d;
         output q;
 
-        wire _5;
-        reg _6;
-        assign _5 = 1'b0;
+        wire signal_const;
+        reg signal_reg;
+        assign signal_const = 1'b0;
         always @(posedge clock) begin
             if (clear)
-                _6 <= _5;
+                signal_reg <= signal_const;
             else
-                _6 <= d;
+                signal_reg <= d;
         end
-        assign q = _6;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -584,22 +584,22 @@ let%expect_test "clock + clear" =
 
     architecture rtl of my_register is
 
-        signal \_5\ : std_logic;
-        signal \_6\ : std_logic;
+        signal signal_const : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
-        \_5\ <= '0';
+        signal_const <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if clear = '1' then
-                    \_6\ <= \_5\;
+                    signal_reg <= signal_const;
                 else
-                    \_6\ <= d;
+                    signal_reg <= d;
                 end if;
             end if;
         end process;
-        q <= \_6\;
+        q <= signal_reg;
 
     end architecture;
     |}];
@@ -618,16 +618,16 @@ let%expect_test "clock + clear" =
         input d;
         output q;
 
-        wire _5;
-        reg _6;
-        assign _5 = 1'b0;
+        wire signal_const;
+        reg signal_reg;
+        assign signal_const = 1'b0;
         always @(posedge clock) begin
             if (clear)
-                _6 <= _5;
+                signal_reg <= signal_const;
             else
-                _6 <= d;
+                signal_reg <= d;
         end
-        assign q = _6;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -645,22 +645,22 @@ let%expect_test "clock + clear" =
 
     architecture rtl of my_register is
 
-        signal \_5\ : std_logic;
-        signal \_6\ : std_logic;
+        signal signal_const : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
-        \_5\ <= '0';
+        signal_const <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if clear = '1' then
-                    \_6\ <= \_5\;
+                    signal_reg <= signal_const;
                 else
-                    \_6\ <= d;
+                    signal_reg <= d;
                 end if;
             end if;
         end process;
-        q <= \_6\;
+        q <= signal_reg;
 
     end architecture;
     |}];
@@ -681,17 +681,17 @@ let%expect_test "clock + clear" =
         input d;
         output q;
 
-        wire _6;
-        reg _7;
-        assign _6 = 1'b0;
+        wire signal_const;
+        reg signal_reg;
+        assign signal_const = 1'b0;
         always @(posedge clock) begin
             if (clear)
-                _7 <= _6;
+                signal_reg <= signal_const;
             else
                 if (enable)
-                    _7 <= d;
+                    signal_reg <= d;
         end
-        assign q = _7;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -710,24 +710,24 @@ let%expect_test "clock + clear" =
 
     architecture rtl of my_register is
 
-        signal \_6\ : std_logic;
-        signal \_7\ : std_logic;
+        signal signal_const : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
-        \_6\ <= '0';
+        signal_const <= '0';
         process (clock) begin
             if rising_edge(clock) then
                 if clear = '1' then
-                    \_7\ <= \_6\;
+                    signal_reg <= signal_const;
                 else
                     if enable = '1' then
-                        \_7\ <= d;
+                        signal_reg <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= \_7\;
+        q <= signal_reg;
 
     end architecture;
     |}]
@@ -752,19 +752,19 @@ let%expect_test "clock + reset + clear" =
         input d;
         output q;
 
-        wire _7;
-        reg _8;
-        assign _7 = 1'b0;
+        wire signal_const;
+        reg signal_reg;
+        assign signal_const = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _8 <= _7;
+                signal_reg <= signal_const;
             else
                 if (clear)
-                    _8 <= _7;
+                    signal_reg <= signal_const;
                 else
-                    _8 <= d;
+                    signal_reg <= d;
         end
-        assign q = _8;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -783,26 +783,26 @@ let%expect_test "clock + reset + clear" =
 
     architecture rtl of my_register is
 
-        signal \_7\ : std_logic;
-        signal \_8\ : std_logic;
+        signal signal_const : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
-        \_7\ <= '0';
+        signal_const <= '0';
         process (clock, reset) begin
             if reset = '1' then
-                \_8\ <= \_7\;
+                signal_reg <= signal_const;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
-                        \_8\ <= \_7\;
+                        signal_reg <= signal_const;
                     else
-                        \_8\ <= d;
+                        signal_reg <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= \_8\;
+        q <= signal_reg;
 
     end architecture;
     |}];
@@ -823,19 +823,19 @@ let%expect_test "clock + reset + clear" =
         input d;
         output q;
 
-        wire _7;
-        reg _8;
-        assign _7 = 1'b0;
+        wire signal_const;
+        reg signal_reg;
+        assign signal_const = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _8 <= _7;
+                signal_reg <= signal_const;
             else
                 if (clear)
-                    _8 <= _7;
+                    signal_reg <= signal_const;
                 else
-                    _8 <= d;
+                    signal_reg <= d;
         end
-        assign q = _8;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -854,26 +854,26 @@ let%expect_test "clock + reset + clear" =
 
     architecture rtl of my_register is
 
-        signal \_7\ : std_logic;
-        signal \_8\ : std_logic;
+        signal signal_const : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
-        \_7\ <= '0';
+        signal_const <= '0';
         process (clock, reset) begin
             if reset = '1' then
-                \_8\ <= \_7\;
+                signal_reg <= signal_const;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
-                        \_8\ <= \_7\;
+                        signal_reg <= signal_const;
                     else
-                        \_8\ <= d;
+                        signal_reg <= d;
                     end if;
                 end if;
             end if;
         end process;
-        q <= \_8\;
+        q <= signal_reg;
 
     end architecture;
     |}];
@@ -896,20 +896,20 @@ let%expect_test "clock + reset + clear" =
         input d;
         output q;
 
-        wire _8;
-        reg _9;
-        assign _8 = 1'b0;
+        wire signal_const;
+        reg signal_reg;
+        assign signal_const = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _9 <= _8;
+                signal_reg <= signal_const;
             else
                 if (clear)
-                    _9 <= _8;
+                    signal_reg <= signal_const;
                 else
                     if (enable)
-                        _9 <= d;
+                        signal_reg <= d;
         end
-        assign q = _9;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -929,28 +929,28 @@ let%expect_test "clock + reset + clear" =
 
     architecture rtl of my_register is
 
-        signal \_8\ : std_logic;
-        signal \_9\ : std_logic;
+        signal signal_const : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
-        \_8\ <= '0';
+        signal_const <= '0';
         process (clock, reset) begin
             if reset = '1' then
-                \_9\ <= \_8\;
+                signal_reg <= signal_const;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
-                        \_9\ <= \_8\;
+                        signal_reg <= signal_const;
                     else
                         if enable = '1' then
-                            \_9\ <= d;
+                            signal_reg <= d;
                         end if;
                     end if;
                 end if;
             end if;
         end process;
-        q <= \_9\;
+        q <= signal_reg;
 
     end architecture;
     |}];
@@ -974,20 +974,20 @@ let%expect_test "clock + reset + clear" =
         input d;
         output q;
 
-        wire _8;
-        reg _9;
-        assign _8 = 1'b0;
+        wire signal_const;
+        reg signal_reg;
+        assign signal_const = 1'b0;
         always @(negedge clock or negedge reset) begin
             if (reset == 0)
-                _9 <= _8;
+                signal_reg <= signal_const;
             else
                 if (clear)
-                    _9 <= _8;
+                    signal_reg <= signal_const;
                 else
                     if (enable)
-                        _9 <= d;
+                        signal_reg <= d;
         end
-        assign q = _9;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -1007,28 +1007,28 @@ let%expect_test "clock + reset + clear" =
 
     architecture rtl of my_register is
 
-        signal \_8\ : std_logic;
-        signal \_9\ : std_logic;
+        signal signal_const : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
-        \_8\ <= '0';
+        signal_const <= '0';
         process (clock, reset) begin
             if reset = '0' then
-                \_9\ <= \_8\;
+                signal_reg <= signal_const;
             else
                 if falling_edge(clock) then
                     if clear = '1' then
-                        \_9\ <= \_8\;
+                        signal_reg <= signal_const;
                     else
                         if enable = '1' then
-                            \_9\ <= d;
+                            signal_reg <= d;
                         end if;
                     end if;
                 end if;
             end if;
         end process;
-        q <= \_9\;
+        q <= signal_reg;
 
     end architecture;
     |}];
@@ -1054,21 +1054,21 @@ let%expect_test "clock + reset + clear" =
         output q;
 
         wire vdd;
-        wire _7;
-        reg _9;
+        wire signal_const;
+        reg signal_reg;
         assign vdd = 1'b1;
-        assign _7 = 1'b1;
+        assign signal_const = 1'b1;
         always @(negedge clock or negedge reset) begin
             if (reset == 0)
-                _9 <= _7;
+                signal_reg <= signal_const;
             else
                 if (clear)
-                    _9 <= vdd;
+                    signal_reg <= vdd;
                 else
                     if (enable)
-                        _9 <= d;
+                        signal_reg <= d;
         end
-        assign q = _9;
+        assign q = signal_reg;
 
     endmodule
     library ieee;
@@ -1089,29 +1089,29 @@ let%expect_test "clock + reset + clear" =
     architecture rtl of my_register is
 
         signal vdd : std_logic;
-        signal \_7\ : std_logic;
-        signal \_9\ : std_logic;
+        signal signal_const : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
         vdd <= '1';
-        \_7\ <= '1';
+        signal_const <= '1';
         process (clock, reset) begin
             if reset = '0' then
-                \_9\ <= \_7\;
+                signal_reg <= signal_const;
             else
                 if falling_edge(clock) then
                     if clear = '1' then
-                        \_9\ <= vdd;
+                        signal_reg <= vdd;
                     else
                         if enable = '1' then
-                            \_9\ <= d;
+                            signal_reg <= d;
                         end if;
                     end if;
                 end if;
             end if;
         end process;
-        q <= \_9\;
+        q <= signal_reg;
 
     end architecture;
     |}]
@@ -1143,17 +1143,17 @@ let%expect_test "multiple reg names" =
         input d;
         output q;
 
-        wire _8;
+        wire signal_const;
         reg c;
         wire b;
         wire a;
-        assign _8 = 1'b0;
+        assign signal_const = 1'b0;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                c <= _8;
+                c <= signal_const;
             else
                 if (clear)
-                    c <= _8;
+                    c <= signal_const;
                 else
                     if (enable)
                         c <= d;
@@ -1180,21 +1180,21 @@ let%expect_test "multiple reg names" =
 
     architecture rtl of my_register is
 
-        signal \_8\ : std_logic;
+        signal signal_const : std_logic;
         signal c : std_logic;
         signal b : std_logic;
         signal a : std_logic;
 
     begin
 
-        \_8\ <= '0';
+        signal_const <= '0';
         process (clock, reset) begin
             if reset = '1' then
-                c <= \_8\;
+                c <= signal_const;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
-                        c <= \_8\;
+                        c <= signal_const;
                     else
                         if enable = '1' then
                             c <= d;

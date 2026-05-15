@@ -192,11 +192,11 @@ let compress_wires signals =
 ;;
 
 let canonicalize signals =
-  let hash_memo = Hashtbl.create (module Signal.Type.Uid) in
-  let canonical = Hashtbl.create (module Signal.Type.Uid) in
+  let hash_memo = Signal.Type.Uid.Table.create () in
+  let canonical = Signal.Type.Uid.Table.create () in
   let canonical_by_hash = Hashtbl.create (module Int) in
   (* we replace all sequential elements with wires, to be able to transform them later *)
-  let sequential_wires = Hashtbl.create (module Signal.Type.Uid) in
+  let sequential_wires = Signal.Type.Uid.Table.create () in
   let `New new_id, `Reset _ = Signal.Type.Uid.generator () in
   List.iter
     (Signal_graph.topological_sort_exn
@@ -249,7 +249,7 @@ let deduplicate circuit =
     |> Assertion_manager.of_signals
   in
   Circuit.create_exn
-    ~config:{ Circuit.Config.default with assertions = Some assertions }
+    ~config:{ (Circuit.config circuit) with assertions = Some assertions }
     ~name:(Circuit.name circuit)
     (List.map outputs ~f:(fun signal -> Hashtbl.find_exn canonical (Signal.uid signal)))
 ;;

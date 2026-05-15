@@ -51,7 +51,9 @@ struct
     let of_z (offset : Int.t) =
       try
         let z =
-          of_bigint ~width:128 Bigint.(bigint_of_int Int.max_value + bigint_of_int offset)
+          of_bigint_trunc
+            ~width:128
+            Bigint.(bigint_of_int Int.max_value + bigint_of_int offset)
         in
         let i = to_unsigned_int z in
         if Int.( <> ) Int.(max_value + offset) i
@@ -231,7 +233,9 @@ struct
     let of_z edge_value (offset : Int.t) =
       try
         let z =
-          of_bigint ~width:128 Bigint.(bigint_of_int edge_value + bigint_of_int offset)
+          of_bigint_trunc
+            ~width:128
+            Bigint.(bigint_of_int edge_value + bigint_of_int offset)
         in
         let i = to_signed_int z in
         if Int.( <> ) Int.(edge_value + offset) i

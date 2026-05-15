@@ -3,12 +3,6 @@ open Signal
 include Fifo_intf.T
 module Kinded_fifo = Fifo_intf.Kinded_fifo
 
-let naming ?scope =
-  match scope with
-  | Some scope -> Scope.naming scope
-  | None -> ( -- )
-;;
-
 (* Generates wbr memory with explicit collision detection to guarantee [wbr] behaviour.
    Despite what's suggested by Vivado's BRAM documentation, [write_first] are not
    respected, even in SDP RAM mode.
@@ -25,20 +19,29 @@ let ram_wbr_safe
   ~ram_attributes
   =
   let open Signal in
-  let ( -- ) = naming ?scope in
+  let ( -- ) = Scope.naming scope in
   let has_distributed_ram_attribute =
     List.find
       ram_attributes
       ~f:(Rtl_attribute.equal Rtl_attribute.Vivado.Ram_style.distributed)
     |> Option.is_some
   in
+  (* Note, for some supplied ram primitives the collision detection may be unnecessary. We
+     currently do not have a way of specifying ram primitive & wbr safely. *)
   match has_distributed_ram_attribute, ram_primitive with
   | true, None ->
-    (* We don't need collision detection when using distributed RAM and the Hardcaml RAM
-       primitive *)
-    ram_wbr capacity ~attributes:ram_attributes ~write_port ~read_port -- "ram_rbw_data"
-  | _ ->
-    let ram_primitive = Option.value ram_primitive ~default:ram_wbr in
+    (* [wbr] can infer distributed RAM, with wbr collision detection is unnecessary. *)
+    ram_wbr capacity ~attributes:ram_attributes ~write_port ~read_port -- "ram_wbr_data"
+  | true, Some _ ->
+    (* Distributed ram attribute and primitive supplied *)
+    raise_s
+      [%message
+        "UNSUPPORTED: When supplying a RAM primitive the distributed ram attribute might \
+         be ignored. Consider supplying a distributed primitive instead."]
+  | false, _ ->
+    (* Note we use [rbw] here as the default otherwise Vivado will not be able to infer
+       this as BRAM ([wbr] gives a warning in Vivado). *)
+    let ram_primitive = Option.value ram_primitive ~default:ram_rbw in
     let collision =
       reg
         (Reg_spec.create ~clock:write_port.write_clock ())
@@ -102,10 +105,10 @@ struct
     [@@deriving hardcaml]
   end
 
-  let create ?nearly_full ?(nearly_empty = 1) ?scope ({ clock; clear; wr; rd } : _ I.t)
+  let create ?nearly_full ?(nearly_empty = 1) ~scope ({ clock; clear; wr; rd } : _ I.t)
     : _ O.t
     =
-    let ( -- ) = naming ?scope in
+    let ( -- ) = Scope.naming scope in
     let reg_spec = Reg_spec.create ~clock ~clear () in
     let reg ?initialize_to ~enable d =
       reg
@@ -160,7 +163,7 @@ let create
   ?(overflow_check = true)
   ?(underflow_check = true)
   ?(ram_attributes = [ Rtl_attribute.Vivado.Ram_style.block ])
-  ?scope
+  ~scope
   ?ram_primitive
   ()
   ~capacity:ram_capacity
@@ -170,7 +173,7 @@ let create
   ~d
   ~rd
   =
-  let ( -- ) = naming ?scope in
+  let ( -- ) = Scope.naming scope in
   (* Check if read_latency is set that its value makes sense. *)
   Option.iter read_latency ~f:(fun read_latency ->
     if showahead && read_latency <> 0
@@ -201,7 +204,7 @@ let create
     end)
   in
   let%tydi { used; used_next; empty; nearly_empty; full; nearly_full } =
-    Fifo_helper.create ?nearly_full ?nearly_empty ?scope { clock; clear; wr; rd }
+    Fifo_helper.create ?nearly_full ?nearly_empty ~scope { clock; clear; wr; rd }
   in
   full' <-- full;
   empty' <-- empty;
@@ -265,7 +268,7 @@ let create_classic_with_extra_reg
   ?overflow_check
   ?underflow_check
   ?ram_attributes
-  ?scope
+  ~scope
   ?ram_primitive
   ()
   ~capacity
@@ -291,7 +294,7 @@ let create_classic_with_extra_reg
       ?underflow_check
       ?ram_attributes
       ?ram_primitive
-      ?scope
+      ~scope
       ()
       ~capacity
       ~clock
@@ -341,7 +344,7 @@ let create_showahead_from_classic
   ?overflow_check
   ?underflow_check
   ?ram_attributes
-  ?scope
+  ~scope
   ?ram_primitive
   ()
   =
@@ -355,7 +358,7 @@ let create_showahead_from_classic
       ?underflow_check
       ?ram_attributes
       ?ram_primitive
-      ?scope
+      ~scope
       ()
       ~capacity
       ~clock:write_clock
@@ -382,7 +385,7 @@ let create_showahead_with_read_latency
   ?(overflow_check = true)
   ?(underflow_check = true)
   ?ram_attributes
-  ?scope
+  ~scope
   ?ram_primitive
   ()
   ~capacity
@@ -405,7 +408,7 @@ let create_showahead_with_read_latency
       ?nearly_full
       ?ram_attributes
       ?ram_primitive
-      ?scope
+      ~scope
       ()
       ~overflow_check
       ~underflow_check
@@ -433,7 +436,7 @@ let create_showahead_with_read_latency
     end)
   in
   let%tydi { used; used_next = _; empty = _; nearly_empty; full; nearly_full = _ } =
-    Fifo_helper.create ?nearly_full ?nearly_empty ?scope { clock; clear; wr; rd }
+    Fifo_helper.create ?nearly_full ?nearly_empty ~scope { clock; clear; wr; rd }
   in
   empty' <-- ~:dout_valid;
   full' <-- full;
@@ -448,7 +451,7 @@ type 'a showahead_with_extra_reg =
 let create_showahead_with_extra_reg_wrapper
   ?(nearly_empty = 1)
   ?nearly_full
-  ?scope
+  ~scope
   fifo
   ~overflow_check
   ~underflow_check
@@ -489,7 +492,7 @@ let create_showahead_with_extra_reg_wrapper
     end)
   in
   let%tydi { used; used_next = _; empty = _; nearly_empty; full; nearly_full } =
-    Fifo_helper.create ?scope ?nearly_full ~nearly_empty { clock; clear; wr; rd }
+    Fifo_helper.create ~scope ?nearly_full ~nearly_empty { clock; clear; wr; rd }
   in
   empty' <-- ~:dout_valid;
   full' <-- full;
@@ -504,7 +507,7 @@ let create_showahead_with_extra_reg
   ?(overflow_check = true)
   ?(underflow_check = true)
   ?ram_attributes
-  ?scope
+  ~scope
   ?ram_primitive
   ()
   ~capacity
@@ -520,7 +523,7 @@ let create_showahead_with_extra_reg
       ~showahead:false
       ?nearly_full
       ?ram_attributes
-      ?scope
+      ~scope
       ?ram_primitive
       ()
       ~overflow_check
@@ -537,7 +540,7 @@ let create_showahead_with_extra_reg
     create_showahead_with_extra_reg_wrapper
       ~nearly_empty
       ?nearly_full
-      ?scope
+      ~scope
       fifo
       ~overflow_check
       ~underflow_check
@@ -560,7 +563,7 @@ module Clocked = struct
     ?overflow_check
     ?underflow_check
     ?ram_attributes
-    ?scope
+    ~scope
     ?ram_primitive
     ()
     ~capacity
@@ -580,7 +583,7 @@ module Clocked = struct
          ?overflow_check
          ?underflow_check
          ?ram_attributes
-         ?scope
+         ~scope
          ?ram_primitive
          ()
          ~capacity)
@@ -599,7 +602,7 @@ module Clocked = struct
     ?overflow_check
     ?underflow_check
     ?ram_attributes
-    ?scope
+    ~scope
     ?ram_primitive
     ()
     ~capacity
@@ -617,7 +620,7 @@ module Clocked = struct
          ?overflow_check
          ?underflow_check
          ?ram_attributes
-         ?scope
+         ~scope
          ?ram_primitive
          ()
          ~capacity)
@@ -636,7 +639,7 @@ module Clocked = struct
     ?overflow_check
     ?underflow_check
     ?ram_attributes
-    ?scope
+    ~scope
     ?ram_primitive
     ()
     ~capacity
@@ -654,7 +657,7 @@ module Clocked = struct
          ?overflow_check
          ?underflow_check
          ?ram_attributes
-         ?scope
+         ~scope
          ?ram_primitive
          ()
          ~capacity)
@@ -674,7 +677,7 @@ module Clocked = struct
     ?overflow_check
     ?underflow_check
     ?ram_attributes
-    ?scope
+    ~scope
     ?ram_primitive
     ()
     ~capacity
@@ -693,7 +696,7 @@ module Clocked = struct
          ?overflow_check
          ?underflow_check
          ?ram_attributes
-         ?scope
+         ~scope
          ?ram_primitive
          ()
          ~capacity)
@@ -709,7 +712,7 @@ module Clocked = struct
   let create_showahead_with_extra_reg_wrapper
     ?nearly_empty
     ?nearly_full
-    ?scope
+    ~scope
     fifo
     ~overflow_check
     ~underflow_check
@@ -726,7 +729,7 @@ module Clocked = struct
       (create_showahead_with_extra_reg_wrapper
          ?nearly_empty
          ?nearly_full
-         ?scope
+         ~scope
          (map fifo ~f:unwrap)
          ~overflow_check
          ~underflow_check
@@ -745,7 +748,7 @@ module Clocked = struct
     ?overflow_check
     ?underflow_check
     ?ram_attributes
-    ?scope
+    ~scope
     ?ram_primitive
     ()
     ~capacity
@@ -763,7 +766,7 @@ module Clocked = struct
          ?overflow_check
          ?underflow_check
          ?ram_attributes
-         ?scope
+         ~scope
          ?ram_primitive
          ()
          ~capacity)
@@ -816,7 +819,7 @@ module With_interface (Config : Config) = struct
     ?overflow_check
     ?underflow_check
     ?ram_attributes
-    ?scope
+    ~scope
     ?ram_primitive
     ~f
     (i : _ I.t)
@@ -827,7 +830,7 @@ module With_interface (Config : Config) = struct
       ?overflow_check
       ?underflow_check
       ?ram_attributes
-      ?scope
+      ~scope
       ?ram_primitive
       ()
       ~capacity:Config.capacity
@@ -867,7 +870,7 @@ let typed_fifo
   ?overflow_check
   ?underflow_check
   ?ram_attributes
-  ?scope
+  ~scope
   ?ram_primitive
   ~(clocking : Signal.t Clocking.t)
   ~capacity
@@ -882,7 +885,7 @@ let typed_fifo
       ?overflow_check
       ?underflow_check
       ?ram_attributes
-      ?scope
+      ~scope
       ?ram_primitive
       ~showahead:true
       ~capacity
@@ -912,7 +915,7 @@ let cut_through_typed_fifo
   ?overflow_check
   ?underflow_check
   ?ram_attributes
-  ?scope
+  ~scope
   ?ram_primitive
   ~(clocking : Signal.t Clocking.t)
   ~capacity
@@ -931,7 +934,7 @@ let cut_through_typed_fifo
       ?overflow_check
       ?underflow_check
       ?ram_attributes
-      ?scope
+      ~scope
       ?ram_primitive
       ~clocking
       ~capacity

@@ -2,7 +2,7 @@
 
 open! Import
 open Hardcaml
-open Hardcaml_waveterm_cyclesim
+open Hardcaml_waveterm_kernel
 
 module I = struct
   type 'a t =
@@ -57,7 +57,7 @@ let run (waves, sim) =
 
 let%expect_test "initialized to zero" =
   let module Sim = Cyclesim.With_interface (I) (O) in
-  Sim.create create |> Waveform.create |> run;
+  Sim.create create |> Cyclesim.Waveform.create |> run;
   [%expect
     {|
     ┌Signals───────────┐┌Waves─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -86,7 +86,7 @@ let%expect_test "pseudorandomly initialized registers" =
       Cyclesim.Config.(
         add_random_initialization default Random_initializer.(create randomize_regs))
     create
-  |> Waveform.create
+  |> Cyclesim.Waveform.create
   |> run;
   [%expect
     {|
@@ -110,7 +110,7 @@ let%expect_test "pseudorandomly initialized registers" =
       Cyclesim.Config.(
         add_random_initialization default Random_initializer.(create randomize_regs))
     (create ~collision_mode:Write_before_read)
-  |> Waveform.create
+  |> Cyclesim.Waveform.create
   |> run;
   [%expect
     {|
@@ -138,7 +138,7 @@ let%expect_test "pseudorandomly initialized memories" =
           Cyclesim.Config.default
           Random_initializer.(create randomize_memories))
     create
-  |> Waveform.create
+  |> Cyclesim.Waveform.create
   |> run;
   [%expect
     {|
@@ -164,7 +164,7 @@ let%expect_test "pseudorandomly initialized state" =
       Cyclesim.Config.(
         add_random_initialization default Random_initializer.(create (Fn.const true)))
     create
-  |> Waveform.create
+  |> Cyclesim.Waveform.create
   |> run;
   [%expect
     {|

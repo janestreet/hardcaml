@@ -154,7 +154,7 @@ ports.
 module Waveform = Hardcaml_waveterm.Waveform
 # let create_sim circuit =
     let sim = Cyclesim.create ~config:Cyclesim.Config.trace_all circuit in
-    let waves, sim = Waveform.create sim in
+    let waves, sim = Cyclesim.Waveform.create sim in
     let first = Cyclesim.in_port sim "first" in
     let a = Cyclesim.in_port sim "a" in
     let b0 = Cyclesim.in_port sim "b0" in
@@ -195,9 +195,10 @@ val test : Binary.t -> Binary.t -> Waveform.t * Binary.t = <fun>
 Let's test our running examples of multiplying `3*5` and `100*99`.
 
 ```ocaml
-# let waves, result = test (Bits.of_unsigned_int ~width:2 3) (Bits.of_unsigned_int ~width:3 5)
-val waves : Waveform.t = <abstr>
-val result : Binary.t = 01111
+let waves, result = test (Bits.of_unsigned_int ~width:2 3) (Bits.of_unsigned_int ~width:3 5);;
+```
+
+```ocaml
 # Stdio.printf "%i" (Bits.to_unsigned_int result)
 15
 - : unit = ()

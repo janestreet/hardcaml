@@ -654,6 +654,18 @@ let to_int32_trunc x = Constant.to_int32 x
 let zero w = Bits0.create w
 let pp fmt t = Stdlib.Format.fprintf fmt "%s" (to_bstr t)
 
+let generate (width : int) =
+  if Int.(width <= 0)
+  then raise_s [%message "Bits.generate: width must be positive" (width : int)];
+  (* Build the generator directly from [Splittable_random] instead of via
+     [Bigint.gen_incl], so that each of the [2 ** width] bit patterns is produced with
+     equal probability. *)
+  Quickcheck.Generator.create (fun ~size:_ ~random ->
+    let t = Bits0.create width in
+    Mutable.randomize ~random_state:random t;
+    t)
+;;
+
 (* Install pretty printer. *)
 module _ = Pretty_printer.Register (struct
     type nonrec t = Bits0.t
@@ -709,3 +721,5 @@ module Signed_int = struct
 
   let sexp_of_t t = [%sexp_of: string] (to_string t)
 end
+
+let type_equal_id = Type_equal.Id.create ~name:"Bits" sexp_of_t

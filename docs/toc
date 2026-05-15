@@ -48,6 +48,7 @@ using-interfaces
     scopes {path:"../scopes.mdx"}
     module_hierarchies {path:"../module_hierarchy.mdx"}
     naming_with_ppx_hardcaml {path:"../ppx_naming.mdx"}
+    variant_interfaces {path:"../variant_interfaces.mdx"}
 examples
     counter {path:"../counter_example.mdx"}
     serial_multiplier {path:"../serial_multiplier_example.mdx"}

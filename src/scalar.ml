@@ -6,6 +6,7 @@ module type S_untyped = Scalar_intf.S_untyped
 module Make_with_wave_format (X : Value.Arg_with_wave_format) = struct
   include Value.Make_with_wave_format (X)
 
+  let globalize globalize_a t = globalize_a t
   let num_bits = X.port_width
 
   let check_width (type a) (module Comb : Comb.S with type t = a) ~expected_width bits =

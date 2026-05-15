@@ -42,23 +42,23 @@ let%expect_test "To_file" =
         input a;
         output b;
 
-        wire _5;
-        wire _1;
-        wire _6;
-        wire _3;
-        wire _7;
+        wire signal_inst;
+        wire signal_wire;
+        wire signal_inst_1;
+        wire signal_wire_1;
+        wire signal_or;
         inner
             the_inner
             ( .a(a),
-              .b(_5) );
-        assign _1 = _5;
+              .b(signal_inst) );
+        assign signal_wire = signal_inst;
         inner
             the_inner_1
             ( .a(a),
-              .b(_6) );
-        assign _3 = _6;
-        assign _7 = _3 | _1;
-        assign b = _7;
+              .b(signal_inst_1) );
+        assign signal_wire_1 = signal_inst_1;
+        assign signal_or = signal_wire_1 | signal_wire;
+        assign b = signal_or;
 
     endmodule
     module outer (
@@ -69,14 +69,14 @@ let%expect_test "To_file" =
         input a;
         output b;
 
-        wire _4;
-        wire _2;
+        wire signal_inst;
+        wire signal_wire;
         middle
             the_middle
             ( .a(a),
-              .b(_4) );
-        assign _2 = _4;
-        assign b = _2;
+              .b(signal_inst) );
+        assign signal_wire = signal_inst;
+        assign b = signal_wire;
 
     endmodule
     |}];
@@ -136,24 +136,24 @@ let%expect_test "In_directory" =
 
     architecture rtl of middle is
 
-        signal \_5\ : std_logic;
-        signal \_1\ : std_logic;
-        signal \_6\ : std_logic;
-        signal \_3\ : std_logic;
-        signal \_7\ : std_logic;
+        signal signal_inst : std_logic;
+        signal signal_wire : std_logic;
+        signal signal_inst_1 : std_logic;
+        signal signal_wire_1 : std_logic;
+        signal signal_or : std_logic;
 
     begin
 
         the_inner: entity work.inner (rtl)
             port map ( a => a,
-                       b => \_5\ );
-        \_1\ <= \_5\;
+                       b => signal_inst );
+        signal_wire <= signal_inst;
         the_inner_1: entity work.inner (rtl)
             port map ( a => a,
-                       b => \_6\ );
-        \_3\ <= \_6\;
-        \_7\ <= \_3\ or \_1\;
-        b <= \_7\;
+                       b => signal_inst_1 );
+        signal_wire_1 <= signal_inst_1;
+        signal_or <= signal_wire_1 or signal_wire;
+        b <= signal_or;
 
     end architecture;
     library ieee;
@@ -169,16 +169,16 @@ let%expect_test "In_directory" =
 
     architecture rtl of outer is
 
-        signal \_4\ : std_logic;
-        signal \_2\ : std_logic;
+        signal signal_inst : std_logic;
+        signal signal_wire : std_logic;
 
     begin
 
         the_middle: entity work.middle (rtl)
             port map ( a => a,
-                       b => \_4\ );
-        \_2\ <= \_4\;
-        b <= \_2\;
+                       b => signal_inst );
+        signal_wire <= signal_inst;
+        b <= signal_wire;
 
     end architecture;
     |}];

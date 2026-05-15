@@ -7,18 +7,19 @@ let%expect_test "rtl name legalization" =
     print_endline [%string {|%{padding alignment} %{name}|}];
     List.iter Rtl.Language.all ~f:(fun language ->
       let scope = Rtl.Name.Scope.create () in
-      let name = Rtl.Name.Scope.mangle_name scope name |> Rtl.Name.legalize ~language in
+      let name =
+        Rtl.Name.Scope.mangle_name scope name
+        |> Rtl.Name.legalize ~language
+        |> Rtl.Name.For_backend.to_string
+      in
       let lang = Rtl.Language.to_string language in
       let padding = padding (max 0 (alignment - String.length lang)) in
       print_endline [%string {|%{lang}%{padding} %{name}|}]);
     print_endline ""
   in
-  [%expect {| |}];
-  let invalid_identifiers =
+  List.iter
     [ ""; "foo!\"£$%^&*()\""; [%string {|\|}]; [%string {|\\|}]; "a name with spaces" ]
-  in
-  List.iter invalid_identifiers ~f:(fun identifier ->
-    require_does_raise ~cr:CR_someday (fun () -> show identifier));
+    ~f:(fun invalid_name -> require_does_raise (fun () -> show invalid_name));
   [%expect
     {|
     "[Rtl_name] string must not be empty"

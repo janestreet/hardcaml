@@ -42,23 +42,18 @@ module Memory = Cyclesim_lookup.Memory
 
 (* Find all nodes we wish to trace, and generate unique names. *)
 module Traced_nodes = struct
-  let create_mangler circuit =
-    let mangler = Mangler.create ~case_sensitive:true in
-    let io_port_names =
-      Circuit.inputs circuit @ Circuit.outputs circuit
-      |> List.map ~f:(fun s -> Signal.names s |> List.hd_exn)
-    in
-    Mangler.add_identifiers_exn mangler io_port_names;
-    mangler
-  ;;
+  let rtl_name_to_string name = Rtl_name.backend_agnostic name
 
-  let internal_signal mangler signal =
-    let mangled_names = Signal.names signal |> List.map ~f:(Mangler.mangle mangler) in
+  let internal_signal circuit signal =
+    let mangled_names =
+      Circuit.Name_for_rtl.internal_signal_exn circuit signal
+      |> List.map ~f:rtl_name_to_string
+    in
     { Traced.signal; mangled_names }
   ;;
 
-  let io_port signal =
-    let name = Signal.names signal |> List.hd_exn in
+  let io_port circuit signal =
+    let name = Circuit.Name_for_rtl.port_exn circuit signal |> rtl_name_to_string in
     { Traced.signal; name }
   ;;
 
@@ -67,17 +62,16 @@ module Traced_nodes = struct
       match is_internal_port with
       | None -> []
       | Some f ->
-        let mangler = create_mangler circuit in
         Signal_graph.filter (Circuit.signal_graph circuit) ~f:(fun s ->
           (not (Circuit.is_input circuit s))
           && (not (Circuit.is_output circuit s))
           && (not (Signal.is_empty s))
           && f s)
         |> List.rev
-        |> List.map ~f:(internal_signal mangler)
+        |> List.map ~f:(internal_signal circuit)
     in
-    { Traced.input_ports = List.map (Circuit.inputs circuit) ~f:io_port
-    ; output_ports = List.map (Circuit.outputs circuit) ~f:io_port
+    { Traced.input_ports = List.map (Circuit.inputs circuit) ~f:(io_port circuit)
+    ; output_ports = List.map (Circuit.outputs circuit) ~f:(io_port circuit)
     ; internal_signals
     }
   ;;

@@ -82,409 +82,409 @@ let%expect_test "3 bit adder, ASIC style, verilog" =
         input [2:0] a;
         output [2:0] c;
 
-        wire _53;
-        wire _1;
-        wire _54;
-        wire _2;
-        wire _56;
-        wire _3;
-        wire _58;
-        wire _4;
-        wire _59;
-        wire _5;
-        wire _60;
-        wire _6;
-        wire _61;
-        wire _7;
-        wire _62;
-        wire _8;
-        wire _63;
-        wire _9;
-        wire _64;
-        wire _10;
-        wire _66;
-        wire _11;
-        wire _68;
-        wire _12;
-        wire _69;
-        wire _13;
-        wire _70;
-        wire _14;
-        wire _71;
-        wire _15;
-        wire _72;
-        wire _16;
-        wire _73;
-        wire _17;
-        wire _74;
-        wire _18;
-        wire _75;
-        wire _19;
-        wire _76;
-        wire _20;
-        wire _77;
-        wire _21;
-        wire _78;
-        wire _22;
-        wire _79;
-        wire _23;
+        wire signal_inst;
+        wire signal_wire;
+        wire signal_inst_1;
+        wire signal_wire_1;
+        wire signal_inst_2;
+        wire signal_wire_2;
+        wire signal_inst_3;
+        wire signal_wire_3;
+        wire signal_inst_4;
+        wire signal_wire_4;
+        wire signal_inst_5;
+        wire signal_wire_5;
+        wire signal_inst_6;
+        wire signal_wire_6;
+        wire signal_inst_7;
+        wire signal_wire_7;
+        wire signal_inst_8;
+        wire signal_wire_8;
+        wire signal_inst_9;
+        wire signal_wire_9;
+        wire signal_inst_10;
+        wire signal_wire_10;
+        wire signal_inst_11;
+        wire signal_wire_11;
+        wire signal_inst_12;
+        wire signal_wire_12;
+        wire signal_inst_13;
+        wire signal_wire_13;
+        wire signal_inst_14;
+        wire signal_wire_14;
+        wire signal_inst_15;
+        wire signal_wire_15;
+        wire signal_inst_16;
+        wire signal_wire_16;
+        wire signal_inst_17;
+        wire signal_wire_17;
+        wire signal_inst_18;
+        wire signal_wire_18;
+        wire signal_inst_19;
+        wire signal_wire_19;
+        wire signal_inst_20;
+        wire signal_wire_20;
+        wire signal_inst_21;
+        wire signal_wire_21;
+        wire signal_inst_22;
+        wire signal_wire_22;
         wire gnd;
-        wire _80;
-        wire _24;
-        wire _81;
-        wire _25;
-        wire _82;
-        wire _26;
-        wire _55;
-        wire _57;
-        wire _83;
-        wire _27;
-        wire _84;
-        wire _28;
-        wire _85;
-        wire _29;
-        wire _86;
-        wire _30;
-        wire _87;
-        wire _31;
-        wire _88;
-        wire _32;
-        wire _89;
-        wire _33;
-        wire _90;
-        wire _34;
-        wire _91;
-        wire _35;
-        wire _65;
-        wire _67;
-        wire _92;
-        wire _36;
-        wire _93;
-        wire _37;
-        wire _94;
-        wire _38;
-        wire _95;
-        wire _39;
-        wire _96;
-        wire _40;
-        wire _97;
-        wire _41;
-        wire _98;
-        wire _42;
-        wire _100;
-        wire _43;
-        wire _99;
-        wire _102;
-        wire _45;
-        wire _101;
-        wire _103;
-        wire _47;
-        wire _104;
-        wire _48;
-        wire _105;
-        wire _49;
-        wire _106;
-        wire _50;
-        wire [2:0] _107;
-        nand
+        wire signal_inst_23;
+        wire signal_wire_23;
+        wire signal_inst_24;
+        wire signal_wire_24;
+        wire signal_inst_25;
+        wire signal_wire_25;
+        wire signal_select;
+        wire signal_select_1;
+        wire signal_inst_26;
+        wire signal_wire_26;
+        wire signal_inst_27;
+        wire signal_wire_27;
+        wire signal_inst_28;
+        wire signal_wire_28;
+        wire signal_inst_29;
+        wire signal_wire_29;
+        wire signal_inst_30;
+        wire signal_wire_30;
+        wire signal_inst_31;
+        wire signal_wire_31;
+        wire signal_inst_32;
+        wire signal_wire_32;
+        wire signal_inst_33;
+        wire signal_wire_33;
+        wire signal_inst_34;
+        wire signal_wire_34;
+        wire signal_select_2;
+        wire signal_select_3;
+        wire signal_inst_35;
+        wire signal_wire_35;
+        wire signal_inst_36;
+        wire signal_wire_36;
+        wire signal_inst_37;
+        wire signal_wire_37;
+        wire signal_inst_38;
+        wire signal_wire_38;
+        wire signal_inst_39;
+        wire signal_wire_39;
+        wire signal_inst_40;
+        wire signal_wire_40;
+        wire signal_inst_41;
+        wire signal_wire_41;
+        wire signal_inst_42;
+        wire signal_wire_42;
+        wire signal_select_4;
+        wire signal_inst_43;
+        wire signal_wire_43;
+        wire signal_select_5;
+        wire signal_inst_44;
+        wire signal_wire_44;
+        wire signal_inst_45;
+        wire signal_wire_45;
+        wire signal_inst_46;
+        wire signal_wire_46;
+        wire signal_inst_47;
+        wire signal_wire_47;
+        wire [2:0] signal_cat;
+        \nand
             the_nand
             ( .a(gnd),
-              .b(_2),
-              .c(_53) );
-        assign _1 = _53;
-        nand
+              .b(signal_wire_1),
+              .c(signal_inst) );
+        assign signal_wire = signal_inst;
+        \nand
             the_nand_1
-            ( .a(_6),
+            ( .a(signal_wire_5),
               .b(gnd),
-              .c(_54) );
-        assign _2 = _54;
-        nand
+              .c(signal_inst_1) );
+        assign signal_wire_1 = signal_inst_1;
+        \nand
             the_nand_2
-            ( .a(_55),
-              .b(_4),
-              .c(_56) );
-        assign _3 = _56;
-        nand
+            ( .a(signal_select),
+              .b(signal_wire_3),
+              .c(signal_inst_2) );
+        assign signal_wire_2 = signal_inst_2;
+        \nand
             the_nand_3
-            ( .a(_57),
-              .b(_55),
-              .c(_58) );
-        assign _4 = _58;
-        nand
+            ( .a(signal_select_1),
+              .b(signal_select),
+              .c(signal_inst_3) );
+        assign signal_wire_3 = signal_inst_3;
+        \nand
             the_nand_4
-            ( .a(_57),
-              .b(_4),
-              .c(_59) );
-        assign _5 = _59;
-        nand
+            ( .a(signal_select_1),
+              .b(signal_wire_3),
+              .c(signal_inst_4) );
+        assign signal_wire_4 = signal_inst_4;
+        \nand
             the_nand_5
-            ( .a(_5),
-              .b(_3),
-              .c(_60) );
-        assign _6 = _60;
-        nand
+            ( .a(signal_wire_4),
+              .b(signal_wire_2),
+              .c(signal_inst_5) );
+        assign signal_wire_5 = signal_inst_5;
+        \nand
             the_nand_6
-            ( .a(_6),
-              .b(_2),
-              .c(_61) );
-        assign _7 = _61;
-        nand
+            ( .a(signal_wire_5),
+              .b(signal_wire_1),
+              .c(signal_inst_6) );
+        assign signal_wire_6 = signal_inst_6;
+        \nand
             the_nand_7
-            ( .a(_7),
-              .b(_1),
-              .c(_62) );
-        assign _8 = _62;
-        nand
+            ( .a(signal_wire_6),
+              .b(signal_wire),
+              .c(signal_inst_7) );
+        assign signal_wire_7 = signal_inst_7;
+        \nand
             the_nand_8
-            ( .a(_32),
-              .b(_10),
-              .c(_63) );
-        assign _9 = _63;
-        nand
+            ( .a(signal_wire_31),
+              .b(signal_wire_9),
+              .c(signal_inst_8) );
+        assign signal_wire_8 = signal_inst_8;
+        \nand
             the_nand_9
-            ( .a(_14),
-              .b(_32),
-              .c(_64) );
-        assign _10 = _64;
-        nand
+            ( .a(signal_wire_13),
+              .b(signal_wire_31),
+              .c(signal_inst_9) );
+        assign signal_wire_9 = signal_inst_9;
+        \nand
             the_nand_10
-            ( .a(_65),
-              .b(_12),
-              .c(_66) );
-        assign _11 = _66;
-        nand
+            ( .a(signal_select_2),
+              .b(signal_wire_11),
+              .c(signal_inst_10) );
+        assign signal_wire_10 = signal_inst_10;
+        \nand
             the_nand_11
-            ( .a(_67),
-              .b(_65),
-              .c(_68) );
-        assign _12 = _68;
-        nand
+            ( .a(signal_select_3),
+              .b(signal_select_2),
+              .c(signal_inst_11) );
+        assign signal_wire_11 = signal_inst_11;
+        \nand
             the_nand_12
-            ( .a(_67),
-              .b(_12),
-              .c(_69) );
-        assign _13 = _69;
-        nand
+            ( .a(signal_select_3),
+              .b(signal_wire_11),
+              .c(signal_inst_12) );
+        assign signal_wire_12 = signal_inst_12;
+        \nand
             the_nand_13
-            ( .a(_13),
-              .b(_11),
-              .c(_70) );
-        assign _14 = _70;
-        nand
+            ( .a(signal_wire_12),
+              .b(signal_wire_10),
+              .c(signal_inst_13) );
+        assign signal_wire_13 = signal_inst_13;
+        \nand
             the_nand_14
-            ( .a(_14),
-              .b(_10),
-              .c(_71) );
-        assign _15 = _71;
-        nand
+            ( .a(signal_wire_13),
+              .b(signal_wire_9),
+              .c(signal_inst_14) );
+        assign signal_wire_14 = signal_inst_14;
+        \nand
             the_nand_15
-            ( .a(_15),
-              .b(_9),
-              .c(_72) );
-        assign _16 = _72;
-        nand
+            ( .a(signal_wire_14),
+              .b(signal_wire_8),
+              .c(signal_inst_15) );
+        assign signal_wire_15 = signal_inst_15;
+        \nand
             the_nand_16
-            ( .a(_41),
-              .b(_42),
-              .c(_73) );
-        assign _17 = _73;
-        nand
+            ( .a(signal_wire_40),
+              .b(signal_wire_41),
+              .c(signal_inst_16) );
+        assign signal_wire_16 = signal_inst_16;
+        \nand
             the_nand_17
-            ( .a(_32),
-              .b(_67),
-              .c(_74) );
-        assign _18 = _74;
-        nand
+            ( .a(signal_wire_31),
+              .b(signal_select_3),
+              .c(signal_inst_17) );
+        assign signal_wire_17 = signal_inst_17;
+        \nand
             the_nand_18
-            ( .a(_18),
-              .b(_18),
-              .c(_75) );
-        assign _19 = _75;
-        nand
+            ( .a(signal_wire_17),
+              .b(signal_wire_17),
+              .c(signal_inst_18) );
+        assign signal_wire_18 = signal_inst_18;
+        \nand
             the_nand_19
-            ( .a(_19),
-              .b(_19),
-              .c(_76) );
-        assign _20 = _76;
-        nand
+            ( .a(signal_wire_18),
+              .b(signal_wire_18),
+              .c(signal_inst_19) );
+        assign signal_wire_19 = signal_inst_19;
+        \nand
             the_nand_20
             ( .a(gnd),
-              .b(_57),
-              .c(_77) );
-        assign _21 = _77;
-        nand
+              .b(signal_select_1),
+              .c(signal_inst_20) );
+        assign signal_wire_20 = signal_inst_20;
+        \nand
             the_nand_21
-            ( .a(_21),
-              .b(_21),
-              .c(_78) );
-        assign _22 = _78;
-        nand
+            ( .a(signal_wire_20),
+              .b(signal_wire_20),
+              .c(signal_inst_21) );
+        assign signal_wire_21 = signal_inst_21;
+        \nand
             the_nand_22
-            ( .a(_22),
-              .b(_22),
-              .c(_79) );
-        assign _23 = _79;
+            ( .a(signal_wire_21),
+              .b(signal_wire_21),
+              .c(signal_inst_22) );
+        assign signal_wire_22 = signal_inst_22;
         assign gnd = 1'b0;
-        nand
+        \nand
             the_nand_23
-            ( .a(_55),
+            ( .a(signal_select),
               .b(gnd),
-              .c(_80) );
-        assign _24 = _80;
-        nand
+              .c(signal_inst_23) );
+        assign signal_wire_23 = signal_inst_23;
+        \nand
             the_nand_24
-            ( .a(_24),
-              .b(_24),
-              .c(_81) );
-        assign _25 = _81;
-        nand
+            ( .a(signal_wire_23),
+              .b(signal_wire_23),
+              .c(signal_inst_24) );
+        assign signal_wire_24 = signal_inst_24;
+        \nand
             the_nand_25
-            ( .a(_25),
-              .b(_25),
-              .c(_82) );
-        assign _26 = _82;
-        assign _55 = b[0:0];
-        assign _57 = a[0:0];
-        nand
+            ( .a(signal_wire_24),
+              .b(signal_wire_24),
+              .c(signal_inst_25) );
+        assign signal_wire_25 = signal_inst_25;
+        assign signal_select = b[0:0];
+        assign signal_select_1 = a[0:0];
+        \nand
             the_nand_26
-            ( .a(_57),
-              .b(_55),
-              .c(_83) );
-        assign _27 = _83;
-        nand
+            ( .a(signal_select_1),
+              .b(signal_select),
+              .c(signal_inst_26) );
+        assign signal_wire_26 = signal_inst_26;
+        \nand
             the_nand_27
-            ( .a(_27),
-              .b(_27),
-              .c(_84) );
-        assign _28 = _84;
-        nand
+            ( .a(signal_wire_26),
+              .b(signal_wire_26),
+              .c(signal_inst_27) );
+        assign signal_wire_27 = signal_inst_27;
+        \nand
             the_nand_28
-            ( .a(_28),
-              .b(_28),
-              .c(_85) );
-        assign _29 = _85;
-        nand
+            ( .a(signal_wire_27),
+              .b(signal_wire_27),
+              .c(signal_inst_28) );
+        assign signal_wire_28 = signal_inst_28;
+        \nand
             the_nand_29
-            ( .a(_29),
-              .b(_26),
-              .c(_86) );
-        assign _30 = _86;
-        nand
+            ( .a(signal_wire_28),
+              .b(signal_wire_25),
+              .c(signal_inst_29) );
+        assign signal_wire_29 = signal_inst_29;
+        \nand
             the_nand_30
-            ( .a(_30),
-              .b(_30),
-              .c(_87) );
-        assign _31 = _87;
-        nand
+            ( .a(signal_wire_29),
+              .b(signal_wire_29),
+              .c(signal_inst_30) );
+        assign signal_wire_30 = signal_inst_30;
+        \nand
             the_nand_31
-            ( .a(_31),
-              .b(_23),
-              .c(_88) );
-        assign _32 = _88;
-        nand
+            ( .a(signal_wire_30),
+              .b(signal_wire_22),
+              .c(signal_inst_31) );
+        assign signal_wire_31 = signal_inst_31;
+        \nand
             the_nand_32
-            ( .a(_65),
-              .b(_32),
-              .c(_89) );
-        assign _33 = _89;
-        nand
+            ( .a(signal_select_2),
+              .b(signal_wire_31),
+              .c(signal_inst_32) );
+        assign signal_wire_32 = signal_inst_32;
+        \nand
             the_nand_33
-            ( .a(_33),
-              .b(_33),
-              .c(_90) );
-        assign _34 = _90;
-        nand
+            ( .a(signal_wire_32),
+              .b(signal_wire_32),
+              .c(signal_inst_33) );
+        assign signal_wire_33 = signal_inst_33;
+        \nand
             the_nand_34
-            ( .a(_34),
-              .b(_34),
-              .c(_91) );
-        assign _35 = _91;
-        assign _65 = b[1:1];
-        assign _67 = a[1:1];
-        nand
+            ( .a(signal_wire_33),
+              .b(signal_wire_33),
+              .c(signal_inst_34) );
+        assign signal_wire_34 = signal_inst_34;
+        assign signal_select_2 = b[1:1];
+        assign signal_select_3 = a[1:1];
+        \nand
             the_nand_35
-            ( .a(_67),
-              .b(_65),
-              .c(_92) );
-        assign _36 = _92;
-        nand
+            ( .a(signal_select_3),
+              .b(signal_select_2),
+              .c(signal_inst_35) );
+        assign signal_wire_35 = signal_inst_35;
+        \nand
             the_nand_36
-            ( .a(_36),
-              .b(_36),
-              .c(_93) );
-        assign _37 = _93;
-        nand
+            ( .a(signal_wire_35),
+              .b(signal_wire_35),
+              .c(signal_inst_36) );
+        assign signal_wire_36 = signal_inst_36;
+        \nand
             the_nand_37
-            ( .a(_37),
-              .b(_37),
-              .c(_94) );
-        assign _38 = _94;
-        nand
+            ( .a(signal_wire_36),
+              .b(signal_wire_36),
+              .c(signal_inst_37) );
+        assign signal_wire_37 = signal_inst_37;
+        \nand
             the_nand_38
-            ( .a(_38),
-              .b(_35),
-              .c(_95) );
-        assign _39 = _95;
-        nand
+            ( .a(signal_wire_37),
+              .b(signal_wire_34),
+              .c(signal_inst_38) );
+        assign signal_wire_38 = signal_inst_38;
+        \nand
             the_nand_39
-            ( .a(_39),
-              .b(_39),
-              .c(_96) );
-        assign _40 = _96;
-        nand
+            ( .a(signal_wire_38),
+              .b(signal_wire_38),
+              .c(signal_inst_39) );
+        assign signal_wire_39 = signal_inst_39;
+        \nand
             the_nand_40
-            ( .a(_40),
-              .b(_20),
-              .c(_97) );
-        assign _41 = _97;
-        nand
+            ( .a(signal_wire_39),
+              .b(signal_wire_19),
+              .c(signal_inst_40) );
+        assign signal_wire_40 = signal_inst_40;
+        \nand
             the_nand_41
-            ( .a(_48),
-              .b(_41),
-              .c(_98) );
-        assign _42 = _98;
-        nand
+            ( .a(signal_wire_45),
+              .b(signal_wire_40),
+              .c(signal_inst_41) );
+        assign signal_wire_41 = signal_inst_41;
+        \nand
             the_nand_42
-            ( .a(_99),
-              .b(_45),
-              .c(_100) );
-        assign _43 = _100;
-        assign _99 = b[2:2];
-        nand
+            ( .a(signal_select_4),
+              .b(signal_wire_43),
+              .c(signal_inst_42) );
+        assign signal_wire_42 = signal_inst_42;
+        assign signal_select_4 = b[2:2];
+        \nand
             the_nand_43
-            ( .a(_101),
-              .b(_99),
-              .c(_102) );
-        assign _45 = _102;
-        assign _101 = a[2:2];
-        nand
+            ( .a(signal_select_5),
+              .b(signal_select_4),
+              .c(signal_inst_43) );
+        assign signal_wire_43 = signal_inst_43;
+        assign signal_select_5 = a[2:2];
+        \nand
             the_nand_44
-            ( .a(_101),
-              .b(_45),
-              .c(_103) );
-        assign _47 = _103;
-        nand
+            ( .a(signal_select_5),
+              .b(signal_wire_43),
+              .c(signal_inst_44) );
+        assign signal_wire_44 = signal_inst_44;
+        \nand
             the_nand_45
-            ( .a(_47),
-              .b(_43),
-              .c(_104) );
-        assign _48 = _104;
-        nand
+            ( .a(signal_wire_44),
+              .b(signal_wire_42),
+              .c(signal_inst_45) );
+        assign signal_wire_45 = signal_inst_45;
+        \nand
             the_nand_46
-            ( .a(_48),
-              .b(_42),
-              .c(_105) );
-        assign _49 = _105;
-        nand
+            ( .a(signal_wire_45),
+              .b(signal_wire_41),
+              .c(signal_inst_46) );
+        assign signal_wire_46 = signal_inst_46;
+        \nand
             the_nand_47
-            ( .a(_49),
-              .b(_17),
-              .c(_106) );
-        assign _50 = _106;
-        assign _107 = { _50,
-                        _16,
-                        _8 };
-        assign c = _107;
+            ( .a(signal_wire_46),
+              .b(signal_wire_16),
+              .c(signal_inst_47) );
+        assign signal_wire_47 = signal_inst_47;
+        assign signal_cat = { signal_wire_47,
+                              signal_wire_15,
+                              signal_wire_7 };
+        assign c = signal_cat;
 
     endmodule
     |}]
@@ -530,553 +530,553 @@ let%expect_test "3 bit adder, FPGA style, verilog" =
         input [2:0] a;
         output [2:0] c;
 
-        wire [1:0] _53;
-        wire _54;
-        wire _1;
-        wire [1:0] _55;
-        wire _56;
-        wire _2;
-        wire [1:0] _58;
-        wire _59;
-        wire _3;
-        wire [1:0] _61;
-        wire _62;
-        wire _4;
-        wire [1:0] _63;
-        wire _64;
-        wire _5;
-        wire [1:0] _65;
-        wire _66;
-        wire _6;
-        wire [1:0] _67;
-        wire _68;
-        wire _7;
-        wire [1:0] _69;
-        wire _70;
-        wire _8;
-        wire [1:0] _71;
-        wire _72;
-        wire _9;
-        wire [1:0] _73;
-        wire _74;
-        wire _10;
-        wire [1:0] _76;
-        wire _77;
-        wire _11;
-        wire [1:0] _79;
-        wire _80;
-        wire _12;
-        wire [1:0] _81;
-        wire _82;
-        wire _13;
-        wire [1:0] _83;
-        wire _84;
-        wire _14;
-        wire [1:0] _85;
-        wire _86;
-        wire _15;
-        wire [1:0] _87;
-        wire _88;
-        wire _16;
-        wire [1:0] _89;
-        wire _90;
-        wire _17;
-        wire [1:0] _91;
-        wire _92;
-        wire _18;
-        wire [1:0] _93;
-        wire _94;
-        wire _19;
-        wire [1:0] _95;
-        wire _96;
-        wire _20;
-        wire [1:0] _97;
-        wire _98;
-        wire _21;
-        wire [1:0] _99;
-        wire _100;
-        wire _22;
-        wire [1:0] _101;
-        wire _102;
-        wire _23;
+        wire [1:0] signal_cat;
+        wire signal_inst;
+        wire signal_wire;
+        wire [1:0] signal_cat_1;
+        wire signal_inst_1;
+        wire signal_wire_1;
+        wire [1:0] signal_cat_2;
+        wire signal_inst_2;
+        wire signal_wire_2;
+        wire [1:0] signal_cat_3;
+        wire signal_inst_3;
+        wire signal_wire_3;
+        wire [1:0] signal_cat_4;
+        wire signal_inst_4;
+        wire signal_wire_4;
+        wire [1:0] signal_cat_5;
+        wire signal_inst_5;
+        wire signal_wire_5;
+        wire [1:0] signal_cat_6;
+        wire signal_inst_6;
+        wire signal_wire_6;
+        wire [1:0] signal_cat_7;
+        wire signal_inst_7;
+        wire signal_wire_7;
+        wire [1:0] signal_cat_8;
+        wire signal_inst_8;
+        wire signal_wire_8;
+        wire [1:0] signal_cat_9;
+        wire signal_inst_9;
+        wire signal_wire_9;
+        wire [1:0] signal_cat_10;
+        wire signal_inst_10;
+        wire signal_wire_10;
+        wire [1:0] signal_cat_11;
+        wire signal_inst_11;
+        wire signal_wire_11;
+        wire [1:0] signal_cat_12;
+        wire signal_inst_12;
+        wire signal_wire_12;
+        wire [1:0] signal_cat_13;
+        wire signal_inst_13;
+        wire signal_wire_13;
+        wire [1:0] signal_cat_14;
+        wire signal_inst_14;
+        wire signal_wire_14;
+        wire [1:0] signal_cat_15;
+        wire signal_inst_15;
+        wire signal_wire_15;
+        wire [1:0] signal_cat_16;
+        wire signal_inst_16;
+        wire signal_wire_16;
+        wire [1:0] signal_cat_17;
+        wire signal_inst_17;
+        wire signal_wire_17;
+        wire [1:0] signal_cat_18;
+        wire signal_inst_18;
+        wire signal_wire_18;
+        wire [1:0] signal_cat_19;
+        wire signal_inst_19;
+        wire signal_wire_19;
+        wire [1:0] signal_cat_20;
+        wire signal_inst_20;
+        wire signal_wire_20;
+        wire [1:0] signal_cat_21;
+        wire signal_inst_21;
+        wire signal_wire_21;
+        wire [1:0] signal_cat_22;
+        wire signal_inst_22;
+        wire signal_wire_22;
         wire gnd;
-        wire [1:0] _103;
-        wire _104;
-        wire _24;
-        wire [1:0] _105;
-        wire _106;
-        wire _25;
-        wire [1:0] _107;
-        wire _108;
-        wire _26;
-        wire _57;
-        wire _60;
-        wire [1:0] _109;
-        wire _110;
-        wire _27;
-        wire [1:0] _111;
-        wire _112;
-        wire _28;
-        wire [1:0] _113;
-        wire _114;
-        wire _29;
-        wire [1:0] _115;
-        wire _116;
-        wire _30;
-        wire [1:0] _117;
-        wire _118;
-        wire _31;
-        wire [1:0] _119;
-        wire _120;
-        wire _32;
-        wire [1:0] _121;
-        wire _122;
-        wire _33;
-        wire [1:0] _123;
-        wire _124;
-        wire _34;
-        wire [1:0] _125;
-        wire _126;
-        wire _35;
-        wire _75;
-        wire _78;
-        wire [1:0] _127;
-        wire _128;
-        wire _36;
-        wire [1:0] _129;
-        wire _130;
-        wire _37;
-        wire [1:0] _131;
-        wire _132;
-        wire _38;
-        wire [1:0] _133;
-        wire _134;
-        wire _39;
-        wire [1:0] _135;
-        wire _136;
-        wire _40;
-        wire [1:0] _137;
-        wire _138;
-        wire _41;
-        wire [1:0] _139;
-        wire _140;
-        wire _42;
-        wire [1:0] _142;
-        wire _143;
-        wire _43;
-        wire _141;
-        wire [1:0] _145;
-        wire _146;
-        wire _45;
-        wire _144;
-        wire [1:0] _147;
-        wire _148;
-        wire _47;
-        wire [1:0] _149;
-        wire _150;
-        wire _48;
-        wire [1:0] _151;
-        wire _152;
-        wire _49;
-        wire [1:0] _153;
-        wire _154;
-        wire _50;
-        wire [2:0] _155;
-        assign _53 = { gnd,
-                       _2 };
+        wire [1:0] signal_cat_23;
+        wire signal_inst_23;
+        wire signal_wire_23;
+        wire [1:0] signal_cat_24;
+        wire signal_inst_24;
+        wire signal_wire_24;
+        wire [1:0] signal_cat_25;
+        wire signal_inst_25;
+        wire signal_wire_25;
+        wire signal_select;
+        wire signal_select_1;
+        wire [1:0] signal_cat_26;
+        wire signal_inst_26;
+        wire signal_wire_26;
+        wire [1:0] signal_cat_27;
+        wire signal_inst_27;
+        wire signal_wire_27;
+        wire [1:0] signal_cat_28;
+        wire signal_inst_28;
+        wire signal_wire_28;
+        wire [1:0] signal_cat_29;
+        wire signal_inst_29;
+        wire signal_wire_29;
+        wire [1:0] signal_cat_30;
+        wire signal_inst_30;
+        wire signal_wire_30;
+        wire [1:0] signal_cat_31;
+        wire signal_inst_31;
+        wire signal_wire_31;
+        wire [1:0] signal_cat_32;
+        wire signal_inst_32;
+        wire signal_wire_32;
+        wire [1:0] signal_cat_33;
+        wire signal_inst_33;
+        wire signal_wire_33;
+        wire [1:0] signal_cat_34;
+        wire signal_inst_34;
+        wire signal_wire_34;
+        wire signal_select_2;
+        wire signal_select_3;
+        wire [1:0] signal_cat_35;
+        wire signal_inst_35;
+        wire signal_wire_35;
+        wire [1:0] signal_cat_36;
+        wire signal_inst_36;
+        wire signal_wire_36;
+        wire [1:0] signal_cat_37;
+        wire signal_inst_37;
+        wire signal_wire_37;
+        wire [1:0] signal_cat_38;
+        wire signal_inst_38;
+        wire signal_wire_38;
+        wire [1:0] signal_cat_39;
+        wire signal_inst_39;
+        wire signal_wire_39;
+        wire [1:0] signal_cat_40;
+        wire signal_inst_40;
+        wire signal_wire_40;
+        wire [1:0] signal_cat_41;
+        wire signal_inst_41;
+        wire signal_wire_41;
+        wire [1:0] signal_cat_42;
+        wire signal_inst_42;
+        wire signal_wire_42;
+        wire signal_select_4;
+        wire [1:0] signal_cat_43;
+        wire signal_inst_43;
+        wire signal_wire_43;
+        wire signal_select_5;
+        wire [1:0] signal_cat_44;
+        wire signal_inst_44;
+        wire signal_wire_44;
+        wire [1:0] signal_cat_45;
+        wire signal_inst_45;
+        wire signal_wire_45;
+        wire [1:0] signal_cat_46;
+        wire signal_inst_46;
+        wire signal_wire_46;
+        wire [1:0] signal_cat_47;
+        wire signal_inst_47;
+        wire signal_wire_47;
+        wire [2:0] signal_cat_48;
+        assign signal_cat = { gnd,
+                              signal_wire_1 };
         LUT2
             #( .INIT("1110") )
             the_LUT2
-            ( .I(_53),
-              .O(_54) );
-        assign _1 = _54;
-        assign _55 = { _6,
-                       gnd };
+            ( .I(signal_cat),
+              .O(signal_inst) );
+        assign signal_wire = signal_inst;
+        assign signal_cat_1 = { signal_wire_5,
+                                gnd };
         LUT2
             #( .INIT("1110") )
             the_LUT2_1
-            ( .I(_55),
-              .O(_56) );
-        assign _2 = _56;
-        assign _58 = { _57,
-                       _4 };
+            ( .I(signal_cat_1),
+              .O(signal_inst_1) );
+        assign signal_wire_1 = signal_inst_1;
+        assign signal_cat_2 = { signal_select,
+                                signal_wire_3 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_2
-            ( .I(_58),
-              .O(_59) );
-        assign _3 = _59;
-        assign _61 = { _60,
-                       _57 };
+            ( .I(signal_cat_2),
+              .O(signal_inst_2) );
+        assign signal_wire_2 = signal_inst_2;
+        assign signal_cat_3 = { signal_select_1,
+                                signal_select };
         LUT2
             #( .INIT("1110") )
             the_LUT2_3
-            ( .I(_61),
-              .O(_62) );
-        assign _4 = _62;
-        assign _63 = { _60,
-                       _4 };
+            ( .I(signal_cat_3),
+              .O(signal_inst_3) );
+        assign signal_wire_3 = signal_inst_3;
+        assign signal_cat_4 = { signal_select_1,
+                                signal_wire_3 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_4
-            ( .I(_63),
-              .O(_64) );
-        assign _5 = _64;
-        assign _65 = { _5,
-                       _3 };
+            ( .I(signal_cat_4),
+              .O(signal_inst_4) );
+        assign signal_wire_4 = signal_inst_4;
+        assign signal_cat_5 = { signal_wire_4,
+                                signal_wire_2 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_5
-            ( .I(_65),
-              .O(_66) );
-        assign _6 = _66;
-        assign _67 = { _6,
-                       _2 };
+            ( .I(signal_cat_5),
+              .O(signal_inst_5) );
+        assign signal_wire_5 = signal_inst_5;
+        assign signal_cat_6 = { signal_wire_5,
+                                signal_wire_1 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_6
-            ( .I(_67),
-              .O(_68) );
-        assign _7 = _68;
-        assign _69 = { _7,
-                       _1 };
+            ( .I(signal_cat_6),
+              .O(signal_inst_6) );
+        assign signal_wire_6 = signal_inst_6;
+        assign signal_cat_7 = { signal_wire_6,
+                                signal_wire };
         LUT2
             #( .INIT("1110") )
             the_LUT2_7
-            ( .I(_69),
-              .O(_70) );
-        assign _8 = _70;
-        assign _71 = { _32,
-                       _10 };
+            ( .I(signal_cat_7),
+              .O(signal_inst_7) );
+        assign signal_wire_7 = signal_inst_7;
+        assign signal_cat_8 = { signal_wire_31,
+                                signal_wire_9 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_8
-            ( .I(_71),
-              .O(_72) );
-        assign _9 = _72;
-        assign _73 = { _14,
-                       _32 };
+            ( .I(signal_cat_8),
+              .O(signal_inst_8) );
+        assign signal_wire_8 = signal_inst_8;
+        assign signal_cat_9 = { signal_wire_13,
+                                signal_wire_31 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_9
-            ( .I(_73),
-              .O(_74) );
-        assign _10 = _74;
-        assign _76 = { _75,
-                       _12 };
+            ( .I(signal_cat_9),
+              .O(signal_inst_9) );
+        assign signal_wire_9 = signal_inst_9;
+        assign signal_cat_10 = { signal_select_2,
+                                 signal_wire_11 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_10
-            ( .I(_76),
-              .O(_77) );
-        assign _11 = _77;
-        assign _79 = { _78,
-                       _75 };
+            ( .I(signal_cat_10),
+              .O(signal_inst_10) );
+        assign signal_wire_10 = signal_inst_10;
+        assign signal_cat_11 = { signal_select_3,
+                                 signal_select_2 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_11
-            ( .I(_79),
-              .O(_80) );
-        assign _12 = _80;
-        assign _81 = { _78,
-                       _12 };
+            ( .I(signal_cat_11),
+              .O(signal_inst_11) );
+        assign signal_wire_11 = signal_inst_11;
+        assign signal_cat_12 = { signal_select_3,
+                                 signal_wire_11 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_12
-            ( .I(_81),
-              .O(_82) );
-        assign _13 = _82;
-        assign _83 = { _13,
-                       _11 };
+            ( .I(signal_cat_12),
+              .O(signal_inst_12) );
+        assign signal_wire_12 = signal_inst_12;
+        assign signal_cat_13 = { signal_wire_12,
+                                 signal_wire_10 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_13
-            ( .I(_83),
-              .O(_84) );
-        assign _14 = _84;
-        assign _85 = { _14,
-                       _10 };
+            ( .I(signal_cat_13),
+              .O(signal_inst_13) );
+        assign signal_wire_13 = signal_inst_13;
+        assign signal_cat_14 = { signal_wire_13,
+                                 signal_wire_9 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_14
-            ( .I(_85),
-              .O(_86) );
-        assign _15 = _86;
-        assign _87 = { _15,
-                       _9 };
+            ( .I(signal_cat_14),
+              .O(signal_inst_14) );
+        assign signal_wire_14 = signal_inst_14;
+        assign signal_cat_15 = { signal_wire_14,
+                                 signal_wire_8 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_15
-            ( .I(_87),
-              .O(_88) );
-        assign _16 = _88;
-        assign _89 = { _41,
-                       _42 };
+            ( .I(signal_cat_15),
+              .O(signal_inst_15) );
+        assign signal_wire_15 = signal_inst_15;
+        assign signal_cat_16 = { signal_wire_40,
+                                 signal_wire_41 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_16
-            ( .I(_89),
-              .O(_90) );
-        assign _17 = _90;
-        assign _91 = { _32,
-                       _78 };
+            ( .I(signal_cat_16),
+              .O(signal_inst_16) );
+        assign signal_wire_16 = signal_inst_16;
+        assign signal_cat_17 = { signal_wire_31,
+                                 signal_select_3 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_17
-            ( .I(_91),
-              .O(_92) );
-        assign _18 = _92;
-        assign _93 = { _18,
-                       _18 };
+            ( .I(signal_cat_17),
+              .O(signal_inst_17) );
+        assign signal_wire_17 = signal_inst_17;
+        assign signal_cat_18 = { signal_wire_17,
+                                 signal_wire_17 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_18
-            ( .I(_93),
-              .O(_94) );
-        assign _19 = _94;
-        assign _95 = { _19,
-                       _19 };
+            ( .I(signal_cat_18),
+              .O(signal_inst_18) );
+        assign signal_wire_18 = signal_inst_18;
+        assign signal_cat_19 = { signal_wire_18,
+                                 signal_wire_18 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_19
-            ( .I(_95),
-              .O(_96) );
-        assign _20 = _96;
-        assign _97 = { gnd,
-                       _60 };
+            ( .I(signal_cat_19),
+              .O(signal_inst_19) );
+        assign signal_wire_19 = signal_inst_19;
+        assign signal_cat_20 = { gnd,
+                                 signal_select_1 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_20
-            ( .I(_97),
-              .O(_98) );
-        assign _21 = _98;
-        assign _99 = { _21,
-                       _21 };
+            ( .I(signal_cat_20),
+              .O(signal_inst_20) );
+        assign signal_wire_20 = signal_inst_20;
+        assign signal_cat_21 = { signal_wire_20,
+                                 signal_wire_20 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_21
-            ( .I(_99),
-              .O(_100) );
-        assign _22 = _100;
-        assign _101 = { _22,
-                        _22 };
+            ( .I(signal_cat_21),
+              .O(signal_inst_21) );
+        assign signal_wire_21 = signal_inst_21;
+        assign signal_cat_22 = { signal_wire_21,
+                                 signal_wire_21 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_22
-            ( .I(_101),
-              .O(_102) );
-        assign _23 = _102;
+            ( .I(signal_cat_22),
+              .O(signal_inst_22) );
+        assign signal_wire_22 = signal_inst_22;
         assign gnd = 1'b0;
-        assign _103 = { _57,
-                        gnd };
+        assign signal_cat_23 = { signal_select,
+                                 gnd };
         LUT2
             #( .INIT("1110") )
             the_LUT2_23
-            ( .I(_103),
-              .O(_104) );
-        assign _24 = _104;
-        assign _105 = { _24,
-                        _24 };
+            ( .I(signal_cat_23),
+              .O(signal_inst_23) );
+        assign signal_wire_23 = signal_inst_23;
+        assign signal_cat_24 = { signal_wire_23,
+                                 signal_wire_23 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_24
-            ( .I(_105),
-              .O(_106) );
-        assign _25 = _106;
-        assign _107 = { _25,
-                        _25 };
+            ( .I(signal_cat_24),
+              .O(signal_inst_24) );
+        assign signal_wire_24 = signal_inst_24;
+        assign signal_cat_25 = { signal_wire_24,
+                                 signal_wire_24 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_25
-            ( .I(_107),
-              .O(_108) );
-        assign _26 = _108;
-        assign _57 = b[0:0];
-        assign _60 = a[0:0];
-        assign _109 = { _60,
-                        _57 };
+            ( .I(signal_cat_25),
+              .O(signal_inst_25) );
+        assign signal_wire_25 = signal_inst_25;
+        assign signal_select = b[0:0];
+        assign signal_select_1 = a[0:0];
+        assign signal_cat_26 = { signal_select_1,
+                                 signal_select };
         LUT2
             #( .INIT("1110") )
             the_LUT2_26
-            ( .I(_109),
-              .O(_110) );
-        assign _27 = _110;
-        assign _111 = { _27,
-                        _27 };
+            ( .I(signal_cat_26),
+              .O(signal_inst_26) );
+        assign signal_wire_26 = signal_inst_26;
+        assign signal_cat_27 = { signal_wire_26,
+                                 signal_wire_26 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_27
-            ( .I(_111),
-              .O(_112) );
-        assign _28 = _112;
-        assign _113 = { _28,
-                        _28 };
+            ( .I(signal_cat_27),
+              .O(signal_inst_27) );
+        assign signal_wire_27 = signal_inst_27;
+        assign signal_cat_28 = { signal_wire_27,
+                                 signal_wire_27 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_28
-            ( .I(_113),
-              .O(_114) );
-        assign _29 = _114;
-        assign _115 = { _29,
-                        _26 };
+            ( .I(signal_cat_28),
+              .O(signal_inst_28) );
+        assign signal_wire_28 = signal_inst_28;
+        assign signal_cat_29 = { signal_wire_28,
+                                 signal_wire_25 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_29
-            ( .I(_115),
-              .O(_116) );
-        assign _30 = _116;
-        assign _117 = { _30,
-                        _30 };
+            ( .I(signal_cat_29),
+              .O(signal_inst_29) );
+        assign signal_wire_29 = signal_inst_29;
+        assign signal_cat_30 = { signal_wire_29,
+                                 signal_wire_29 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_30
-            ( .I(_117),
-              .O(_118) );
-        assign _31 = _118;
-        assign _119 = { _31,
-                        _23 };
+            ( .I(signal_cat_30),
+              .O(signal_inst_30) );
+        assign signal_wire_30 = signal_inst_30;
+        assign signal_cat_31 = { signal_wire_30,
+                                 signal_wire_22 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_31
-            ( .I(_119),
-              .O(_120) );
-        assign _32 = _120;
-        assign _121 = { _75,
-                        _32 };
+            ( .I(signal_cat_31),
+              .O(signal_inst_31) );
+        assign signal_wire_31 = signal_inst_31;
+        assign signal_cat_32 = { signal_select_2,
+                                 signal_wire_31 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_32
-            ( .I(_121),
-              .O(_122) );
-        assign _33 = _122;
-        assign _123 = { _33,
-                        _33 };
+            ( .I(signal_cat_32),
+              .O(signal_inst_32) );
+        assign signal_wire_32 = signal_inst_32;
+        assign signal_cat_33 = { signal_wire_32,
+                                 signal_wire_32 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_33
-            ( .I(_123),
-              .O(_124) );
-        assign _34 = _124;
-        assign _125 = { _34,
-                        _34 };
+            ( .I(signal_cat_33),
+              .O(signal_inst_33) );
+        assign signal_wire_33 = signal_inst_33;
+        assign signal_cat_34 = { signal_wire_33,
+                                 signal_wire_33 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_34
-            ( .I(_125),
-              .O(_126) );
-        assign _35 = _126;
-        assign _75 = b[1:1];
-        assign _78 = a[1:1];
-        assign _127 = { _78,
-                        _75 };
+            ( .I(signal_cat_34),
+              .O(signal_inst_34) );
+        assign signal_wire_34 = signal_inst_34;
+        assign signal_select_2 = b[1:1];
+        assign signal_select_3 = a[1:1];
+        assign signal_cat_35 = { signal_select_3,
+                                 signal_select_2 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_35
-            ( .I(_127),
-              .O(_128) );
-        assign _36 = _128;
-        assign _129 = { _36,
-                        _36 };
+            ( .I(signal_cat_35),
+              .O(signal_inst_35) );
+        assign signal_wire_35 = signal_inst_35;
+        assign signal_cat_36 = { signal_wire_35,
+                                 signal_wire_35 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_36
-            ( .I(_129),
-              .O(_130) );
-        assign _37 = _130;
-        assign _131 = { _37,
-                        _37 };
+            ( .I(signal_cat_36),
+              .O(signal_inst_36) );
+        assign signal_wire_36 = signal_inst_36;
+        assign signal_cat_37 = { signal_wire_36,
+                                 signal_wire_36 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_37
-            ( .I(_131),
-              .O(_132) );
-        assign _38 = _132;
-        assign _133 = { _38,
-                        _35 };
+            ( .I(signal_cat_37),
+              .O(signal_inst_37) );
+        assign signal_wire_37 = signal_inst_37;
+        assign signal_cat_38 = { signal_wire_37,
+                                 signal_wire_34 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_38
-            ( .I(_133),
-              .O(_134) );
-        assign _39 = _134;
-        assign _135 = { _39,
-                        _39 };
+            ( .I(signal_cat_38),
+              .O(signal_inst_38) );
+        assign signal_wire_38 = signal_inst_38;
+        assign signal_cat_39 = { signal_wire_38,
+                                 signal_wire_38 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_39
-            ( .I(_135),
-              .O(_136) );
-        assign _40 = _136;
-        assign _137 = { _40,
-                        _20 };
+            ( .I(signal_cat_39),
+              .O(signal_inst_39) );
+        assign signal_wire_39 = signal_inst_39;
+        assign signal_cat_40 = { signal_wire_39,
+                                 signal_wire_19 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_40
-            ( .I(_137),
-              .O(_138) );
-        assign _41 = _138;
-        assign _139 = { _48,
-                        _41 };
+            ( .I(signal_cat_40),
+              .O(signal_inst_40) );
+        assign signal_wire_40 = signal_inst_40;
+        assign signal_cat_41 = { signal_wire_45,
+                                 signal_wire_40 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_41
-            ( .I(_139),
-              .O(_140) );
-        assign _42 = _140;
-        assign _142 = { _141,
-                        _45 };
+            ( .I(signal_cat_41),
+              .O(signal_inst_41) );
+        assign signal_wire_41 = signal_inst_41;
+        assign signal_cat_42 = { signal_select_4,
+                                 signal_wire_43 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_42
-            ( .I(_142),
-              .O(_143) );
-        assign _43 = _143;
-        assign _141 = b[2:2];
-        assign _145 = { _144,
-                        _141 };
+            ( .I(signal_cat_42),
+              .O(signal_inst_42) );
+        assign signal_wire_42 = signal_inst_42;
+        assign signal_select_4 = b[2:2];
+        assign signal_cat_43 = { signal_select_5,
+                                 signal_select_4 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_43
-            ( .I(_145),
-              .O(_146) );
-        assign _45 = _146;
-        assign _144 = a[2:2];
-        assign _147 = { _144,
-                        _45 };
+            ( .I(signal_cat_43),
+              .O(signal_inst_43) );
+        assign signal_wire_43 = signal_inst_43;
+        assign signal_select_5 = a[2:2];
+        assign signal_cat_44 = { signal_select_5,
+                                 signal_wire_43 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_44
-            ( .I(_147),
-              .O(_148) );
-        assign _47 = _148;
-        assign _149 = { _47,
-                        _43 };
+            ( .I(signal_cat_44),
+              .O(signal_inst_44) );
+        assign signal_wire_44 = signal_inst_44;
+        assign signal_cat_45 = { signal_wire_44,
+                                 signal_wire_42 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_45
-            ( .I(_149),
-              .O(_150) );
-        assign _48 = _150;
-        assign _151 = { _48,
-                        _42 };
+            ( .I(signal_cat_45),
+              .O(signal_inst_45) );
+        assign signal_wire_45 = signal_inst_45;
+        assign signal_cat_46 = { signal_wire_45,
+                                 signal_wire_41 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_46
-            ( .I(_151),
-              .O(_152) );
-        assign _49 = _152;
-        assign _153 = { _49,
-                        _17 };
+            ( .I(signal_cat_46),
+              .O(signal_inst_46) );
+        assign signal_wire_46 = signal_inst_46;
+        assign signal_cat_47 = { signal_wire_46,
+                                 signal_wire_16 };
         LUT2
             #( .INIT("1110") )
             the_LUT2_47
-            ( .I(_153),
-              .O(_154) );
-        assign _50 = _154;
-        assign _155 = { _50,
-                        _16,
-                        _8 };
-        assign c = _155;
+            ( .I(signal_cat_47),
+              .O(signal_inst_47) );
+        assign signal_wire_47 = signal_inst_47;
+        assign signal_cat_48 = { signal_wire_47,
+                                 signal_wire_15,
+                                 signal_wire_7 };
+        assign c = signal_cat_48;
 
     endmodule
     |}]

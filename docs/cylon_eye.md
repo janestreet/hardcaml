@@ -182,7 +182,7 @@ let test () =
       (List.mapi leds ~f:(fun i -> output (Printf.sprintf "led%.2i" i)))
     |> Cyclesim.create ~config:Cyclesim.Config.trace_all
   in
-  let waves, sim = Waveform.create sim in
+  let waves, sim = Cyclesim.Waveform.create sim in
   for _ = 1 to 120 do
     Cyclesim.cycle sim
   done;

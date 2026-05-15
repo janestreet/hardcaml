@@ -8,8 +8,19 @@ let print_circuit c =
   |> Signal_graph.iter ~f:(fun signal -> Signal.to_string signal |> Stdio.print_endline)
 ;;
 
+let dedup outputs =
+  Circuit.create_exn
+    ~name:"test"
+    ~config:
+      { Circuit.Config.default with
+        (* Ensure printed signal UIDs are stable *)
+        normalize_uids = true
+      }
+    outputs
+  |> Dedup.deduplicate
+;;
+
 let%expect_test "simple" =
-  let dedup outputs = Circuit.create_exn ~name:"test" outputs |> Dedup.deduplicate in
   let v = of_string "1111" +: of_string "1111" in
   let c = dedup [ output "out" v ] in
   print_circuit c;
@@ -41,7 +52,6 @@ let%expect_test "simple" =
 ;;
 
 let%expect_test "register" =
-  let dedup outputs = Circuit.create_exn ~name:"test" outputs |> Dedup.deduplicate in
   let clock = input "clock" 1 in
   let v =
     reg_fb
@@ -69,7 +79,6 @@ let%expect_test "register" =
 ;;
 
 let%expect_test "wires" =
-  let dedup outputs = Circuit.create_exn ~name:"test" outputs |> Dedup.deduplicate in
   let v = of_string "1100" in
   let c = dedup [ output "out" (wireof (wireof (wireof (wireof v) -- "x"))) ] in
   print_circuit c;
@@ -83,7 +92,6 @@ let%expect_test "wires" =
 ;;
 
 let%expect_test "memory" =
-  let dedup outputs = Circuit.create_exn ~name:"test" outputs |> Dedup.deduplicate in
   let clock = input "clock" 1 in
   let v =
     multiport_memory

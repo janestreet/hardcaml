@@ -107,18 +107,18 @@ let%expect_test "flattened" =
 
         wire x_0;
         wire a_0;
-        wire _5;
-        wire _8;
+        wire signal_wire;
+        wire signal_wire_1;
         wire a_1;
         assign x_0 = 1'b0;
-        assign a_0 = ~ _8;
-        assign _5 = b;
-        assign _8 = a;
-        assign a_1 = ~ _8;
+        assign a_0 = ~ signal_wire_1;
+        assign signal_wire = b;
+        assign signal_wire_1 = a;
+        assign a_1 = ~ signal_wire_1;
         assign c_0 = a_1;
-        assign d_0 = _5;
+        assign d_0 = signal_wire;
         assign c_1 = a_0;
-        assign d_1 = _5;
+        assign d_1 = signal_wire;
         assign x = x_0;
 
     endmodule
@@ -146,18 +146,18 @@ let%expect_test "flattened" =
 
         wire the_middle$x;
         wire inner_1$a;
-        wire _5;
-        wire _8;
+        wire signal_wire;
+        wire signal_wire_1;
         wire inner$a;
         assign the_middle$x = 1'b0;
-        assign inner_1$a = ~ _8;
-        assign _5 = b;
-        assign _8 = a;
-        assign inner$a = ~ _8;
+        assign inner_1$a = ~ signal_wire_1;
+        assign signal_wire = b;
+        assign signal_wire_1 = a;
+        assign inner$a = ~ signal_wire_1;
         assign c_0 = inner$a;
-        assign d_0 = _5;
+        assign d_0 = signal_wire;
         assign c_1 = inner_1$a;
-        assign d_1 = _5;
+        assign d_1 = signal_wire;
         assign x = the_middle$x;
 
     endmodule
@@ -185,18 +185,18 @@ let%expect_test "flattened" =
 
         wire outer$the_middle$x;
         wire outer$the_middle$inner_1$a;
-        wire _5;
-        wire _8;
+        wire signal_wire;
+        wire signal_wire_1;
         wire outer$the_middle$inner$a;
         assign outer$the_middle$x = 1'b0;
-        assign outer$the_middle$inner_1$a = ~ _8;
-        assign _5 = b;
-        assign _8 = a;
-        assign outer$the_middle$inner$a = ~ _8;
+        assign outer$the_middle$inner_1$a = ~ signal_wire_1;
+        assign signal_wire = b;
+        assign signal_wire_1 = a;
+        assign outer$the_middle$inner$a = ~ signal_wire_1;
         assign c_0 = outer$the_middle$inner$a;
-        assign d_0 = _5;
+        assign d_0 = signal_wire;
         assign c_1 = outer$the_middle$inner_1$a;
-        assign d_1 = _5;
+        assign d_1 = signal_wire;
         assign x = outer$the_middle$x;
 
     endmodule
@@ -228,14 +228,14 @@ let%expect_test "hierarchical" =
         output c;
         output d;
 
-        wire _2;
-        wire _5;
+        wire signal_wire;
+        wire signal_wire_1;
         wire a_0;
-        assign _2 = b;
-        assign _5 = a;
-        assign a_0 = ~ _5;
+        assign signal_wire = b;
+        assign signal_wire_1 = a;
+        assign a_0 = ~ signal_wire_1;
         assign c = a_0;
-        assign d = _2;
+        assign d = signal_wire;
 
     endmodule
     module middle (
@@ -257,29 +257,29 @@ let%expect_test "hierarchical" =
         output x;
 
         wire x_0;
-        wire _12;
-        wire [1:0] _11;
-        wire _13;
-        wire _5;
-        wire _8;
+        wire signal_select;
+        wire [1:0] signal_inst;
+        wire signal_select_1;
+        wire signal_wire;
+        wire signal_wire_1;
         wire a_0;
         assign x_0 = 1'b0;
-        assign _12 = _11[1:1];
+        assign signal_select = signal_inst[1:1];
         (* keep_hierarchy="yes" *)
         inner
             inner_1
-            ( .a(_8),
-              .b(_5),
-              .c(_11[0:0]),
-              .d(_11[1:1]) );
-        assign _13 = _11[0:0];
-        assign _5 = b;
-        assign _8 = a;
-        assign a_0 = ~ _8;
+            ( .a(signal_wire_1),
+              .b(signal_wire),
+              .c(signal_inst[0:0]),
+              .d(signal_inst[1:1]) );
+        assign signal_select_1 = signal_inst[0:0];
+        assign signal_wire = b;
+        assign signal_wire_1 = a;
+        assign a_0 = ~ signal_wire_1;
         assign c_0 = a_0;
-        assign d_0 = _5;
-        assign c_1 = _13;
-        assign d_1 = _12;
+        assign d_0 = signal_wire;
+        assign c_1 = signal_select_1;
+        assign d_1 = signal_select;
         assign x = x_0;
 
     endmodule
@@ -301,35 +301,35 @@ let%expect_test "hierarchical" =
         output d_1;
         output x;
 
-        wire _11;
-        wire _12;
-        wire _13;
-        wire _14;
-        wire _6;
-        wire _8;
-        wire [4:0] _10;
-        wire _15;
-        assign _11 = _10[4:4];
-        assign _12 = _10[3:3];
-        assign _13 = _10[2:2];
-        assign _14 = _10[1:1];
-        assign _6 = b;
-        assign _8 = a;
+        wire signal_select;
+        wire signal_select_1;
+        wire signal_select_2;
+        wire signal_select_3;
+        wire signal_wire;
+        wire signal_wire_1;
+        wire [4:0] signal_inst;
+        wire signal_select_4;
+        assign signal_select = signal_inst[4:4];
+        assign signal_select_1 = signal_inst[3:3];
+        assign signal_select_2 = signal_inst[2:2];
+        assign signal_select_3 = signal_inst[1:1];
+        assign signal_wire = b;
+        assign signal_wire_1 = a;
         middle
             the_middle
-            ( .a(_8),
-              .b(_6),
-              .c_0(_10[0:0]),
-              .d_0(_10[1:1]),
-              .c_1(_10[2:2]),
-              .d_1(_10[3:3]),
-              .x(_10[4:4]) );
-        assign _15 = _10[0:0];
-        assign c_0 = _15;
-        assign d_0 = _14;
-        assign c_1 = _13;
-        assign d_1 = _12;
-        assign x = _11;
+            ( .a(signal_wire_1),
+              .b(signal_wire),
+              .c_0(signal_inst[0:0]),
+              .d_0(signal_inst[1:1]),
+              .c_1(signal_inst[2:2]),
+              .d_1(signal_inst[3:3]),
+              .x(signal_inst[4:4]) );
+        assign signal_select_4 = signal_inst[0:0];
+        assign c_0 = signal_select_4;
+        assign d_0 = signal_select_3;
+        assign c_1 = signal_select_2;
+        assign d_1 = signal_select_1;
+        assign x = signal_select;
 
     endmodule
     |}];
@@ -348,14 +348,14 @@ let%expect_test "hierarchical" =
         output c;
         output d;
 
-        wire _2;
-        wire _5;
+        wire signal_wire;
+        wire signal_wire_1;
         wire inner_1$a;
-        assign _2 = b;
-        assign _5 = a;
-        assign inner_1$a = ~ _5;
+        assign signal_wire = b;
+        assign signal_wire_1 = a;
+        assign inner_1$a = ~ signal_wire_1;
         assign c = inner_1$a;
-        assign d = _2;
+        assign d = signal_wire;
 
     endmodule
     module middle (
@@ -377,29 +377,29 @@ let%expect_test "hierarchical" =
         output x;
 
         wire the_middle$x;
-        wire _12;
-        wire [1:0] _11;
-        wire _13;
-        wire _5;
-        wire _8;
+        wire signal_select;
+        wire [1:0] signal_inst;
+        wire signal_select_1;
+        wire signal_wire;
+        wire signal_wire_1;
         wire inner$a;
         assign the_middle$x = 1'b0;
-        assign _12 = _11[1:1];
+        assign signal_select = signal_inst[1:1];
         (* keep_hierarchy="yes" *)
         inner
             inner_1
-            ( .a(_8),
-              .b(_5),
-              .c(_11[0:0]),
-              .d(_11[1:1]) );
-        assign _13 = _11[0:0];
-        assign _5 = b;
-        assign _8 = a;
-        assign inner$a = ~ _8;
+            ( .a(signal_wire_1),
+              .b(signal_wire),
+              .c(signal_inst[0:0]),
+              .d(signal_inst[1:1]) );
+        assign signal_select_1 = signal_inst[0:0];
+        assign signal_wire = b;
+        assign signal_wire_1 = a;
+        assign inner$a = ~ signal_wire_1;
         assign c_0 = inner$a;
-        assign d_0 = _5;
-        assign c_1 = _13;
-        assign d_1 = _12;
+        assign d_0 = signal_wire;
+        assign c_1 = signal_select_1;
+        assign d_1 = signal_select;
         assign x = the_middle$x;
 
     endmodule
@@ -421,35 +421,35 @@ let%expect_test "hierarchical" =
         output d_1;
         output x;
 
-        wire _11;
-        wire _12;
-        wire _13;
-        wire _14;
-        wire _6;
-        wire _8;
-        wire [4:0] _10;
-        wire _15;
-        assign _11 = _10[4:4];
-        assign _12 = _10[3:3];
-        assign _13 = _10[2:2];
-        assign _14 = _10[1:1];
-        assign _6 = b;
-        assign _8 = a;
+        wire signal_select;
+        wire signal_select_1;
+        wire signal_select_2;
+        wire signal_select_3;
+        wire signal_wire;
+        wire signal_wire_1;
+        wire [4:0] signal_inst;
+        wire signal_select_4;
+        assign signal_select = signal_inst[4:4];
+        assign signal_select_1 = signal_inst[3:3];
+        assign signal_select_2 = signal_inst[2:2];
+        assign signal_select_3 = signal_inst[1:1];
+        assign signal_wire = b;
+        assign signal_wire_1 = a;
         middle
             the_middle
-            ( .a(_8),
-              .b(_6),
-              .c_0(_10[0:0]),
-              .d_0(_10[1:1]),
-              .c_1(_10[2:2]),
-              .d_1(_10[3:3]),
-              .x(_10[4:4]) );
-        assign _15 = _10[0:0];
-        assign c_0 = _15;
-        assign d_0 = _14;
-        assign c_1 = _13;
-        assign d_1 = _12;
-        assign x = _11;
+            ( .a(signal_wire_1),
+              .b(signal_wire),
+              .c_0(signal_inst[0:0]),
+              .d_0(signal_inst[1:1]),
+              .c_1(signal_inst[2:2]),
+              .d_1(signal_inst[3:3]),
+              .x(signal_inst[4:4]) );
+        assign signal_select_4 = signal_inst[0:0];
+        assign c_0 = signal_select_4;
+        assign d_0 = signal_select_3;
+        assign c_1 = signal_select_2;
+        assign d_1 = signal_select_1;
+        assign x = signal_select;
 
     endmodule
     |}];
@@ -468,14 +468,14 @@ let%expect_test "hierarchical" =
         output c;
         output d;
 
-        wire _2;
-        wire _5;
+        wire signal_wire;
+        wire signal_wire_1;
         wire outer$the_middle$inner_1$a;
-        assign _2 = b;
-        assign _5 = a;
-        assign outer$the_middle$inner_1$a = ~ _5;
+        assign signal_wire = b;
+        assign signal_wire_1 = a;
+        assign outer$the_middle$inner_1$a = ~ signal_wire_1;
         assign c = outer$the_middle$inner_1$a;
-        assign d = _2;
+        assign d = signal_wire;
 
     endmodule
     module middle (
@@ -497,29 +497,29 @@ let%expect_test "hierarchical" =
         output x;
 
         wire outer$the_middle$x;
-        wire _12;
-        wire [1:0] _11;
-        wire _13;
-        wire _5;
-        wire _8;
+        wire signal_select;
+        wire [1:0] signal_inst;
+        wire signal_select_1;
+        wire signal_wire;
+        wire signal_wire_1;
         wire outer$the_middle$inner$a;
         assign outer$the_middle$x = 1'b0;
-        assign _12 = _11[1:1];
+        assign signal_select = signal_inst[1:1];
         (* keep_hierarchy="yes" *)
         inner
             inner_1
-            ( .a(_8),
-              .b(_5),
-              .c(_11[0:0]),
-              .d(_11[1:1]) );
-        assign _13 = _11[0:0];
-        assign _5 = b;
-        assign _8 = a;
-        assign outer$the_middle$inner$a = ~ _8;
+            ( .a(signal_wire_1),
+              .b(signal_wire),
+              .c(signal_inst[0:0]),
+              .d(signal_inst[1:1]) );
+        assign signal_select_1 = signal_inst[0:0];
+        assign signal_wire = b;
+        assign signal_wire_1 = a;
+        assign outer$the_middle$inner$a = ~ signal_wire_1;
         assign c_0 = outer$the_middle$inner$a;
-        assign d_0 = _5;
-        assign c_1 = _13;
-        assign d_1 = _12;
+        assign d_0 = signal_wire;
+        assign c_1 = signal_select_1;
+        assign d_1 = signal_select;
         assign x = outer$the_middle$x;
 
     endmodule
@@ -541,35 +541,35 @@ let%expect_test "hierarchical" =
         output d_1;
         output x;
 
-        wire _11;
-        wire _12;
-        wire _13;
-        wire _14;
-        wire _6;
-        wire _8;
-        wire [4:0] _10;
-        wire _15;
-        assign _11 = _10[4:4];
-        assign _12 = _10[3:3];
-        assign _13 = _10[2:2];
-        assign _14 = _10[1:1];
-        assign _6 = b;
-        assign _8 = a;
+        wire signal_select;
+        wire signal_select_1;
+        wire signal_select_2;
+        wire signal_select_3;
+        wire signal_wire;
+        wire signal_wire_1;
+        wire [4:0] signal_inst;
+        wire signal_select_4;
+        assign signal_select = signal_inst[4:4];
+        assign signal_select_1 = signal_inst[3:3];
+        assign signal_select_2 = signal_inst[2:2];
+        assign signal_select_3 = signal_inst[1:1];
+        assign signal_wire = b;
+        assign signal_wire_1 = a;
         middle
             the_middle
-            ( .a(_8),
-              .b(_6),
-              .c_0(_10[0:0]),
-              .d_0(_10[1:1]),
-              .c_1(_10[2:2]),
-              .d_1(_10[3:3]),
-              .x(_10[4:4]) );
-        assign _15 = _10[0:0];
-        assign c_0 = _15;
-        assign d_0 = _14;
-        assign c_1 = _13;
-        assign d_1 = _12;
-        assign x = _11;
+            ( .a(signal_wire_1),
+              .b(signal_wire),
+              .c_0(signal_inst[0:0]),
+              .d_0(signal_inst[1:1]),
+              .c_1(signal_inst[2:2]),
+              .d_1(signal_inst[3:3]),
+              .x(signal_inst[4:4]) );
+        assign signal_select_4 = signal_inst[0:0];
+        assign c_0 = signal_select_4;
+        assign d_0 = signal_select_3;
+        assign c_1 = signal_select_2;
+        assign d_1 = signal_select_1;
+        assign x = signal_select;
 
     endmodule
     |}]
@@ -660,18 +660,18 @@ let%expect_test "[hierarchical_here] uses the file name as the module name" =
 
         wire x_0;
         wire test_module_hierarchy$a;
-        wire _5;
-        wire _8;
+        wire signal_wire;
+        wire signal_wire_1;
         wire inner$a;
         assign x_0 = 1'b0;
-        assign test_module_hierarchy$a = ~ _8;
-        assign _5 = b;
-        assign _8 = a;
-        assign inner$a = ~ _8;
+        assign test_module_hierarchy$a = ~ signal_wire_1;
+        assign signal_wire = b;
+        assign signal_wire_1 = a;
+        assign inner$a = ~ signal_wire_1;
         assign c_0 = inner$a;
-        assign d_0 = _5;
+        assign d_0 = signal_wire;
         assign c_1 = test_module_hierarchy$a;
-        assign d_1 = _5;
+        assign d_1 = signal_wire;
         assign x = x_0;
 
     endmodule

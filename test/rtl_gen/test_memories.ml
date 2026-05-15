@@ -70,42 +70,42 @@ let%expect_test "memory " =
         output [31:0] q2;
         output q3;
 
-        wire _11;
-        wire _10;
-        reg [0:0] _12[0:1];
-        wire _9;
+        wire signal_select;
+        wire signal_select_1;
+        reg [0:0] signal_multiport_mem[0:1];
+        wire signal_select_2;
         wire q2_0;
         wire q1_0;
-        wire [3:0] _15;
-        reg [31:0] _16[0:15];
-        wire [3:0] _14;
+        wire [3:0] signal_select_3;
+        reg [31:0] signal_multiport_mem_1[0:15];
+        wire [3:0] signal_select_4;
         wire [31:0] q2_1;
         wire [31:0] q1_1;
-        reg [31:0] _18[0:127];
-        wire [31:0] _19;
-        assign _11 = d[0:0];
-        assign _10 = wa[0:0];
+        reg [31:0] signal_multiport_mem_2[0:127];
+        wire [31:0] signal_mem_read_port;
+        assign signal_select = d[0:0];
+        assign signal_select_1 = wa[0:0];
         always @(posedge clock) begin
             if (we)
-                _12[_10] <= _11;
+                signal_multiport_mem[signal_select_1] <= signal_select;
         end
-        assign _9 = ra[0:0];
-        assign q2_0 = _12[_9];
-        assign _15 = wa[3:0];
+        assign signal_select_2 = ra[0:0];
+        assign q2_0 = signal_multiport_mem[signal_select_2];
+        assign signal_select_3 = wa[3:0];
         always @(posedge clock) begin
             if (we)
-                _16[_15] <= d;
+                signal_multiport_mem_1[signal_select_3] <= d;
         end
-        assign _14 = ra[3:0];
-        assign q2_1 = _16[_14];
+        assign signal_select_4 = ra[3:0];
+        assign q2_1 = signal_multiport_mem_1[signal_select_4];
         always @(posedge clock) begin
             if (we)
-                _18[wa] <= d;
+                signal_multiport_mem_2[wa] <= d;
         end
-        assign _19 = _18[ra];
+        assign signal_mem_read_port = signal_multiport_mem_2[ra];
         assign q1_0 = q2_0;
         assign q1_1 = q2_1;
-        assign q1 = _19;
+        assign q1 = signal_mem_read_port;
         assign q2 = q2_1;
         assign q3 = q2_0;
 
@@ -129,57 +129,57 @@ let%expect_test "memory " =
 
     architecture rtl of mem is
 
-        signal \_11\ : std_logic;
-        signal \_10\ : std_logic;
-        type \_12_type\ is array (0 to 1) of std_logic;
-        signal \_12\ : \_12_type\;
-        signal \_9\ : std_logic;
+        signal signal_select : std_logic;
+        signal signal_select_1 : std_logic;
+        type signal_multiport_mem_type is array (0 to 1) of std_logic;
+        signal signal_multiport_mem : signal_multiport_mem_type;
+        signal signal_select_2 : std_logic;
         signal q2_0 : std_logic;
         signal q1_0 : std_logic;
-        signal \_15\ : std_logic_vector(3 downto 0);
-        type \_16_type\ is array (0 to 15) of std_logic_vector(31 downto 0);
-        signal \_16\ : \_16_type\;
-        signal \_14\ : std_logic_vector(3 downto 0);
+        signal signal_select_3 : std_logic_vector(3 downto 0);
+        type signal_multiport_mem_type_1 is array (0 to 15) of std_logic_vector(31 downto 0);
+        signal signal_multiport_mem_1 : signal_multiport_mem_type_1;
+        signal signal_select_4 : std_logic_vector(3 downto 0);
         signal q2_1 : std_logic_vector(31 downto 0);
         signal q1_1 : std_logic_vector(31 downto 0);
-        type \_18_type\ is array (0 to 127) of std_logic_vector(31 downto 0);
-        signal \_18\ : \_18_type\;
-        signal \_19\ : std_logic_vector(31 downto 0);
+        type signal_multiport_mem_type_2 is array (0 to 127) of std_logic_vector(31 downto 0);
+        signal signal_multiport_mem_2 : signal_multiport_mem_type_2;
+        signal signal_mem_read_port : std_logic_vector(31 downto 0);
 
     begin
 
-        \_11\ <= d(0);
-        \_10\ <= wa(0);
+        signal_select <= d(0);
+        signal_select_1 <= wa(0);
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    \_12\(to_integer(unsigned(std_logic_vector'("" & \_10\)))) <= \_11\;
+                    signal_multiport_mem(to_integer(unsigned(std_logic_vector'("" & signal_select_1)))) <= signal_select;
                 end if;
             end if;
         end process;
-        \_9\ <= ra(0);
-        q2_0 <= \_12\(to_integer(unsigned(std_logic_vector'("" & \_9\))));
-        \_15\ <= wa(3 downto 0);
+        signal_select_2 <= ra(0);
+        q2_0 <= signal_multiport_mem(to_integer(unsigned(std_logic_vector'("" & signal_select_2))));
+        signal_select_3 <= wa(3 downto 0);
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    \_16\(to_integer(unsigned(\_15\))) <= d;
+                    signal_multiport_mem_1(to_integer(unsigned(signal_select_3))) <= d;
                 end if;
             end if;
         end process;
-        \_14\ <= ra(3 downto 0);
-        q2_1 <= \_16\(to_integer(unsigned(\_14\)));
+        signal_select_4 <= ra(3 downto 0);
+        q2_1 <= signal_multiport_mem_1(to_integer(unsigned(signal_select_4)));
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    \_18\(to_integer(unsigned(wa))) <= d;
+                    signal_multiport_mem_2(to_integer(unsigned(wa))) <= d;
                 end if;
             end if;
         end process;
-        \_19\ <= \_18\(to_integer(unsigned(ra)));
+        signal_mem_read_port <= signal_multiport_mem_2(to_integer(unsigned(ra)));
         q1_0 <= q2_0;
         q1_1 <= q2_1;
-        q1 <= \_19\;
+        q1 <= signal_mem_read_port;
         q2 <= q2_1;
         q3 <= q2_0;
 
@@ -211,42 +211,42 @@ let%expect_test "memory " =
         output [31:0] q2;
         output q3;
 
-        bit _11;
-        bit _10;
-        reg [0:0] _12[0:1];
-        bit _9;
+        bit signal_select;
+        bit signal_select_1;
+        reg [0:0] signal_multiport_mem[0:1];
+        bit signal_select_2;
         bit q2_0;
         bit q1_0;
-        bit [3:0] _15;
-        reg [31:0] _16[0:15];
-        bit [3:0] _14;
+        bit [3:0] signal_select_3;
+        reg [31:0] signal_multiport_mem_1[0:15];
+        bit [3:0] signal_select_4;
         bit [31:0] q2_1;
         bit [31:0] q1_1;
-        reg [31:0] _18[0:127];
-        bit [31:0] _19;
-        assign _11 = d[0:0];
-        assign _10 = wa[0:0];
+        reg [31:0] signal_multiport_mem_2[0:127];
+        bit [31:0] signal_mem_read_port;
+        assign signal_select = d[0:0];
+        assign signal_select_1 = wa[0:0];
         always @(posedge clock) begin
             if (we)
-                _12[_10] <= _11;
+                signal_multiport_mem[signal_select_1] <= signal_select;
         end
-        assign _9 = ra[0:0];
-        assign q2_0 = _12[_9];
-        assign _15 = wa[3:0];
+        assign signal_select_2 = ra[0:0];
+        assign q2_0 = signal_multiport_mem[signal_select_2];
+        assign signal_select_3 = wa[3:0];
         always @(posedge clock) begin
             if (we)
-                _16[_15] <= d;
+                signal_multiport_mem_1[signal_select_3] <= d;
         end
-        assign _14 = ra[3:0];
-        assign q2_1 = _16[_14];
+        assign signal_select_4 = ra[3:0];
+        assign q2_1 = signal_multiport_mem_1[signal_select_4];
         always @(posedge clock) begin
             if (we)
-                _18[wa] <= d;
+                signal_multiport_mem_2[wa] <= d;
         end
-        assign _19 = _18[ra];
+        assign signal_mem_read_port = signal_multiport_mem_2[ra];
         assign q1_0 = q2_0;
         assign q1_1 = q2_1;
-        assign q1 = _19;
+        assign q1 = signal_mem_read_port;
         assign q2 = q2_1;
         assign q3 = q2_0;
 
@@ -279,57 +279,57 @@ let%expect_test "memory " =
             end if;
         end function;
 
-        signal \_11\ : bit;
-        signal \_10\ : bit;
-        type \_12_type\ is array (0 to 1) of std_logic;
-        signal \_12\ : \_12_type\;
-        signal \_9\ : bit;
+        signal signal_select : bit;
+        signal signal_select_1 : bit;
+        type signal_multiport_mem_type is array (0 to 1) of std_logic;
+        signal signal_multiport_mem : signal_multiport_mem_type;
+        signal signal_select_2 : bit;
         signal q2_0 : bit;
         signal q1_0 : bit;
-        signal \_15\ : bit_vector(3 downto 0);
-        type \_16_type\ is array (0 to 15) of std_logic_vector(31 downto 0);
-        signal \_16\ : \_16_type\;
-        signal \_14\ : bit_vector(3 downto 0);
+        signal signal_select_3 : bit_vector(3 downto 0);
+        type signal_multiport_mem_type_1 is array (0 to 15) of std_logic_vector(31 downto 0);
+        signal signal_multiport_mem_1 : signal_multiport_mem_type_1;
+        signal signal_select_4 : bit_vector(3 downto 0);
         signal q2_1 : bit_vector(31 downto 0);
         signal q1_1 : bit_vector(31 downto 0);
-        type \_18_type\ is array (0 to 127) of std_logic_vector(31 downto 0);
-        signal \_18\ : \_18_type\;
-        signal \_19\ : bit_vector(31 downto 0);
+        type signal_multiport_mem_type_2 is array (0 to 127) of std_logic_vector(31 downto 0);
+        signal signal_multiport_mem_2 : signal_multiport_mem_type_2;
+        signal signal_mem_read_port : bit_vector(31 downto 0);
 
     begin
 
-        \_11\ <= d(0);
-        \_10\ <= wa(0);
+        signal_select <= d(0);
+        signal_select_1 <= wa(0);
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    \_12\(to_integer(unsigned'("" & \_10\))) <= to_stdlogic(\_11\);
+                    signal_multiport_mem(to_integer(unsigned'("" & signal_select_1))) <= to_stdlogic(signal_select);
                 end if;
             end if;
         end process;
-        \_9\ <= ra(0);
-        q2_0 <= to_bit(\_12\(to_integer(unsigned'("" & \_9\))));
-        \_15\ <= wa(3 downto 0);
+        signal_select_2 <= ra(0);
+        q2_0 <= to_bit(signal_multiport_mem(to_integer(unsigned'("" & signal_select_2))));
+        signal_select_3 <= wa(3 downto 0);
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    \_16\(to_integer(unsigned(\_15\))) <= to_stdlogicvector(d);
+                    signal_multiport_mem_1(to_integer(unsigned(signal_select_3))) <= to_stdlogicvector(d);
                 end if;
             end if;
         end process;
-        \_14\ <= ra(3 downto 0);
-        q2_1 <= to_bitvector(\_16\(to_integer(unsigned(\_14\))));
+        signal_select_4 <= ra(3 downto 0);
+        q2_1 <= to_bitvector(signal_multiport_mem_1(to_integer(unsigned(signal_select_4))));
         process (clock) begin
             if rising_edge(clock) then
                 if we = '1' then
-                    \_18\(to_integer(unsigned(wa))) <= to_stdlogicvector(d);
+                    signal_multiport_mem_2(to_integer(unsigned(wa))) <= to_stdlogicvector(d);
                 end if;
             end if;
         end process;
-        \_19\ <= to_bitvector(\_18\(to_integer(unsigned(ra))));
+        signal_mem_read_port <= to_bitvector(signal_multiport_mem_2(to_integer(unsigned(ra))));
         q1_0 <= q2_0;
         q1_1 <= q2_1;
-        q1 <= \_19\;
+        q1 <= signal_mem_read_port;
         q2 <= q2_1;
         q3 <= q2_0;
 

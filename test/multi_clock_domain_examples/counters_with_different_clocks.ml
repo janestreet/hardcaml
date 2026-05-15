@@ -31,7 +31,7 @@ let falling_edge ({ clock; enable } : _ I.t) =
 ;;
 
 let gated_clock ({ clock; enable } : _ I.t) =
-  let gated_clock = (clock &: enable) -- "gated clock" in
+  let gated_clock = (clock &: enable) -- "gated_clock" in
   { O.reg_out =
       reg_fb (Reg_spec.create ~clock:gated_clock ()) ~width:8 ~f:(fun d -> d +:. 1)
   }
@@ -39,7 +39,7 @@ let gated_clock ({ clock; enable } : _ I.t) =
 
 let falling_edge_enable_reg ({ clock; enable } : _ I.t) =
   let spec = Reg_spec.create ~clock () |> Reg_spec.override ~clock_edge:Falling in
-  let enable_reg = reg spec enable -- "enable reg" in
+  let enable_reg = reg spec enable -- "enable_reg" in
   { O.reg_out = reg_fb spec ~enable:enable_reg ~width:8 ~f:(fun d -> d +:. 1) }
 ;;
 
@@ -52,11 +52,11 @@ let inverted_clock ({ clock; enable } : _ I.t) =
 ;;
 
 let run_cyclesim_test circuit =
-  let module Cyclesim_waveform = Hardcaml_waveterm.For_cyclesim.Waveform in
+  let module Cyclesim_waveform = Hardcaml_waveterm.Waveform in
   let waves, sim =
     let module Sim = Cyclesim.With_interface (I) (O) in
     let sim = Sim.create circuit in
-    Cyclesim_waveform.create sim
+    Cyclesim.Waveform.create sim
   in
   let inputs = Cyclesim.inputs sim in
   for i = 1 to 12 do
@@ -85,7 +85,7 @@ let run_event_sim_test circuit =
       ])
   in
   Simulator.run ~time_limit:20 sim;
-  Hardcaml_event_driven_sim.Waveterm.Waveform.expect waves ~wave_width:1 ~display_width:82
+  Hardcaml_waveterm.Waveform.expect waves ~wave_width:1 ~display_width:82
 ;;
 
 let run_test circuit =
@@ -210,7 +210,7 @@ let%expect_test "gated clock" =
     │                  ││    └───┘   └───┘   └───┘   └───┘   └───┘   └───┘   └───┘   │
     │enable            ││────────┐       ┌───────┐       ┌───────┐       ┌───────┐   │
     │                  ││        └───────┘       └───────┘       └───────┘       └───│
-    │gated clock       ││────┐           ┌───┐           ┌───┐           ┌───┐       │
+    │gated_clock       ││────┐           ┌───┐           ┌───┐           ┌───┐       │
     │                  ││    └───────────┘   └───────────┘   └───────────┘   └───────│
     │                  ││────────────────┬───────────────┬───────────────┬───────────│
     │reg_out           ││ 00             │01             │02             │03         │
@@ -242,7 +242,7 @@ let%expect_test "falling edge - enable as a reg" =
     │                  ││    └───┘   └───┘   └───┘   └───┘   └───┘   └───┘   └───┘   │
     │enable            ││────────┐       ┌───────┐       ┌───────┐       ┌───────┐   │
     │                  ││        └───────┘       └───────┘       └───────┘       └───│
-    │enable reg        ││    ┌───────┐       ┌───────┐       ┌───────┐       ┌───────│
+    │enable_reg        ││    ┌───────┐       ┌───────┐       ┌───────┐       ┌───────│
     │                  ││────┘       └───────┘       └───────┘       └───────┘       │
     │                  ││────────────┬───────────────┬───────────────┬───────────────│
     │reg_out           ││ 00         │01             │02             │03             │

@@ -328,12 +328,16 @@ struct
     mux2 enable d reg
   ;;
 
-  let reg_fb ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~width ~f =
+  let reg_fb_and_next ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~width ~f =
     let _, info = to_rep (Reg_spec.clock spec) in
     let d = wire width |> update_rep ~info in
     let q = reg spec ?enable ?initialize_to ?reset_to ?clear_to ?clear d in
     assign d (f q);
-    q
+    q, d
+  ;;
+
+  let reg_fb ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~width ~f =
+    fst (reg_fb_and_next ?enable ?initialize_to ?reset_to ?clear ?clear_to spec ~width ~f)
   ;;
 
   let counter ?enable ?initialize_to ?reset_to ?clear ?clear_to ?(by = 1) spec ~width =
