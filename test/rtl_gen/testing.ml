@@ -8,8 +8,8 @@ let hdl ?database ?config blackbox (lang : Rtl.Language.t) circuit =
   |> Rope.to_string
 ;;
 
-let iverilog = Tools_config.iverilog
-let ghdl = Tools_config.ghdl
+let iverilog = Hardcaml_tools_config.iverilog
+let ghdl = Hardcaml_tools_config.ghdl
 
 let redirect quiet command =
   if quiet then command ^ " 2> /dev/null > /dev/null" else command

@@ -3,10 +3,13 @@ open! Core0
 let fold circuit database ~init ~f =
   let rec fold arg (circuit : Circuit.t) inst =
     let arg = f arg (Some circuit) inst in
-    List.fold (Circuit.instantiations circuit) ~init:arg ~f:(fun arg inst ->
-      match Circuit_database.find database ~mangled_name:inst.circuit_name with
-      | Some circuit -> fold arg circuit (Some inst)
-      | None -> f arg None (Some inst))
+    List.fold
+      (Circuit.instantiations circuit)
+      ~init:arg
+      ~f:(fun arg { instantiation = inst; _ } ->
+        match Circuit_database.find database ~mangled_name:inst.circuit_name with
+        | Some circuit -> fold arg circuit (Some inst)
+        | None -> f arg None (Some inst))
   in
   fold init circuit None
 ;;
@@ -14,7 +17,7 @@ let fold circuit database ~init ~f =
 let print circuit database =
   let rec f level circuit instance_name =
     Stdio.printf "%s%s(%s)\n" level (Circuit.name circuit) instance_name;
-    List.iter (Circuit.instantiations circuit) ~f:(fun inst ->
+    List.iter (Circuit.instantiations circuit) ~f:(fun { instantiation = inst; _ } ->
       let next_level = "  " ^ level in
       match Circuit_database.find database ~mangled_name:inst.circuit_name with
       | Some circuit -> f next_level circuit inst.instance_label

@@ -201,10 +201,10 @@ let%expect_test "instantiation in verilog" =
         output [1:0] b_vhdl;
         output [1:0] b_verilog;
 
-        wire [1:0] _6;
-        wire [1:0] _1;
-        wire [1:0] _7;
-        wire [1:0] _4;
+        wire [1:0] signal_inst;
+        wire [1:0] signal_wire;
+        wire [1:0] signal_inst_1;
+        wire [1:0] signal_wire_1;
         test_parameters_verilog
             #( .an_int(7),
                .a_bool(1'b1),
@@ -218,8 +218,8 @@ let%expect_test "instantiation in verilog" =
                .a_std_ulogic_vector(4'b1011) )
             the_test_parameters_verilog
             ( .a(a),
-              .b(_6[1:0]) );
-        assign _1 = _6;
+              .b(signal_inst[1:0]) );
+        assign signal_wire = signal_inst;
         test_parameters_vhdl
             #( .an_int(7),
                .a_bool(1'b1),
@@ -233,10 +233,10 @@ let%expect_test "instantiation in verilog" =
                .a_std_ulogic_vector(4'b1011) )
             the_test_parameters_vhdl
             ( .a(a),
-              .b(_7[1:0]) );
-        assign _4 = _7;
-        assign b_vhdl = _4;
-        assign b_verilog = _1;
+              .b(signal_inst_1[1:0]) );
+        assign signal_wire_1 = signal_inst_1;
+        assign b_vhdl = signal_wire_1;
+        assign b_verilog = signal_wire;
 
     endmodule
     |}]
@@ -261,10 +261,10 @@ let%expect_test "instantiation in vhdl" =
 
     architecture rtl of test_parameter_instantiation_vhdl is
 
-        signal \_6\ : std_logic_vector(1 downto 0);
-        signal \_1\ : std_logic_vector(1 downto 0);
-        signal \_7\ : std_logic_vector(1 downto 0);
-        signal \_4\ : std_logic_vector(1 downto 0);
+        signal signal_inst : std_logic_vector(1 downto 0);
+        signal signal_wire : std_logic_vector(1 downto 0);
+        signal signal_inst_1 : std_logic_vector(1 downto 0);
+        signal signal_wire_1 : std_logic_vector(1 downto 0);
 
     begin
 
@@ -280,8 +280,8 @@ let%expect_test "instantiation in vhdl" =
                           a_std_logic_vector => std_logic_vector'("1010"),
                           a_std_ulogic_vector => std_ulogic_vector'("1011") )
             port map ( a => a,
-                       b => \_6\(1 downto 0) );
-        \_1\ <= \_6\;
+                       b => signal_inst(1 downto 0) );
+        signal_wire <= signal_inst;
         the_test_parameters_vhdl: entity work.test_parameters_vhdl (rtl)
             generic map ( an_int => 7,
                           a_bool => true,
@@ -294,10 +294,10 @@ let%expect_test "instantiation in vhdl" =
                           a_std_logic_vector => std_logic_vector'("1010"),
                           a_std_ulogic_vector => std_ulogic_vector'("1011") )
             port map ( a => a,
-                       b => \_7\(1 downto 0) );
-        \_4\ <= \_7\;
-        b_vhdl <= \_4\;
-        b_verilog <= \_1\;
+                       b => signal_inst_1(1 downto 0) );
+        signal_wire_1 <= signal_inst_1;
+        b_vhdl <= signal_wire_1;
+        b_verilog <= signal_wire;
 
     end architecture;
     |}]

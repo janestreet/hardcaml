@@ -12,7 +12,6 @@ module type S_enum = sig
   module Cases : T
   include Interface.S
 
-  val ast : Interface.Ast.t
   val of_enum : (module Comb.S with type t = 'a) -> Cases.t -> 'a t
   val to_enum : Bits.t t -> Cases.t Or_error.t
   val to_enum_exn : Bits.t t -> Cases.t

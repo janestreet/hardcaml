@@ -25,12 +25,7 @@ let%expect_test "2 registers with colliding uids doesn't cause the registers to 
   let r2 = reg (Reg_spec.create ~clock ()) i2 -- "r2" in
   let r2 = set_reg_uid r2 (Signal.Type.Uid.Expert.of_int uid2) in
   let sum = r1 +: r2 -- "sum" in
-  let circuit =
-    Circuit.create_exn
-      ~config:{ Circuit.Config.default with normalize_uids = false }
-      ~name:"test"
-      [ output "out" sum ]
-  in
+  let circuit = Circuit.create_exn ~name:"test" [ output "out" sum ] in
   let deduped_circuit = Dedup.deduplicate circuit in
   let num_registers_in_original_circuit = num_registers circuit in
   let num_registers_in_deduped_circuit = num_registers deduped_circuit in

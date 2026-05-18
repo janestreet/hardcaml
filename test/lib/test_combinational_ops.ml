@@ -148,19 +148,19 @@ let%expect_test "internal representation" =
         output [7:0] c;
         output [7:0] d;
 
-        wire [7:0] _6;
-        wire [15:0] _5;
-        wire [7:0] _7;
-        assign _6 = _5[15:8];
+        wire [7:0] signal_select;
+        wire [15:0] signal_inst;
+        wire [7:0] signal_select_1;
+        assign signal_select = signal_inst[15:8];
         add_sub
             the_add_sub
             ( .i0(a),
               .i1(b),
-              .o0(_5[7:0]),
-              .o1(_5[15:8]) );
-        assign _7 = _5[7:0];
-        assign c = _7;
-        assign d = _6;
+              .o0(signal_inst[7:0]),
+              .o1(signal_inst[15:8]) );
+        assign signal_select_1 = signal_inst[7:0];
+        assign c = signal_select_1;
+        assign d = signal_select;
 
     endmodule
     |}]
@@ -183,19 +183,19 @@ let%expect_test "internal representation (mutable)" =
         output [7:0] c;
         output [7:0] d;
 
-        wire [7:0] _6;
-        wire [15:0] _5;
-        wire [7:0] _7;
-        assign _6 = _5[15:8];
+        wire [7:0] signal_select;
+        wire [15:0] signal_inst;
+        wire [7:0] signal_select_1;
+        assign signal_select = signal_inst[15:8];
         add_sub_mutable
             the_add_sub_mutable
             ( .i0(a),
               .i1(b),
-              .o0(_5[7:0]),
-              .o1(_5[15:8]) );
-        assign _7 = _5[7:0];
-        assign c = _7;
-        assign d = _6;
+              .o0(signal_inst[7:0]),
+              .o1(signal_inst[15:8]) );
+        assign signal_select_1 = signal_inst[7:0];
+        assign c = signal_select_1;
+        assign d = signal_select;
 
     endmodule
     |}]

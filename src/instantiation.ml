@@ -42,6 +42,7 @@ let create
   ?instance
   ?(parameters = [])
   ?(attributes = [])
+  ?(user_metadata = String.Table.create ())
   ()
   ~name
   ~inputs
@@ -89,6 +90,8 @@ let create
   in
   List.iter attributes ~f:(fun attribute ->
     ignore (Signal.add_attribute signal attribute : Signal.t));
+  Hashtbl.iteri user_metadata ~f:(fun ~key ~data ->
+    Signal.Type.set_user_metadata signal ~key ~data);
   let outputs =
     List.map outputs ~f:(fun { name; output_width = width; output_low_index = offset } ->
       ( name
@@ -104,7 +107,7 @@ let create
 ;;
 
 module With_interface (I : Interface.S) (O : Interface.S) = struct
-  let create ?lib ?arch ?instance ?parameters ?attributes ~name inputs =
+  let create ?lib ?arch ?instance ?parameters ?attributes ?user_metadata ~name inputs =
     (* ensure the passed inputs are of the correct widths. *)
     I.Of_signal.validate inputs;
     let inputs =
@@ -118,6 +121,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
         ?instance
         ?parameters
         ?attributes
+        ?user_metadata
         ~name
         ~inputs
         ~outputs:O.Names_and_widths.port_names_and_widths

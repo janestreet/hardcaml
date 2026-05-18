@@ -129,6 +129,12 @@ module type Regs = sig
   val reg : (t -> t) with_register_spec
   val reg_fb : (width:int -> f:(t -> t) -> t) with_register_spec
 
+  (** Like {!reg_fb} but returns both the registered value and the next cycle's value
+      (i.e. the output of [f prev_value]). The next value ignores [clear] or [reset] if
+      applied, i.e. if [clear] is applied, next will still be [f prev_value] rather than
+      [clear_to]. *)
+  val reg_fb_and_next : (width:int -> f:(t -> t) -> t * t) with_register_spec
+
   (** Pipeline a signal [n] times with the given register specification. If set, a list of
       RTL attributes will also be applied to each register created. *)
   val pipeline : ?attributes:Rtl_attribute.t list -> (n:int -> t -> t) with_register_spec

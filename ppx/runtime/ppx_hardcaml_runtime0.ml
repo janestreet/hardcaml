@@ -1,5 +1,7 @@
 open Core
 
+module type Pre = Hardcaml_interface_types.Pre
+
 module Array = struct
   include Array
 

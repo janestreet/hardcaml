@@ -68,82 +68,82 @@ let%expect_test "" =
         input start;
         output is_done;
 
-        wire [1:0] _10;
-        wire [1:0] _24;
-        wire [3:0] _22;
-        wire [3:0] _14;
-        wire _2;
-        wire _4;
-        wire [3:0] _16;
-        wire [3:0] _17;
-        reg [3:0] _19;
-        wire [3:0] _5;
-        reg [3:0] _15;
-        wire _23;
-        wire [1:0] _25;
-        wire [1:0] _18;
-        wire [1:0] _13;
-        wire _7;
-        wire [1:0] _20;
-        reg [1:0] _26;
-        wire [1:0] _8;
+        wire [1:0] signal_const;
+        wire [1:0] signal_const_1;
+        wire [3:0] signal_const_2;
+        wire [3:0] signal_const_3;
+        wire signal_wire;
+        wire signal_wire_1;
+        wire [3:0] signal_const_4;
+        wire [3:0] signal_add;
+        reg [3:0] signal_cases;
+        wire [3:0] signal_wire_2;
+        reg [3:0] signal_reg;
+        wire signal_eq;
+        wire [1:0] signal_mux;
+        wire [1:0] signal_const_6;
+        wire [1:0] signal_const_7;
+        wire signal_wire_3;
+        wire [1:0] signal_mux_1;
+        reg [1:0] signal_cases_1;
+        wire [1:0] signal_wire_4;
         (* fsm_encoding="one_hot" *)
-        reg [1:0] _11;
-        wire _27;
-        assign _10 = 2'b00;
-        assign _24 = 2'b11;
-        assign _22 = 4'b1111;
-        assign _14 = 4'b0000;
-        assign _2 = clear;
-        assign _4 = clock;
-        assign _16 = 4'b0001;
-        assign _17 = _15 + _16;
+        reg [1:0] signal_reg_1;
+        wire signal_eq_1;
+        assign signal_const = 2'b00;
+        assign signal_const_1 = 2'b11;
+        assign signal_const_2 = 4'b1111;
+        assign signal_const_3 = 4'b0000;
+        assign signal_wire = clear;
+        assign signal_wire_1 = clock;
+        assign signal_const_4 = 4'b0001;
+        assign signal_add = signal_reg + signal_const_4;
         always @* begin
-            case (_11)
+            case (signal_reg_1)
             2'b01:
-                _19 <= _14;
+                signal_cases <= signal_const_3;
             2'b10:
-                _19 <= _17;
+                signal_cases <= signal_add;
             default:
-                _19 <= _15;
+                signal_cases <= signal_reg;
             endcase
         end
-        assign _5 = _19;
-        always @(posedge _4) begin
-            if (_2)
-                _15 <= _14;
+        assign signal_wire_2 = signal_cases;
+        always @(posedge signal_wire_1) begin
+            if (signal_wire)
+                signal_reg <= signal_const_3;
             else
-                _15 <= _5;
+                signal_reg <= signal_wire_2;
         end
-        assign _23 = _15 == _22;
-        assign _25 = _23 ? _24 : _11;
-        assign _18 = 2'b10;
-        assign _13 = 2'b01;
-        assign _7 = start;
-        assign _20 = _7 ? _13 : _11;
+        assign signal_eq = signal_reg == signal_const_2;
+        assign signal_mux = signal_eq ? signal_const_1 : signal_reg_1;
+        assign signal_const_6 = 2'b10;
+        assign signal_const_7 = 2'b01;
+        assign signal_wire_3 = start;
+        assign signal_mux_1 = signal_wire_3 ? signal_const_7 : signal_reg_1;
         always @* begin
-            case (_11)
+            case (signal_reg_1)
             2'b00:
-                _26 <= _20;
+                signal_cases_1 <= signal_mux_1;
             2'b01:
-                _26 <= _18;
+                signal_cases_1 <= signal_const_6;
             2'b10:
-                _26 <= _25;
+                signal_cases_1 <= signal_mux;
             2'b11:
-                _26 <= _10;
+                signal_cases_1 <= signal_const;
             default:
-                _26 <= _11;
+                signal_cases_1 <= signal_reg_1;
             endcase
         end
-        assign _8 = _26;
-        always @(posedge _4) begin
-            if (_2)
-                _11 <= _10;
+        assign signal_wire_4 = signal_cases_1;
+        always @(posedge signal_wire_1) begin
+            if (signal_wire)
+                signal_reg_1 <= signal_const;
             else
-                _11 <= _8;
+                signal_reg_1 <= signal_wire_4;
         end
-        assign _27 = _10 == _11;
-        assign is_done = _27;
+        assign signal_eq_1 = signal_const == signal_reg_1;
+        assign is_done = signal_eq_1;
 
     endmodule
     |}];
@@ -166,95 +166,95 @@ let%expect_test "" =
 
     architecture rtl of statemachine is
 
-        signal \_10\ : std_logic_vector(1 downto 0);
-        signal \_24\ : std_logic_vector(1 downto 0);
-        signal \_22\ : std_logic_vector(3 downto 0);
-        signal \_14\ : std_logic_vector(3 downto 0);
-        signal \_2\ : std_logic;
-        signal \_4\ : std_logic;
-        signal \_16\ : std_logic_vector(3 downto 0);
-        signal \_17\ : std_logic_vector(3 downto 0);
-        signal \_19\ : std_logic_vector(3 downto 0);
-        signal \_5\ : std_logic_vector(3 downto 0);
-        signal \_15\ : std_logic_vector(3 downto 0);
-        signal \_23\ : std_logic;
-        signal \_25\ : std_logic_vector(1 downto 0);
-        signal \_18\ : std_logic_vector(1 downto 0);
-        signal \_13\ : std_logic_vector(1 downto 0);
-        signal \_7\ : std_logic;
-        signal \_20\ : std_logic_vector(1 downto 0);
-        signal \_26\ : std_logic_vector(1 downto 0);
-        signal \_8\ : std_logic_vector(1 downto 0);
-        signal \_11\ : std_logic_vector(1 downto 0);
-        attribute fsm_encoding of \_11\ : signal is "one_hot";
-        signal \_27\ : std_logic;
+        signal signal_const : std_logic_vector(1 downto 0);
+        signal signal_const_1 : std_logic_vector(1 downto 0);
+        signal signal_const_2 : std_logic_vector(3 downto 0);
+        signal signal_const_3 : std_logic_vector(3 downto 0);
+        signal signal_wire : std_logic;
+        signal signal_wire_1 : std_logic;
+        signal signal_const_4 : std_logic_vector(3 downto 0);
+        signal signal_add : std_logic_vector(3 downto 0);
+        signal signal_cases : std_logic_vector(3 downto 0);
+        signal signal_wire_2 : std_logic_vector(3 downto 0);
+        signal signal_reg : std_logic_vector(3 downto 0);
+        signal signal_eq : std_logic;
+        signal signal_mux : std_logic_vector(1 downto 0);
+        signal signal_const_6 : std_logic_vector(1 downto 0);
+        signal signal_const_7 : std_logic_vector(1 downto 0);
+        signal signal_wire_3 : std_logic;
+        signal signal_mux_1 : std_logic_vector(1 downto 0);
+        signal signal_cases_1 : std_logic_vector(1 downto 0);
+        signal signal_wire_4 : std_logic_vector(1 downto 0);
+        signal signal_reg_1 : std_logic_vector(1 downto 0);
+        attribute fsm_encoding of signal_reg_1 : signal is "one_hot";
+        signal signal_eq_1 : std_logic;
 
     begin
 
-        \_10\ <= "00";
-        \_24\ <= "11";
-        \_22\ <= "1111";
-        \_14\ <= "0000";
-        \_2\ <= clear;
-        \_4\ <= clock;
-        \_16\ <= "0001";
-        \_17\ <= std_logic_vector(unsigned(\_15\) + unsigned(\_16\));
+        signal_const <= "00";
+        signal_const_1 <= "11";
+        signal_const_2 <= "1111";
+        signal_const_3 <= "0000";
+        signal_wire <= clear;
+        signal_wire_1 <= clock;
+        signal_const_4 <= "0001";
+        signal_add <= std_logic_vector(unsigned(signal_reg) + unsigned(signal_const_4));
         process (all) begin
-            case \_11\ is
+            case signal_reg_1 is
             when "01" =>
-                \_19\ <= \_14\;
+                signal_cases <= signal_const_3;
             when "10" =>
-                \_19\ <= \_17\;
+                signal_cases <= signal_add;
             when others =>
-                \_19\ <= \_15\;
+                signal_cases <= signal_reg;
             end case;
         end process;
-        \_5\ <= \_19\;
-        process (\_4\) begin
-            if rising_edge(\_4\) then
-                if \_2\ = '1' then
-                    \_15\ <= \_14\;
+        signal_wire_2 <= signal_cases;
+        process (signal_wire_1) begin
+            if rising_edge(signal_wire_1) then
+                if signal_wire = '1' then
+                    signal_reg <= signal_const_3;
                 else
-                    \_15\ <= \_5\;
+                    signal_reg <= signal_wire_2;
                 end if;
             end if;
         end process;
-        \_23\ <= unsigned(\_15\) ?= unsigned(\_22\);
-        with to_integer(unsigned(std_logic_vector'("" & \_23\))) select \_25\ <=
-            \_11\ when 0,
-            \_24\ when others;
-        \_18\ <= "10";
-        \_13\ <= "01";
-        \_7\ <= start;
-        with to_integer(unsigned(std_logic_vector'("" & \_7\))) select \_20\ <=
-            \_11\ when 0,
-            \_13\ when others;
+        signal_eq <= unsigned(signal_reg) ?= unsigned(signal_const_2);
+        with to_integer(unsigned(std_logic_vector'("" & signal_eq))) select signal_mux <=
+            signal_reg_1 when 0,
+            signal_const_1 when others;
+        signal_const_6 <= "10";
+        signal_const_7 <= "01";
+        signal_wire_3 <= start;
+        with to_integer(unsigned(std_logic_vector'("" & signal_wire_3))) select signal_mux_1 <=
+            signal_reg_1 when 0,
+            signal_const_7 when others;
         process (all) begin
-            case \_11\ is
+            case signal_reg_1 is
             when "00" =>
-                \_26\ <= \_20\;
+                signal_cases_1 <= signal_mux_1;
             when "01" =>
-                \_26\ <= \_18\;
+                signal_cases_1 <= signal_const_6;
             when "10" =>
-                \_26\ <= \_25\;
+                signal_cases_1 <= signal_mux;
             when "11" =>
-                \_26\ <= \_10\;
+                signal_cases_1 <= signal_const;
             when others =>
-                \_26\ <= \_11\;
+                signal_cases_1 <= signal_reg_1;
             end case;
         end process;
-        \_8\ <= \_26\;
-        process (\_4\) begin
-            if rising_edge(\_4\) then
-                if \_2\ = '1' then
-                    \_11\ <= \_10\;
+        signal_wire_4 <= signal_cases_1;
+        process (signal_wire_1) begin
+            if rising_edge(signal_wire_1) then
+                if signal_wire = '1' then
+                    signal_reg_1 <= signal_const;
                 else
-                    \_11\ <= \_8\;
+                    signal_reg_1 <= signal_wire_4;
                 end if;
             end if;
         end process;
-        \_27\ <= unsigned(\_10\) ?= unsigned(\_11\);
-        is_done <= \_27\;
+        signal_eq_1 <= unsigned(signal_const) ?= unsigned(signal_reg_1);
+        is_done <= signal_eq_1;
 
     end architecture;
     |}]
@@ -295,28 +295,28 @@ let%expect_test "show that the pseudo-constants for matches are not printed sepe
         input [31:0] select;
         output [7:0] q;
 
-        reg [7:0] _18;
+        reg [7:0] signal_cases;
         always @* begin
             case (select)
             32'b11101111101011000111100110100000:
-                _18 <= d0;
+                signal_cases <= d0;
             32'b01001001100011001101101000110110:
-                _18 <= d1;
+                signal_cases <= d1;
             32'b00000101111010001100110101100001:
-                _18 <= d2;
+                signal_cases <= d2;
             32'b10001100111011010010011011111100:
-                _18 <= d3;
+                signal_cases <= d3;
             32'b11100010000011110010101010010011:
-                _18 <= d4;
+                signal_cases <= d4;
             32'b01001110100011101100011101100101:
-                _18 <= d5;
+                signal_cases <= d5;
             32'b10011000111110001101010011000011:
-                _18 <= d6;
+                signal_cases <= d6;
             default:
-                _18 <= def;
+                signal_cases <= def;
             endcase
         end
-        assign q = _18;
+        assign q = signal_cases;
 
     endmodule
     |}]

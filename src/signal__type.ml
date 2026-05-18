@@ -2,8 +2,6 @@ open! Core0
 
 module type Uid = Signal__type_intf.Uid
 module type Type = Signal__type_intf.Type
-module type Uid_set = Signal__type_intf.Uid_set
-module type Uid_map = Signal__type_intf.Uid_map
 module type With_info = Signal__type_intf.With_info
 
 module Uid = Uid_builder.Make ()
@@ -30,6 +28,7 @@ module Metadata = struct
     ; caller_id : Caller_id.t option
     ; mutable wave_format : Wave_format.t
     ; mutable coverage : Coverage_metadata.t option
+    ; user_metadata : Sexp.t String.Table.t
     }
   [@@deriving bin_io, sexp_of]
 end
@@ -356,14 +355,6 @@ and reg_spec =
   ; reset_level : Level.t
   ; clear : t option
   }
-
-module Uid_map = Map.M (Uid)
-
-module Uid_set = struct
-  type t = Set.M(Uid).t [@@deriving sexp_of]
-
-  let empty = Set.empty (module Uid)
-end
 
 module type Printable =
   Signal__type_intf.Printable
@@ -986,6 +977,7 @@ let make_id_allow_zero_width width : Info.t =
         ; caller_id = Some caller_id
         ; wave_format = default_wave_format
         ; coverage = None
+        ; user_metadata = String.Table.create ()
         })
   }
 ;;
@@ -1010,6 +1002,7 @@ let get_or_alloc_metadata (t : Info.t) =
       ; caller_id = None
       ; wave_format = default_wave_format
       ; coverage = None
+      ; user_metadata = String.Table.create ()
       }
     in
     t.metadata <- Some metadata;
@@ -1102,6 +1095,20 @@ let get_wave_format t =
 
 let update_coverage_metadata t ~f =
   change_metadata t ~f:(fun metadata -> metadata.coverage <- Some (f metadata.coverage))
+;;
+
+let set_user_metadata t ~key ~data =
+  change_metadata t ~f:(fun metadata -> Hashtbl.set metadata.user_metadata ~key ~data)
+;;
+
+let find_user_metadata t key =
+  let%bind.Option metadata = get_metadata t in
+  Hashtbl.find metadata.user_metadata key
+;;
+
+let user_metadata t =
+  Option.value_map (get_metadata t) ~default:(String.Table.create ()) ~f:(fun m ->
+    m.user_metadata)
 ;;
 
 let is_vdd = function
@@ -1249,6 +1256,20 @@ let map_dependant t ~f =
   | Inst inst -> Inst (Inst.map inst ~f)
   | Wire wire -> Wire (Wire.map wire ~f)
 ;;
+
+module Signal_compared_by_uid = struct
+  module T = struct
+    type nonrec t = t [@@deriving sexp_of]
+
+    let compare a b = Uid.compare (uid a) (uid b)
+  end
+
+  include T
+  include Comparator.Make (T)
+end
+
+module Set = Set.Make_plain (Signal_compared_by_uid)
+module Map = Map.Make_plain (Signal_compared_by_uid)
 
 module Make_default_info (S : sig
     type t

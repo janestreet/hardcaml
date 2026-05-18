@@ -1,18 +1,41 @@
-(** A dynamically-sized array, similar to std::vector in C++. *)
+(** Waveform data interface. *)
 
-open! Core0
-
-module type Data = sig
-  type t [@@deriving sexp_of, compare ~localize, equal ~localize]
+module type S = sig
+  type t [@@deriving sexp_of, equal ~localize]
 
   val width : t -> int
   val length : t -> int
   val get : t -> int -> Bits.t
-  val create : int -> t
-  val init : int -> width:int -> f:(int -> Bits.t) -> t
-  val set : t -> int -> Bits.t -> unit
-  val set_mutable_unsafe : t -> int -> Bits.Mutable.t -> unit
-  val set_from_bytes : int -> t -> int -> Bytes.t -> int -> unit
-  val non_cache_hits : t -> int
   val get_digestible_string : t -> Bytes.t * int
+end
+
+module type Wave_data = sig
+  module type S = S
+
+  module Type : sig
+    type t =
+      | Input
+      | Output
+      | Internal
+    [@@deriving compare ~localize, equal ~localize, sexp_of]
+  end
+
+  module Wave : sig
+    type 'wave_data t =
+      { name : string
+      ; width : int
+      ; typ : Type.t
+      ; wave_format : Wave_format.t
+      ; is_pseudo_clock : bool
+      ; wave_data : 'wave_data
+      }
+    [@@deriving equal ~localize, sexp_of]
+  end
+
+  type t =
+    | By_cycle of Wave_data_in_cycles.t Wave.t array
+    | By_event of Wave_data_in_events.Bits.t Wave.t array
+  [@@deriving equal ~localize, sexp_of]
+
+  val combine : t -> t -> t
 end

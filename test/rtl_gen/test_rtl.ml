@@ -66,80 +66,80 @@ let%expect_test "simple example" =
         output [1:0] moo;
         output [1:0] sum;
 
-        wire [1:0] _17;
+        wire [1:0] signal_cat;
         wire gnd;
-        wire [1:0] _16;
-        wire [1:0] _18;
-        wire [1:0] _29;
+        wire [1:0] signal_cat_1;
+        wire [1:0] signal_add;
+        wire [1:0] signal_const;
         wire [1:0] bbb;
         wire [1:0] aaa;
         wire zoo_0;
-        wire _24;
-        wire [1:0] _25;
-        wire [1:0] _22;
-        wire [1:0] _26;
-        wire [1:0] _28;
+        wire signal_or;
+        wire [1:0] signal_cat_2;
+        wire [1:0] signal_cat_3;
+        wire [1:0] signal_mux;
+        wire [1:0] signal_or_1;
         wire [1:0] fff;
         wire [1:0] eee;
         wire [1:0] ddd;
         wire [1:0] ccc;
-        wire [1:0] _2;
-        wire _20;
+        wire [1:0] signal_wire;
+        wire signal_not;
         wire noo;
         wire coo;
-        wire _32;
-        wire _5;
-        wire _7;
-        wire _9;
-        wire _11;
-        wire _13;
-        wire _19;
-        reg _33;
-        assign _17 = { gnd,
-                       _11 };
+        wire signal_const_1;
+        wire signal_wire_1;
+        wire signal_wire_2;
+        wire signal_wire_3;
+        wire signal_wire_4;
+        wire signal_wire_5;
+        wire signal_add_1;
+        reg signal_reg;
+        assign signal_cat = { gnd,
+                              signal_wire_4 };
         assign gnd = 1'b0;
-        assign _16 = { gnd,
-                       _13 };
-        assign _18 = _16 + _17;
-        assign _29 = 2'b11;
+        assign signal_cat_1 = { gnd,
+                                signal_wire_5 };
+        assign signal_add = signal_cat_1 + signal_cat;
+        assign signal_const = 2'b11;
         assign bbb = 2'b11;
         assign zoo_0 = ~ noo;
-        assign _24 = _19 | zoo_0;
-        assign _25 = { _24,
-                       _24 };
-        assign _22 = { _19,
-                       noo };
-        assign _26 = _19 ? _25 : _22;
-        assign _28 = _26 | bbb;
-        assign fff = _28 | _29;
-        assign _2 = fff;
-        assign _20 = ~ _11;
-        assign noo = _13 - _20;
-        assign _32 = 1'b0;
-        assign _5 = clear;
-        assign _7 = reset;
-        assign _9 = clock;
-        assign _11 = bar;
-        assign _13 = foo;
-        assign _19 = _13 + _11;
-        always @(posedge _9 or posedge _7) begin
-            if (_7)
-                _33 <= _32;
+        assign signal_or = signal_add_1 | zoo_0;
+        assign signal_cat_2 = { signal_or,
+                                signal_or };
+        assign signal_cat_3 = { signal_add_1,
+                                noo };
+        assign signal_mux = signal_add_1 ? signal_cat_2 : signal_cat_3;
+        assign signal_or_1 = signal_mux | bbb;
+        assign fff = signal_or_1 | signal_const;
+        assign signal_wire = fff;
+        assign signal_not = ~ signal_wire_4;
+        assign noo = signal_wire_5 - signal_not;
+        assign signal_const_1 = 1'b0;
+        assign signal_wire_1 = clear;
+        assign signal_wire_2 = reset;
+        assign signal_wire_3 = clock;
+        assign signal_wire_4 = bar;
+        assign signal_wire_5 = foo;
+        assign signal_add_1 = signal_wire_5 + signal_wire_4;
+        always @(posedge signal_wire_3 or posedge signal_wire_2) begin
+            if (signal_wire_2)
+                signal_reg <= signal_const_1;
             else
-                if (_5)
-                    _33 <= _32;
+                if (signal_wire_1)
+                    signal_reg <= signal_const_1;
                 else
                     if (noo)
-                        _33 <= _19;
+                        signal_reg <= signal_add_1;
         end
         assign aaa = bbb;
         assign eee = fff;
         assign ddd = fff;
         assign ccc = fff;
         assign coo = noo;
-        assign zoo = _33;
-        assign moo = _2;
-        assign sum = _18;
+        assign zoo = signal_reg;
+        assign moo = signal_wire;
+        assign sum = signal_add;
 
     endmodule
     library ieee;
@@ -161,73 +161,73 @@ let%expect_test "simple example" =
 
     architecture rtl of temp is
 
-        signal \_17\ : std_logic_vector(1 downto 0);
+        signal signal_cat : std_logic_vector(1 downto 0);
         signal gnd : std_logic;
-        signal \_16\ : std_logic_vector(1 downto 0);
-        signal \_18\ : std_logic_vector(1 downto 0);
-        signal \_29\ : std_logic_vector(1 downto 0);
+        signal signal_cat_1 : std_logic_vector(1 downto 0);
+        signal signal_add : std_logic_vector(1 downto 0);
+        signal signal_const : std_logic_vector(1 downto 0);
         signal bbb : std_logic_vector(1 downto 0);
         signal aaa : std_logic_vector(1 downto 0);
         signal zoo_0 : std_logic;
-        signal \_24\ : std_logic;
-        signal \_25\ : std_logic_vector(1 downto 0);
-        signal \_22\ : std_logic_vector(1 downto 0);
-        signal \_26\ : std_logic_vector(1 downto 0);
-        signal \_28\ : std_logic_vector(1 downto 0);
+        signal signal_or : std_logic;
+        signal signal_cat_2 : std_logic_vector(1 downto 0);
+        signal signal_cat_3 : std_logic_vector(1 downto 0);
+        signal signal_mux : std_logic_vector(1 downto 0);
+        signal signal_or_1 : std_logic_vector(1 downto 0);
         signal fff : std_logic_vector(1 downto 0);
         signal eee : std_logic_vector(1 downto 0);
         signal ddd : std_logic_vector(1 downto 0);
         signal ccc : std_logic_vector(1 downto 0);
-        signal \_2\ : std_logic_vector(1 downto 0);
-        signal \_20\ : std_logic;
+        signal signal_wire : std_logic_vector(1 downto 0);
+        signal signal_not : std_logic;
         signal noo : std_logic;
         signal coo : std_logic;
-        signal \_32\ : std_logic;
-        signal \_5\ : std_logic;
-        signal \_7\ : std_logic;
-        signal \_9\ : std_logic;
-        signal \_11\ : std_logic;
-        signal \_13\ : std_logic;
-        signal \_19\ : std_logic;
-        signal \_33\ : std_logic;
+        signal signal_const_1 : std_logic;
+        signal signal_wire_1 : std_logic;
+        signal signal_wire_2 : std_logic;
+        signal signal_wire_3 : std_logic;
+        signal signal_wire_4 : std_logic;
+        signal signal_wire_5 : std_logic;
+        signal signal_add_1 : std_logic;
+        signal signal_reg : std_logic;
 
     begin
 
-        \_17\ <= gnd & \_11\;
+        signal_cat <= gnd & signal_wire_4;
         gnd <= '0';
-        \_16\ <= gnd & \_13\;
-        \_18\ <= std_logic_vector(unsigned(\_16\) + unsigned(\_17\));
-        \_29\ <= "11";
+        signal_cat_1 <= gnd & signal_wire_5;
+        signal_add <= std_logic_vector(unsigned(signal_cat_1) + unsigned(signal_cat));
+        signal_const <= "11";
         bbb <= "11";
         zoo_0 <= not noo;
-        \_24\ <= \_19\ or zoo_0;
-        \_25\ <= \_24\ & \_24\;
-        \_22\ <= \_19\ & noo;
-        with to_integer(unsigned(std_logic_vector'("" & \_19\))) select \_26\ <=
-            \_22\ when 0,
-            \_25\ when others;
-        \_28\ <= \_26\ or bbb;
-        fff <= \_28\ or \_29\;
-        \_2\ <= fff;
-        \_20\ <= not \_11\;
-        noo <= (unsigned(std_logic_vector'("" & \_13\)) - unsigned(std_logic_vector'("" & \_20\))) ?= "1";
-        \_32\ <= '0';
-        \_5\ <= clear;
-        \_7\ <= reset;
-        \_9\ <= clock;
-        \_11\ <= bar;
-        \_13\ <= foo;
-        \_19\ <= (unsigned(std_logic_vector'("" & \_13\)) + unsigned(std_logic_vector'("" & \_11\))) ?= "1";
-        process (\_9\, \_7\) begin
-            if \_7\ = '1' then
-                \_33\ <= \_32\;
+        signal_or <= signal_add_1 or zoo_0;
+        signal_cat_2 <= signal_or & signal_or;
+        signal_cat_3 <= signal_add_1 & noo;
+        with to_integer(unsigned(std_logic_vector'("" & signal_add_1))) select signal_mux <=
+            signal_cat_3 when 0,
+            signal_cat_2 when others;
+        signal_or_1 <= signal_mux or bbb;
+        fff <= signal_or_1 or signal_const;
+        signal_wire <= fff;
+        signal_not <= not signal_wire_4;
+        noo <= (unsigned(std_logic_vector'("" & signal_wire_5)) - unsigned(std_logic_vector'("" & signal_not))) ?= "1";
+        signal_const_1 <= '0';
+        signal_wire_1 <= clear;
+        signal_wire_2 <= reset;
+        signal_wire_3 <= clock;
+        signal_wire_4 <= bar;
+        signal_wire_5 <= foo;
+        signal_add_1 <= (unsigned(std_logic_vector'("" & signal_wire_5)) + unsigned(std_logic_vector'("" & signal_wire_4))) ?= "1";
+        process (signal_wire_3, signal_wire_2) begin
+            if signal_wire_2 = '1' then
+                signal_reg <= signal_const_1;
             else
-                if rising_edge(\_9\) then
-                    if \_5\ = '1' then
-                        \_33\ <= \_32\;
+                if rising_edge(signal_wire_3) then
+                    if signal_wire_1 = '1' then
+                        signal_reg <= signal_const_1;
                     else
                         if noo = '1' then
-                            \_33\ <= \_19\;
+                            signal_reg <= signal_add_1;
                         end if;
                     end if;
                 end if;
@@ -238,9 +238,9 @@ let%expect_test "simple example" =
         ddd <= fff;
         ccc <= fff;
         coo <= noo;
-        zoo <= \_33\;
-        moo <= \_2\;
-        sum <= \_18\;
+        zoo <= signal_reg;
+        moo <= signal_wire;
+        sum <= signal_add;
 
     end architecture;
     |}]
@@ -273,80 +273,80 @@ let%expect_test "apply port mangling to " =
         output [1:0] moo;
         output [1:0] sum;
 
-        bit [1:0] _17;
+        bit [1:0] signal_cat;
         bit gnd;
-        bit [1:0] _16;
-        bit [1:0] _18;
-        bit [1:0] _29;
+        bit [1:0] signal_cat_1;
+        bit [1:0] signal_add;
+        bit [1:0] signal_const;
         bit [1:0] bbb;
         bit [1:0] aaa;
         bit zoo_0;
-        bit _24;
-        bit [1:0] _25;
-        bit [1:0] _22;
-        bit [1:0] _26;
-        bit [1:0] _28;
+        bit signal_or;
+        bit [1:0] signal_cat_2;
+        bit [1:0] signal_cat_3;
+        bit [1:0] signal_mux;
+        bit [1:0] signal_or_1;
         bit [1:0] fff;
         bit [1:0] eee;
         bit [1:0] ddd;
         bit [1:0] ccc;
-        bit [1:0] _2;
-        bit _20;
+        bit [1:0] signal_wire;
+        bit signal_not;
         bit noo;
         bit coo;
-        bit _32;
-        bit _5;
-        bit _7;
-        bit _9;
-        bit _11;
-        bit _13;
-        bit _19;
-        bit _33;
-        assign _17 = { gnd,
-                       _11 };
+        bit signal_const_1;
+        bit signal_wire_1;
+        bit signal_wire_2;
+        bit signal_wire_3;
+        bit signal_wire_4;
+        bit signal_wire_5;
+        bit signal_add_1;
+        bit signal_reg;
+        assign signal_cat = { gnd,
+                              signal_wire_4 };
         assign gnd = 1'b0;
-        assign _16 = { gnd,
-                       _13 };
-        assign _18 = _16 + _17;
-        assign _29 = 2'b11;
+        assign signal_cat_1 = { gnd,
+                                signal_wire_5 };
+        assign signal_add = signal_cat_1 + signal_cat;
+        assign signal_const = 2'b11;
         assign bbb = 2'b11;
         assign zoo_0 = ~ noo;
-        assign _24 = _19 | zoo_0;
-        assign _25 = { _24,
-                       _24 };
-        assign _22 = { _19,
-                       noo };
-        assign _26 = _19 ? _25 : _22;
-        assign _28 = _26 | bbb;
-        assign fff = _28 | _29;
-        assign _2 = fff;
-        assign _20 = ~ _11;
-        assign noo = _13 - _20;
-        assign _32 = 1'b0;
-        assign _5 = clear;
-        assign _7 = reset;
-        assign _9 = clock;
-        assign _11 = bar;
-        assign _13 = foo;
-        assign _19 = _13 + _11;
-        always @(posedge _9 or posedge _7) begin
-            if (_7)
-                _33 <= _32;
+        assign signal_or = signal_add_1 | zoo_0;
+        assign signal_cat_2 = { signal_or,
+                                signal_or };
+        assign signal_cat_3 = { signal_add_1,
+                                noo };
+        assign signal_mux = signal_add_1 ? signal_cat_2 : signal_cat_3;
+        assign signal_or_1 = signal_mux | bbb;
+        assign fff = signal_or_1 | signal_const;
+        assign signal_wire = fff;
+        assign signal_not = ~ signal_wire_4;
+        assign noo = signal_wire_5 - signal_not;
+        assign signal_const_1 = 1'b0;
+        assign signal_wire_1 = clear;
+        assign signal_wire_2 = reset;
+        assign signal_wire_3 = clock;
+        assign signal_wire_4 = bar;
+        assign signal_wire_5 = foo;
+        assign signal_add_1 = signal_wire_5 + signal_wire_4;
+        always @(posedge signal_wire_3 or posedge signal_wire_2) begin
+            if (signal_wire_2)
+                signal_reg <= signal_const_1;
             else
-                if (_5)
-                    _33 <= _32;
+                if (signal_wire_1)
+                    signal_reg <= signal_const_1;
                 else
                     if (noo)
-                        _33 <= _19;
+                        signal_reg <= signal_add_1;
         end
         assign aaa = bbb;
         assign eee = fff;
         assign ddd = fff;
         assign ccc = fff;
         assign coo = noo;
-        assign zoo = _33;
-        assign moo = _2;
-        assign sum = _18;
+        assign zoo = signal_reg;
+        assign moo = signal_wire;
+        assign sum = signal_add;
 
     endmodule
     library ieee;
@@ -377,73 +377,73 @@ let%expect_test "apply port mangling to " =
             end if;
         end function;
 
-        signal \_17\ : bit_vector(1 downto 0);
+        signal signal_cat : bit_vector(1 downto 0);
         signal gnd : bit;
-        signal \_16\ : bit_vector(1 downto 0);
-        signal \_18\ : bit_vector(1 downto 0);
-        signal \_29\ : bit_vector(1 downto 0);
+        signal signal_cat_1 : bit_vector(1 downto 0);
+        signal signal_add : bit_vector(1 downto 0);
+        signal signal_const : bit_vector(1 downto 0);
         signal bbb : bit_vector(1 downto 0);
         signal aaa : bit_vector(1 downto 0);
         signal zoo_0 : bit;
-        signal \_24\ : bit;
-        signal \_25\ : bit_vector(1 downto 0);
-        signal \_22\ : bit_vector(1 downto 0);
-        signal \_26\ : bit_vector(1 downto 0);
-        signal \_28\ : bit_vector(1 downto 0);
+        signal signal_or : bit;
+        signal signal_cat_2 : bit_vector(1 downto 0);
+        signal signal_cat_3 : bit_vector(1 downto 0);
+        signal signal_mux : bit_vector(1 downto 0);
+        signal signal_or_1 : bit_vector(1 downto 0);
         signal fff : bit_vector(1 downto 0);
         signal eee : bit_vector(1 downto 0);
         signal ddd : bit_vector(1 downto 0);
         signal ccc : bit_vector(1 downto 0);
-        signal \_2\ : bit_vector(1 downto 0);
-        signal \_20\ : bit;
+        signal signal_wire : bit_vector(1 downto 0);
+        signal signal_not : bit;
         signal noo : bit;
         signal coo : bit;
-        signal \_32\ : bit;
-        signal \_5\ : bit;
-        signal \_7\ : bit;
-        signal \_9\ : bit;
-        signal \_11\ : bit;
-        signal \_13\ : bit;
-        signal \_19\ : bit;
-        signal \_33\ : bit;
+        signal signal_const_1 : bit;
+        signal signal_wire_1 : bit;
+        signal signal_wire_2 : bit;
+        signal signal_wire_3 : bit;
+        signal signal_wire_4 : bit;
+        signal signal_wire_5 : bit;
+        signal signal_add_1 : bit;
+        signal signal_reg : bit;
 
     begin
 
-        \_17\ <= gnd & \_11\;
+        signal_cat <= gnd & signal_wire_4;
         gnd <= '0';
-        \_16\ <= gnd & \_13\;
-        \_18\ <= bit_vector(unsigned(\_16\) + unsigned(\_17\));
-        \_29\ <= "11";
+        signal_cat_1 <= gnd & signal_wire_5;
+        signal_add <= bit_vector(unsigned(signal_cat_1) + unsigned(signal_cat));
+        signal_const <= "11";
         bbb <= "11";
         zoo_0 <= not noo;
-        \_24\ <= \_19\ or zoo_0;
-        \_25\ <= \_24\ & \_24\;
-        \_22\ <= \_19\ & noo;
-        with to_integer(unsigned'("" & \_19\)) select \_26\ <=
-            \_22\ when 0,
-            \_25\ when others;
-        \_28\ <= \_26\ or bbb;
-        fff <= \_28\ or \_29\;
-        \_2\ <= fff;
-        \_20\ <= not \_11\;
-        noo <= (unsigned'("" & \_13\) - unsigned'("" & \_20\)) ?= "1";
-        \_32\ <= '0';
-        \_5\ <= clear;
-        \_7\ <= reset;
-        \_9\ <= clock;
-        \_11\ <= bar;
-        \_13\ <= foo;
-        \_19\ <= (unsigned'("" & \_13\) + unsigned'("" & \_11\)) ?= "1";
-        process (\_9\, \_7\) begin
-            if \_7\ = '1' then
-                \_33\ <= \_32\;
+        signal_or <= signal_add_1 or zoo_0;
+        signal_cat_2 <= signal_or & signal_or;
+        signal_cat_3 <= signal_add_1 & noo;
+        with to_integer(unsigned'("" & signal_add_1)) select signal_mux <=
+            signal_cat_3 when 0,
+            signal_cat_2 when others;
+        signal_or_1 <= signal_mux or bbb;
+        fff <= signal_or_1 or signal_const;
+        signal_wire <= fff;
+        signal_not <= not signal_wire_4;
+        noo <= (unsigned'("" & signal_wire_5) - unsigned'("" & signal_not)) ?= "1";
+        signal_const_1 <= '0';
+        signal_wire_1 <= clear;
+        signal_wire_2 <= reset;
+        signal_wire_3 <= clock;
+        signal_wire_4 <= bar;
+        signal_wire_5 <= foo;
+        signal_add_1 <= (unsigned'("" & signal_wire_5) + unsigned'("" & signal_wire_4)) ?= "1";
+        process (signal_wire_3, signal_wire_2) begin
+            if signal_wire_2 = '1' then
+                signal_reg <= signal_const_1;
             else
-                if rising_edge(\_9\) then
-                    if \_5\ = '1' then
-                        \_33\ <= \_32\;
+                if rising_edge(signal_wire_3) then
+                    if signal_wire_1 = '1' then
+                        signal_reg <= signal_const_1;
                     else
                         if noo = '1' then
-                            \_33\ <= \_19\;
+                            signal_reg <= signal_add_1;
                         end if;
                     end if;
                 end if;
@@ -454,9 +454,9 @@ let%expect_test "apply port mangling to " =
         ddd <= fff;
         ccc <= fff;
         coo <= noo;
-        zoo <= \_33\;
-        moo <= \_2\;
-        sum <= \_18\;
+        zoo <= signal_reg;
+        moo <= signal_wire;
+        sum <= signal_add;
 
     end architecture;
     |}]

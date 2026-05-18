@@ -139,6 +139,62 @@ let%expect_test "[floor_log2], [popcount]" =
     |}]
 ;;
 
+let%expect_test "[byte_qualifier]" =
+  let e num_bytes how_many_bytes_set =
+    Bits.binary_to_byte_qualifier
+      ~num_bytes
+      (Bits.of_unsigned_int ~width:(num_bits_to_represent num_bytes) how_many_bytes_set)
+  in
+  (* Self tests *)
+  Sequence.range 1 8
+  |> Sequence.iter ~f:(fun num_bytes ->
+    Sequence.range ~stop:`inclusive 0 num_bytes
+    |> Sequence.iter ~f:(fun how_many_bytes_set ->
+      let encoded = e num_bytes how_many_bytes_set in
+      assert (Bits.to_unsigned_int (popcount encoded) = how_many_bytes_set);
+      assert (Bits.to_unsigned_int (trailing_ones encoded) = how_many_bytes_set)));
+  (* Usage demonstration *)
+  let p num_bytes test_cases =
+    List.map test_cases ~f:(fun input ->
+      let result = e num_bytes input in
+      [%message (input : int) (result : Bits.t)])
+    |> Expectable.print
+  in
+  p 4 [ 0; 2; 4 ];
+  [%expect
+    {|
+    ┌───────┬────────┐
+    │ input │ result │
+    ├───────┼────────┤
+    │ 0     │ 0000   │
+    │ 2     │ 0011   │
+    │ 4     │ 1111   │
+    └───────┴────────┘
+    |}];
+  p 6 [ 0; 3; 6 ];
+  [%expect
+    {|
+    ┌───────┬────────┐
+    │ input │ result │
+    ├───────┼────────┤
+    │ 0     │ 000000 │
+    │ 3     │ 000111 │
+    │ 6     │ 111111 │
+    └───────┴────────┘
+    |}];
+  p 8 [ 0; 4; 8 ];
+  [%expect
+    {|
+    ┌───────┬──────────┐
+    │ input │ result   │
+    ├───────┼──────────┤
+    │ 0     │ 00000000 │
+    │ 4     │ 00001111 │
+    │ 8     │ 11111111 │
+    └───────┴──────────┘
+    |}]
+;;
+
 let test_sexp_of_bit_string (module M : Hardcaml.Comb.S) =
   List.iter
     [ "0"
@@ -310,6 +366,71 @@ module%test Test_for_collection = struct
 
         include Bits.For_iarray
       end)
+  ;;
+end
+
+module%test Test_generate = struct
+  open Core
+
+  let%expect_test "generate raises for non-positive widths" =
+    require_does_raise (fun () -> generate 0);
+    [%expect {| ("Bits.generate: width must be positive" (width 0)) |}];
+    require_does_raise (fun () -> generate (-1));
+    [%expect {| ("Bits.generate: width must be positive" (width -1)) |}]
+  ;;
+
+  let%expect_test "generate produces values of the requested width in range" =
+    List.iter [ 1; 3; 8; 17; 64; 65 ] ~f:(fun width ->
+      Quickcheck.test
+        (Bits.generate width)
+        ~sexp_of:[%sexp_of: Bits.t]
+        ~trials:200
+        ~f:(fun bits ->
+          [%test_result: int] (Bits.width bits) ~expect:width;
+          let as_bigint = Bits.to_bigint ~signedness:Unsigned bits in
+          if Bigint.(as_bigint < zero || as_bigint >= one lsl width)
+          then
+            raise_s [%message "value out of range" (width : int) (as_bigint : Bigint.t)]))
+  ;;
+
+  let print_example_values ~width ~num_samples =
+    let random = Splittable_random.of_int 0x0ead_beef in
+    let generator = Bits.generate width in
+    for _ = 1 to num_samples do
+      let bits = Quickcheck.Generator.generate generator ~size:10 ~random in
+      print_endline (Bits.Binary.to_string bits)
+    done
+  ;;
+
+  let%expect_test "generate is approximately uniform over all bit patterns" =
+    print_example_values ~width:4 ~num_samples:10;
+    [%expect
+      {|
+      4'b1110
+      4'b0111
+      4'b0000
+      4'b0111
+      4'b1001
+      4'b1100
+      4'b1011
+      4'b1110
+      4'b0011
+      4'b0011
+      |}];
+    print_example_values ~width:70 ~num_samples:10;
+    [%expect
+      {|
+      70'b0001111110100011101010101100110010100000110111011101110100000001001110
+      70'b0001110100101100010100100101011011000010011101011010001010111001010000
+      70'b1111001010000011010010010110100011001010101101101011100100110000101001
+      70'b1011101000100011110011000010001010010010001000110000000111011111101011
+      70'b0100111001110111001100100000000000111101111101100001010110111101100011
+      70'b0110011110011001000101111011010101000111101010110000111001000110110100
+      70'b0000000111110010000010101011011100010101011101001000001011101110100000
+      70'b0101010100101101000010001101010000100111100011011100101010110101010001
+      70'b0101011011100101101011010110001010111101011010011010010110110101001000
+      70'b0001110100101001011011101101110101111001000111100001111110101101001000
+      |}]
   ;;
 end
 

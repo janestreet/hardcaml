@@ -42,10 +42,13 @@ let attributes_to_string (attributes : Rtl_attribute.t list) =
   [%rope {|(* %{Rope.concat ~sep:[%rope ","] attrs} *)|}]
 ;;
 
+let name_to_rope name = Rtl_name.For_backend.to_string name |> Rope.of_string
+
 let declare_io_ports (ast : Rtl_ast.t) =
   let io_ports =
     List.concat
       [ List.map ast.inputs ~f:(fun { name; range; attributes; _ } ->
+          let name = name_to_rope name in
           ( name
           , match attributes with
             | [] -> input name range
@@ -54,6 +57,7 @@ let declare_io_ports (ast : Rtl_ast.t) =
       ; List.map
           ast.outputs
           ~f:(fun { output = { name; range; attributes; _ }; driven_by = _ } ->
+            let name = name_to_rope name in
             ( name
             , match attributes with
               | [] -> output name range
@@ -105,11 +109,12 @@ let declaration (decl : Rtl_ast.declaration) ~(two_state : bool) =
     if Rtl_ast.equal_reg_or_wire var.reg_or_wire Reg && is_write_var decl var
     then
       [%rope
-        "%{attr}%{tab}%{(if two_state then bit else reg) var.name \
+        "%{attr}%{tab}%{(if two_state then bit else reg) (name_to_rope var.name) \
          var.range}%{comment}%{initialize_to};\n"]
     else
       [%rope
-        "%{attr}%{tab}%{(if two_state then bit else wire) var.name var.range}%{comment};\n"]
+        "%{attr}%{tab}%{(if two_state then bit else wire) (name_to_rope var.name) \
+         var.range}%{comment};\n"]
   in
   match decl with
   | Logic decl -> concat_map decl.all_names ~f:(write_var ~write_attrs:true decl)
@@ -119,14 +124,16 @@ let declaration (decl : Rtl_ast.declaration) ~(two_state : bool) =
     let range = range_compat r in
     let comment = get_comment memory.comment in
     let attr = write_attr memory in
-    [%rope "%{attr}%{tab}reg%{range} %{memory.name}[0:%{(depth-1)#Int}]%{comment};\n"]
+    [%rope
+      "%{attr}%{tab}reg%{range} %{name_to_rope memory.name}[0:%{(depth-1)#Int}]%{comment};\n"]
 ;;
 
-let declarations Rtl_ast.{ declarations; config = { two_state; _ }; _ } =
-  List.map declarations ~f:(declaration ~two_state) |> Rope.concat
+let declarations (ast : Rtl_ast.t) =
+  List.map ast.declarations ~f:(declaration ~two_state:ast.config.two_state)
+  |> Rope.concat
 ;;
 
-let rec write_always_statements indent (t : Rtl_ast.always) =
+let rec write_always_statements ast indent (t : Rtl_ast.always) =
   let block indent ts ~f =
     match ts with
     | [ _ ] -> f (Rope.concat [ indent; tab ])
@@ -139,37 +146,42 @@ let rec write_always_statements indent (t : Rtl_ast.always) =
   in
   let cond (c : Rtl_ast.condition) =
     match c with
-    | Level { level = High; var } | Edge { edge = Rising; var } -> [%rope "%{var.name}"]
+    | Level { level = High; var } | Edge { edge = Rising; var } ->
+      [%rope "%{name_to_rope var.name}"]
     | Level { level = Low; var } | Edge { edge = Falling; var } ->
-      [%rope "%{var.name} == 0"]
+      [%rope "%{name_to_rope var.name} == 0"]
     | Clock _ -> (* clocks are not written in verilog *) assert false
   in
   match t with
   | If { condition = Clock _; on_true; on_false = [] } ->
-    concat_map on_true ~f:(write_always_statements indent)
+    concat_map on_true ~f:(write_always_statements ast indent)
   | If { condition; on_true; on_false = [] } ->
     Rope.concat
       [ [%rope "%{indent}if (%{cond condition})\n"]
       ; block indent on_true ~f:(fun indent ->
-          concat_map on_true ~f:(write_always_statements indent))
+          concat_map on_true ~f:(write_always_statements ast indent))
       ]
   | If { condition; on_true; on_false } ->
     Rope.concat
       [ [%rope "%{indent}if (%{cond condition})\n"]
       ; block indent on_true ~f:(fun indent ->
-          concat_map on_true ~f:(write_always_statements indent))
+          concat_map on_true ~f:(write_always_statements ast indent))
       ; [%rope "%{indent}else\n"]
       ; block indent on_false ~f:(fun indent ->
-          concat_map on_false ~f:(write_always_statements indent))
+          concat_map on_false ~f:(write_always_statements ast indent))
       ]
-  | Assignment { lhs; rhs } -> [%rope "%{indent}%{lhs.name} <= %{rhs.name};\n"]
+  | Assignment { lhs; rhs } ->
+    [%rope "%{indent}%{name_to_rope lhs.name} <= %{name_to_rope rhs.name};\n"]
   | Memory_assignment { lhs; index; rhs } ->
-    [%rope "%{indent}%{lhs.name}[%{index.name}] <= %{rhs.name};\n"]
+    [%rope
+      "%{indent}%{name_to_rope lhs.name}[%{name_to_rope index.name}] <= %{name_to_rope \
+       rhs.name};\n"]
   | Constant_memory_assignment { lhs; index; value } ->
-    [%rope "%{indent}%{lhs.name}[%{index#Int}] <= %{verilog_constant value};\n"]
+    [%rope
+      "%{indent}%{name_to_rope lhs.name}[%{index#Int}] <= %{verilog_constant value};\n"]
   | Case { select; cases } ->
     Rope.concat
-      [ [%rope "%{indent}case (%{select.name})\n"]
+      [ [%rope "%{indent}case (%{name_to_rope select.name})\n"]
       ; concat_map cases ~f:(fun case ->
           let case, statements =
             match case with
@@ -183,13 +195,13 @@ let rec write_always_statements indent (t : Rtl_ast.always) =
           Rope.concat
             [ case
             ; block indent statements ~f:(fun indent ->
-                concat_map statements ~f:(write_always_statements indent))
+                concat_map statements ~f:(write_always_statements ast indent))
             ])
       ; [%rope "%{indent}endcase\n"]
       ]
 ;;
 
-let write_always (sensitivity_list : Rtl_ast.sensitivity_list) always =
+let write_always ast (sensitivity_list : Rtl_ast.sensitivity_list) always =
   let sensitivity_list =
     match sensitivity_list with
     | Star -> [%rope "*"]
@@ -197,22 +209,22 @@ let write_always (sensitivity_list : Rtl_ast.sensitivity_list) always =
       let edges =
         concat_map ~sep:[%rope " or "] edges ~f:(fun { edge; var } ->
           match edge with
-          | Rising -> [%rope "posedge %{var.name}"]
-          | Falling -> [%rope "negedge %{var.name}"])
+          | Rising -> [%rope "posedge %{name_to_rope var.name}"]
+          | Falling -> [%rope "negedge %{name_to_rope var.name}"])
       in
       [%rope "(%{edges})"]
   in
   Rope.concat
     [ [%rope "%{tab}always @%{sensitivity_list} begin\n"]
-    ; write_always_statements tab2 always
+    ; write_always_statements ast tab2 always
     ; [%rope "%{tab}end\n"]
     ]
 ;;
 
-let write_initial always =
+let write_initial ast always =
   Rope.concat
     [ [%rope "%{tab}initial begin\n"]
-    ; concat_map always ~f:(fun always -> write_always_statements tab2 always)
+    ; concat_map always ~f:(fun always -> write_always_statements ast tab2 always)
     ; [%rope "%{tab}end\n"]
     ]
 ;;
@@ -245,7 +257,7 @@ let parameter_value (p : Parameter.t) =
 let write_instantiation (instantiation : Rtl_ast.instantiation) =
   Rope.concat
     [ write_attributes instantiation.attributes
-    ; [%rope "%{tab}%{instantiation.name#String}\n"]
+    ; [%rope "%{tab}%{name_to_rope instantiation.name}\n"]
     ; (let sep = [%rope ",\n%{spaces (tab_len*2 + 3)}"] in
        match instantiation.parameters with
        | [] -> Rope.empty
@@ -256,19 +268,21 @@ let write_instantiation (instantiation : Rtl_ast.instantiation) =
              [%rope ".%{name#String}(%{value})"])
          in
          [%rope "%{tab2}#( %{parameters} )\n"])
-    ; [%rope "%{tab2}%{instantiation.instance#String}\n"]
+    ; [%rope "%{tab2}%{name_to_rope instantiation.instance}\n"]
     ; (let sep = [%rope ",\n%{spaces (tab_len*2 + 2)}"] in
        let input_ports =
          List.map instantiation.input_ports ~f:(fun { port_name; connection } ->
-           [%rope ".%{port_name#String}(%{connection.name})"])
+           [%rope ".%{name_to_rope port_name}(%{name_to_rope connection.name})"])
        in
        let output_ports =
          match instantiation.output_ports with
          | [ { port_name; connection; high = 0; low = 0 } ] ->
-           [ [%rope ".%{port_name#String}(%{connection.name})"] ]
+           [ [%rope ".%{name_to_rope port_name}(%{name_to_rope connection.name})"] ]
          | output_ports ->
            List.map output_ports ~f:(fun { port_name; connection; high; low } ->
-             [%rope ".%{port_name#String}(%{connection.name}[%{high#Int}:%{low#Int}])"])
+             [%rope
+               ".%{name_to_rope port_name}(%{name_to_rope \
+                connection.name}[%{high#Int}:%{low#Int}])"])
        in
        let ports = Rope.concat ~sep (input_ports @ output_ports) in
        [%rope "%{tab2}( %{ports} );\n"])
@@ -289,57 +303,83 @@ let operator (op : Rtl_ast.binop) =
      | Lt -> "<")
 ;;
 
-let rec statement (stat : Rtl_ast.statement) =
+let rec statement ast (stat : Rtl_ast.statement) =
   match stat with
-  | Assignment (Not { lhs; arg }) -> [%rope "%{tab}assign %{lhs.name} = ~ %{arg.name};\n"]
+  | Assignment (Not { lhs; arg }) ->
+    [%rope "%{tab}assign %{name_to_rope lhs.name} = ~ %{name_to_rope arg.name};\n"]
   | Assignment (Concat { lhs; args }) ->
-    let sep = [%rope ",\n%{spaces (Rope.length lhs.name + ((tab_len * 3) + 4))}"] in
-    let args = concat_map ~sep args ~f:(fun arg -> [%rope "%{arg.name}"]) in
-    [%rope "%{tab}assign %{lhs.name} = { %{args} };\n"]
+    let sep =
+      [%rope ",\n%{spaces (Rope.length (name_to_rope lhs.name) + ((tab_len * 3) + 4))}"]
+    in
+    let args = concat_map ~sep args ~f:(fun arg -> [%rope "%{name_to_rope arg.name}"]) in
+    [%rope "%{tab}assign %{name_to_rope lhs.name} = { %{args} };\n"]
   | Assignment (Binop { lhs; arg_a; op = Muls; arg_b }) ->
+    let lhs_name = name_to_rope lhs.name in
+    let arg_a_name = name_to_rope arg_a.name in
+    let arg_b_name = name_to_rope arg_b.name in
     [%rope
-      "%{tab}assign %{lhs.name} = $signed(%{arg_a.name}) %{operator Muls} \
-       $signed(%{arg_b.name});\n"]
+      "%{tab}assign %{lhs_name} = $signed(%{arg_a_name}) %{operator Muls} \
+       $signed(%{arg_b_name});\n"]
   | Assignment (Binop { lhs; arg_a; op; arg_b }) ->
-    [%rope "%{tab}assign %{lhs.name} = %{arg_a.name} %{operator op} %{arg_b.name};\n"]
+    let lhs_name = name_to_rope lhs.name in
+    let arg_a_name = name_to_rope arg_a.name in
+    let arg_b_name = name_to_rope arg_b.name in
+    [%rope "%{tab}assign %{lhs_name} = %{arg_a_name} %{operator op} %{arg_b_name};\n"]
   | Assignment (Wire { lhs; driver }) ->
-    [%rope "%{tab}assign %{lhs.name} = %{driver.name};\n"]
+    let lhs_name = name_to_rope lhs.name in
+    let driver_name = name_to_rope driver.name in
+    [%rope "%{tab}assign %{lhs_name} = %{driver_name};\n"]
   | Assignment (Select { lhs; arg; high; low }) ->
-    [%rope "%{tab}assign %{lhs.name} = %{arg.name}[%{high#Int}:%{low#Int}];\n"]
+    let lhs_name = name_to_rope lhs.name in
+    let arg_name = name_to_rope arg.name in
+    [%rope "%{tab}assign %{lhs_name} = %{arg_name}[%{high#Int}:%{low#Int}];\n"]
   | Assignment (Const { lhs; constant }) ->
-    [%rope "%{tab}assign %{lhs.name} = %{verilog_constant constant};\n"]
+    let lhs_name = name_to_rope lhs.name in
+    [%rope "%{tab}assign %{lhs_name} = %{verilog_constant constant};\n"]
   | Assignment (Mux { lhs; select; cases = [ on_false; on_true ] }) ->
+    let lhs_name = name_to_rope lhs.name in
+    let select_name = name_to_rope select.name in
+    let on_true_name = name_to_rope on_true.name in
+    let on_false_name = name_to_rope on_false.name in
     [%rope
-      "%{tab}assign %{lhs.name} = %{select.name} ? %{on_true.name} : %{on_false.name};\n"]
+      "%{tab}assign %{lhs_name} = %{select_name} ? %{on_true_name} : %{on_false_name};\n"]
   | Assignment (Mux _) -> (* In verilog, these cases are written by always *) assert false
   | Mux { to_assignment; to_always; is_mux2 } ->
-    if is_mux2 then statement (to_assignment ()) else statement (to_always ())
-  | Always { sensitivity_list; always } -> write_always sensitivity_list always
-  | Initial { always } -> write_initial always
+    if is_mux2 then statement ast (to_assignment ()) else statement ast (to_always ())
+  | Always { sensitivity_list; always } -> write_always ast sensitivity_list always
+  | Initial { always } -> write_initial ast always
   | Instantiation instantiation -> write_instantiation instantiation
   | Multiport_mem { always; initial } ->
     Rope.concat
-      [ concat_map always ~f:statement
-      ; Option.value_map ~default:Rope.empty initial ~f:statement
+      [ concat_map always ~f:(statement ast)
+      ; Option.value_map ~default:Rope.empty initial ~f:(statement ast)
       ]
   | Mem_read_port { lhs; memory; address } ->
-    [%rope "%{tab}assign %{lhs.name} = %{memory.name}[%{address.name}];\n"]
+    let lhs_name = name_to_rope lhs.name in
+    let memory_name = name_to_rope memory.name in
+    let address_name = name_to_rope address.name in
+    [%rope "%{tab}assign %{lhs_name} = %{memory_name}[%{address_name}];\n"]
 ;;
 
-let statements (ast : Rtl_ast.t) = concat_map ast.statements ~f:statement
+let statements (ast : Rtl_ast.t) = concat_map ast.statements ~f:(statement ast)
 
 let output_assignments (ast : Rtl_ast.t) =
   concat_map ast.outputs ~f:(fun { output; driven_by } ->
     Option.value_map ~default:Rope.empty driven_by ~f:(fun driven_by ->
-      [%rope "%{tab}assign %{output.name} = %{driven_by.name};\n"]))
+      let output_name = name_to_rope output.name in
+      let driven_by_name = name_to_rope driven_by.name in
+      [%rope "%{tab}assign %{output_name} = %{driven_by_name};\n"]))
 ;;
 
 let write_alias (decl : Rtl_ast.declaration) =
   match decl with
   | Logic decl ->
+    let write_name = name_to_rope decl.write.name in
     concat_map decl.all_names ~f:(fun var ->
       if not (Rtl_ast.equal_var var decl.write)
-      then [%rope "%{tab}assign %{var.name} = %{decl.write.name};\n"]
+      then (
+        let var_name = name_to_rope var.name in
+        [%rope "%{tab}assign %{var_name} = %{write_name};\n"])
       else Rope.empty)
   (* We dont allow naming in the following cases, so no aliases *)
   | Multiport_memory _ -> Rope.empty

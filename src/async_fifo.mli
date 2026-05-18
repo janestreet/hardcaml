@@ -39,9 +39,18 @@ module Make (M : S) : sig
   module O : sig
     type 'a t =
       { full : 'a
+      (** Note: the hardcaml async fifo can hold [2^log2_depth - 1] elements, one fewer
+          than you might expect. *)
+      ; almost_full : 'a
+      (** [almost_full] is high if the fifo contains >= [capacity-2] elements. (i.e. 2
+          writes away from being full). *)
+      ; prog_full : 'a
+      (** [prog_full] is high if the fifo contains >= [prog_full_thresh] elements. *)
       ; data_out : 'a
       ; valid : 'a
-      ; almost_empty : 'a
+      ; almost_empty : 'a (** [almost_empty] is high if the fifo contains <= 2 elements *)
+      ; prog_empty : 'a
+      (** [prog_empty] is high if the fifo contains <= [prog_empty_thresh] elements *)
       }
     [@@deriving hardcaml]
   end
@@ -51,6 +60,12 @@ module Make (M : S) : sig
     -> ?use_negedge_sync_chain:bool
     -> ?sync_stages:int
     -> ?memory_type:Fifo_memory_type.t
+    -> ?prog_full_thresh:int
+         (** [prog_full] is high if the fifo contains >= [prog_full_thresh] elements. When
+             [None], [prog_full] is tied to [gnd]. *)
+    -> ?prog_empty_thresh:int
+         (** [prog_empty] is high if the fifo contains <= [prog_empty_thresh] elements.
+             When [None], [prog_empty] is tied to [gnd]. *)
     -> Scope.t
     -> Signal.t I.t
     -> Signal.t O.t
@@ -63,6 +78,8 @@ module Make (M : S) : sig
          (** The number of synchronization stages to use for the gray coded registers
              (default is 2). *)
     -> ?memory_type:Fifo_memory_type.t (** Which style of ram to implement. *)
+    -> ?prog_full_thresh:int
+    -> ?prog_empty_thresh:int
     -> ?scope:Scope.t
     -> Signal.t I.t
     -> Signal.t O.t
@@ -75,6 +92,8 @@ module Make (M : S) : sig
          (** The number of synchronization stages to use for the gray coded registers
              (default is 2). *)
     -> ?memory_type:Fifo_memory_type.t (** Which style of ram to implement. *)
+    -> ?prog_full_thresh:int
+    -> ?prog_empty_thresh:int
     -> ?scope:Scope.t
     -> Clocked_signal.t I.t
     -> Clocked_signal.t O.t
@@ -82,16 +101,26 @@ module Make (M : S) : sig
   (** Create an async FIFO that [O.valid] goes high after [delay] clocks of a [o.valid]
       low start. This is useful for packet buffering across clock domains where you don't
       want the output [valid] to de-assert. *)
-  val create_with_delay : ?delay:Int.t -> Scope.t -> Signal.t I.t -> Signal.t O.t
+  val create_with_delay
+    :  ?prog_full_thresh:int
+    -> ?prog_empty_thresh:int
+    -> ?delay:Int.t
+    -> Scope.t
+    -> Signal.t I.t
+    -> Signal.t O.t
 
   val create_with_delay_clocked
-    :  ?delay:Int.t
+    :  ?prog_full_thresh:int
+    -> ?prog_empty_thresh:int
+    -> ?delay:Int.t
     -> Scope.t
     -> Clocked_signal.t I.t
     -> Clocked_signal.t O.t
 
   val hierarchical_with_delay
     :  ?name:string
+    -> ?prog_full_thresh:int
+    -> ?prog_empty_thresh:int
     -> ?delay:int
     -> Scope.t
     -> Signal.t I.t
@@ -108,6 +137,8 @@ module Make (M : S) : sig
       -> ?sync_stages:int
            (** The number of synchronization stages to use for the gray coded registers
                (default is 2). *)
+      -> ?prog_full_thresh:int
+      -> ?prog_empty_thresh:int
       -> ?scope:Scope.t
       -> Signal.t I.t
       -> Signal.t O.t

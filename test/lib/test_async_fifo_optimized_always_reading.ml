@@ -1,7 +1,6 @@
 open Core
 open Hardcaml
 open Hardcaml_waveterm_kernel
-open Hardcaml_waveterm_cyclesim
 
 module Async_fifo = Async_fifo.Make (struct
     let width = 16
@@ -17,7 +16,7 @@ let create_sim () =
 ;;
 
 let test ~probability_write_enable () =
-  let waves, sim = Waveform.create (create_sim ()) in
+  let waves, sim = Cyclesim.Waveform.create (create_sim ()) in
   let inputs = Cyclesim.inputs sim in
   let outputs = Cyclesim.outputs sim in
   inputs.read_enable := Bits.gnd;

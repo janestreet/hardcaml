@@ -28,6 +28,7 @@ design, a vendor macro or even another Hardcaml circuit.
     ?instance:string ->
     ?parameters:Hardcaml.Parameter.t list ->
     ?attributes:Hardcaml.Rtl_attribute.t list ->
+    ?user_metadata:(string, Sexp.t) Base.Hashtbl.t ->
     unit ->
     name:string ->
     inputs:(string * Signal.t) list ->

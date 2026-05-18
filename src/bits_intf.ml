@@ -99,6 +99,10 @@ module type Bits = sig
   (** Pretty printer. *)
   val pp : Formatter.t -> t -> unit
 
+  (** [generate width] is a quickcheck generator that uniformly samples a [t] of the given
+      [width] over all [2 ** width] possible values. *)
+  val generate : int -> t Quickcheck.Generator.t
+
   module type To_sexp_and_string := sig
     type nonrec t = t [@@deriving compare ~localize, sexp_of, to_string]
   end

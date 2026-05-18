@@ -39,7 +39,7 @@ module T = struct
     -> ?overflow_check:bool (** default is [true] *)
     -> ?underflow_check:bool (** default is [true] *)
     -> ?ram_attributes:Rtl_attribute.t list (** default is blockram *)
-    -> ?scope:Scope.t (** to override naming prefix *)
+    -> scope:Scope.t (** used to establish the naming prefix *)
     -> ?ram_primitive:create_ram_primitive
          (** default is the Hardcaml ram_wbr primitive.
 
@@ -162,7 +162,7 @@ module type Fifo = sig
   val create_showahead_with_extra_reg_wrapper
     :  ?nearly_empty:int
     -> ?nearly_full:int
-    -> ?scope:Scope.t
+    -> scope:Scope.t
     -> Signal.t t
     -> overflow_check:bool
     -> underflow_check:bool
@@ -199,7 +199,7 @@ module type Fifo = sig
     val create_showahead_with_extra_reg_wrapper
       :  ?nearly_empty:int
       -> ?nearly_full:int
-      -> ?scope:Scope.t
+      -> scope:Scope.t
       -> Clocked_signal.t t
       -> overflow_check:bool
       -> underflow_check:bool

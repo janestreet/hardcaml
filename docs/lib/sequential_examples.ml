@@ -41,7 +41,7 @@ module Jk_flip_flop = struct
            ~name:"jk_flip_flop"
            [ output "q" (f ~clock:(input "clock" 1) ~j:(input "j" 1) ~k:(input "k" 1)) ])
     in
-    let waves, sim = Waveform.create sim in
+    let waves, sim = Cyclesim.Waveform.create sim in
     let j = Cyclesim.in_port sim "j" in
     let k = Cyclesim.in_port sim "k" in
     List.iter Bool.all ~f:(fun k' ->
@@ -124,7 +124,7 @@ module T_flip_flop = struct
                (f ~clock:(input "clock" 1) ~reset_n:(input "reset_n" 1) ~t:(input "t" 1))
            ])
     in
-    let waves, sim = Waveform.create sim in
+    let waves, sim = Cyclesim.Waveform.create sim in
     let rstn = Cyclesim.in_port sim "reset_n" in
     let t = Cyclesim.in_port sim "t" in
     rstn := Bits.gnd;
@@ -212,7 +212,7 @@ module Ring_counter = struct
                (ring_counter ~n:4 ~clock:(input "clock" 1) ~clear:(input "clear" 1))
            ])
     in
-    let waves, sim = Waveform.create sim in
+    let waves, sim = Cyclesim.Waveform.create sim in
     let clear = Cyclesim.in_port sim "clear" in
     clear := Bits.vdd;
     Cyclesim.cycle sim;
@@ -259,7 +259,7 @@ module Mobius_counter = struct
                (mobius_counter ~n:4 ~clock:(input "clk" 1) ~clear:(input "clear" 1))
            ])
     in
-    let waves, sim = Waveform.create sim in
+    let waves, sim = Cyclesim.Waveform.create sim in
     let clear = Cyclesim.in_port sim "clear" in
     clear := Bits.vdd;
     Cyclesim.cycle sim;
@@ -335,7 +335,7 @@ module Modulo_n_counter = struct
                   ~increment:(input "increment" 1))
            ])
     in
-    let waves, sim = Waveform.create sim in
+    let waves, sim = Cyclesim.Waveform.create sim in
     let clear = Cyclesim.in_port sim "clear" in
     let increment = Cyclesim.in_port sim "increment" in
     clear := Bits.vdd;
@@ -418,7 +418,7 @@ module Gray_counter = struct
            ~name:"gray_counter"
            [ output "out" (f ~n:4 ~clock:(input "clock" 1) ~clear:(input "clear" 1)) ])
     in
-    let waves, sim = Waveform.create sim in
+    let waves, sim = Cyclesim.Waveform.create sim in
     let clear = Cyclesim.in_port sim "clear" in
     clear := Bits.vdd;
     Cyclesim.cycle sim;
@@ -511,7 +511,7 @@ module Bidirectional_shift_reg = struct
                   ~d:(input "d" 1))
            ])
     in
-    let waves, sim = Waveform.create sim in
+    let waves, sim = Cyclesim.Waveform.create sim in
     let d = Cyclesim.in_port sim "d" in
     let en = Cyclesim.in_port sim "enable" in
     let dir = Cyclesim.in_port sim "dir" in

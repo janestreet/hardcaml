@@ -36,7 +36,7 @@ let%expect_test "{to,of}_z resepects sign" =
     let bits = Bits.random ~width in
     let is_signed = Bits.msb bits |> Bits.to_bool in
     let z = Bits.to_bigint ~signedness:Signed bits in
-    let bits' = Bits.of_bigint ~width z in
+    let bits' = Bits.of_bigint_trunc ~width z in
     let failed msg =
       let sexp_of_z z = Bigint.to_string z |> [%sexp_of: string] in
       raise_s [%message msg (bits : Bits.t) (bits' : Bits.t) (z : z)]
@@ -104,12 +104,12 @@ let%expect_test "roundtrips" =
   let z =
     ( max_bit_width
     , fun width x ->
-        x |> Constant.to_bigint ~signedness:Unsigned |> Constant.of_bigint ~width )
+        x |> Constant.to_bigint ~signedness:Unsigned |> Constant.of_bigint_trunc ~width )
   in
   let z_signed =
     ( max_bit_width
     , fun width x ->
-        x |> Constant.to_bigint ~signedness:Signed |> Constant.of_bigint ~width )
+        x |> Constant.to_bigint ~signedness:Signed |> Constant.of_bigint_trunc ~width )
   in
   let int64_array =
     ( max_bit_width

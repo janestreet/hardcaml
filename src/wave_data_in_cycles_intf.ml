@@ -1,0 +1,18 @@
+(** A dynamically-sized array, similar to std::vector in C++. *)
+
+open! Core0
+
+module type Wave_data_in_cycles = sig
+  type t [@@deriving sexp_of, compare ~localize, equal ~localize]
+
+  val width : t -> int
+  val length : t -> int
+  val get : t -> int -> Bits.t
+  val create : int -> t
+  val init : int -> width:int -> f:(int -> Bits.t) -> t
+  val set : t -> int -> Bits.t -> unit
+  val set_mutable_unsafe : t -> int -> Bits.Mutable.t -> unit
+  val set_from_bytes : int -> t -> int -> Bytes.t -> int -> unit
+  val non_cache_hits : t -> int
+  val get_digestible_string : t -> Bytes.t * int
+end

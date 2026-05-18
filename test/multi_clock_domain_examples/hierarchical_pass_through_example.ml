@@ -75,7 +75,7 @@ let test ?(wave_width = 0) ~fast_period () =
   Harness.run_advanced
     ~trace:`All_named
     ~print_waves_after_test:
-      (Hardcaml_waveterm.For_cyclesim.Waveform.print
+      (Hardcaml_waveterm.Waveform.print
          ~display_width:100
          ~wave_width
          ~display_rules:

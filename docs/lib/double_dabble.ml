@@ -165,7 +165,7 @@ let%expect_test "Debug waveform" =
   in
   let open Bits in
   let sim, ports = Bcd.sim () in
-  let waves, sim = Waveform.create sim in
+  let waves, sim = Cyclesim.Waveform.create sim in
   ports.start := Bits.vdd;
   ports.binary_in <--. 99;
   Cyclesim.cycle sim;

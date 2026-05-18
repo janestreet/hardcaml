@@ -48,6 +48,8 @@ module Table : sig
   val fold_map : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc * 'b) -> 'acc * 'b t
   val fold : 'a t -> init:'acc -> f:('acc -> 'a -> 'acc) -> 'acc
   val map_inplace : 'a t -> f:('a -> 'a) -> unit
+  val iter : 'a t -> f:('a -> unit) -> unit
+  val concat : 'a array t -> 'a array
 end
 
 module Set : sig

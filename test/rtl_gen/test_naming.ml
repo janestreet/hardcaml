@@ -66,9 +66,9 @@ let%expect_test "verilog" =
         input i_simple;
         output o_simple;
 
-        wire _2;
-        assign _2 = i_simple;
-        assign o_simple = _2;
+        wire signal_wire;
+        assign signal_wire = i_simple;
+        assign o_simple = signal_wire;
 
     endmodule
     module test_naming (
@@ -79,16 +79,16 @@ let%expect_test "verilog" =
         input i_simple;
         output o_simple;
 
-        wire _2;
-        wire _5;
-        wire _3;
-        assign _2 = i_simple;
+        wire signal_wire;
+        wire signal_inst;
+        wire signal_wire_1;
+        assign signal_wire = i_simple;
         inner
             inner
-            ( .i_simple(_2),
-              .o_simple(_5) );
-        assign _3 = _5;
-        assign o_simple = _3;
+            ( .i_simple(signal_wire),
+              .o_simple(signal_inst) );
+        assign signal_wire_1 = signal_inst;
+        assign o_simple = signal_wire_1;
 
     endmodule
     module naming (
@@ -99,16 +99,16 @@ let%expect_test "verilog" =
         input i_simple;
         output o_simple;
 
-        wire _2;
-        wire _5;
-        wire _3;
-        assign _2 = i_simple;
+        wire signal_wire;
+        wire signal_inst;
+        wire signal_wire_1;
+        assign signal_wire = i_simple;
         test_naming
             test_naming
-            ( .i_simple(_2),
-              .o_simple(_5) );
-        assign _3 = _5;
-        assign o_simple = _3;
+            ( .i_simple(signal_wire),
+              .o_simple(signal_inst) );
+        assign signal_wire_1 = signal_inst;
+        assign o_simple = signal_wire_1;
 
     endmodule
     |}];
@@ -131,15 +131,15 @@ let%expect_test "verilog" =
         output \o_extended_in_?both ;
         output o_extended_in_$vhdl_only;
 
-        wire _2;
-        wire _5;
-        wire _8;
-        assign _2 = i_extended_in_$vhdl_only;
-        assign _5 = \i_extended_in_?both ;
-        assign _8 = i_simple;
-        assign o_simple = _8;
-        assign \o_extended_in_?both  = _5;
-        assign o_extended_in_$vhdl_only = _2;
+        wire signal_wire;
+        wire signal_wire_1;
+        wire signal_wire_2;
+        assign signal_wire = i_extended_in_$vhdl_only;
+        assign signal_wire_1 = \i_extended_in_?both ;
+        assign signal_wire_2 = i_simple;
+        assign o_simple = signal_wire_2;
+        assign \o_extended_in_?both  = signal_wire_1;
+        assign o_extended_in_$vhdl_only = signal_wire;
 
     endmodule
     module test_naming (
@@ -158,30 +158,30 @@ let%expect_test "verilog" =
         output \o_extended_in_?both ;
         output o_extended_in_$vhdl_only;
 
-        wire _11;
-        wire _12;
-        wire _4;
-        wire _6;
-        wire _8;
-        wire [2:0] _10;
-        wire _13;
-        assign _11 = _10[2:2];
-        assign _12 = _10[1:1];
-        assign _4 = i_extended_in_$vhdl_only;
-        assign _6 = \i_extended_in_?both ;
-        assign _8 = i_simple;
+        wire signal_select;
+        wire signal_select_1;
+        wire signal_wire;
+        wire signal_wire_1;
+        wire signal_wire_2;
+        wire [2:0] signal_inst;
+        wire signal_select_2;
+        assign signal_select = signal_inst[2:2];
+        assign signal_select_1 = signal_inst[1:1];
+        assign signal_wire = i_extended_in_$vhdl_only;
+        assign signal_wire_1 = \i_extended_in_?both ;
+        assign signal_wire_2 = i_simple;
         inner
             inner
-            ( .i_simple(_8),
-              .\i_extended_in_?both (_6),
-              .i_extended_in_$vhdl_only(_4),
-              .o_simple(_10[0:0]),
-              .\o_extended_in_?both (_10[1:1]),
-              .o_extended_in_$vhdl_only(_10[2:2]) );
-        assign _13 = _10[0:0];
-        assign o_simple = _13;
-        assign \o_extended_in_?both  = _12;
-        assign o_extended_in_$vhdl_only = _11;
+            ( .i_simple(signal_wire_2),
+              .\i_extended_in_?both (signal_wire_1),
+              .i_extended_in_$vhdl_only(signal_wire),
+              .o_simple(signal_inst[0:0]),
+              .\o_extended_in_?both (signal_inst[1:1]),
+              .o_extended_in_$vhdl_only(signal_inst[2:2]) );
+        assign signal_select_2 = signal_inst[0:0];
+        assign o_simple = signal_select_2;
+        assign \o_extended_in_?both  = signal_select_1;
+        assign o_extended_in_$vhdl_only = signal_select;
 
     endmodule
     module naming (
@@ -200,30 +200,30 @@ let%expect_test "verilog" =
         output \o_extended_in_?both ;
         output o_extended_in_$vhdl_only;
 
-        wire _11;
-        wire _12;
-        wire _4;
-        wire _6;
-        wire _8;
-        wire [2:0] _10;
-        wire _13;
-        assign _11 = _10[2:2];
-        assign _12 = _10[1:1];
-        assign _4 = i_extended_in_$vhdl_only;
-        assign _6 = \i_extended_in_?both ;
-        assign _8 = i_simple;
+        wire signal_select;
+        wire signal_select_1;
+        wire signal_wire;
+        wire signal_wire_1;
+        wire signal_wire_2;
+        wire [2:0] signal_inst;
+        wire signal_select_2;
+        assign signal_select = signal_inst[2:2];
+        assign signal_select_1 = signal_inst[1:1];
+        assign signal_wire = i_extended_in_$vhdl_only;
+        assign signal_wire_1 = \i_extended_in_?both ;
+        assign signal_wire_2 = i_simple;
         test_naming
             test_naming
-            ( .i_simple(_8),
-              .\i_extended_in_?both (_6),
-              .i_extended_in_$vhdl_only(_4),
-              .o_simple(_10[0:0]),
-              .\o_extended_in_?both (_10[1:1]),
-              .o_extended_in_$vhdl_only(_10[2:2]) );
-        assign _13 = _10[0:0];
-        assign o_simple = _13;
-        assign \o_extended_in_?both  = _12;
-        assign o_extended_in_$vhdl_only = _11;
+            ( .i_simple(signal_wire_2),
+              .\i_extended_in_?both (signal_wire_1),
+              .i_extended_in_$vhdl_only(signal_wire),
+              .o_simple(signal_inst[0:0]),
+              .\o_extended_in_?both (signal_inst[1:1]),
+              .o_extended_in_$vhdl_only(signal_inst[2:2]) );
+        assign signal_select_2 = signal_inst[0:0];
+        assign o_simple = signal_select_2;
+        assign \o_extended_in_?both  = signal_select_1;
+        assign o_extended_in_$vhdl_only = signal_select;
 
     endmodule
     |}]
@@ -246,12 +246,12 @@ let%expect_test "vhdl" =
 
     architecture rtl of inner is
 
-        signal \_2\ : std_logic;
+        signal signal_wire : std_logic;
 
     begin
 
-        \_2\ <= i_simple;
-        o_simple <= \_2\;
+        signal_wire <= i_simple;
+        o_simple <= signal_wire;
 
     end architecture;
     library ieee;
@@ -267,18 +267,18 @@ let%expect_test "vhdl" =
 
     architecture rtl of test_naming is
 
-        signal \_2\ : std_logic;
-        signal \_5\ : std_logic;
-        signal \_3\ : std_logic;
+        signal signal_wire : std_logic;
+        signal signal_inst : std_logic;
+        signal signal_wire_1 : std_logic;
 
     begin
 
-        \_2\ <= i_simple;
+        signal_wire <= i_simple;
         inner: entity work.inner (rtl)
-            port map ( i_simple => \_2\,
-                       o_simple => \_5\ );
-        \_3\ <= \_5\;
-        o_simple <= \_3\;
+            port map ( i_simple => signal_wire,
+                       o_simple => signal_inst );
+        signal_wire_1 <= signal_inst;
+        o_simple <= signal_wire_1;
 
     end architecture;
     library ieee;
@@ -294,18 +294,18 @@ let%expect_test "vhdl" =
 
     architecture rtl of naming is
 
-        signal \_2\ : std_logic;
-        signal \_5\ : std_logic;
-        signal \_3\ : std_logic;
+        signal signal_wire : std_logic;
+        signal signal_inst : std_logic;
+        signal signal_wire_1 : std_logic;
 
     begin
 
-        \_2\ <= i_simple;
+        signal_wire <= i_simple;
         test_naming: entity work.test_naming (rtl)
-            port map ( i_simple => \_2\,
-                       o_simple => \_5\ );
-        \_3\ <= \_5\;
-        o_simple <= \_3\;
+            port map ( i_simple => signal_wire,
+                       o_simple => signal_inst );
+        signal_wire_1 <= signal_inst;
+        o_simple <= signal_wire_1;
 
     end architecture;
     |}];
@@ -329,18 +329,18 @@ let%expect_test "vhdl" =
 
     architecture rtl of inner is
 
-        signal \_2\ : std_logic;
-        signal \_5\ : std_logic;
-        signal \_8\ : std_logic;
+        signal signal_wire : std_logic;
+        signal signal_wire_1 : std_logic;
+        signal signal_wire_2 : std_logic;
 
     begin
 
-        \_2\ <= \i_extended_in_$vhdl_only\;
-        \_5\ <= \i_extended_in_?both\;
-        \_8\ <= i_simple;
-        o_simple <= \_8\;
-        \o_extended_in_?both\ <= \_5\;
-        \o_extended_in_$vhdl_only\ <= \_2\;
+        signal_wire <= \i_extended_in_$vhdl_only\;
+        signal_wire_1 <= \i_extended_in_?both\;
+        signal_wire_2 <= i_simple;
+        o_simple <= signal_wire_2;
+        \o_extended_in_?both\ <= signal_wire_1;
+        \o_extended_in_$vhdl_only\ <= signal_wire;
 
     end architecture;
     library ieee;
@@ -360,32 +360,32 @@ let%expect_test "vhdl" =
 
     architecture rtl of test_naming is
 
-        signal \_11\ : std_logic;
-        signal \_12\ : std_logic;
-        signal \_4\ : std_logic;
-        signal \_6\ : std_logic;
-        signal \_8\ : std_logic;
-        signal \_10\ : std_logic_vector(2 downto 0);
-        signal \_13\ : std_logic;
+        signal signal_select : std_logic;
+        signal signal_select_1 : std_logic;
+        signal signal_wire : std_logic;
+        signal signal_wire_1 : std_logic;
+        signal signal_wire_2 : std_logic;
+        signal signal_inst : std_logic_vector(2 downto 0);
+        signal signal_select_2 : std_logic;
 
     begin
 
-        \_11\ <= \_10\(2);
-        \_12\ <= \_10\(1);
-        \_4\ <= \i_extended_in_$vhdl_only\;
-        \_6\ <= \i_extended_in_?both\;
-        \_8\ <= i_simple;
+        signal_select <= signal_inst(2);
+        signal_select_1 <= signal_inst(1);
+        signal_wire <= \i_extended_in_$vhdl_only\;
+        signal_wire_1 <= \i_extended_in_?both\;
+        signal_wire_2 <= i_simple;
         inner: entity work.inner (rtl)
-            port map ( i_simple => \_8\,
-                       \i_extended_in_?both\ => \_6\,
-                       \i_extended_in_$vhdl_only\ => \_4\,
-                       o_simple => \_10\(0),
-                       \o_extended_in_?both\ => \_10\(1),
-                       \o_extended_in_$vhdl_only\ => \_10\(2) );
-        \_13\ <= \_10\(0);
-        o_simple <= \_13\;
-        \o_extended_in_?both\ <= \_12\;
-        \o_extended_in_$vhdl_only\ <= \_11\;
+            port map ( i_simple => signal_wire_2,
+                       \i_extended_in_?both\ => signal_wire_1,
+                       \i_extended_in_$vhdl_only\ => signal_wire,
+                       o_simple => signal_inst(0),
+                       \o_extended_in_?both\ => signal_inst(1),
+                       \o_extended_in_$vhdl_only\ => signal_inst(2) );
+        signal_select_2 <= signal_inst(0);
+        o_simple <= signal_select_2;
+        \o_extended_in_?both\ <= signal_select_1;
+        \o_extended_in_$vhdl_only\ <= signal_select;
 
     end architecture;
     library ieee;
@@ -405,32 +405,32 @@ let%expect_test "vhdl" =
 
     architecture rtl of naming is
 
-        signal \_11\ : std_logic;
-        signal \_12\ : std_logic;
-        signal \_4\ : std_logic;
-        signal \_6\ : std_logic;
-        signal \_8\ : std_logic;
-        signal \_10\ : std_logic_vector(2 downto 0);
-        signal \_13\ : std_logic;
+        signal signal_select : std_logic;
+        signal signal_select_1 : std_logic;
+        signal signal_wire : std_logic;
+        signal signal_wire_1 : std_logic;
+        signal signal_wire_2 : std_logic;
+        signal signal_inst : std_logic_vector(2 downto 0);
+        signal signal_select_2 : std_logic;
 
     begin
 
-        \_11\ <= \_10\(2);
-        \_12\ <= \_10\(1);
-        \_4\ <= \i_extended_in_$vhdl_only\;
-        \_6\ <= \i_extended_in_?both\;
-        \_8\ <= i_simple;
+        signal_select <= signal_inst(2);
+        signal_select_1 <= signal_inst(1);
+        signal_wire <= \i_extended_in_$vhdl_only\;
+        signal_wire_1 <= \i_extended_in_?both\;
+        signal_wire_2 <= i_simple;
         test_naming: entity work.test_naming (rtl)
-            port map ( i_simple => \_8\,
-                       \i_extended_in_?both\ => \_6\,
-                       \i_extended_in_$vhdl_only\ => \_4\,
-                       o_simple => \_10\(0),
-                       \o_extended_in_?both\ => \_10\(1),
-                       \o_extended_in_$vhdl_only\ => \_10\(2) );
-        \_13\ <= \_10\(0);
-        o_simple <= \_13\;
-        \o_extended_in_?both\ <= \_12\;
-        \o_extended_in_$vhdl_only\ <= \_11\;
+            port map ( i_simple => signal_wire_2,
+                       \i_extended_in_?both\ => signal_wire_1,
+                       \i_extended_in_$vhdl_only\ => signal_wire,
+                       o_simple => signal_inst(0),
+                       \o_extended_in_?both\ => signal_inst(1),
+                       \o_extended_in_$vhdl_only\ => signal_inst(2) );
+        signal_select_2 <= signal_inst(0);
+        o_simple <= signal_select_2;
+        \o_extended_in_?both\ <= signal_select_1;
+        \o_extended_in_$vhdl_only\ <= signal_select;
 
     end architecture;
     |}]

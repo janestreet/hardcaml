@@ -1,13 +1,15 @@
 open! Core0
 
+module type S = Read_port_intf.S
+
 type 'a t =
   { read_clock : 'a
   ; read_address : 'a
   ; read_enable : 'a
   }
-[@@deriving bin_io, sexp_of]
+[@@deriving bin_io, sexp_of, equal ~localize, compare ~localize]
 
-let iter t ~f =
+let iter t ~(f @ local) =
   f t.read_clock;
   f t.read_address;
   f t.read_enable
@@ -27,8 +29,8 @@ let zip s t =
   }
 ;;
 
-let iter2 s t ~f = iter (zip s t) ~f:(fun (s, t) -> f s t)
-let map2 s t ~f = map (zip s t) ~f:(fun (s, t) -> f s t)
+let iter2 s t ~(f @ local) = iter (zip s t) ~f:(fun (s, t) -> f s t) [@nontail]
+let map2 s t ~f = map (zip s t) ~f:(fun (s, t) -> f s t) [@nontail]
 let to_list t = [ t.read_clock; t.read_address; t.read_enable ]
 
 let port_names =

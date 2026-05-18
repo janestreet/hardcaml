@@ -22,12 +22,12 @@ let%expect_test "reg, clock + enable" =
         input [7:0] d;
         output [7:0] q;
 
-        reg [7:0] _5;
+        reg [7:0] signal_reg;
         always @(posedge clock) begin
             if (enable)
-                _5 <= d;
+                signal_reg <= d;
         end
-        assign q = _5;
+        assign q = signal_reg;
 
     endmodule
     |}];
@@ -49,18 +49,18 @@ let%expect_test "reg, clock + enable" =
 
     architecture rtl of reg is
 
-        signal \_5\ : std_logic_vector(7 downto 0);
+        signal signal_reg : std_logic_vector(7 downto 0);
 
     begin
 
         process (clock) begin
             if rising_edge(clock) then
                 if enable = '1' then
-                    \_5\ <= d;
+                    signal_reg <= d;
                 end if;
             end if;
         end process;
-        q <= \_5\;
+        q <= signal_reg;
 
     end architecture;
     |}]
@@ -89,20 +89,20 @@ let%expect_test "reg, clock, reset, clear + enable" =
         input [7:0] d;
         output [7:0] q;
 
-        wire [7:0] _8;
-        reg [7:0] _9;
-        assign _8 = 8'b00000000;
+        wire [7:0] signal_const;
+        reg [7:0] signal_reg;
+        assign signal_const = 8'b00000000;
         always @(posedge clock or posedge reset) begin
             if (reset)
-                _9 <= _8;
+                signal_reg <= signal_const;
             else
                 if (clear)
-                    _9 <= _8;
+                    signal_reg <= signal_const;
                 else
                     if (enable)
-                        _9 <= d;
+                        signal_reg <= d;
         end
-        assign q = _9;
+        assign q = signal_reg;
 
     endmodule
     |}];
@@ -126,28 +126,28 @@ let%expect_test "reg, clock, reset, clear + enable" =
 
     architecture rtl of reg is
 
-        signal \_8\ : std_logic_vector(7 downto 0);
-        signal \_9\ : std_logic_vector(7 downto 0);
+        signal signal_const : std_logic_vector(7 downto 0);
+        signal signal_reg : std_logic_vector(7 downto 0);
 
     begin
 
-        \_8\ <= "00000000";
+        signal_const <= "00000000";
         process (clock, reset) begin
             if reset = '1' then
-                \_9\ <= \_8\;
+                signal_reg <= signal_const;
             else
                 if rising_edge(clock) then
                     if clear = '1' then
-                        \_9\ <= \_8\;
+                        signal_reg <= signal_const;
                     else
                         if enable = '1' then
-                            \_9\ <= d;
+                            signal_reg <= d;
                         end if;
                     end if;
                 end if;
             end if;
         end process;
-        q <= \_9\;
+        q <= signal_reg;
 
     end architecture;
     |}]
@@ -186,14 +186,14 @@ let%expect_test "mem" =
         input [1:0] read_address;
         output [7:0] q;
 
-        reg [7:0] _7[0:3];
-        wire [7:0] _8;
+        reg [7:0] signal_multiport_mem[0:3];
+        wire [7:0] signal_mem_read_port;
         always @(posedge clock) begin
             if (write_enable)
-                _7[write_address] <= write_data;
+                signal_multiport_mem[write_address] <= write_data;
         end
-        assign _8 = _7[read_address];
-        assign q = _8;
+        assign signal_mem_read_port = signal_multiport_mem[read_address];
+        assign q = signal_mem_read_port;
 
     endmodule
     |}];
@@ -217,21 +217,21 @@ let%expect_test "mem" =
 
     architecture rtl of reg is
 
-        type \_7_type\ is array (0 to 3) of std_logic_vector(7 downto 0);
-        signal \_7\ : \_7_type\;
-        signal \_8\ : std_logic_vector(7 downto 0);
+        type signal_multiport_mem_type is array (0 to 3) of std_logic_vector(7 downto 0);
+        signal signal_multiport_mem : signal_multiport_mem_type;
+        signal signal_mem_read_port : std_logic_vector(7 downto 0);
 
     begin
 
         process (clock) begin
             if rising_edge(clock) then
                 if write_enable = '1' then
-                    \_7\(to_integer(unsigned(write_address))) <= write_data;
+                    signal_multiport_mem(to_integer(unsigned(write_address))) <= write_data;
                 end if;
             end if;
         end process;
-        \_8\ <= \_7\(to_integer(unsigned(read_address)));
-        q <= \_8\;
+        signal_mem_read_port <= signal_multiport_mem(to_integer(unsigned(read_address)));
+        q <= signal_mem_read_port;
 
     end architecture;
     |}]
@@ -269,19 +269,19 @@ let%expect_test "multiport mem" =
         input [1:0] read_address;
         output [7:0] q0;
 
-        reg [7:0] _8[0:3];
-        wire [7:0] _9;
-        reg [7:0] _10;
+        reg [7:0] signal_multiport_mem[0:3];
+        wire [7:0] signal_mem_read_port;
+        reg [7:0] signal_reg;
         always @(posedge clock) begin
             if (write_enable)
-                _8[write_address] <= write_data;
+                signal_multiport_mem[write_address] <= write_data;
         end
-        assign _9 = _8[read_address];
+        assign signal_mem_read_port = signal_multiport_mem[read_address];
         always @(posedge clock) begin
             if (read_enable)
-                _10 <= _9;
+                signal_reg <= signal_mem_read_port;
         end
-        assign q0 = _10;
+        assign q0 = signal_reg;
 
     endmodule
     |}];
@@ -306,29 +306,29 @@ let%expect_test "multiport mem" =
 
     architecture rtl of reg is
 
-        type \_8_type\ is array (0 to 3) of std_logic_vector(7 downto 0);
-        signal \_8\ : \_8_type\;
-        signal \_9\ : std_logic_vector(7 downto 0);
-        signal \_10\ : std_logic_vector(7 downto 0);
+        type signal_multiport_mem_type is array (0 to 3) of std_logic_vector(7 downto 0);
+        signal signal_multiport_mem : signal_multiport_mem_type;
+        signal signal_mem_read_port : std_logic_vector(7 downto 0);
+        signal signal_reg : std_logic_vector(7 downto 0);
 
     begin
 
         process (clock) begin
             if rising_edge(clock) then
                 if write_enable = '1' then
-                    \_8\(to_integer(unsigned(write_address))) <= write_data;
+                    signal_multiport_mem(to_integer(unsigned(write_address))) <= write_data;
                 end if;
             end if;
         end process;
-        \_9\ <= \_8\(to_integer(unsigned(read_address)));
+        signal_mem_read_port <= signal_multiport_mem(to_integer(unsigned(read_address)));
         process (clock) begin
             if rising_edge(clock) then
                 if read_enable = '1' then
-                    \_10\ <= \_9\;
+                    signal_reg <= signal_mem_read_port;
                 end if;
             end if;
         end process;
-        q0 <= \_10\;
+        q0 <= signal_reg;
 
     end architecture;
     |}]
@@ -481,12 +481,12 @@ let%expect_test "initial value of resisters" =
         input [7:0] d;
         output [7:0] q;
 
-        reg [7:0] _5 = 8'b00101011;
+        reg [7:0] signal_reg = 8'b00101011;
         always @(posedge clock) begin
             if (enable)
-                _5 <= d;
+                signal_reg <= d;
         end
-        assign q = _5;
+        assign q = signal_reg;
 
     endmodule
     |}];
@@ -508,18 +508,18 @@ let%expect_test "initial value of resisters" =
 
     architecture rtl of reg is
 
-        signal \_5\ : std_logic_vector(7 downto 0) := "00101011";
+        signal signal_reg : std_logic_vector(7 downto 0) := "00101011";
 
     begin
 
         process (clock) begin
             if rising_edge(clock) then
                 if enable = '1' then
-                    \_5\ <= d;
+                    signal_reg <= d;
                 end if;
             end if;
         end process;
-        q <= \_5\;
+        q <= signal_reg;
 
     end architecture;
     |}]
@@ -545,12 +545,12 @@ let%expect_test "initial value of resisters with comment (only in Verilog)" =
         input [7:0] d;
         output [7:0] q;
 
-        reg [7:0] _5/* some comment */ = 8'b00101011;
+        reg [7:0] signal_reg/* some comment */ = 8'b00101011;
         always @(posedge clock) begin
             if (enable)
-                _5 <= d;
+                signal_reg <= d;
         end
-        assign q = _5;
+        assign q = signal_reg;
 
     endmodule
     |}]

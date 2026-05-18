@@ -14,20 +14,6 @@ open! Core0
 (** Uids unqiuely label every hardcaml node with an integer value. *)
 module type Uid = Uid_builder.S
 
-module type Uid_set = sig
-  module Uid : Uid
-
-  type t = Set.M(Uid).t [@@deriving sexp_of]
-
-  val empty : t
-end
-
-module type Uid_map = sig
-  module Uid : Uid
-
-  type 'v t = 'v Map.M(Uid).t
-end
-
 (** Information attached to the signals. *)
 module type With_info = sig
   type t
@@ -154,6 +140,7 @@ module type Type = sig
       ; caller_id : Caller_id.t option
       ; mutable wave_format : Wave_format.t
       ; mutable coverage : Coverage_metadata.t option
+      ; user_metadata : Sexp.t String.Table.t
       }
     [@@deriving bin_io, sexp_of]
   end
@@ -443,11 +430,17 @@ module type Signal__type = sig
 
   include Type
 
-  module type Uid_set = Uid_set
-  module type Uid_map = Uid_map
+  module Signal_compared_by_uid : sig
+    type nonrec t = t [@@deriving sexp_of]
 
-  module Uid_set : Uid_set with module Uid := Uid
-  module Uid_map : Uid_map with module Uid := Uid
+    include Comparator.S with type t := t
+  end
+
+  (** Set of [Signals] compared by their [Uid]s *)
+  module Set : Set.S_plain with type Elt.t = t
+
+  (** Map of [Signals] compared by their [Uid]s *)
+  module Map : Map.S_plain with type Key.t = t
 
   module type With_info = With_info
   module type Deps = Deps with type t := t
@@ -514,10 +507,10 @@ module type Signal__type = sig
   val structural_compare
     :  ?check_names:bool
     -> ?check_deps:bool
-    -> ?initial_deps:Uid_set.t
+    -> ?initial_deps:Uid.Set.t
     -> t
     -> t
-    -> Uid_set.t * bool
+    -> Uid.Set.t * bool
 
   (** Return true if [t] has at least one name set. *)
   val has_name : t -> bool
@@ -566,6 +559,15 @@ module type Signal__type = sig
     :  t
     -> f:(Coverage_metadata.t option -> Coverage_metadata.t)
     -> unit
+
+  (** Set a user-defined metadata entry on the signal, keyed by a string. *)
+  val set_user_metadata : t -> key:string -> data:Sexp.t -> unit
+
+  (** Find a user-defined metadata entry on the signal by key. *)
+  val find_user_metadata : t -> string -> Sexp.t option
+
+  (** Return all user-defined metadata on the signal. *)
+  val user_metadata : t -> Sexp.t String.Table.t
 
   (** This function creates a copy of the signal with [f] applied to the signal's info (if
       applicable). *)

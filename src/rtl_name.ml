@@ -69,6 +69,12 @@ module Vhdl = struct
   ;;
 end
 
+(* A validated identifier is one which can be expressed as an simple or extended
+   identifier in either VHDL or Verilog.
+
+   It should not be 'empty' nor contain a space (for Verilog compatibility) or backslash
+   (to avoid escaping issues).
+*)
 module Validated : sig
   type t [@@deriving to_string, sexp_of]
 
@@ -95,13 +101,15 @@ end = struct
 end
 
 module Mangled_and_validated : sig
-  type t [@@deriving to_string, sexp_of]
+  type t [@@deriving to_string, sexp_of, equal ~localize]
 
   val mangle : Mangler.t -> Validated.t -> t
   val add : Mangler.t -> Validated.t -> [ `Ok of t | `Duplicate ]
+  val from_raw_external_name : string -> t
 end = struct
-  type t = string [@@deriving to_string, sexp_of]
+  type t = string [@@deriving to_string, sexp_of, equal ~localize]
 
+  let from_raw_external_name name = name
   let mangle mangler validated = Mangler.mangle mangler (Validated.to_string validated)
 
   let add mangler validated =
@@ -112,21 +120,44 @@ end = struct
   ;;
 end
 
-type t = Mangled_and_validated.t [@@deriving sexp_of]
+module For_backend = struct
+  module T = struct
+    type name = Mangled_and_validated.t [@@deriving sexp_of, equal ~localize]
 
-let legalize_bare_name name ~(language : Rtl_language.t) =
-  match language with
-  | Verilog -> Verilog.legalize_and_keep_unique name
-  | Systemverilog -> Systemverilog.legalize_and_keep_unique name
-  | Vhdl -> Vhdl.legalize_and_keep_unique name
-;;
+    type t =
+      { for_backed : string
+      ; backend_agnostic : name
+      }
+    [@@deriving sexp_of, equal ~localize, fields ~getters]
 
-let legalize t ~(language : Rtl_language.t) =
-  legalize_bare_name (Mangled_and_validated.to_string t) ~language
-;;
+    let legalize backend_agnostic ~(language : Rtl_language.t) =
+      let name = Mangled_and_validated.to_string backend_agnostic in
+      let for_backed =
+        match language with
+        | Verilog -> Verilog.legalize_and_keep_unique name
+        | Systemverilog -> Systemverilog.legalize_and_keep_unique name
+        | Vhdl -> Vhdl.legalize_and_keep_unique name
+      in
+      { for_backed; backend_agnostic }
+    ;;
+
+    let backend_agnostic_string t = t.backend_agnostic |> Mangled_and_validated.to_string
+    let to_string t = t.for_backed
+    let compare a b = String.compare a.for_backed b.for_backed
+  end
+
+  include T
+  include Comparable.Make_plain (T)
+end
+
+type t = Mangled_and_validated.t [@@deriving sexp_of, equal ~localize]
+
+let from_raw_external_name name = Mangled_and_validated.from_raw_external_name name
+let backend_agnostic t = Mangled_and_validated.to_string t
+let legalize t ~language = For_backend.legalize t ~language
 
 module Scope = struct
-  type t = { mangler : Mangler.t } [@@deriving fields ~getters]
+  type t = { mangler : Mangler.t } [@@deriving fields ~getters, sexp_of]
 
   let create () = { mangler = Mangler.create ~case_sensitive:false }
   let validate _t name = Validated.validate name
@@ -147,7 +178,37 @@ module Scope = struct
 
   let add_port_name t port name = add_port_name' t name ~port
   let add_phantom_port_name t name = add_port_name' t name
-  let derived_name signal = "_" ^ Signal.Type.Uid.to_string (Signal.uid signal)
+
+  let derived_name signal =
+    let type_ =
+      match signal with
+      | Signal.Type.Empty -> "empty"
+      | Const _ -> "const"
+      | Op2 { op; _ } ->
+        (match op with
+         | Add -> "add"
+         | Sub -> "sub"
+         | Mulu -> "mulu"
+         | Muls -> "muls"
+         | And -> "and"
+         | Or -> "or"
+         | Xor -> "xor"
+         | Eq -> "eq"
+         | Lt -> "lt")
+      | Mux _ -> "mux"
+      | Cases _ -> "cases"
+      | Cat _ -> "cat"
+      | Not _ -> "not"
+      | Wire _ -> "wire"
+      | Select _ -> "select"
+      | Reg _ -> "reg"
+      | Multiport_mem _ -> "multiport_mem"
+      | Mem_read_port _ -> "mem_read_port"
+      | Inst _ -> "inst"
+    in
+    "signal_" ^ type_
+  ;;
+
   let mangle_name t name = validate t name |> mangle t
 
   let mangle_signal_names t signal =
@@ -178,4 +239,8 @@ module Scope = struct
       raise_s
         [%message "[Rtl_name.mangle_mem_name] requires a Mem signal" (signal : Signal.t)]
   ;;
+end
+
+module For_test = struct
+  let of_string name = Mangled_and_validated.from_raw_external_name name
 end

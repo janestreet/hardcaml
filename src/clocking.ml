@@ -22,6 +22,14 @@ struct
     Signal.reg_fb ?enable ?clear ?clear_to (to_spec t) ~width ~f
   ;;
 
+  let reg_fb_and_next ?enable ?clear ?clear_to t ~width ~f =
+    Signal.reg_fb_and_next ?enable ?clear ?clear_to (to_spec t) ~width ~f
+  ;;
+
+  let reg_fb_and_next_no_clear ?enable ?clear ?clear_to t ~width ~f =
+    Signal.reg_fb_and_next ?enable ?clear ?clear_to (to_spec_no_clear t) ~width ~f
+  ;;
+
   let reg_fb_no_clear ?enable ?clear ?clear_to t ~width ~f =
     Signal.reg_fb ?enable ?clear ?clear_to (to_spec_no_clear t) ~width ~f
   ;;

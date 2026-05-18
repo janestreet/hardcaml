@@ -40,9 +40,9 @@ let%expect_test "attributes on signals" =
         output o;
 
         (* boolattr=1,intattr=123 *)
-        wire _4;
-        assign _4 = i | j;
-        assign o = _4;
+        wire signal_or;
+        assign signal_or = i | j;
+        assign o = signal_or;
 
     endmodule
     library ieee;
@@ -65,14 +65,14 @@ let%expect_test "attributes on signals" =
 
     architecture rtl of attributes is
 
-        signal \_4\ : std_logic;
-        attribute boolattr of \_4\ : signal is true;
-        attribute intattr of \_4\ : signal is 123;
+        signal signal_or : std_logic;
+        attribute boolattr of signal_or : signal is true;
+        attribute intattr of signal_or : signal is 123;
 
     begin
 
-        \_4\ <= i or j;
-        o <= \_4\;
+        signal_or <= i or j;
+        o <= signal_or;
 
     end architecture;
     |}]
@@ -120,9 +120,9 @@ let%expect_test "attributes on instantiations" =
         input a;
         output b;
 
-        wire _2;
-        assign _2 = a;
-        assign b = _2;
+        wire signal_wire;
+        assign signal_wire = a;
+        assign b = signal_wire;
 
     endmodule
     module attributes (
@@ -134,15 +134,15 @@ let%expect_test "attributes on instantiations" =
         (* nameattr *)
         output o;
 
-        wire _4;
-        wire _2;
+        wire signal_inst;
+        wire signal_wire;
         (* stringattr="foo" *)
         inner
             inner
             ( .a(i),
-              .b(_4) );
-        assign _2 = _4;
-        assign o = _2;
+              .b(signal_inst) );
+        assign signal_wire = signal_inst;
+        assign o = signal_wire;
 
     endmodule
     library ieee;
@@ -158,12 +158,12 @@ let%expect_test "attributes on instantiations" =
 
     architecture rtl of inner is
 
-        signal \_2\ : std_logic;
+        signal signal_wire : std_logic;
 
     begin
 
-        \_2\ <= a;
-        b <= \_2\;
+        signal_wire <= a;
+        b <= signal_wire;
 
     end architecture;
     library ieee;
@@ -180,17 +180,17 @@ let%expect_test "attributes on instantiations" =
 
     architecture rtl of attributes is
 
-        signal \_4\ : std_logic;
+        signal signal_inst : std_logic;
         attribute stringattr of inner : label is "foo";
-        signal \_2\ : std_logic;
+        signal signal_wire : std_logic;
 
     begin
 
         inner: entity work.inner (rtl)
             port map ( a => i,
-                       b => \_4\ );
-        \_2\ <= \_4\;
-        o <= \_2\;
+                       b => signal_inst );
+        signal_wire <= signal_inst;
+        o <= signal_wire;
 
     end architecture;
     |}]
@@ -235,14 +235,14 @@ let%expect_test "attributes on memories" =
         output [7:0] q;
 
         (* on_mem=123 *)
-        reg [7:0] _7[0:3];
-        wire [7:0] _8;
+        reg [7:0] signal_multiport_mem[0:3];
+        wire [7:0] signal_mem_read_port;
         always @(posedge clk) begin
             if (write_enable)
-                _7[write_address] <= write_data;
+                signal_multiport_mem[write_address] <= write_data;
         end
-        assign _8 = _7[read_address];
-        assign q = _8;
+        assign signal_mem_read_port = signal_multiport_mem[read_address];
+        assign q = signal_mem_read_port;
 
     endmodule
     library ieee;
@@ -263,22 +263,22 @@ let%expect_test "attributes on memories" =
 
     architecture rtl of attributes is
 
-        type \_7_type\ is array (0 to 3) of std_logic_vector(7 downto 0);
-        signal \_7\ : \_7_type\;
-        attribute on_mem of \_7\ : signal is 123;
-        signal \_8\ : std_logic_vector(7 downto 0);
+        type signal_multiport_mem_type is array (0 to 3) of std_logic_vector(7 downto 0);
+        signal signal_multiport_mem : signal_multiport_mem_type;
+        attribute on_mem of signal_multiport_mem : signal is 123;
+        signal signal_mem_read_port : std_logic_vector(7 downto 0);
 
     begin
 
         process (clk) begin
             if rising_edge(clk) then
                 if write_enable = '1' then
-                    \_7\(to_integer(unsigned(write_address))) <= write_data;
+                    signal_multiport_mem(to_integer(unsigned(write_address))) <= write_data;
                 end if;
             end if;
         end process;
-        \_8\ <= \_7\(to_integer(unsigned(read_address)));
-        q <= \_8\;
+        signal_mem_read_port <= signal_multiport_mem(to_integer(unsigned(read_address)));
+        q <= signal_mem_read_port;
 
     end architecture;
     |}]
@@ -303,9 +303,9 @@ let%expect_test "comments on signals" =
         input i;
         output o;
 
-        wire _4/* I am a comment */;
-        assign _4 = i | j;
-        assign o = _4;
+        wire signal_or/* I am a comment */;
+        assign signal_or = i | j;
+        assign o = signal_or;
 
     endmodule
     library ieee;
@@ -322,12 +322,12 @@ let%expect_test "comments on signals" =
 
     architecture rtl of comments is
 
-        signal \_4\ : std_logic;
+        signal signal_or : std_logic;
 
     begin
 
-        \_4\ <= i or j;
-        o <= \_4\;
+        signal_or <= i or j;
+        o <= signal_or;
 
     end architecture;
     |}]

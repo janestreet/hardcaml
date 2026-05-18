@@ -1,6 +1,5 @@
 open Import
 open Hardcaml_waveterm_kernel
-open Hardcaml_waveterm_cyclesim
 
 let%expect_test "binary_to_gray" =
   let open Bits in
@@ -102,13 +101,17 @@ module Async_fifo = Async_fifo.Make (struct
 module I = Async_fifo.I
 module O = Async_fifo.O
 
-let create_sim ?sync_stages () =
+let create_sim ?sync_stages ?prog_full_thresh ?prog_empty_thresh () =
   let module Sim = Cyclesim.With_interface (I) (O) in
   let sim =
     Sim.create
-      (Async_fifo.create ?sync_stages ~scope:(Scope.create ~flatten_design:true ()))
+      (Async_fifo.create
+         ?sync_stages
+         ?prog_full_thresh
+         ?prog_empty_thresh
+         ~scope:(Scope.create ~flatten_design:true ()))
   in
-  Waveform.create sim
+  Cyclesim.Waveform.create sim
 ;;
 
 let basic_test ?sync_stages () =
@@ -155,6 +158,136 @@ let basic_test ?sync_stages () =
       ]
   in
   Waveform.print waves ~display_rules ~wave_width:1 ~display_width:130
+;;
+
+let%expect_test "programmable full and empty flags" =
+  let module Async_fifo_8 =
+    Hardcaml.Async_fifo.Make (struct
+      let width = 72
+      let log2_depth = 3
+      let optimize_for_same_clock_rate_and_always_reading = false
+    end)
+  in
+  let module Sim = Cyclesim.With_interface (Async_fifo_8.I) (Async_fifo_8.O) in
+  (* Even though we say [log2_depth = 3], the actual hardcaml async fifo can hold 1 fewer
+     element than 8. *)
+  let max_elements = 7 in
+  let prog_full_thresh = 6 in
+  let prog_empty_thresh = 3 in
+  let waves, sim =
+    Cyclesim.Waveform.create
+      (Sim.create
+         (Async_fifo_8.create
+            ~prog_full_thresh
+            ~prog_empty_thresh
+            ~scope:(Scope.create ~flatten_design:true ())))
+  in
+  let inputs = Cyclesim.inputs sim in
+  let outputs = Cyclesim.outputs ~clock_edge:After sim in
+  let validate_flags ~num_elements =
+    let check_flag name ~expected ~actual =
+      if not (Bool.equal expected actual)
+      then
+        raise_s
+          [%message
+            "flag mismatch"
+              (name : string)
+              (num_elements : int)
+              (expected : bool)
+              (actual : bool)]
+    in
+    check_flag
+      "full"
+      ~expected:(num_elements = max_elements)
+      ~actual:(Bits.to_bool !(outputs.full));
+    check_flag
+      "almost_full"
+      (* [almost_full] is asserted when the fifo is 2 writes away from full. Similar for
+         [almost_empty] *)
+      ~expected:(num_elements >= max_elements - 2)
+      ~actual:(Bits.to_bool !(outputs.almost_full));
+    check_flag
+      "prog_full"
+      ~expected:(num_elements >= prog_full_thresh)
+      ~actual:(Bits.to_bool !(outputs.prog_full));
+    check_flag
+      "almost_empty"
+      ~expected:(num_elements <= 2)
+      ~actual:(Bits.to_bool !(outputs.almost_empty));
+    check_flag
+      "prog_empty"
+      ~expected:(num_elements <= prog_empty_thresh)
+      ~actual:(Bits.to_bool !(outputs.prog_empty))
+  in
+  (* Reset *)
+  inputs.reset_write := Bits.vdd;
+  inputs.reset_read := Bits.vdd;
+  Cyclesim.cycle sim;
+  inputs.reset_write := Bits.gnd;
+  inputs.reset_read := Bits.gnd;
+  Cyclesim.cycle sim;
+  (* Enqueue: write one element per iteration, then an extra settle cycle so cross-domain
+     flags propagate before we validate. *)
+  for i = 1 to max_elements do
+    inputs.data_in := Bits.of_int_trunc i ~width:72;
+    inputs.write_enable := Bits.vdd;
+    Cyclesim.cycle sim;
+    inputs.write_enable := Bits.gnd;
+    Cyclesim.cycle sim;
+    Cyclesim.cycle sim;
+    validate_flags ~num_elements:i
+  done;
+  (* Dequeue: read one element per iteration, then settle before validating. *)
+  for i = max_elements downto 1 do
+    inputs.read_enable := Bits.vdd;
+    Cyclesim.cycle sim;
+    inputs.read_enable := Bits.gnd;
+    Cyclesim.cycle sim;
+    Cyclesim.cycle sim;
+    validate_flags ~num_elements:(i - 1)
+  done;
+  let display_rules =
+    Display_rule.
+      [ port_name_is ~alignment:Right "data_in" ~wave_format:Hex
+      ; port_name_is ~alignment:Right "write_enable" ~wave_format:Bit
+      ; port_name_is ~alignment:Right "read_enable" ~wave_format:Bit
+      ; port_name_is ~alignment:Right "prog_full" ~wave_format:Bit
+      ; port_name_is ~alignment:Right "almost_full" ~wave_format:Bit
+      ; port_name_is ~alignment:Right "full" ~wave_format:Bit
+      ; port_name_is ~alignment:Right "prog_empty" ~wave_format:Bit
+      ; port_name_is ~alignment:Right "almost_empty" ~wave_format:Bit
+      ; port_name_is ~alignment:Right "valid" ~wave_format:Bit
+      ; port_name_is ~alignment:Right "data_out" ~wave_format:Hex
+      ]
+  in
+  Waveform.print waves ~display_rules ~wave_width:1 ~display_width:150;
+  [%expect
+    {|
+    ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+    │                  ││────────┬───────────┬───────────┬───────────┬───────────┬───────────┬───────────┬───────────────────────────────────────────────│
+    │data_in           ││ .000000│.0000000001│.0000000002│.0000000003│.0000000004│.0000000005│.0000000006│000000000000000007                             │
+    │                  ││────────┴───────────┴───────────┴───────────┴───────────┴───────────┴───────────┴───────────────────────────────────────────────│
+    │write_enable      ││        ┌───┐       ┌───┐       ┌───┐       ┌───┐       ┌───┐       ┌───┐       ┌───┐                                           │
+    │                  ││────────┘   └───────┘   └───────┘   └───────┘   └───────┘   └───────┘   └───────┘   └───────────────────────────────────────────│
+    │read_enable       ││                                                                                            ┌───┐       ┌───┐       ┌───┐       │
+    │                  ││────────────────────────────────────────────────────────────────────────────────────────────┘   └───────┘   └───────┘   └───────│
+    │prog_full         ││                                                                        ┌───────────────────────────────────────────┐           │
+    │                  ││────────────────────────────────────────────────────────────────────────┘                                           └───────────│
+    │almost_full       ││                                                            ┌───────────────────────────────────────────────────────────────────│
+    │                  ││────────────────────────────────────────────────────────────┘                                                                   │
+    │full              ││                                                                                    ┌───────────────────┐                       │
+    │                  ││────────────────────────────────────────────────────────────────────────────────────┘                   └───────────────────────│
+    │prog_empty        ││────────────────────────────────────────────────────────┐                                                                       │
+    │                  ││                                                        └───────────────────────────────────────────────────────────────────────│
+    │almost_empty      ││────────────────────────────────────────────┐                                                                                   │
+    │                  ││                                            └───────────────────────────────────────────────────────────────────────────────────│
+    │valid             ││                    ┌───────────────────────────────────────────────────────────────────────────────────────────────────────────│
+    │                  ││────────────────────┘                                                                                                           │
+    │                  ││────────────────┬───────────────────────────────────────────────────────────────────────────────┬───────────┬───────────┬───────│
+    │data_out          ││ .00000000000000│000000000000000001                                                             │.0000000002│.0000000003│.000004│
+    │                  ││────────────────┴───────────────────────────────────────────────────────────────────────────────┴───────────┴───────────┴───────│
+    └──────────────────┘└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+    |}]
 ;;
 
 let%expect_test "works with a synchronous clock" =
@@ -232,7 +365,7 @@ let create_sim_delay () =
     Sim.create
       (Async_fifo.create_with_delay ~delay:3 (Scope.create ~flatten_design:true ()))
   in
-  Waveform.create sim
+  Cyclesim.Waveform.create sim
 ;;
 
 let%expect_test "works with a synchronous clock in delayed mode" =

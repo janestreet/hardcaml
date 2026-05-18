@@ -185,7 +185,7 @@ let of_int64_array ~width a =
 
 let z32mask = Bigint.of_int64 0xFFFF_FFFFL
 
-let of_bigint ~width z =
+let of_bigint_trunc ~width z =
   let t = create width in
   let rec f i z width =
     if width <= 0 || Bigint.(z = zero)

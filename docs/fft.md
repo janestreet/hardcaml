@@ -473,7 +473,7 @@ let hw_test () =
         }
       create
   in
-  let waves, sim = Waveform.create sim in
+  let waves, sim = Cyclesim.Waveform.create sim in
   clear_core sim;
   load_fft_coefficients sim;
   run_fft sim;

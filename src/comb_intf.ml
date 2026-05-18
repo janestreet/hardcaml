@@ -234,6 +234,7 @@ module type Constructors = sig
 
   val of_unsigned_int32 : width:int -> int32 -> t
   val of_unsigned_int64 : width:int -> int64 -> t
+  val of_unsigned_bigint : width:int -> Bigint.t -> t
 
   (** Convert signed values to constant. Input values which are not representable in
       [width] bits will raise. *)
@@ -241,6 +242,7 @@ module type Constructors = sig
 
   val of_signed_int32 : width:int -> int32 -> t
   val of_signed_int64 : width:int -> int64 -> t
+  val of_signed_bigint : width:int -> Bigint.t -> t
 
   (** convert hex string to a constant. If the target width is greater than the hex length
       and [signedness] is [Signed] then the result is sign extended. Otherwise the result
@@ -261,7 +263,7 @@ module type Constructors = sig
     -> t
 
   (** Convert an arbitrarily wide integer value to a constant. *)
-  val of_bigint : width:int -> Bigint.t -> t
+  val of_bigint_trunc : width:int -> Bigint.t -> t
 
   (** convert verilog style or binary string to constant *)
   val of_string : string -> t
@@ -710,6 +712,10 @@ module type S = sig
   (** [popcount t] returns the number of bits set in [t]. *)
   val popcount : (t -> t) optional_branching_factor
 
+  (** [binary_to_byte_qualifier ~num_bytes t] returns a byte qualifier encoding of a
+      binary size for use when encoding contiguous byte enables or byte keep signals. *)
+  val binary_to_byte_qualifier : num_bytes:int -> t -> t
+
   (** [is_pow2 t] returns a bit to indicate if [t] is a power of 2. *)
   val is_pow2 : (t -> t) optional_branching_factor
 
@@ -790,6 +796,8 @@ module type S = sig
     val sel_bottom : t -> width:int -> t
     val sel_top : t -> width:int -> t
     val repeat : t -> count:int -> t
+    val split_in_half_msb : ?msbs:int -> t -> t * t
+    val split_in_half_lsb : ?lsbs:int -> t -> t * t
     val mux : t -> non_zero_width list -> non_zero_width
   end
 
@@ -800,6 +808,8 @@ module type S = sig
 
   (** Signed vector operations (ie may operate on [Bits.t] or [Signal.t] directly). *)
   module Signed : Typed_math
+
+  val type_equal_id : t Type_equal.Id.t
 end
 
 module type Gen_cases_from_mux = sig

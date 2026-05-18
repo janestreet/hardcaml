@@ -74,6 +74,8 @@ module Table = struct
   let fold_map t ~init ~f = Array.fold_map t ~init ~f
   let fold t ~init ~f = Array.fold t ~init ~f
   let map_inplace t ~f = Array.map_inplace t ~f
+  let iter t ~f = Array.iter t ~f
+  let concat t = Array.to_list t |> Array.concat
 end
 
 module Set = struct

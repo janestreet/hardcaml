@@ -1,12 +1,14 @@
 open! Core0
 
+module type S = Write_port_intf.S
+
 type 'a t =
   { write_clock : 'a
   ; write_address : 'a
   ; write_enable : 'a
   ; write_data : 'a
   }
-[@@deriving bin_io, sexp_of]
+[@@deriving bin_io, sexp_of, equal ~localize, compare ~localize]
 
 let iter t ~f =
   f t.write_clock;
@@ -31,8 +33,8 @@ let zip s t =
   }
 ;;
 
-let iter2 s t ~f = iter (zip s t) ~f:(fun (s, t) -> f s t)
-let map2 s t ~f = map (zip s t) ~f:(fun (s, t) -> f s t)
+let iter2 s t ~f = iter (zip s t) ~f:(fun (s, t) -> f s t) [@nontail]
+let map2 s t ~f = map (zip s t) ~f:(fun (s, t) -> f s t) [@nontail]
 let to_list t = [ t.write_clock; t.write_address; t.write_enable; t.write_data ]
 
 let port_names =

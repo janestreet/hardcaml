@@ -18,7 +18,7 @@ let%expect_test "Initial values, resets and clears of registers" =
   in
   let circ = Circuit.create_exn ~name:"initial" [ output "q" q ] in
   let sim = Cyclesim.create circ in
-  let waves, sim = Hardcaml_waveterm_cyclesim.Waveform.create sim in
+  let waves, sim = Cyclesim.Waveform.create sim in
   (* This is an explicit for-loop here to test that the default value of [n] is 1 *)
   for _ = 0 to 1 do
     Cyclesim.cycle sim
@@ -29,7 +29,7 @@ let%expect_test "Initial values, resets and clears of registers" =
   Cyclesim.cycle sim;
   Cyclesim.in_port sim "clear" := Bits.gnd;
   Cyclesim.cycle ~n:2 sim;
-  Hardcaml_waveterm_cyclesim.Waveform.print waves ~wave_width:2;
+  Hardcaml_waveterm_kernel.Waveform.print waves ~wave_width:2;
   [%expect
     {|
     ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
@@ -39,6 +39,53 @@ let%expect_test "Initial values, resets and clears of registers" =
     │               ││────────────┘     └─────────────────────────────   │
     │clear          ││                              ┌─────┐              │
     │               ││──────────────────────────────┘     └───────────   │
+    │               ││──────┬───────────┬─────┬─────┬─────┬─────┬─────   │
+    │q              ││ 10   │11         │20   │21   │22   │30   │31      │
+    │               ││──────┴───────────┴─────┴─────┴─────┴─────┴─────   │
+    └───────────────┘└───────────────────────────────────────────────────┘
+    |}]
+;;
+
+let%expect_test "reg_fb_and_next returns registered value and next cycle value" =
+  let clock = input "clock" 1 in
+  let reset = input "reset" 1 in
+  let clear = input "clear" 1 in
+  let q, next =
+    reg_fb_and_next
+      (Reg_spec.create ~clock ~reset ~clear ())
+      ~initialize_to:(Bits.of_int_trunc ~width:8 16)
+      ~reset_to:(Bits.of_int_trunc ~width:8 32)
+      ~clear_to:(Signal.of_int_trunc ~width:8 48)
+      ~width:8
+      ~f:(fun d -> d +:. 1)
+  in
+  let circ =
+    Circuit.create_exn ~name:"reg_fb_and_next" [ output "q" q; output "next" next ]
+  in
+  let sim = Cyclesim.create circ in
+  let waves, sim = Cyclesim.Waveform.create sim in
+  for _ = 0 to 1 do
+    Cyclesim.cycle sim
+  done;
+  Cyclesim.reset sim;
+  Cyclesim.cycle ~n:2 sim;
+  Cyclesim.in_port sim "clear" := Bits.vdd;
+  Cyclesim.cycle sim;
+  Cyclesim.in_port sim "clear" := Bits.gnd;
+  Cyclesim.cycle ~n:2 sim;
+  Hardcaml_waveterm_kernel.Waveform.print waves ~wave_width:2;
+  [%expect
+    {|
+    ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
+    │clock          ││┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──│
+    │               ││   └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  │
+    │reset          ││            ┌─────┐                                │
+    │               ││────────────┘     └─────────────────────────────   │
+    │clear          ││                              ┌─────┐              │
+    │               ││──────────────────────────────┘     └───────────   │
+    │               ││──────┬───────────┬─────┬─────┬─────┬─────┬─────   │
+    │next           ││ 11   │12         │21   │22   │23   │31   │32      │
+    │               ││──────┴───────────┴─────┴─────┴─────┴─────┴─────   │
     │               ││──────┬───────────┬─────┬─────┬─────┬─────┬─────   │
     │q              ││ 10   │11         │20   │21   │22   │30   │31      │
     │               ││──────┴───────────┴─────┴─────┴─────┴─────┴─────   │

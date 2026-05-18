@@ -177,52 +177,52 @@ let%expect_test "verilog with normalization" =
         output [1:0] g;
         output [1:0] h;
 
-        wire [1:0] _1;
-        wire _12;
-        reg [1:0] _13[0:3];
-        wire [1:0] _14;
-        wire [2:0] _19;
-        wire [2:0] _17;
-        wire [8:0] _15;
-        wire [2:0] _16;
-        wire [2:0] _18;
-        wire [2:0] _20;
-        wire [1:0] _22;
-        wire [1:0] _21;
-        reg [1:0] _23;
-        assign _1 = a;
-        assign _12 = a[1:1];
+        wire [1:0] signal_wire;
+        wire signal_select;
+        reg [1:0] signal_multiport_mem[0:3];
+        wire [1:0] signal_mem_read_port;
+        wire [2:0] signal_select_1;
+        wire [2:0] signal_select_2;
+        wire [8:0] signal_inst;
+        wire [2:0] signal_select_3;
+        wire [2:0] signal_or;
+        wire [2:0] signal_or_1;
+        wire [1:0] signal_const;
+        wire [1:0] signal_add;
+        reg [1:0] signal_reg;
+        assign signal_wire = a;
+        assign signal_select = a[1:1];
         always @(posedge clock) begin
-            if (_12)
-                _13[b] <= a;
+            if (signal_select)
+                signal_multiport_mem[b] <= a;
         end
-        assign _14 = _13[a];
-        assign _19 = _15[8:6];
-        assign _17 = _15[5:3];
+        assign signal_mem_read_port = signal_multiport_mem[a];
+        assign signal_select_1 = signal_inst[8:6];
+        assign signal_select_2 = signal_inst[5:3];
         blah
             the_blah
             ( .a(a),
               .b(b),
-              .c(_15[2:0]),
-              .d(_15[5:3]),
-              .e(_15[8:6]) );
-        assign _16 = _15[2:0];
-        assign _18 = _16 | _17;
-        assign _20 = _18 | _19;
-        assign _22 = 2'b00;
-        assign _21 = a + b;
+              .c(signal_inst[2:0]),
+              .d(signal_inst[5:3]),
+              .e(signal_inst[8:6]) );
+        assign signal_select_3 = signal_inst[2:0];
+        assign signal_or = signal_select_3 | signal_select_2;
+        assign signal_or_1 = signal_or | signal_select_1;
+        assign signal_const = 2'b00;
+        assign signal_add = a + b;
         always @(posedge clock) begin
             if (clear)
-                _23 <= _22;
+                signal_reg <= signal_const;
             else
-                _23 <= _21;
+                signal_reg <= signal_add;
         end
-        assign c = _23;
+        assign c = signal_reg;
         assign d = a;
-        assign e = _20;
-        assign f = _14;
-        assign g = _14;
-        assign h = _1;
+        assign e = signal_or_1;
+        assign f = signal_mem_read_port;
+        assign g = signal_mem_read_port;
+        assign h = signal_wire;
 
     endmodule
     |}]

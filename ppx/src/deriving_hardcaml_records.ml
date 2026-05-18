@@ -15,8 +15,8 @@ let parse_rtlmangle expr ~loc =
 let field_name ~loc txt = pexp_constant ~loc (Pconst_string (txt, loc, None))
 
 (*
-   * Identifier manipulation
-*)
+ * Identifier manipulation
+ *)
 
 let mk_rtlident ~loc name prefix suffix =
   match prefix, suffix with
@@ -35,8 +35,8 @@ let mangle_name ~loc name mangle =
 ;;
 
 (*
-   * Code generation utility functions
-*)
+ * Code generation utility functions
+ *)
 
 let expand_names_and_widths_init ~loc ~collection vname label_declaration =
   let nbits = Label_attribute.get_bits_with_default ~loc label_declaration in
@@ -71,8 +71,8 @@ let is_ptyp_var_with_name typ name =
 ;;
 
 (*
-   * Expand t label
-*)
+ * Expand t label
+ *)
 
 let expand_port_names_and_widths_label_array_like
   ~collection
@@ -294,8 +294,8 @@ let expand_signal_attribute_label
 ;;
 
 (*
-   * Expand map label
-*)
+ * Expand map label
+ *)
 
 let mkfield var memb =
   let loc = Location.none in
@@ -396,8 +396,8 @@ let expand_map_label iter_or_map var ({ pld_name = { txt; loc }; _ } as label_de
 ;;
 
 (*
-   * Expand map2 label
-*)
+ * Expand map2 label
+ *)
 
 let expand_map2_label_collection ~collection iter_or_map var loc ident0 ident1 typ =
   match Ppxlib_jane.Shim.Core_type_desc.of_parsetree typ with
@@ -487,8 +487,8 @@ let expand_map2_label
 ;;
 
 (*
-   * Expand to_list label
-*)
+ * Expand to_list label
+ *)
 
 let expand_to_list_label_collection ~collection var loc ident typ =
   let to_list = Collection.to_list collection loc in
@@ -567,8 +567,8 @@ let build_expr_list labels =
 ;;
 
 (*
-   * Expand ast label
-*)
+ * Expand ast label
+ *)
 
 let expand_ast_label
   opts
@@ -640,8 +640,8 @@ let expand_ast_label
 ;;
 
 (*
-   * PPX deriving
-*)
+ * PPX deriving
+ *)
 
 let pexp_sequenceN ~loc exprs =
   match List.rev exprs with
@@ -805,7 +805,7 @@ let sig_of_type ~ast ~pre ({ ptype_loc = loc; _ } as type_decl) =
   | Ptype_record _, [ ({ ptyp_desc = Ptyp_var _; _ }, _) ] ->
     let intf = [%sigi: include Ppx_hardcaml_runtime.Interface.S with type 'a t := 'a t] in
     if pre
-    then []
+    then [ [%sigi: include Ppx_hardcaml_runtime0.Pre with type 'a t := 'a t] ]
     else if ast
     then [ intf; [%sigi: val ast : Ppx_hardcaml_runtime.Interface.Ast.t] ]
     else [ intf ]

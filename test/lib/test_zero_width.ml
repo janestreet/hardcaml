@@ -254,6 +254,80 @@ let%expect_test "repeat" =
   [%expect {| ("repeat (Some vdd) ~count:1" (1)) |}]
 ;;
 
+let%expect_test "split_in_half_msb" =
+  let show ?msbs t =
+    let top, bottom = split_in_half_msb ?msbs t in
+    print_s [%message (top : t) (bottom : t)]
+  in
+  show zero_width;
+  [%expect
+    {|
+    ((top    ())
+     (bottom ()))
+    |}];
+  show (Some vdd);
+  [%expect {| ((top (1)) (bottom ())) |}];
+  show (Some (of_string "10"));
+  [%expect
+    {|
+    ((top    (1))
+     (bottom (0)))
+    |}];
+  show (Some (of_string "101"));
+  [%expect
+    {|
+    ((top    (10))
+     (bottom (1)))
+    |}];
+  show ~msbs:0 (Some (of_string "10"));
+  [%expect {| ((top ()) (bottom (10))) |}];
+  show ~msbs:1 (Some (of_string "10"));
+  [%expect
+    {|
+    ((top    (1))
+     (bottom (0)))
+    |}];
+  show ~msbs:2 (Some (of_string "10"));
+  [%expect {| ((top (10)) (bottom ())) |}]
+;;
+
+let%expect_test "split_in_half_lsb" =
+  let show ?lsbs t =
+    let top, bottom = split_in_half_lsb ?lsbs t in
+    print_s [%message (top : t) (bottom : t)]
+  in
+  show zero_width;
+  [%expect
+    {|
+    ((top    ())
+     (bottom ()))
+    |}];
+  show (Some vdd);
+  [%expect {| ((top ()) (bottom (1))) |}];
+  show (Some (of_string "10"));
+  [%expect
+    {|
+    ((top    (1))
+     (bottom (0)))
+    |}];
+  show (Some (of_string "101"));
+  [%expect
+    {|
+    ((top    (1))
+     (bottom (01)))
+    |}];
+  show ~lsbs:0 (Some (of_string "10"));
+  [%expect {| ((top (10)) (bottom ())) |}];
+  show ~lsbs:1 (Some (of_string "10"));
+  [%expect
+    {|
+    ((top    (1))
+     (bottom (0)))
+    |}];
+  show ~lsbs:2 (Some (of_string "10"));
+  [%expect {| ((top ()) (bottom (10))) |}]
+;;
+
 let%expect_test "mux" =
   require_does_raise (fun () -> ignore (mux None [] : non_zero_width));
   [%expect {| "[mux] got no data inputs" |}];

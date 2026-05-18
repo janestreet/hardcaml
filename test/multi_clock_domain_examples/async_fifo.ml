@@ -19,7 +19,6 @@ let fifo () =
 module _ = struct
   open Hardcaml_event_driven_sim.Two_state_simulator
   module Process = Simulator.Process
-  module Waveform = Waveterm.Waveform
 
   let ( <-- ) = Simulator.( <-- )
   let ( !& ) = Simulator.( !& )
@@ -67,12 +66,14 @@ module _ = struct
              ])
       in
       Simulator.run ~time_limit:100 simulator;
-      Waveform.expect waves ~wave_width:(-1) ~display_width:82;
+      Hardcaml_waveterm.Waveform.expect waves ~wave_width:(-1) ~display_width:82;
       [%expect
         {|
         ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────┐
         │almost_empty      ││────────────────────────────────────────────────────────────│
         │                  ││                                                            │
+        │almost_full       ││                                                            │
+        │                  ││────────────────────────────────────────────────────────────│
         │clock_read        ││   ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──│
         │                  ││───┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  │
         │clock_write       ││     ┌────┐    ┌────┐    ┌────┐    ┌────┐    ┌────┐    ┌────│
@@ -89,6 +90,10 @@ module _ = struct
         │full              ││                                                            │
         │                  ││────────────────────────────────────────────────────────────│
         │gnd               ││                                                            │
+        │                  ││────────────────────────────────────────────────────────────│
+        │prog_empty        ││                                                            │
+        │                  ││────────────────────────────────────────────────────────────│
+        │prog_full         ││                                                            │
         │                  ││────────────────────────────────────────────────────────────│
         │                  ││─────────────────────────────────────────────┬──────────────│
         │raddr_rd          ││ 0                                           │1             │
@@ -122,13 +127,13 @@ module _ = struct
         │write_enable      ││               ┌─────────┐         ┌─────────┐              │
         │                  ││───────────────┘         └─────────┘         └──────────────│
         └──────────────────┘└────────────────────────────────────────────────────────────┘
-        9d45c59d907202ea2c276ef7fb9afc29
+        973170fccb0846190718f0e8e3e9929d
         |}])
   ;;
 end
 
 module%test [@tags "runtime5-only"] Cyclesim_tests = struct
-  open Hardcaml_waveterm.For_cyclesim
+  open Hardcaml_waveterm
   module Fifo_sim = Cyclesim.With_interface (Fifo.I) (Fifo.O)
 
   let sim () =
@@ -147,7 +152,7 @@ module%test [@tags "runtime5-only"] Cyclesim_tests = struct
 
     let%expect_test "" =
       let sim = sim () in
-      let waves, sim = Waveform.create sim in
+      let waves, sim = Cyclesim.Waveform.create sim in
       let inputs = Cyclesim.inputs sim in
       let open Bits in
       let update_write ~cycle =
@@ -192,10 +197,16 @@ module%test [@tags "runtime5-only"] Cyclesim_tests = struct
         │                  ││────────────────────┘         └─────────┘         └─────────────────│
         │almost_empty      ││────────────────────────────────────────────────────────────────────│
         │                  ││                                                                    │
+        │almost_full       ││                                                                    │
+        │                  ││────────────────────────────────────────────────────────────────────│
         │                  ││────────────────────────────────────┬───────────┬─────┬─────────────│
         │data_out          ││ 0                                  │A          │0    │B            │
         │                  ││────────────────────────────────────┴───────────┴─────┴─────────────│
         │full              ││                                                                    │
+        │                  ││────────────────────────────────────────────────────────────────────│
+        │prog_empty        ││                                                                    │
+        │                  ││────────────────────────────────────────────────────────────────────│
+        │prog_full         ││                                                                    │
         │                  ││────────────────────────────────────────────────────────────────────│
         │valid             ││                                          ┌─────┐           ┌───────│
         │                  ││──────────────────────────────────────────┘     └───────────┘       │
@@ -243,7 +254,7 @@ module%test [@tags "runtime5-only"] Cyclesim_tests = struct
 
       let run_test testbench ~count ~print_waves =
         let simulator = sim () in
-        let waves, simulator = Waveform.create simulator in
+        let waves, simulator = Cyclesim.Waveform.create simulator in
         let f () = Step.run_until_finished () ~show_steps:true ~simulator ~testbench in
         run f ~count;
         if print_waves then Waveform.print waves ~wave_width:(-1)
@@ -290,7 +301,7 @@ module%test [@tags "runtime5-only"] Cyclesim_tests = struct
 
       let run_test testbench ~count ~print_waves =
         let simulator = sim () in
-        let waves, simulator = Waveform.create simulator in
+        let waves, simulator = Cyclesim.Waveform.create simulator in
         let inputs = Cyclesim.inputs simulator in
         let outputs = Cyclesim.outputs ~clock_edge:Before simulator in
         let f () =
@@ -414,10 +425,16 @@ module%test [@tags "runtime5-only"] Cyclesim_tests = struct
           │               ││          └────────────────────────────────────────│
           │almost_empty   ││───────────────────────────────────────────────────│
           │               ││                                                   │
+          │almost_full    ││                                                   │
+          │               ││───────────────────────────────────────────────────│
           │               ││────────────┬───────────┬──────────────────────────│
           │data_out       ││ 0          │5          │0                         │
           │               ││────────────┴───────────┴──────────────────────────│
           │full           ││                                                   │
+          │               ││───────────────────────────────────────────────────│
+          │prog_empty     ││                                                   │
+          │               ││───────────────────────────────────────────────────│
+          │prog_full      ││                                                   │
           │               ││───────────────────────────────────────────────────│
           │valid          ││                  ┌─────┐                          │
           │               ││──────────────────┘     └──────────────────────────│

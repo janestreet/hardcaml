@@ -11,7 +11,7 @@ type reg_or_wire =
 [@@deriving equal ~localize, sexp_of]
 
 type var =
-  { name : Rope.t
+  { name : Rtl_name.For_backend.t
   ; range : range
   ; reg_or_wire : reg_or_wire
   ; attributes : Rtl_attribute.t list
@@ -35,7 +35,7 @@ type logic_declaration =
 
 type multiport_memory_declaration =
   { memory : var
-  ; memory_type : string
+  ; memory_type : Rtl_name.For_backend.t
   ; depth : int
   ; range : range
   }
@@ -46,7 +46,7 @@ type declaration =
   | Multiport_memory of multiport_memory_declaration
   | Inst of
       { logic : logic_declaration
-      ; instance_name : string
+      ; instance_name : Rtl_name.For_backend.t
       }
 [@@deriving sexp_of]
 
@@ -162,13 +162,13 @@ type sensitivity_list =
 [@@deriving sexp_of]
 
 type instantiation_input_port =
-  { port_name : string
+  { port_name : Rtl_name.For_backend.t
   ; connection : var
   }
 [@@deriving sexp_of]
 
 type instantiation_output_port =
-  { port_name : string
+  { port_name : Rtl_name.For_backend.t
   ; connection : var
   ; high : int
   ; low : int
@@ -176,8 +176,8 @@ type instantiation_output_port =
 [@@deriving sexp_of]
 
 type instantiation =
-  { name : string
-  ; instance : string
+  { name : Rtl_name.For_backend.t
+  ; instance : Rtl_name.For_backend.t
   ; parameters : Parameter.t list
   ; input_ports : instantiation_input_port list
   ; output_ports : instantiation_output_port list
@@ -215,7 +215,7 @@ type t =
   ; outputs : output list
   ; declarations : declaration list
   ; statements : statement list
-  ; var_map : declaration Map.M(Signal.Type.Uid).t
+  ; var_map : declaration Signal.Type.Uid.Map.t
   (** Map all input, output and internal signals to a var declaration *)
   ; config : Rtl_config.t (** Configuration for RTL emission. *)
   }
@@ -237,7 +237,9 @@ module Signals_name_map : sig
   end
 
   type t_rtl_ast = t
-  type t = string Map.M(Uid_with_index).t [@@deriving equal ~localize, sexp_of]
+
+  type t = Rtl_name.For_backend.t Map.M(Uid_with_index).t
+  [@@deriving equal ~localize, sexp_of]
 
   val create : t_rtl_ast -> t
 end

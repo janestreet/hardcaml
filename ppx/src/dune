@@ -1,7 +1,7 @@
 (library
  (name ppx_hardcaml0)
  (public_name hardcaml.ppx_hardcaml0)
- (kind ppx_deriver)
+ (kind ppx_rewriter)
  (libraries base compiler-libs.common ppx_compare ppx_sexp_conv ppxlib)
  (ppx_runtime_libraries hardcaml.ppx_hardcaml_runtime0)
  (preprocess

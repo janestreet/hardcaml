@@ -1,7 +1,7 @@
 open Core
 open Hardcaml
 open Signal
-open Hardcaml_waveterm_cyclesim
+open Hardcaml_waveterm_kernel
 module R = (val Types.value 8)
 
 module I = struct
@@ -55,7 +55,7 @@ let%expect_test "signal" =
       ; q_always_intf = R.Of_always.value q_always_intf
       })
   in
-  let waves, sim = Waveform.create sim in
+  let waves, sim = Cyclesim.Waveform.create sim in
   let inputs = Cyclesim.inputs sim in
   let open Bits in
   (* Show behaviour wrt to clear and enable *)

@@ -100,7 +100,7 @@ module Hierarchical_circuits = struct
         ; subcircuits =
             List.filter_map
               (Circuit.instantiations circuit |> List.rev)
-              ~f:(fun inst ->
+              ~f:(fun { instantiation = inst; _ } ->
                 match Circuit_database.find database ~mangled_name:inst.circuit_name with
                 | None -> None
                 | Some circuit ->

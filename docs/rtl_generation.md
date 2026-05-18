@@ -203,14 +203,14 @@ module top (
     input s;
     output t;
 
-    wire _4;
-    wire _2;
+    wire signal_inst;
+    wire signal_wire;
     inner2
         the_inner2
         ( .x(s),
-          .y(_4) );
-    assign _2 = _4;
-    assign t = _2;
+          .y(signal_inst) );
+    assign signal_wire = signal_inst;
+    assign t = signal_wire;
 
 endmodule
 
@@ -250,14 +250,14 @@ module inner2 (
     input x;
     output y;
 
-    wire _4;
-    wire _2;
+    wire signal_inst;
+    wire signal_wire;
     inner1
         the_inner1
         ( .a(x),
-          .b(_4) );
-    assign _2 = _4;
-    assign y = _2;
+          .b(signal_inst) );
+    assign signal_wire = signal_inst;
+    assign y = signal_wire;
 
 endmodule
 

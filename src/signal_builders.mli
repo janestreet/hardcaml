@@ -132,6 +132,17 @@ module Registers (Comb : sig
     -> f:(t -> t)
     -> t
 
+  val reg_fb_and_next
+    :  ?enable:t
+    -> ?initialize_to:Bits.t
+    -> ?reset_to:Bits.t
+    -> ?clear:t
+    -> ?clear_to:t
+    -> Reg_spec.t
+    -> width:int
+    -> f:(t -> t)
+    -> t * t
+
   (** Pipeline a signal [n] times with the given register specification. If set, a list of
       RTL attributes will also be applied to each register created. *)
   val pipeline

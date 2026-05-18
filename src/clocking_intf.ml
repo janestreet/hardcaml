@@ -53,6 +53,24 @@ module type Functions = sig
     -> f:(Signal.t -> Signal.t)
     -> Signal.t
 
+  val reg_fb_and_next
+    :  ?enable:Signal.t
+    -> ?clear:Signal.t
+    -> ?clear_to:Signal.t
+    -> Signal.t t
+    -> width:int
+    -> f:(Signal.t -> Signal.t)
+    -> Signal.t * Signal.t
+
+  val reg_fb_and_next_no_clear
+    :  ?enable:Signal.t
+    -> ?clear:Signal.t
+    -> ?clear_to:Signal.t
+    -> Signal.t t
+    -> width:int
+    -> f:(Signal.t -> Signal.t)
+    -> Signal.t * Signal.t
+
   val reg_fb_no_clear
     :  ?enable:Signal.t
     -> ?clear:Signal.t

@@ -154,7 +154,7 @@ val create_sequence_detector_sim : unit -> Cyclesim.t_port_list = <fun>
 ```ocaml
 # let test bits = 
     let sim = create_sequence_detector_sim () in
-    let waves, sim = Waveform.create sim in
+    let waves, sim = Cyclesim.Waveform.create sim in
     let d = Cyclesim.in_port sim "d" in
     List.iter (Bits.bits_lsb bits) ~f:(fun bit ->
       d := bit;

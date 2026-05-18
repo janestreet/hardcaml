@@ -90,23 +90,23 @@ let%expect_test "generate hierarchy without sharing" =
         input a;
         output b;
 
-        wire _5;
-        wire _1;
-        wire _6;
-        wire _3;
-        wire _7;
+        wire signal_inst;
+        wire signal_wire;
+        wire signal_inst_1;
+        wire signal_wire_1;
+        wire signal_or;
         inner_1
             the_inner_1
             ( .a(a),
-              .b(_5) );
-        assign _1 = _5;
+              .b(signal_inst) );
+        assign signal_wire = signal_inst;
         inner
             the_inner
             ( .a(a),
-              .b(_6) );
-        assign _3 = _6;
-        assign _7 = _3 | _1;
-        assign b = _7;
+              .b(signal_inst_1) );
+        assign signal_wire_1 = signal_inst_1;
+        assign signal_or = signal_wire_1 | signal_wire;
+        assign b = signal_or;
 
     endmodule
     module outer (
@@ -117,14 +117,14 @@ let%expect_test "generate hierarchy without sharing" =
         input a;
         output b;
 
-        wire _4;
-        wire _2;
+        wire signal_inst;
+        wire signal_wire;
         middle
             the_middle
             ( .a(a),
-              .b(_4) );
-        assign _2 = _4;
-        assign b = _2;
+              .b(signal_inst) );
+        assign signal_wire = signal_inst;
+        assign b = signal_wire;
 
     endmodule
     |}]
@@ -159,23 +159,23 @@ let%expect_test "generate hierarchy with sharing" =
         input a;
         output b;
 
-        wire _5;
-        wire _1;
-        wire _6;
-        wire _3;
-        wire _7;
+        wire signal_inst;
+        wire signal_wire;
+        wire signal_inst_1;
+        wire signal_wire_1;
+        wire signal_or;
         inner
             the_inner
             ( .a(a),
-              .b(_5) );
-        assign _1 = _5;
+              .b(signal_inst) );
+        assign signal_wire = signal_inst;
         inner
             the_inner_1
             ( .a(a),
-              .b(_6) );
-        assign _3 = _6;
-        assign _7 = _3 | _1;
-        assign b = _7;
+              .b(signal_inst_1) );
+        assign signal_wire_1 = signal_inst_1;
+        assign signal_or = signal_wire_1 | signal_wire;
+        assign b = signal_or;
 
     endmodule
     module outer (
@@ -186,14 +186,14 @@ let%expect_test "generate hierarchy with sharing" =
         input a;
         output b;
 
-        wire _4;
-        wire _2;
+        wire signal_inst;
+        wire signal_wire;
         middle
             the_middle
             ( .a(a),
-              .b(_4) );
-        assign _2 = _4;
-        assign b = _2;
+              .b(signal_inst) );
+        assign signal_wire = signal_inst;
+        assign b = signal_wire;
 
     endmodule
     |}]

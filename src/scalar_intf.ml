@@ -1,7 +1,9 @@
 open! Core0
 
 module type S = sig
-  include Interface.S
+  type !'a t [@@deriving equal ~localize, compare ~localize, globalize, sexp_of]
+
+  include Interface.S with type 'a t := 'a t
 
   val num_bits : int
   val create : (module Comb.S with type t = 'a) -> 'a -> 'a t

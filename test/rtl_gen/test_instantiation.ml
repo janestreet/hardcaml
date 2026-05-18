@@ -58,56 +58,56 @@ let%expect_test "instantiation, with 0 or more parameters." =
         output zoo;
         output [1:0] moo;
 
-        wire [1:0] _13;
-        wire [1:0] _10;
-        wire [1:0] _8;
-        wire [1:0] _11;
-        wire [1:0] _14;
-        wire [2:0] _12;
-        wire _18;
-        wire [2:0] _9;
-        wire _16;
-        wire _3;
-        wire _5;
-        wire [2:0] _7;
-        wire _15;
-        wire _17;
-        wire _19;
-        assign _13 = _12[2:1];
-        assign _10 = _9[2:1];
-        assign _8 = _7[2:1];
-        assign _11 = _8 | _10;
-        assign _14 = _11 | _13;
+        wire [1:0] signal_select;
+        wire [1:0] signal_select_1;
+        wire [1:0] signal_select_2;
+        wire [1:0] signal_or;
+        wire [1:0] signal_or_1;
+        wire [2:0] signal_inst;
+        wire signal_select_3;
+        wire [2:0] signal_inst_1;
+        wire signal_select_4;
+        wire signal_wire;
+        wire signal_wire_1;
+        wire [2:0] signal_inst_2;
+        wire signal_select_5;
+        wire signal_or_2;
+        wire signal_or_3;
+        assign signal_select = signal_inst[2:1];
+        assign signal_select_1 = signal_inst_1[2:1];
+        assign signal_select_2 = signal_inst_2[2:1];
+        assign signal_or = signal_select_2 | signal_select_1;
+        assign signal_or_1 = signal_or | signal_select;
         foo
             #( .par(3),
                .far("baloo") )
             the_foo
-            ( .foo(_5),
-              .bar(_3),
-              .zoo(_12[0:0]),
-              .moo(_12[2:1]) );
-        assign _18 = _12[0:0];
+            ( .foo(signal_wire_1),
+              .bar(signal_wire),
+              .zoo(signal_inst[0:0]),
+              .moo(signal_inst[2:1]) );
+        assign signal_select_3 = signal_inst[0:0];
         foo
             #( .par(3) )
             the_foo_1
-            ( .foo(_5),
-              .bar(_3),
-              .zoo(_9[0:0]),
-              .moo(_9[2:1]) );
-        assign _16 = _9[0:0];
-        assign _3 = bar;
-        assign _5 = foo;
+            ( .foo(signal_wire_1),
+              .bar(signal_wire),
+              .zoo(signal_inst_1[0:0]),
+              .moo(signal_inst_1[2:1]) );
+        assign signal_select_4 = signal_inst_1[0:0];
+        assign signal_wire = bar;
+        assign signal_wire_1 = foo;
         foo
             the_foo_2
-            ( .foo(_5),
-              .bar(_3),
-              .zoo(_7[0:0]),
-              .moo(_7[2:1]) );
-        assign _15 = _7[0:0];
-        assign _17 = _15 | _16;
-        assign _19 = _17 | _18;
-        assign zoo = _19;
-        assign moo = _14;
+            ( .foo(signal_wire_1),
+              .bar(signal_wire),
+              .zoo(signal_inst_2[0:0]),
+              .moo(signal_inst_2[2:1]) );
+        assign signal_select_5 = signal_inst_2[0:0];
+        assign signal_or_2 = signal_select_5 | signal_select_4;
+        assign signal_or_3 = signal_or_2 | signal_select_3;
+        assign zoo = signal_or_3;
+        assign moo = signal_or_1;
 
     endmodule
     ("GHDL failed with" (error_code (Error (Exit_non_zero 1))))
@@ -126,56 +126,56 @@ let%expect_test "instantiation, with 0 or more parameters." =
 
     architecture rtl of temp is
 
-        signal \_13\ : std_logic_vector(1 downto 0);
-        signal \_10\ : std_logic_vector(1 downto 0);
-        signal \_8\ : std_logic_vector(1 downto 0);
-        signal \_11\ : std_logic_vector(1 downto 0);
-        signal \_14\ : std_logic_vector(1 downto 0);
-        signal \_12\ : std_logic_vector(2 downto 0);
-        signal \_18\ : std_logic;
-        signal \_9\ : std_logic_vector(2 downto 0);
-        signal \_16\ : std_logic;
-        signal \_3\ : std_logic;
-        signal \_5\ : std_logic;
-        signal \_7\ : std_logic_vector(2 downto 0);
-        signal \_15\ : std_logic;
-        signal \_17\ : std_logic;
-        signal \_19\ : std_logic;
+        signal signal_select : std_logic_vector(1 downto 0);
+        signal signal_select_1 : std_logic_vector(1 downto 0);
+        signal signal_select_2 : std_logic_vector(1 downto 0);
+        signal signal_or : std_logic_vector(1 downto 0);
+        signal signal_or_1 : std_logic_vector(1 downto 0);
+        signal signal_inst : std_logic_vector(2 downto 0);
+        signal signal_select_3 : std_logic;
+        signal signal_inst_1 : std_logic_vector(2 downto 0);
+        signal signal_select_4 : std_logic;
+        signal signal_wire : std_logic;
+        signal signal_wire_1 : std_logic;
+        signal signal_inst_2 : std_logic_vector(2 downto 0);
+        signal signal_select_5 : std_logic;
+        signal signal_or_2 : std_logic;
+        signal signal_or_3 : std_logic;
 
     begin
 
-        \_13\ <= \_12\(2 downto 1);
-        \_10\ <= \_9\(2 downto 1);
-        \_8\ <= \_7\(2 downto 1);
-        \_11\ <= \_8\ or \_10\;
-        \_14\ <= \_11\ or \_13\;
+        signal_select <= signal_inst(2 downto 1);
+        signal_select_1 <= signal_inst_1(2 downto 1);
+        signal_select_2 <= signal_inst_2(2 downto 1);
+        signal_or <= signal_select_2 or signal_select_1;
+        signal_or_1 <= signal_or or signal_select;
         the_foo: entity work.foo (rtl)
             generic map ( par => 3,
                           far => "baloo" )
-            port map ( foo => \_5\,
-                       bar => \_3\,
-                       zoo => \_12\(0),
-                       moo => \_12\(2 downto 1) );
-        \_18\ <= \_12\(0);
+            port map ( foo => signal_wire_1,
+                       bar => signal_wire,
+                       zoo => signal_inst(0),
+                       moo => signal_inst(2 downto 1) );
+        signal_select_3 <= signal_inst(0);
         the_foo_1: entity work.foo (rtl)
             generic map ( par => 3 )
-            port map ( foo => \_5\,
-                       bar => \_3\,
-                       zoo => \_9\(0),
-                       moo => \_9\(2 downto 1) );
-        \_16\ <= \_9\(0);
-        \_3\ <= bar;
-        \_5\ <= foo;
+            port map ( foo => signal_wire_1,
+                       bar => signal_wire,
+                       zoo => signal_inst_1(0),
+                       moo => signal_inst_1(2 downto 1) );
+        signal_select_4 <= signal_inst_1(0);
+        signal_wire <= bar;
+        signal_wire_1 <= foo;
         the_foo_2: entity work.foo (rtl)
-            port map ( foo => \_5\,
-                       bar => \_3\,
-                       zoo => \_7\(0),
-                       moo => \_7\(2 downto 1) );
-        \_15\ <= \_7\(0);
-        \_17\ <= \_15\ or \_16\;
-        \_19\ <= \_17\ or \_18\;
-        zoo <= \_19\;
-        moo <= \_14\;
+            port map ( foo => signal_wire_1,
+                       bar => signal_wire,
+                       zoo => signal_inst_2(0),
+                       moo => signal_inst_2(2 downto 1) );
+        signal_select_5 <= signal_inst_2(0);
+        signal_or_2 <= signal_select_5 or signal_select_4;
+        signal_or_3 <= signal_or_2 or signal_select_3;
+        zoo <= signal_or_3;
+        moo <= signal_or_1;
 
     end architecture;
     |}]
@@ -214,19 +214,19 @@ let%expect_test "instantiation output corner case" =
         input foo;
         output zoo;
 
-        wire _2;
-        wire _4;
-        wire _7;
-        wire _5;
-        assign _2 = bar;
-        assign _4 = foo;
+        wire signal_wire;
+        wire signal_wire_1;
+        wire signal_inst;
+        wire signal_wire_2;
+        assign signal_wire = bar;
+        assign signal_wire_1 = foo;
         foo
             the_foo
-            ( .foo(_4),
-              .bar(_2),
-              .zoo(_7) );
-        assign _5 = _7;
-        assign zoo = _5;
+            ( .foo(signal_wire_1),
+              .bar(signal_wire),
+              .zoo(signal_inst) );
+        assign signal_wire_2 = signal_inst;
+        assign zoo = signal_wire_2;
 
     endmodule
     ("GHDL failed with" (error_code (Error (Exit_non_zero 1))))
@@ -244,21 +244,21 @@ let%expect_test "instantiation output corner case" =
 
     architecture rtl of temp is
 
-        signal \_2\ : std_logic;
-        signal \_4\ : std_logic;
-        signal \_7\ : std_logic;
-        signal \_5\ : std_logic;
+        signal signal_wire : std_logic;
+        signal signal_wire_1 : std_logic;
+        signal signal_inst : std_logic;
+        signal signal_wire_2 : std_logic;
 
     begin
 
-        \_2\ <= bar;
-        \_4\ <= foo;
+        signal_wire <= bar;
+        signal_wire_1 <= foo;
         the_foo: entity work.foo (rtl)
-            port map ( foo => \_4\,
-                       bar => \_2\,
-                       zoo => \_7\ );
-        \_5\ <= \_7\;
-        zoo <= \_5\;
+            port map ( foo => signal_wire_1,
+                       bar => signal_wire,
+                       zoo => signal_inst );
+        signal_wire_2 <= signal_inst;
+        zoo <= signal_wire_2;
 
     end architecture;
     |}]
@@ -318,12 +318,12 @@ let%expect_test "all parameter types" =
         input foo;
         output zoo;
 
-        wire _2;
-        wire _4;
-        wire _7;
-        wire _5;
-        assign _2 = bar;
-        assign _4 = foo;
+        wire signal_wire;
+        wire signal_wire_1;
+        wire signal_inst;
+        wire signal_wire_2;
+        assign signal_wire = bar;
+        assign signal_wire_1 = foo;
         foo
             #( .a(1'b1),
                .a2(1'b0),
@@ -338,11 +338,11 @@ let%expect_test "all parameter types" =
                .i(9'bUX01ZWLH_),
                .j("foo") )
             the_foo
-            ( .foo(_4),
-              .bar(_2),
-              .zoo(_7) );
-        assign _5 = _7;
-        assign zoo = _5;
+            ( .foo(signal_wire_1),
+              .bar(signal_wire),
+              .zoo(signal_inst) );
+        assign signal_wire_2 = signal_inst;
+        assign zoo = signal_wire_2;
 
     endmodule
     ("GHDL failed with" (error_code (Error (Exit_non_zero 1))))
@@ -360,15 +360,15 @@ let%expect_test "all parameter types" =
 
     architecture rtl of temp is
 
-        signal \_2\ : std_logic;
-        signal \_4\ : std_logic;
-        signal \_7\ : std_logic;
-        signal \_5\ : std_logic;
+        signal signal_wire : std_logic;
+        signal signal_wire_1 : std_logic;
+        signal signal_inst : std_logic;
+        signal signal_wire_2 : std_logic;
 
     begin
 
-        \_2\ <= bar;
-        \_4\ <= foo;
+        signal_wire <= bar;
+        signal_wire_1 <= foo;
         the_foo: entity work.foo (rtl)
             generic map ( a => '1',
                           a2 => '0',
@@ -382,11 +382,11 @@ let%expect_test "all parameter types" =
                           h => 'W',
                           i => std_ulogic_vector'("UX01ZWLH_"),
                           j => "foo" )
-            port map ( foo => \_4\,
-                       bar => \_2\,
-                       zoo => \_7\ );
-        \_5\ <= \_7\;
-        zoo <= \_5\;
+            port map ( foo => signal_wire_1,
+                       bar => signal_wire,
+                       zoo => signal_inst );
+        signal_wire_2 <= signal_inst;
+        zoo <= signal_wire_2;
 
     end architecture;
     |}]
@@ -420,9 +420,9 @@ let%expect_test "phantom input" =
         input bar;
         output zoo;
 
-        wire _2;
-        assign _2 = foo;
-        assign zoo = _2;
+        wire signal_wire;
+        assign signal_wire = foo;
+        assign zoo = signal_wire;
 
     endmodule
     library ieee;
@@ -439,12 +439,12 @@ let%expect_test "phantom input" =
 
     architecture rtl of temp is
 
-        signal \_2\ : std_logic;
+        signal signal_wire : std_logic;
 
     begin
 
-        \_2\ <= foo;
-        zoo <= \_2\;
+        signal_wire <= foo;
+        zoo <= signal_wire;
 
     end architecture;
     |}]
@@ -502,23 +502,23 @@ let%expect_test "vivado compatibility mode" =
         input foo;
         output zoo;
 
-        wire _2;
-        wire _4;
-        wire _7;
-        wire _5;
-        assign _2 = bar;
-        assign _4 = foo;
+        wire signal_wire;
+        wire signal_wire_1;
+        wire signal_inst;
+        wire signal_wire_2;
+        assign signal_wire = bar;
+        assign signal_wire_1 = foo;
         foo
             #( .a(1'b0),
                .b(1'b1),
                .c(1'b0),
                .d(1'b1) )
             the_foo
-            ( .foo(_4),
-              .bar(_2),
-              .zoo(_7) );
-        assign _5 = _7;
-        assign zoo = _5;
+            ( .foo(signal_wire_1),
+              .bar(signal_wire),
+              .zoo(signal_inst) );
+        assign signal_wire_2 = signal_inst;
+        assign zoo = signal_wire_2;
 
     endmodule
     ("GHDL failed with" (error_code (Error (Exit_non_zero 1))))
@@ -536,25 +536,25 @@ let%expect_test "vivado compatibility mode" =
 
     architecture rtl of temp is
 
-        signal \_2\ : std_logic;
-        signal \_4\ : std_logic;
-        signal \_7\ : std_logic;
-        signal \_5\ : std_logic;
+        signal signal_wire : std_logic;
+        signal signal_wire_1 : std_logic;
+        signal signal_inst : std_logic;
+        signal signal_wire_2 : std_logic;
 
     begin
 
-        \_2\ <= bar;
-        \_4\ <= foo;
+        signal_wire <= bar;
+        signal_wire_1 <= foo;
         the_foo: entity work.foo (rtl)
             generic map ( a => '0',
                           b => '1',
                           c => '0',
                           d => '1' )
-            port map ( foo => \_4\,
-                       bar => \_2\,
-                       zoo => \_7\ );
-        \_5\ <= \_7\;
-        zoo <= \_5\;
+            port map ( foo => signal_wire_1,
+                       bar => signal_wire,
+                       zoo => signal_inst );
+        signal_wire_2 <= signal_inst;
+        zoo <= signal_wire_2;
 
     end architecture;
     |}];

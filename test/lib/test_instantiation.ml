@@ -26,14 +26,14 @@ let%expect_test "Intstantiation in Verilog with single bit output" =
         input a;
         output b;
 
-        wire _4;
-        wire _2;
+        wire signal_inst;
+        wire signal_wire;
         example
             the_example
             ( .a(a),
-              .b(_4) );
-        assign _2 = _4;
-        assign b = _2;
+              .b(signal_inst) );
+        assign signal_wire = signal_inst;
+        assign b = signal_wire;
 
     endmodule
     |}]
@@ -56,16 +56,16 @@ let%expect_test "Intstantiation in VHDL with single bit output" =
 
     architecture rtl of example is
 
-        signal \_4\ : std_logic;
-        signal \_2\ : std_logic;
+        signal signal_inst : std_logic;
+        signal signal_wire : std_logic;
 
     begin
 
         the_example: entity work.example (rtl)
             port map ( a => a,
-                       b => \_4\ );
-        \_2\ <= \_4\;
-        b <= \_2\;
+                       b => signal_inst );
+        signal_wire <= signal_inst;
+        b <= signal_wire;
 
     end architecture;
     |}]
@@ -107,19 +107,19 @@ let%expect_test "Intstantiation in Verilog with multiple inputs and outputs" =
         output c;
         output [3:0] d;
 
-        wire [3:0] _6;
-        wire [4:0] _5;
-        wire _7;
-        assign _6 = _5[4:1];
+        wire [3:0] signal_select;
+        wire [4:0] signal_inst;
+        wire signal_select_1;
+        assign signal_select = signal_inst[4:1];
         example
             the_example
             ( .a(a),
               .b(b),
-              .c(_5[0:0]),
-              .d(_5[4:1]) );
-        assign _7 = _5[0:0];
-        assign c = _7;
-        assign d = _6;
+              .c(signal_inst[0:0]),
+              .d(signal_inst[4:1]) );
+        assign signal_select_1 = signal_inst[0:0];
+        assign c = signal_select_1;
+        assign d = signal_select;
 
     endmodule
     |}]

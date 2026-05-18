@@ -5,8 +5,19 @@ let show t = print_s [%sexp (t : Circuit.t)]
 
 (* Signal.Types.reset_id () *)
 
+let create ~name signals =
+  Circuit.create_exn
+    ~name
+    ~config:
+      { Circuit.Config.default with
+        (* Ensure that printed signal UIDs are stable *)
+        normalize_uids = true
+      }
+    signals
+;;
+
 let%expect_test "[sexp_of_t]" =
-  show (Circuit.create_exn ~name:"name" []);
+  show (create ~name:"name" []);
   [%expect
     {|
     ((name name)
@@ -25,12 +36,13 @@ let%expect_test "[sexp_of_t]" =
        (outputs ())
        (upto    ())))
      (assertions     ())
-     (instantiations ()))
+     (instantiations ())
+     (rtl_name_map unset))
     |}]
 ;;
 
 let%expect_test "[sexp_of_t] with an output" =
-  show (Circuit.create_exn ~name:"name" [ wireof vdd -- "output" ]);
+  show (create ~name:"name" [ wireof vdd -- "output" ]);
   [%expect
     {|
     ((name name)
@@ -57,14 +69,15 @@ let%expect_test "[sexp_of_t] with an output" =
          (data_in 0b1))))
        (upto ())))
      (assertions     ())
-     (instantiations ()))
+     (instantiations ())
+     (rtl_name_map unset))
     |}]
 ;;
 
 let%expect_test "[sexp_of_t] with an input" =
   let output = wire 1 in
   output <-- input "input" 1;
-  show (Circuit.create_exn ~name:"name" [ output -- "output" ]);
+  show (create ~name:"name" [ output -- "output" ]);
   [%expect
     {|
     ((name name)
@@ -91,14 +104,15 @@ let%expect_test "[sexp_of_t] with an input" =
          (data_in input))))
        (upto ())))
      (assertions     ())
-     (instantiations ()))
+     (instantiations ())
+     (rtl_name_map unset))
     |}]
 ;;
 
 let%expect_test "[sexp_of_t] with an operator" =
   let output = wire 1 in
   output <-- ~:(input "input" 1);
-  show (Circuit.create_exn ~name:"name" [ output -- "output" ]);
+  show (create ~name:"name" [ output -- "output" ]);
   [%expect
     {|
     ((name name)
@@ -125,17 +139,18 @@ let%expect_test "[sexp_of_t] with an operator" =
          (data_in not))))
        (upto ())))
      (assertions     ())
-     (instantiations ()))
+     (instantiations ())
+     (rtl_name_map unset))
     |}]
 ;;
 
 let%expect_test "Output signal not driven" =
-  require_does_raise (fun () -> Circuit.create_exn ~name:"test" [ wire 1 ]);
+  require_does_raise (fun () -> create ~name:"test" [ wire 1 ]);
   [%expect {| ("circuit output signal is not driven" (output_signal (wire (width 1)))) |}]
 ;;
 
 let%expect_test "Output signal with no name" =
-  require_does_raise (fun () -> Circuit.create_exn ~name:"test" [ wireof vdd ]);
+  require_does_raise (fun () -> create ~name:"test" [ wireof vdd ]);
   [%expect
     {|
     ("circuit output signal must have a port name"
@@ -147,8 +162,7 @@ let%expect_test "Output signal with no name" =
 ;;
 
 let%expect_test "Output signal with multiple names" =
-  require_does_raise (fun () ->
-    Circuit.create_exn ~name:"test" [ wireof vdd -- "a" -- "b" ]);
+  require_does_raise (fun () -> create ~name:"test" [ wireof vdd -- "a" -- "b" ]);
   [%expect
     {|
     ("circuit output signal should only have one port name"
@@ -161,7 +175,7 @@ let%expect_test "Output signal with multiple names" =
 ;;
 
 let%expect_test "Output signal must be a wire" =
-  require_does_raise (fun () -> Circuit.create_exn ~name:"test" [ gnd ]);
+  require_does_raise (fun () -> create ~name:"test" [ gnd ]);
   [%expect
     {|
     ("circuit output signal must be a wire" (
@@ -174,17 +188,14 @@ let%expect_test "Output signal must be a wire" =
 ;;
 
 let%expect_test "Port names must be unique" =
-  require_does_raise (fun () ->
-    Circuit.create_exn ~name:"test" [ output "a" (input "a" 1) ]);
+  require_does_raise (fun () -> create ~name:"test" [ output "a" (input "a" 1) ]);
   [%expect
     {| ("Port names are not unique" (circuit_name test) (input_and_output_names (a))) |}];
   require_does_raise (fun () ->
-    Circuit.create_exn
-      ~name:"test"
-      [ output "a" (input "b" 1 +: input "b" 1 +: input "c" 1) ]);
+    create ~name:"test" [ output "a" (input "b" 1 +: input "b" 1 +: input "c" 1) ]);
   [%expect {| ("Input port names are not unique" (circuit_name test) (repeated (b))) |}];
   require_does_raise (fun () ->
-    Circuit.create_exn ~name:"test" [ output "a" (input "b" 1); output "a" (input "c" 1) ]);
+    create ~name:"test" [ output "a" (input "b" 1); output "a" (input "c" 1) ]);
   [%expect {| ("Output port names are not unique" (circuit_name test) (repeated (a))) |}]
 ;;
 
@@ -192,12 +203,12 @@ let%expect_test "Port names must be unique" =
    VHDL, Verilog and C (and other backends). *)
 let%expect_test "Port name clashes with reserved name" =
   require_does_not_raise (fun () ->
-    ignore (Circuit.create_exn ~name:"test" [ output "module" (input "x" 1) ] : Circuit.t));
+    ignore (create ~name:"test" [ output "module" (input "x" 1) ] : Circuit.t));
   [%expect {| |}]
 ;;
 
 let%expect_test "input with no name" =
-  require_does_raise (fun () -> Circuit.create_exn ~name:"test" [ output "o" (wire 1) ]);
+  require_does_raise (fun () -> create ~name:"test" [ output "o" (wire 1) ]);
   [%expect
     {|
     ("circuit input signal must have a port name (unassigned wire?)"
@@ -206,8 +217,7 @@ let%expect_test "input with no name" =
 ;;
 
 let%expect_test "input with multiple names" =
-  require_does_raise (fun () ->
-    Circuit.create_exn ~name:"test" [ output "o" (wire 1 -- "a" -- "b") ]);
+  require_does_raise (fun () -> create ~name:"test" [ output "o" (wire 1 -- "a" -- "b") ]);
   [%expect
     {|
     ("circuit input signal should only have one port name"
@@ -216,7 +226,7 @@ let%expect_test "input with multiple names" =
 ;;
 
 let%expect_test "phantom inputs" =
-  let circuit = Circuit.create_exn ~name:"test" [ output "b" (input "a" 1) ] in
+  let circuit = create ~name:"test" [ output "b" (input "a" 1) ] in
   (* Add a single phantom inputs *)
   Circuit.set_phantom_inputs circuit [ "c", 1 ] |> show;
   [%expect
@@ -245,7 +255,8 @@ let%expect_test "phantom inputs" =
          (data_in a))))
        (upto ())))
      (assertions     ())
-     (instantiations ()))
+     (instantiations ())
+     (rtl_name_map unset))
     |}];
   (* Add 2, one of which is already an input (and will be removed) *)
   Circuit.set_phantom_inputs circuit [ "a", 1; "c", 1 ] |> show;
@@ -275,7 +286,8 @@ let%expect_test "phantom inputs" =
          (data_in a))))
        (upto ())))
      (assertions     ())
-     (instantiations ()))
+     (instantiations ())
+     (rtl_name_map unset))
     |}];
   (* Add 2, one of which is already an output *)
   require_does_raise (fun () ->
@@ -300,7 +312,7 @@ let%expect_test "phantom input aliases an internal name" =
     let b = ~:a -- "b" in
     output "c" b
   in
-  let circuit = Circuit.create_exn ~name:"test" [ f () ] in
+  let circuit = create ~name:"test" [ f () ] in
   Rtl.print Verilog circuit;
   [%expect
     {|
@@ -347,7 +359,7 @@ let%expect_test "verify_clock_pins" =
     let clock = input "clock" 1 in
     let bar = reg (Reg_spec.create ~clock ()) ~enable:vdd foo in
     let bar = output "bar" bar in
-    Circuit.create_exn ~name:"the_foo_bar" [ bar ]
+    create ~name:"the_foo_bar" [ bar ]
   in
   require_does_not_raise (fun () ->
     Design_rule_checks.verify_clock_pins circuit ~expected_clock_pins:[ "clock" ]);
@@ -369,7 +381,7 @@ let%expect_test "verify_clock_pins" =
     let clock = wireof (input "clock" 1) -- "clock_wire" in
     let bar = reg (Reg_spec.create ~clock ()) ~enable:vdd foo in
     let bar = output "bar" bar in
-    Circuit.create_exn ~name:"the_foo_bar" [ bar ]
+    create ~name:"the_foo_bar" [ bar ]
   in
   require_does_not_raise (fun () ->
     Design_rule_checks.verify_clock_pins
@@ -418,7 +430,7 @@ let%expect_test "verify_clock_pins" =
           |]
         ()
     in
-    Circuit.create_exn
+    create
       ~name:"name"
       (List.mapi
          ~f:(fun i s -> output (Printf.sprintf "ram_%d" i) s)

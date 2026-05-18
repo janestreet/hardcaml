@@ -23,9 +23,9 @@ module Config : sig
     ; normalize_uids : bool
     (** Renumber the [Uid]s of all signals in the circuit starting at one.
 
-        Uid normalization ensures that circuits will print the same (as sexps or rtl)
-        regardless of the environment in which they are constructed (in particular with
-        regard to the global uid generator). *)
+        Uid normalization ensures that circuits will print the same (as sexps) regardless
+        of the environment in which they are constructed (in particular with regard to the
+        global uid generator). *)
     ; assertions : Assertion_manager.t option
     ; port_checks : Port_checks.t
     (** Perform validation checks on inputs and outputs ([With_interface] only) *)
@@ -37,13 +37,11 @@ module Config : sig
     }
   [@@deriving sexp_of]
 
-  (** Perform combinational loop checks, uid normalization, strict port checks, and add
-      phantom inputs. *)
+  (** Perform combinational loop checks, strict port checks, and add phantom inputs. *)
   val default : t
 
-  (** Deftault checks for simulations. Drop combinational loop checks (the simulation
-      scheduler will do that anyway) and uid normalization. Used by
-      [Cyclesim.With_interface]. *)
+  (** Default checks for simulations. Drop combinational loop checks (the simulation
+      scheduler will do that anyway). Used by [Cyclesim.With_interface]. *)
   val default_for_simulations : t
 end
 
@@ -86,13 +84,39 @@ val phantom_inputs : t -> (string * int) list
 val assertions : t -> Signal.t Map.M(String).t
 
 (** Construct a map of [uid]s to [Signal.t]s. *)
-val signal_map : t -> Signal.t Signal.Type.Uid_map.t
+val signal_map : t -> Signal.t Signal.Type.Uid.Map.t
 
 (** compare 2 circuits to see if they are the same *)
 val structural_compare : ?check_names:bool -> t -> t -> bool
 
 (** returns the list of instantiations in this circuit *)
-val instantiations : t -> Signal.t Signal.Type.Inst.Instantiation.t list
+val instantiations : t -> Signal.t Signal.Type.Inst.t list
+
+(** {2 Sanitized and mangled RTL names for circuit components} *)
+module Name_for_rtl : sig
+  (** Rtl names for an internal signal. This will raise if the signal is not part of the
+      circuit or is one of its inputs or outputs. *)
+  val internal_signal_exn : t -> Signal.t -> Rtl_name.t list
+
+  (** Rtl name for a instantiation. This will raise if the signal is not part of the
+      circuit *)
+  val instantiation_exn : t -> Signal.t Signal.Type.Inst.t -> Rtl_name.t
+
+  (** Rtl name for a memory array and (in VHDL) array type. This will fail if the signal
+      is not part of the circuit *)
+  val multiport_mem_exn
+    :  t
+    -> Signal.t Signal.Type.Multiport_mem.t
+    -> Rtl_name.t * Rtl_name.t
+
+  (** Rtl name for a circuit port. This will fail if the signal is not an input or output
+      port of the circuit *)
+  val port_exn : t -> Signal.t -> Rtl_name.t
+
+  (** Rtl name for a phantom port. This will fail if there is no phantom port with the
+      given name and size *)
+  val phantom_port_exn : t -> string * int -> Rtl_name.t
+end
 
 module With_interface (I : Interface.S) (O : Interface.S) : sig
   type create = Interface.Create_fn(I)(O).t
