@@ -345,7 +345,9 @@ let systemverilog =
        illegal_bins
        shortreal
        bit
+       implements
        implies
+       soft
        solve
        break
        import
@@ -360,6 +362,7 @@ let systemverilog =
        interface
        struct
        class
+       interconnect
        intersect
        super
        clocking
@@ -387,6 +390,7 @@ let systemverilog =
        modport
        type
        cross
+       nettype
        new
        typedef
        dist
@@ -406,7 +410,7 @@ let systemverilog =
        until_with
        endgroup
        program
-       untypted
+       untyped
        endinterface
        property
        var
