@@ -3,6 +3,8 @@
 
     Open at the top level of modules that need to be clocked. *)
 
+open Core0
+
 module Signal = struct
   include Clocked_signal
   include Clocked_signal.Overrides

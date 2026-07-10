@@ -1,4 +1,4 @@
-open! Base
+open! Core0
 
 type t [@@deriving bin_io, sexp_of]
 

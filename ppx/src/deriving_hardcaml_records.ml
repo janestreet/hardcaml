@@ -34,6 +34,45 @@ let mangle_name ~loc name mangle =
   | None -> [%expr _n]
 ;;
 
+let clocking_mangled_name ~loc ~field_name ~mname ~label_declaration ~rtlname ~rtlmangle =
+  (* demangle clocking interfaces *)
+  let module_name_is_clocking name =
+    String.equal name "Clocking" || String.is_suffix name ~suffix:"_clocking"
+  in
+  let is_clocking_module mname =
+    match Longident.flatten_exn mname |> List.rev with
+    | name :: _ when module_name_is_clocking name -> true
+    | "Clocked" :: name :: _ when module_name_is_clocking name -> true
+    | _ -> false
+    | exception Invalid_argument _ ->
+      raise_errorf
+        ~loc
+        "[%s] nested interface module paths containing functor applications are not \
+         supported: %s"
+        deriver
+        (Longident.name mname)
+  in
+  match
+    is_clocking_module mname
+    && not (Label_attribute.has_rtlname ~loc:() label_declaration)
+  with
+  | false -> mangle_name ~loc rtlname rtlmangle
+  | true ->
+    (match
+       Label_attribute.has_rtlprefix ~loc:() label_declaration
+       || Label_attribute.has_rtlsuffix ~loc:() label_declaration
+     with
+     | true -> [%expr _n]
+     | false ->
+       (match String.chop_suffix field_name ~suffix:"_clocking" with
+        | Some prefix ->
+          [%expr Ppx_hardcaml_runtime0.concat [ [%e estring ~loc prefix]; "_"; _n ]]
+        | None ->
+          (match String.equal field_name "clocking" with
+           | true -> [%expr _n]
+           | false -> mangle_name ~loc rtlname rtlmangle)))
+;;
+
 (*
  * Code generation utility functions
  *)
@@ -154,7 +193,15 @@ let expand_port_names_and_widths_expresion
         in
         [%expr [%e fn] ~nbits:[%e nbits]]
     in
-    let mangled = mangle_name ~loc rtlname rtlmangle in
+    let mangled =
+      clocking_mangled_name
+        ~loc
+        ~field_name:txt
+        ~mname
+        ~label_declaration
+        ~rtlname
+        ~rtlmangle
+    in
     let rtlident = mk_rtlident ~loc mangled rtlprefix rtlsuffix in
     let mapid = pexp_ident ~loc (Located.mk ~loc (Ldot (mname, "map"))) in
     [%expr [%e mapid] [%e port_names_and_widths] ~f:(fun (_n, _b) -> [%e rtlident], _b)]

@@ -1,6 +1,6 @@
 (library
  (name hardcaml_test)
  (libraries bignum.bigint core expect_test_helpers_base expectable hardcaml
-   hardcaml_waveterm.kernel jane_rope splittable_random stdio)
+   hardcaml_vcd hardcaml_waveterm.kernel jane_rope splittable_random stdio)
  (preprocess
   (pps ppx_hardcaml ppx_jane)))

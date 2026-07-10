@@ -1,5 +1,7 @@
 (** Waveform data interface. *)
 
+open Core0
+
 module type S = sig
   type t [@@deriving sexp_of, equal ~localize]
 
@@ -38,4 +40,15 @@ module type Wave_data = sig
   [@@deriving equal ~localize, sexp_of]
 
   val combine : t -> t -> t
+
+  type event =
+    { wave_index : int
+    ; event_index : int
+    }
+
+  (** Iterate over events from all waves in increasing time order. The input waves are
+      assumed to already be in increasing time order individually. *)
+  val event_sequence_in_time_order
+    :  Wave_data_in_events.Bits.t Wave.t array
+    -> event Sequence.t
 end

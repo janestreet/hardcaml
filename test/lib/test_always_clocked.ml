@@ -27,7 +27,7 @@ module%test Always_clocked_variable_wire_domain_validation = struct
     [%expect
       {|
       ("[ensure_domain] Non-const Signal has unexpected clock domain"
-       (loc  lib/hardcaml/hardcaml/src/always.ml:LINE:COL)
+       (loc  lib/hardcaml/hardcaml/kernel/always.ml:LINE:COL)
        (name default)
        (signal (
          (base (wire (names (default)) (width 8)))

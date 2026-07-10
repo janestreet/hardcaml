@@ -26,8 +26,8 @@ design, a vendor macro or even another Hardcaml circuit.
 - : ?lib:string ->
     ?arch:string ->
     ?instance:string ->
-    ?parameters:Hardcaml.Parameter.t list ->
-    ?attributes:Hardcaml.Rtl_attribute.t list ->
+    ?parameters:Hardcaml_kernel.Parameter.t list ->
+    ?attributes:Hardcaml_kernel.Rtl_attribute.t list ->
     ?user_metadata:(string, Sexp.t) Base.Hashtbl.t ->
     unit ->
     name:string ->

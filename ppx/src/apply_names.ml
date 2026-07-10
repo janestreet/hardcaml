@@ -181,6 +181,19 @@ let hardcaml_name_collection collection =
           [%e name_intf_expression ~module_of_type_of_expression_being_named ~loc])])
 ;;
 
+let hardcaml_name_option () =
+  declare_let_binding_extension
+    ~name:"hw_option"
+    ~generate_naming_function:(fun ~arg ~loc ~name ->
+      let module_of_type_of_expression_being_named =
+        Option.value_map arg ~default:hardcaml_signal ~f:(fun { loc = _; txt } -> txt)
+      in
+      [%expr
+        Ppx_hardcaml_runtime0.Option.map ~f:(fun thing_to_name ->
+          let name = [%e estring ~loc name] in
+          [%e name_intf_expression ~module_of_type_of_expression_being_named ~loc])])
+;;
+
 let raise_hw_var_doesn't_support_intfs ~loc ~hw_var_variant =
   Location.raise_errorf
     ~loc
@@ -225,6 +238,19 @@ let hardcaml_name_var_collection collection =
       | Some _ -> raise_hw_var_doesn't_support_intfs ~loc ~hw_var_variant:("_" ^ name))
 ;;
 
+let hardcaml_name_var_option () =
+  declare_let_binding_extension
+    ~name:"hw_var_option"
+    ~generate_naming_function:(fun ~arg ~loc ~name ->
+      match arg with
+      | None ->
+        [%expr
+          Ppx_hardcaml_runtime0.Option.map ~f:(fun (thing_to_name : Always.Variable.t) ->
+            let name = [%e estring ~loc name] in
+            [%e name_always_variable_expr ~loc])]
+      | Some _ -> raise_hw_var_doesn't_support_intfs ~loc ~hw_var_variant:"_option")
+;;
+
 let register () =
   Driver.register_transformation
     "hardcaml_naming"
@@ -233,9 +259,11 @@ let register () =
       ; Context_free.Rule.extension (hardcaml_name_collection List)
       ; Context_free.Rule.extension (hardcaml_name_collection Array)
       ; Context_free.Rule.extension (hardcaml_name_collection Iarray)
+      ; Context_free.Rule.extension (hardcaml_name_option ())
       ; Context_free.Rule.extension (hardcaml_name_var ())
       ; Context_free.Rule.extension (hardcaml_name_var_collection List)
       ; Context_free.Rule.extension (hardcaml_name_var_collection Array)
       ; Context_free.Rule.extension (hardcaml_name_var_collection Iarray)
+      ; Context_free.Rule.extension (hardcaml_name_var_option ())
       ]
 ;;

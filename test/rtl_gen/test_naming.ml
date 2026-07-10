@@ -116,17 +116,17 @@ let%expect_test "verilog" =
   [%expect
     {|
     module inner (
-        i_extended_in_$vhdl_only,
-        \i_extended_in_?both ,
         i_simple,
+        \i_extended_in_?both ,
+        i_extended_in_$vhdl_only,
         o_simple,
         \o_extended_in_?both ,
         o_extended_in_$vhdl_only
     );
 
-        input i_extended_in_$vhdl_only;
-        input \i_extended_in_?both ;
         input i_simple;
+        input \i_extended_in_?both ;
+        input i_extended_in_$vhdl_only;
         output o_simple;
         output \o_extended_in_?both ;
         output o_extended_in_$vhdl_only;
@@ -143,17 +143,17 @@ let%expect_test "verilog" =
 
     endmodule
     module test_naming (
-        i_extended_in_$vhdl_only,
-        \i_extended_in_?both ,
         i_simple,
+        \i_extended_in_?both ,
+        i_extended_in_$vhdl_only,
         o_simple,
         \o_extended_in_?both ,
         o_extended_in_$vhdl_only
     );
 
-        input i_extended_in_$vhdl_only;
-        input \i_extended_in_?both ;
         input i_simple;
+        input \i_extended_in_?both ;
+        input i_extended_in_$vhdl_only;
         output o_simple;
         output \o_extended_in_?both ;
         output o_extended_in_$vhdl_only;
@@ -185,17 +185,17 @@ let%expect_test "verilog" =
 
     endmodule
     module naming (
-        i_extended_in_$vhdl_only,
-        \i_extended_in_?both ,
         i_simple,
+        \i_extended_in_?both ,
+        i_extended_in_$vhdl_only,
         o_simple,
         \o_extended_in_?both ,
         o_extended_in_$vhdl_only
     );
 
-        input i_extended_in_$vhdl_only;
-        input \i_extended_in_?both ;
         input i_simple;
+        input \i_extended_in_?both ;
+        input i_extended_in_$vhdl_only;
         output o_simple;
         output \o_extended_in_?both ;
         output o_extended_in_$vhdl_only;
@@ -318,9 +318,9 @@ let%expect_test "vhdl" =
 
     entity inner is
         port (
-            \i_extended_in_$vhdl_only\ : in std_logic;
-            \i_extended_in_?both\ : in std_logic;
             i_simple : in std_logic;
+            \i_extended_in_?both\ : in std_logic;
+            \i_extended_in_$vhdl_only\ : in std_logic;
             o_simple : out std_logic;
             \o_extended_in_?both\ : out std_logic;
             \o_extended_in_$vhdl_only\ : out std_logic
@@ -349,9 +349,9 @@ let%expect_test "vhdl" =
 
     entity test_naming is
         port (
-            \i_extended_in_$vhdl_only\ : in std_logic;
-            \i_extended_in_?both\ : in std_logic;
             i_simple : in std_logic;
+            \i_extended_in_?both\ : in std_logic;
+            \i_extended_in_$vhdl_only\ : in std_logic;
             o_simple : out std_logic;
             \o_extended_in_?both\ : out std_logic;
             \o_extended_in_$vhdl_only\ : out std_logic
@@ -394,9 +394,9 @@ let%expect_test "vhdl" =
 
     entity naming is
         port (
-            \i_extended_in_$vhdl_only\ : in std_logic;
-            \i_extended_in_?both\ : in std_logic;
             i_simple : in std_logic;
+            \i_extended_in_?both\ : in std_logic;
+            \i_extended_in_$vhdl_only\ : in std_logic;
             o_simple : out std_logic;
             \o_extended_in_?both\ : out std_logic;
             \o_extended_in_$vhdl_only\ : out std_logic

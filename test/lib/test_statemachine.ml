@@ -57,14 +57,14 @@ let%expect_test "" =
   [%expect
     {|
     module statemachine (
-        clear,
         clock,
+        clear,
         start,
         is_done
     );
 
-        input clear;
         input clock;
+        input clear;
         input start;
         output is_done;
 
@@ -156,8 +156,8 @@ let%expect_test "" =
 
     entity statemachine is
         port (
-            clear : in std_logic;
             clock : in std_logic;
+            clear : in std_logic;
             start : in std_logic;
             is_done : out std_logic
         );

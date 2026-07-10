@@ -20,6 +20,7 @@ end
 
 module Int = Int
 module List = List
+module Option = Option
 
 let concat = String.concat
 

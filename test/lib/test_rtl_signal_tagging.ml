@@ -58,17 +58,17 @@ let%expect_test "Signal attributes on top of signals in Verilog for circuits con
   [%expect
     {|
     module module_foo (
-        b,
         clk,
         a,
+        b,
         clear,
         c
     );
 
-        (* mark_debug="TRUE" *)
-        input [3:0] b;
         input clk;
         input [3:0] a;
+        (* mark_debug="TRUE" *)
+        input [3:0] b;
         input clear;
         (* mark_debug="TRUE" *)
         output [3:0] c;

@@ -1,3 +1,5 @@
+open! Core0
+
 module type Functions = sig
   module Signal : Signal.S
   module Always : Always.S with module Signal := Signal
@@ -7,6 +9,7 @@ module type Functions = sig
   val add_clear : Signal.t t -> Signal.t -> Signal.t t
   val to_spec : Signal.t t -> Signal.Reg_spec.t
   val to_spec_no_clear : Signal.t t -> Signal.Reg_spec.t
+  val clock : Signal.t t -> Signal.t
 
   val reg
     :  Signal.t t

@@ -2,6 +2,8 @@
     parameterizable, however, it should be less than or equal to [2 ^ LUT_SIZE] to avoid
     glitches on the addressing logic. *)
 
+open Core0
+
 module type S = sig
   (** Width of data in FIFO. *)
   val width : int
@@ -146,9 +148,5 @@ module Make (M : S) : sig
 end
 
 module For_testing : sig
-  val gray_inc_mux_inputs
-    :  (module Comb_intf.S with type t = 'a)
-    -> int
-    -> by:int
-    -> 'a list
+  val gray_inc_mux_inputs : (module Comb.S with type t = 'a) -> int -> by:int -> 'a list
 end

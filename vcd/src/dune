@@ -1,0 +1,10 @@
+(library
+ (name hardcaml_vcd)
+ (public_name hardcaml.vcd)
+ (libraries core)
+ (preprocess
+  (pps ppx_jane -compare-require-explicit-locality)))
+
+(ocamllex lexer)
+
+(ocamlyacc parser)

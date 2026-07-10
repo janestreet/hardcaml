@@ -47,14 +47,14 @@ let%expect_test "instantiation, with 0 or more parameters." =
     {|
     ("Icarus Verilog failed with" (error_code (Error (Exit_non_zero 4))))
     module temp (
-        bar,
         foo,
+        bar,
         zoo,
         moo
     );
 
-        input bar;
         input foo;
+        input bar;
         output zoo;
         output [1:0] moo;
 
@@ -117,8 +117,8 @@ let%expect_test "instantiation, with 0 or more parameters." =
 
     entity temp is
         port (
-            bar : in std_logic;
             foo : in std_logic;
+            bar : in std_logic;
             zoo : out std_logic;
             moo : out std_logic_vector(1 downto 0)
         );
@@ -205,13 +205,13 @@ let%expect_test "instantiation output corner case" =
     {|
     ("Icarus Verilog failed with" (error_code (Error (Exit_non_zero 2))))
     module temp (
-        bar,
         foo,
+        bar,
         zoo
     );
 
-        input bar;
         input foo;
+        input bar;
         output zoo;
 
         wire signal_wire;
@@ -236,8 +236,8 @@ let%expect_test "instantiation output corner case" =
 
     entity temp is
         port (
-            bar : in std_logic;
             foo : in std_logic;
+            bar : in std_logic;
             zoo : out std_logic
         );
     end entity;
@@ -309,13 +309,13 @@ let%expect_test "all parameter types" =
     {|
     ("Icarus Verilog failed with" (error_code (Error (Exit_non_zero 3))))
     module temp (
-        bar,
         foo,
+        bar,
         zoo
     );
 
-        input bar;
         input foo;
+        input bar;
         output zoo;
 
         wire signal_wire;
@@ -352,8 +352,8 @@ let%expect_test "all parameter types" =
 
     entity temp is
         port (
-            bar : in std_logic;
             foo : in std_logic;
+            bar : in std_logic;
             zoo : out std_logic
         );
     end entity;
@@ -493,13 +493,13 @@ let%expect_test "vivado compatibility mode" =
     {|
     ("Icarus Verilog failed with" (error_code (Error (Exit_non_zero 2))))
     module temp (
-        bar,
         foo,
+        bar,
         zoo
     );
 
-        input bar;
         input foo;
+        input bar;
         output zoo;
 
         wire signal_wire;
@@ -528,8 +528,8 @@ let%expect_test "vivado compatibility mode" =
 
     entity temp is
         port (
-            bar : in std_logic;
             foo : in std_logic;
+            bar : in std_logic;
             zoo : out std_logic
         );
     end entity;

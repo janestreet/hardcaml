@@ -274,7 +274,7 @@ module example4
   assign _4 = 1'bz;
   assign _5 =
     sel == 0 ? d :
-    _4;
+    1'bz;
   assign t = _5;
 endmodule
 - : unit = ()

@@ -1,0 +1,9 @@
+(library
+ (foreign_stubs
+  (language c)
+  (names bits_stubs))
+ (name hardcaml_kernel)
+ (public_name hardcaml.kernel)
+ (libraries bignum.bigint core hardcaml_interface_types stdio)
+ (preprocess
+  (pps ppx_jane ppx_hardcaml0)))

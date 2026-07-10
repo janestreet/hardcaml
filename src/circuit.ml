@@ -71,7 +71,8 @@ end
 
 module Port = struct
   module T = struct
-    type t = string * (int[@compare.ignore]) [@@deriving compare ~localize, sexp_of]
+    type t = string * (int[@compare.ignore] [@hash.ignore])
+    [@@deriving compare ~localize, hash, sexp_of]
   end
 
   include T
@@ -80,46 +81,58 @@ module Port = struct
 end
 
 module Rtl_name_map = struct
+  module State = struct
+    type t =
+      | With_ports of
+          { with_names : Signal.t list
+          ; without_names : Signal.t list
+          }
+      | With_named of { without_names : Signal.t list }
+      | With_all
+    [@@deriving sexp_of]
+  end
+
   type t =
-    { signal_names : Rtl_name.t list Map.M(Signal.Type.Uid).t
-    ; instantiation_names : Rtl_name.t Map.M(Signal.Type.Uid).t
-    ; multiport_mem_names : (Rtl_name.t * Rtl_name.t) Map.M(Signal.Type.Uid).t
-    ; port_names : Rtl_name.t Map.M(Signal.Type.Uid).t
-    ; phantom_port_names : Rtl_name.t Port.Map.t
+    { mutable state : State.t
+    ; scope : Rtl_name.Scope.t
+    ; signal_names : Rtl_name.t list Hashtbl.M(Signal.Type.Uid).t
+    ; instantiation_names : Rtl_name.t Hashtbl.M(Signal.Type.Uid).t
+    ; multiport_mem_names : (Rtl_name.t * Rtl_name.t) Hashtbl.M(Signal.Type.Uid).t
+    ; port_names : Rtl_name.t Hashtbl.M(Signal.Type.Uid).t
+    ; phantom_port_names : Rtl_name.t Hashtbl.M(Port).t
     }
   [@@deriving sexp_of]
 
-  let add_signal t scope signal =
-    { t with
-      signal_names =
-        Map.add_exn
-          t.signal_names
-          ~key:(Signal.uid signal)
-          ~data:(Rtl_name.Scope.mangle_signal_names scope signal)
-    }
+  let add_signal t signal =
+    Hashtbl.add_exn
+      t.signal_names
+      ~key:(Signal.uid signal)
+      ~data:(Rtl_name.Scope.mangle_signal_names t.scope signal)
   ;;
 
-  let add_inst t scope signal =
-    let t = add_signal t scope signal in
-    { t with
-      instantiation_names =
-        Map.add_exn
-          t.instantiation_names
-          ~key:(Signal.uid signal)
-          ~data:(Rtl_name.Scope.mangle_instantiation_name scope signal)
-    }
+  let add_inst t signal =
+    add_signal t signal;
+    Hashtbl.add_exn
+      t.instantiation_names
+      ~key:(Signal.uid signal)
+      ~data:(Rtl_name.Scope.mangle_instantiation_name t.scope signal)
   ;;
 
-  let add_mem t scope signal =
-    let name, type_name = Rtl_name.Scope.mangle_multiport_mem_name scope signal in
-    { t with
-      multiport_mem_names =
-        Map.add_exn t.multiport_mem_names ~key:(Signal.uid signal) ~data:(name, type_name)
-    ; signal_names = Map.add_exn t.signal_names ~key:(Signal.uid signal) ~data:[ name ]
-    }
+  let add_mem t signal =
+    let name, type_name = Rtl_name.Scope.mangle_multiport_mem_name t.scope signal in
+    Hashtbl.add_exn t.multiport_mem_names ~key:(Signal.uid signal) ~data:(name, type_name);
+    Hashtbl.add_exn t.signal_names ~key:(Signal.uid signal) ~data:[ name ]
   ;;
 
-  let add_port t scope signal =
+  let add_signal_by_kind t signal =
+    if Signal.Type.is_mem signal
+    then add_mem t signal
+    else if Signal.Type.is_inst signal
+    then add_inst t signal
+    else add_signal t signal
+  ;;
+
+  let add_port t signal =
     match Signal.names signal with
     | [] ->
       raise_s
@@ -128,13 +141,10 @@ module Rtl_name_map = struct
             ~note:"This error should have been caught during circuit generation."
             ~port:(signal : Signal.t)]
     | [ name ] ->
-      let port_names =
-        Map.add_exn
-          t.port_names
-          ~key:(Signal.uid signal)
-          ~data:(Rtl_name.Scope.add_port_name scope signal name)
-      in
-      { t with port_names }
+      Hashtbl.add_exn
+        t.port_names
+        ~key:(Signal.uid signal)
+        ~data:(Rtl_name.Scope.add_port_name t.scope signal name)
     | _ ->
       raise_s
         [%message
@@ -143,58 +153,61 @@ module Rtl_name_map = struct
             ~port:(signal : Signal.t)]
   ;;
 
-  let add_phantom_port t scope port =
+  let add_phantom_port t port =
     let name, _ = port in
-    let phantom_port_names =
-      Map.add_exn
-        t.phantom_port_names
-        ~key:port
-        ~data:(Rtl_name.Scope.add_phantom_port_name scope name)
-    in
-    { t with phantom_port_names }
+    Hashtbl.add_exn
+      t.phantom_port_names
+      ~key:port
+      ~data:(Rtl_name.Scope.add_phantom_port_name t.scope name)
   ;;
 
-  let init () =
-    { signal_names = Map.empty (module Signal.Type.Uid)
-    ; instantiation_names = Map.empty (module Signal.Type.Uid)
-    ; multiport_mem_names = Map.empty (module Signal.Type.Uid)
-    ; port_names = Map.empty (module Signal.Type.Uid)
-    ; phantom_port_names = Map.empty (module Port)
-    }
-  ;;
-
-  let create signal_graph ~inputs ~phantom_inputs ~outputs =
-    let scope = Rtl_name.Scope.create () in
-    let t = init () in
-    (* Add ports first so that any internal names that conflict with ports are mangled. *)
-    let t = List.fold inputs ~init:t ~f:(fun t input -> add_port t scope input) in
-    let t =
-      List.fold phantom_inputs ~init:t ~f:(fun t phantom_input ->
-        add_phantom_port t scope phantom_input)
-    in
-    let t = List.fold outputs ~init:t ~f:(fun t output -> add_port t scope output) in
+  let create_with_ports signal_graph ~inputs ~phantom_inputs ~outputs =
     let ports =
       List.concat_map [ inputs; outputs ] ~f:(List.map ~f:Signal.uid)
-      |> Set.of_list (module Signal.Type.Uid)
+      |> Hash_set.of_list (module Signal.Type.Uid)
     in
     (* For readability, process the signals in the roughly the order they will appear in
        the RTL, instead of depth-first. Also, first name signals with user given names, so
-       that any derived names that conflict with be mangled.
-    *)
+       that any derived names that conflict with be mangled. *)
     let with_names, without_names =
       Signal_graph.filter signal_graph ~f:(fun signal ->
-        (not (Signal.is_empty signal)) && not (Set.mem ports (Signal.uid signal)))
+        (not (Signal.is_empty signal)) && not (Hash_set.mem ports (Signal.uid signal)))
       |> List.partition_tf ~f:(fun signal -> List.length (Signal.names signal) > 0)
     in
-    let add_signal t signal =
-      if Signal.Type.is_mem signal
-      then add_mem t scope signal
-      else if Signal.Type.is_inst signal
-      then add_inst t scope signal
-      else add_signal t scope signal
+    let t =
+      { state = With_ports { with_names; without_names }
+      ; scope = Rtl_name.Scope.create ()
+      ; signal_names = Hashtbl.create (module Signal.Type.Uid)
+      ; instantiation_names = Hashtbl.create (module Signal.Type.Uid)
+      ; multiport_mem_names = Hashtbl.create (module Signal.Type.Uid)
+      ; port_names = Hashtbl.create (module Signal.Type.Uid)
+      ; phantom_port_names = Hashtbl.create (module Port)
+      }
     in
-    let t = List.fold ~init:t with_names ~f:add_signal in
-    List.fold ~init:t without_names ~f:add_signal
+    (* Add ports first so that any internal names that conflict with ports are mangled. *)
+    List.iter inputs ~f:(fun input -> add_port t input);
+    List.iter phantom_inputs ~f:(fun phantom_input -> add_phantom_port t phantom_input);
+    List.iter outputs ~f:(fun output -> add_port t output);
+    t
+  ;;
+
+  let init_named t =
+    match t.state with
+    | With_ports { with_names; without_names } ->
+      List.iter with_names ~f:(add_signal_by_kind t);
+      t.state <- With_named { without_names }
+    | With_named _ | With_all -> ()
+  ;;
+
+  let rec init_unnamed t =
+    match t.state with
+    | With_ports _ ->
+      init_named t;
+      init_unnamed t
+    | With_named { without_names } ->
+      List.iter without_names ~f:(add_signal_by_kind t);
+      t.state <- With_all
+    | With_all -> ()
   ;;
 end
 
@@ -276,19 +289,26 @@ let check_port_names_are_well_formed circuit_name inputs outputs =
           (input_and_output_names : Set.M(String).t)]
 ;;
 
-let get_or_create_rtl_name_map t =
-  match Set_once.get t.rtl_name_map with
-  | Some map -> map
-  | None ->
-    let map =
-      Rtl_name_map.create
-        t.signal_graph
-        ~inputs:t.inputs
-        ~outputs:t.outputs
-        ~phantom_inputs:t.phantom_inputs
-    in
-    Set_once.set_exn t.rtl_name_map map;
-    map
+let get_or_create_rtl_name_map t include_ =
+  let map =
+    match Set_once.get t.rtl_name_map with
+    | Some map -> map
+    | None ->
+      let map =
+        Rtl_name_map.create_with_ports
+          t.signal_graph
+          ~inputs:t.inputs
+          ~outputs:t.outputs
+          ~phantom_inputs:t.phantom_inputs
+      in
+      Set_once.set_exn t.rtl_name_map map;
+      map
+  in
+  (match map.state, include_ with
+   | _, `Ports_only | (With_named _ | With_all), `Named | With_all, `All -> ()
+   | With_ports _, `Named -> Rtl_name_map.init_named map
+   | (With_ports _ | With_named _), `All -> Rtl_name_map.init_unnamed map);
+  map
 ;;
 
 let create_exn ?(config = Config.default) ~name outputs =
@@ -451,24 +471,50 @@ let structural_compare ?check_names c0 c1 =
 let instantiations t = t.instantiations
 
 module Name_for_rtl = struct
+  let maybe_find_with_name find =
+    match find `Ports_only with
+    | Some a -> a
+    | None ->
+      (match find `Named with
+       | Some a -> a
+       | None -> find `All |> Option.value_exn)
+  ;;
+
   let internal_signal_exn t signal =
-    Map.find_exn (get_or_create_rtl_name_map t).signal_names (Signal.uid signal)
+    let find include_ =
+      Hashtbl.find
+        (get_or_create_rtl_name_map t include_).signal_names
+        (Signal.uid signal)
+    in
+    maybe_find_with_name find
   ;;
 
   let instantiation_exn t (inst : Signal.t Signal.Type.Inst.t) =
-    Map.find_exn (get_or_create_rtl_name_map t).instantiation_names inst.info.uid
+    let find include_ =
+      Hashtbl.find
+        (get_or_create_rtl_name_map t include_).instantiation_names
+        inst.info.uid
+    in
+    maybe_find_with_name find
   ;;
 
   let multiport_mem_exn t (mem : Signal.t Signal.Type.Multiport_mem.t) =
-    Map.find_exn (get_or_create_rtl_name_map t).multiport_mem_names mem.info.uid
+    let find include_ =
+      Hashtbl.find
+        (get_or_create_rtl_name_map t include_).multiport_mem_names
+        mem.info.uid
+    in
+    maybe_find_with_name find
   ;;
 
   let port_exn t signal =
-    Map.find_exn (get_or_create_rtl_name_map t).port_names (Signal.uid signal)
+    Hashtbl.find_exn
+      (get_or_create_rtl_name_map t `Ports_only).port_names
+      (Signal.uid signal)
   ;;
 
   let phantom_port_exn t port =
-    Map.find_exn (get_or_create_rtl_name_map t).phantom_port_names port
+    Hashtbl.find_exn (get_or_create_rtl_name_map t `Ports_only).phantom_port_names port
   ;;
 end
 
@@ -573,6 +619,28 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
             (port_names : string list)]
   ;;
 
+  let sort_inputs_by_port_order inputs =
+    (* During circuit creation, inputs are discovered by a graph search. Put them back
+       into the order specified by the interface. *)
+    let ordering = Hashtbl.create (module String) in
+    let (_ : int) =
+      I.fold I.port_names ~init:0 ~f:(fun idx name ->
+        Hashtbl.add_exn ordering ~key:name ~data:idx;
+        idx + 1)
+    in
+    let compare (a, _) (b, _) =
+      match Hashtbl.find ordering a, Hashtbl.find ordering b with
+      | None, None -> 0
+      | Some _, None -> -1
+      | None, Some _ -> 1
+      | Some a, Some b -> Int.compare a b
+    in
+    List.sort
+      (List.map inputs ~f:(fun signal -> List.hd_exn (Signal.names signal), signal))
+      ~compare
+    |> List.map ~f:snd
+  ;;
+
   let create_exn
     ?(config = Config.default)
     ?input_attributes
@@ -613,6 +681,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
     let circuit =
       create_exn ~config ~name (config.modify_outputs (O.to_list circuit_outputs))
     in
+    let circuit = { circuit with inputs = sort_inputs_by_port_order circuit.inputs } in
     (* Bodge - create phantom inputs which are inputs which may not be used in the
        implementation (perhaps due to some configuration option) but exist in the
        interface. *)

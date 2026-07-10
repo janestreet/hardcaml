@@ -88,8 +88,8 @@ let%expect_test "flattened" =
   [%expect
     {|
     module outer (
-        b,
         a,
+        b,
         c_0,
         d_0,
         c_1,
@@ -97,8 +97,8 @@ let%expect_test "flattened" =
         x
     );
 
-        input b;
         input a;
+        input b;
         output c_0;
         output d_0;
         output c_1;
@@ -127,8 +127,8 @@ let%expect_test "flattened" =
   [%expect
     {|
     module outer (
-        b,
         a,
+        b,
         c_0,
         d_0,
         c_1,
@@ -136,8 +136,8 @@ let%expect_test "flattened" =
         x
     );
 
-        input b;
         input a;
+        input b;
         output c_0;
         output d_0;
         output c_1;
@@ -166,8 +166,8 @@ let%expect_test "flattened" =
   [%expect
     {|
     module outer (
-        b,
         a,
+        b,
         c_0,
         d_0,
         c_1,
@@ -175,8 +175,8 @@ let%expect_test "flattened" =
         x
     );
 
-        input b;
         input a;
+        input b;
         output c_0;
         output d_0;
         output c_1;
@@ -217,14 +217,14 @@ let%expect_test "hierarchical" =
   [%expect
     {|
     module inner (
-        b,
         a,
+        b,
         c,
         d
     );
 
-        input b;
         input a;
+        input b;
         output c;
         output d;
 
@@ -239,8 +239,8 @@ let%expect_test "hierarchical" =
 
     endmodule
     module middle (
-        b,
         a,
+        b,
         c_0,
         d_0,
         c_1,
@@ -248,8 +248,8 @@ let%expect_test "hierarchical" =
         x
     );
 
-        input b;
         input a;
+        input b;
         output c_0;
         output d_0;
         output c_1;
@@ -284,8 +284,8 @@ let%expect_test "hierarchical" =
 
     endmodule
     module outer (
-        b,
         a,
+        b,
         c_0,
         d_0,
         c_1,
@@ -293,8 +293,8 @@ let%expect_test "hierarchical" =
         x
     );
 
-        input b;
         input a;
+        input b;
         output c_0;
         output d_0;
         output c_1;
@@ -337,14 +337,14 @@ let%expect_test "hierarchical" =
   [%expect
     {|
     module inner (
-        b,
         a,
+        b,
         c,
         d
     );
 
-        input b;
         input a;
+        input b;
         output c;
         output d;
 
@@ -359,8 +359,8 @@ let%expect_test "hierarchical" =
 
     endmodule
     module middle (
-        b,
         a,
+        b,
         c_0,
         d_0,
         c_1,
@@ -368,8 +368,8 @@ let%expect_test "hierarchical" =
         x
     );
 
-        input b;
         input a;
+        input b;
         output c_0;
         output d_0;
         output c_1;
@@ -404,8 +404,8 @@ let%expect_test "hierarchical" =
 
     endmodule
     module outer (
-        b,
         a,
+        b,
         c_0,
         d_0,
         c_1,
@@ -413,8 +413,8 @@ let%expect_test "hierarchical" =
         x
     );
 
-        input b;
         input a;
+        input b;
         output c_0;
         output d_0;
         output c_1;
@@ -457,14 +457,14 @@ let%expect_test "hierarchical" =
   [%expect
     {|
     module inner (
-        b,
         a,
+        b,
         c,
         d
     );
 
-        input b;
         input a;
+        input b;
         output c;
         output d;
 
@@ -479,8 +479,8 @@ let%expect_test "hierarchical" =
 
     endmodule
     module middle (
-        b,
         a,
+        b,
         c_0,
         d_0,
         c_1,
@@ -488,8 +488,8 @@ let%expect_test "hierarchical" =
         x
     );
 
-        input b;
         input a;
+        input b;
         output c_0;
         output d_0;
         output c_1;
@@ -524,8 +524,8 @@ let%expect_test "hierarchical" =
 
     endmodule
     module outer (
-        b,
         a,
+        b,
         c_0,
         d_0,
         c_1,
@@ -533,8 +533,8 @@ let%expect_test "hierarchical" =
         x
     );
 
-        input b;
         input a;
+        input b;
         output c_0;
         output d_0;
         output c_1;
@@ -624,7 +624,7 @@ let%expect_test "floating ports not in interface" =
       (expected_but_not_in_circuit ())
       (in_circuit_but_not_expected (foo))
       (circuit (
-        (name floating_inner) (input_ports (b foo a)) (output_ports (c d)))))
+        (name floating_inner) (input_ports (a b foo)) (output_ports (c d)))))
     |}]
 ;;
 
@@ -641,8 +641,8 @@ let%expect_test "[hierarchical_here] uses the file name as the module name" =
   [%expect
     {|
     module circuit (
-        b,
         a,
+        b,
         c_0,
         d_0,
         c_1,
@@ -650,8 +650,8 @@ let%expect_test "[hierarchical_here] uses the file name as the module name" =
         x
     );
 
-        input b;
         input a;
+        input b;
         output c_0;
         output d_0;
         output c_1;

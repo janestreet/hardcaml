@@ -1,3 +1,5 @@
+open Hardcaml_kernel
+
 (** {1 Design} *)
 
 module Always = Always

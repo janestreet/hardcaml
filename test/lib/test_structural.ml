@@ -64,7 +64,7 @@ let%expect_test "Prints with circuit created via With_interface.create_circuit" 
       assign _5 = 1'bz;
       assign _6 = a[0:0];
       assign _7 =
-        _6 == 0 ? _5 :
+        _6 == 0 ? 1'bz :
         _4;
       assign _8 = a[0:0];
       assign _9 = { _8, a };

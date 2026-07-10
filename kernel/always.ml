@@ -86,7 +86,12 @@ struct
       ~depth
       debug_info
       =
-      if depth = 0
+      if depth < 0
+      then
+        raise_s
+          [%message
+            "[Always.Variable.pipeline] cannot accept a negative depth" (depth : int)]
+      else if depth = 0
       then (
         (* use a wire - need to derive the default value *)
         match reset_to with

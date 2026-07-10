@@ -1,6 +1,6 @@
 open! Core0
 
-type ('a, 'b) with_valid2 = ('a, 'b) Comb_intf.with_valid2
+type ('a, 'b) with_valid2 = ('a, 'b) Comb.with_valid2
 
 module type Cases = Enum_intf.Cases
 module type S_enum = Enum_intf.S_enum

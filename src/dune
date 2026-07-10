@@ -1,12 +1,8 @@
 (library
- (foreign_stubs
-  (language c)
-  (names bits_stubs))
  (name hardcaml)
  (public_name hardcaml)
- (libraries bignum.bigint bin_prot core core_kernel.flags
-   hardcaml_interface_types base.md5 jane_rope sexplib splittable_random
-   stdio)
+ (libraries core core_kernel.flags hardcaml_kernel hardcaml_vcd base.md5
+   core_kernel.pairing_heap jane_rope sexplib stdio)
  (preprocess
   (pps ppx_jane ppx_hardcaml0 ppx_rope -require-template-extension))
  (ocamlopt_flags
