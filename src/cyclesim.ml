@@ -269,6 +269,7 @@ module Waveform = struct
       String.equal "clock" x
       || String.equal "clk" x
       || String.is_suffix ~suffix:"$clock" x
+      || String.is_suffix ~suffix:"_clock" x
     | `By_input_clocks ->
       (* Clocks are driven in the sim and don't need to be special cased here for the
          waveform *)
@@ -291,19 +292,20 @@ module Waveform = struct
             ~typ
             ~is_pseudo_clock:true
             (Data.create 1)
-        , fun _ -> () )
+        , None )
       else if is_reset t.name
       then (
         let data, _ = lookup sim cycle t in
         ( create_wave ~signal:t.signal ~name:t.name ~typ ~is_pseudo_clock:false data
-        , fun v -> Data.set data !cycle (if v then Bits.vdd else Bits.gnd) ))
+        , Some (fun v -> Data.set data !cycle (if v then Bits.vdd else Bits.gnd)) ))
       else (
         let data, update = lookup sim cycle t in
-        create_wave ~signal:t.signal ~name:t.name ~typ ~is_pseudo_clock:false data, update)
+        ( create_wave ~signal:t.signal ~name:t.name ~typ ~is_pseudo_clock:false data
+        , Some update ))
     in
     let internal_signal (t : Traced.internal_signal) =
       Option.value_map (lookup_node sim cycle t) ~default:[] ~f:(fun (data, update) ->
-        List.map t.mangled_names ~f:(fun name ->
+        List.mapi t.mangled_names ~f:(fun i name ->
           if is_clock name ~clock_mode
           then
             ( create_wave
@@ -312,10 +314,13 @@ module Waveform = struct
                 ~typ:Internal
                 ~is_pseudo_clock:true
                 (Data.create 1)
-            , fun _ -> () )
-          else
+            , None )
+          else (
+            (* Only trace each signal once, but add an entry per name that all points to
+               the same data *)
+            let update = if i = 0 then Some update else None in
             ( create_wave ~signal:t.signal ~name ~typ:Internal ~is_pseudo_clock:false data
-            , update )))
+            , update ))))
     in
     List.concat
       [ List.map traced.input_ports ~f:(io_port Input lookup_in_port)
@@ -327,13 +332,8 @@ module Waveform = struct
   let wrap sim =
     let cycle = ref 0 in
     let traced = trace sim cycle ~clock_mode:(clock_mode sim) in
-    let waves =
-      let waves = Array.of_list_map traced ~f:fst in
-      let get_name (w : _ Wave_data.Wave.t) = w.name in
-      Array.sort waves ~compare:(fun w0 w1 -> String.compare (get_name w0) (get_name w1));
-      waves
-    in
-    let updates = Array.of_list_map traced ~f:snd in
+    let waves = Array.of_list_map traced ~f:fst in
+    let updates = List.filter_map traced ~f:snd |> Array.of_list in
     let tasks rst () =
       Array.iter ~f:(fun f -> f rst) updates;
       Int.incr cycle

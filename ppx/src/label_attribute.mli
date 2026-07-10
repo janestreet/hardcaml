@@ -5,6 +5,9 @@ open Ppxlib
 type t
 
 val has_exists : loc:'a -> label_declaration -> bool
+val has_rtlname : loc:'a -> label_declaration -> bool
+val has_rtlprefix : loc:'a -> label_declaration -> bool
+val has_rtlsuffix : loc:'a -> label_declaration -> bool
 val get_exists : loc:location -> label_declaration -> expression
 val get_bits_opt : loc:location -> label_declaration -> expression option
 val get_bits_with_default : loc:location -> label_declaration -> expression

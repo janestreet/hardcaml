@@ -34,6 +34,18 @@ let has_exists ~loc:_ label_declaration =
   (find exists) label_declaration |> Option.is_some
 ;;
 
+let has_rtlname ~loc:_ label_declaration =
+  (find rtlname) label_declaration |> Option.is_some
+;;
+
+let has_rtlprefix ~loc:_ label_declaration =
+  (find rtlprefix) label_declaration |> Option.is_some
+;;
+
+let has_rtlsuffix ~loc:_ label_declaration =
+  (find rtlsuffix) label_declaration |> Option.is_some
+;;
+
 let get_exists ~loc label_declaration =
   match (find exists) label_declaration with
   | Some exists -> exists

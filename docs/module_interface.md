@@ -67,7 +67,7 @@ For example, we can create a circuit as follows:
 # module My_circuit = Circuit.With_interface(I)(O)
 module My_circuit :
   sig
-    type create = Hardcaml.Interface.Create_fn(I)(O).t
+    type create = Hardcaml_kernel.Interface.Create_fn(I)(O).t
     val create_exn :
       ?config:Circuit.Config.t ->
       ?input_attributes:Rtl_attribute.t list I.t ->

@@ -1,3 +1,5 @@
+open Core0
+
 module Signal : sig
   include module type of Clocked_signal
   include module type of Clocked_signal.Overrides

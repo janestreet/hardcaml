@@ -865,12 +865,20 @@ let to_verilog circuit =
           let parts = concat_map ~sep:[%rope ", "] d ~f:name in
           [%rope "{ %{parts} }"]
         | Mux (sel, d) ->
+          (* A Vivado quirk makes it fail to infer IOBUF when tristating through a
+             "high-z" variable. Ininling 1'bz seems to fix this. *)
+          let inline_or_name x =
+            match x with
+            | Rtl_op (_, w, Constant b) -> [%rope "%{w#Int}'b%{b#String}"]
+            | _ -> name x
+          in
           let rec write n l =
             match l with
             | [] -> Rope.empty
-            | [ x ] -> [%rope "    %{name x}"]
+            | [ x ] -> [%rope "    %{inline_or_name x}"]
             | x :: t ->
-              [%rope "    %{name sel} == %{n#Int} ? %{name x} :\n%{write (n+1) t}"]
+              [%rope
+                "    %{name sel} == %{n#Int} ? %{inline_or_name x} :\n%{write (n+1) t}"]
           in
           [%rope "\n%{write 0 d}"]
       in

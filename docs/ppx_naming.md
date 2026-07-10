@@ -132,8 +132,8 @@ must be of the appropriate, and same, type (ie `Signal.t` or `Always.Variable.t`
 
 # Lists, Arrays, and Iarrays
 
-The final supported form allows lists, arrays, and iarrays to be named. As might be
-expected, it applies the name along with an index for each element.
+Lists, arrays, and iarrays can be named. As might be expected, it applies the name along
+with an index for each element.
 
 ```ocaml
 # let create scope x =
@@ -153,3 +153,19 @@ arrays and iarrays respectively.
 contain `Always.Variable.t`s.
 
 These forms may also include a module path for use with interfaces and so on.
+
+# Options
+
+Options may be named if they are `Some`.
+
+```ocaml
+# let create scope x =
+  let%hw_option foo = x in
+  foo
+val create : Scope.t -> t option -> t option = <fun>
+# create (Scope.create ()) (Some (of_string "111"))
+- : t option = Some (const (names (foo)) (width 3) (value 0b111))
+```
+
+Similar to lists, `%hw_var_option` can be used for `Always.Variable.t option`, and a
+module path may be included for use with interfaces.

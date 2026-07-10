@@ -283,7 +283,9 @@ struct
     d
     =
     let maybe_add_attributes s = List.fold attributes ~init:s ~f:add_attribute in
-    if n = 0
+    if n < 0
+    then raise_s [%message "[Signal.pipeline] cannot accept a negative value" (n : int)]
+    else if n = 0
     then d
     else
       maybe_add_attributes

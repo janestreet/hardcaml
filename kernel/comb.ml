@@ -1111,7 +1111,7 @@ module Make (Prims : Primitives) = struct
   let rec tree ~arity ~f l =
     if arity <= 1 then raise_tree_invalid_arity ();
     let rec t0 l =
-      let l0, l1 = List.split_n l arity in
+      let #(l0, l1) = List.split_n l arity in
       if List.is_empty l1 then [ f l0 ] else f l0 :: t0 l1
     in
     match l with

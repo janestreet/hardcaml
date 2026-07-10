@@ -39,8 +39,8 @@ let%expect_test "simple vcd file" =
     $scope module inputs $end
       $var wire 1 ! -clock $end
       $var wire 1 " -reset $end
-      $var wire 1 $ a $end
-      $var wire 1 # b $end
+      $var wire 1 # a $end
+      $var wire 1 $ b $end
     $upscope $end
     $scope module outputs $end
       $var wire 1 % c_0 $end
@@ -91,8 +91,8 @@ let%expect_test "simple vcd file" =
     $dumpvars
     x!
     x"
-    x$
     x#
+    x$
     x%
     x'
     x&

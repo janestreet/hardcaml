@@ -47,21 +47,21 @@ let%expect_test "simple example" =
   [%expect
     {|
     module temp (
+        clock,
         clear,
         reset,
-        clock,
-        bar,
         foo,
+        bar,
         zoo,
         moo,
         sum
     );
 
+        input clock;
         input clear;
         input reset;
-        input clock;
-        input bar;
         input foo;
+        input bar;
         output zoo;
         output [1:0] moo;
         output [1:0] sum;
@@ -148,11 +148,11 @@ let%expect_test "simple example" =
 
     entity temp is
         port (
+            clock : in std_logic;
             clear : in std_logic;
             reset : in std_logic;
-            clock : in std_logic;
-            bar : in std_logic;
             foo : in std_logic;
+            bar : in std_logic;
             zoo : out std_logic;
             moo : out std_logic_vector(1 downto 0);
             sum : out std_logic_vector(1 downto 0)
@@ -254,21 +254,21 @@ let%expect_test "apply port mangling to " =
   [%expect
     {|
     module temp (
+        clock,
         clear,
         reset,
-        clock,
-        bar,
         foo,
+        bar,
         zoo,
         moo,
         sum
     );
 
+        input clock;
         input clear;
         input reset;
-        input clock;
-        input bar;
         input foo;
+        input bar;
         output zoo;
         output [1:0] moo;
         output [1:0] sum;
@@ -355,11 +355,11 @@ let%expect_test "apply port mangling to " =
 
     entity temp is
         port (
+            clock : in bit;
             clear : in bit;
             reset : in bit;
-            clock : in bit;
-            bar : in bit;
             foo : in bit;
+            bar : in bit;
             zoo : out bit;
             moo : out bit_vector(1 downto 0);
             sum : out bit_vector(1 downto 0)

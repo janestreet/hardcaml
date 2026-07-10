@@ -1,3 +1,4 @@
+open! Core0
 module Clocking = Clocking
 
 module Cross_product (Outer : Interface.S) (Inner : Interface.S) :

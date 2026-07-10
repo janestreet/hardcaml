@@ -61,9 +61,9 @@ let%expect_test "operators" =
   [%expect
     {|
     module operators (
-        i_c,
-        i_b,
         i_a,
+        i_b,
+        i_c,
         o_and,
         o_or,
         o_xor,
@@ -82,9 +82,9 @@ let%expect_test "operators" =
         o_mux
     );
 
-        input [9:0] i_c;
-        input [7:0] i_b;
         input [7:0] i_a;
+        input [7:0] i_b;
+        input [9:0] i_c;
         output [7:0] o_and;
         output [7:0] o_or;
         output [7:0] o_xor;
@@ -186,9 +186,9 @@ let%expect_test "operators" =
 
     entity operators is
         port (
-            i_c : in std_logic_vector(9 downto 0);
-            i_b : in std_logic_vector(7 downto 0);
             i_a : in std_logic_vector(7 downto 0);
+            i_b : in std_logic_vector(7 downto 0);
+            i_c : in std_logic_vector(9 downto 0);
             o_and : out std_logic_vector(7 downto 0);
             o_or : out std_logic_vector(7 downto 0);
             o_xor : out std_logic_vector(7 downto 0);

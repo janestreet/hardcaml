@@ -39,7 +39,7 @@ let%expect_test "too many inputs" =
       (actual_ports (a b c))
       (expected_but_not_in_circuit ())
       (in_circuit_but_not_expected (c))
-      (circuit ((name foo) (input_ports (c b a)) (output_ports (x)))))
+      (circuit ((name foo) (input_ports (a b c)) (output_ports (x)))))
     |}]
 ;;
 

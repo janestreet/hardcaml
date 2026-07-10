@@ -34,21 +34,25 @@ val test : unit -> Data.t = <fun>
 # let waves = test ()
 val waves : Data.t =
   Hardcaml__.Wave_data.By_cycle
-   [|{Hardcaml__.Wave_data.Wave.name = "clear"; width = 1;
+   [|{Hardcaml__.Wave_data.Wave.name = "clock"; width = 1;
       typ = Hardcaml.Wave_data.Type.Input;
-      wave_format = Hardcaml__.Wave_format.Bit_or Hardcaml__.Wave_format.Hex;
-      is_pseudo_clock = false; wave_data = <abstr>};
-     {Hardcaml__.Wave_data.Wave.name = "clock"; width = 1;
-      typ = Hardcaml.Wave_data.Type.Input;
-      wave_format = Hardcaml__.Wave_format.Bit_or Hardcaml__.Wave_format.Hex;
+      wave_format =
+       Hardcaml__.Core0.Wave_format.Bit_or Hardcaml__.Core0.Wave_format.Hex;
       is_pseudo_clock = true; wave_data = <abstr>};
-     {Hardcaml__.Wave_data.Wave.name = "dout"; width = 8;
-      typ = Hardcaml.Wave_data.Type.Output;
-      wave_format = Hardcaml__.Wave_format.Bit_or Hardcaml__.Wave_format.Hex;
+     {Hardcaml__.Wave_data.Wave.name = "clear"; width = 1;
+      typ = Hardcaml.Wave_data.Type.Input;
+      wave_format =
+       Hardcaml__.Core0.Wave_format.Bit_or Hardcaml__.Core0.Wave_format.Hex;
       is_pseudo_clock = false; wave_data = <abstr>};
      {Hardcaml__.Wave_data.Wave.name = "incr"; width = 1;
       typ = Hardcaml.Wave_data.Type.Input;
-      wave_format = Hardcaml__.Wave_format.Bit_or Hardcaml__.Wave_format.Hex;
+      wave_format =
+       Hardcaml__.Core0.Wave_format.Bit_or Hardcaml__.Core0.Wave_format.Hex;
+      is_pseudo_clock = false; wave_data = <abstr>};
+     {Hardcaml__.Wave_data.Wave.name = "dout"; width = 8;
+      typ = Hardcaml.Wave_data.Type.Output;
+      wave_format =
+       Hardcaml__.Core0.Wave_format.Bit_or Hardcaml__.Core0.Wave_format.Hex;
       is_pseudo_clock = false; wave_data = <abstr>}|]
 # Waveform.print waves
 ┌Signals────────┐┌Waves──────────────────────────────────────────────┐

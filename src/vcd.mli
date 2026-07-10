@@ -176,3 +176,56 @@ val write_time : Out_channel.t -> int -> unit
 
     Flush the out channel! *)
 val wrap : Out_channel.t -> ('i, 'o) Cyclesim.t -> ('i, 'o) Cyclesim.t
+
+(** Generate a VCD file from cycle-based waveform data that has already been populated.
+
+    This mirrors {!wrap}: it synthesises an implicit [-clock] and [-reset] pair, places
+    them in the [inputs] scope alongside other [Input]-typed waves, and emits one VCD
+    cycle for each entry in the wave data. Index 0 is treated as the post-reset state and
+    is emitted at [t = 0] with [-clock = 0] and [-reset = 1]; index [N >= 1] is emitted at
+    [t = N * vcdcycle] with [-clock = 1] / [-reset = 0], followed by a clock-low
+    half-cycle. Waves named ["clock"] or ["reset"] are dropped to avoid colliding with the
+    synthesised pair.
+
+    Flush the out channel! *)
+val write_cycle_based
+  :  ?config:Config.t
+  -> Out_channel.t
+  -> Wave_data_in_cycles.t Wave_data.Wave.t array
+  -> unit
+
+(** Generate a VCD file from event-based waveform data that has already been populated.
+
+    The waves are walked in time order using {!Wave_data.event_sequence_in_time_order};
+    multiple events at the same time share a single [#time] marker. Variables are split
+    into [inputs] / [outputs] / [various] scopes based on {!Wave_data.Type.t}, matching
+    the layout produced by [wrap]; empty scopes are omitted. Hierarchical names are split
+    on [$] like {!Scope.create_auto_hierarchy}.
+
+    Unlike [wrap], this does not synthesise a clock or reset signal — those are expected
+    to already be present in [waves] when relevant.
+
+    Flush the out channel! *)
+val write_event_based
+  :  ?config:Config.t
+  -> Out_channel.t
+  -> Wave_data_in_events.Bits.t Wave_data.Wave.t array
+  -> unit
+
+(** Parse a VCD into an event-based wave-data array.
+
+    This is intended to round-trip VCDs produced by {!wrap}, {!write_event_based} and
+    {!write_cycle_based}. The top-level scope name is used to recover the
+    {!Wave_data.Type.t}: ["inputs"] / ["outputs"] / ["various"] map to [Input] / [Output]
+    / [Internal]; any other top-level scope name falls back to [Internal]. The remaining
+    scope path is rejoined with [$] (matching the convention used by the writers), with
+    ["-inputs"] / ["-outputs"] mapped back to ["i"] / ["o"]. The {!Wave_format.t} cannot
+    be recovered and is always [Bit_or Hex].
+
+    Some VCD features are not representable in [Bits.t] and raise on encounter:
+
+    - X / Z bits in mid-simulation value changes (initial all-X [$dumpvars] entries
+      written by Hardcaml are silently skipped),
+    - real-valued signals,
+    - [$dumpoff] regions. *)
+val read_event_based : Hardcaml_vcd.t -> Wave_data_in_events.Bits.t Wave_data.Wave.t array

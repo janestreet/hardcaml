@@ -25,7 +25,7 @@ A state machine is constructed with the following function:
 - : here:[%call_pos] ->
     ?encoding:Always.State_machine.Encoding.t ->
     ?auto_wave_format:bool ->
-    ?attributes:Hardcaml.Rtl_attribute.t list ->
+    ?attributes:Hardcaml_kernel.Rtl_attribute.t list ->
     ?enable:t ->
     ?unreachable:'a list ->
     (module Hardcaml.Always.State_machine.State with type t = 'a) ->

@@ -3,4 +3,4 @@
  (public_name hardcaml.interface_types)
  (libraries core)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

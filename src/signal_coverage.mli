@@ -1,5 +1,6 @@
 (** Coverage information about a single signal. *)
 
+open Core0
 open Coverage_prim
 
 type 'a coverage =

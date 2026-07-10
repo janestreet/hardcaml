@@ -17,16 +17,16 @@ let%expect_test "top level blackbox" =
   [%expect
     {|
     module fir_filter_blackbox (
-        enable,
-        clr,
         clk,
+        clr,
+        enable,
         d,
         q
     );
 
-        input enable;
-        input clr;
         input clk;
+        input clr;
+        input enable;
         input [15:0] d;
         output [31:0] q;
 
@@ -49,16 +49,16 @@ let%expect_test "Instantiation blackbox" =
   [%expect
     {|
     module fir_filter (
-        enable,
-        clr,
         clk,
+        clr,
+        enable,
         d,
         q
     );
 
-        input enable;
-        input clr;
         input clk;
+        input clr;
+        input enable;
         input [15:0] d;
         output [31:0] q;
 
@@ -130,17 +130,17 @@ let%expect_test "Instantiation blackbox" =
 
     endmodule
     module fir_filter_top (
-        d,
-        enable,
-        clr,
         clk,
+        clr,
+        enable,
+        d,
         q
     );
 
-        input [15:0] d;
-        input enable;
-        input clr;
         input clk;
+        input clr;
+        input enable;
+        input [15:0] d;
         output [31:0] q;
 
         wire [15:0] signal_wire;
@@ -170,33 +170,33 @@ let%expect_test "Instantiation blackbox" =
   [%expect
     {|
     module fir_filter (
-        enable,
-        clr,
         clk,
+        clr,
+        enable,
         d,
         q
     );
 
-        input enable;
-        input clr;
         input clk;
+        input clr;
+        input enable;
         input [15:0] d;
         output [31:0] q;
 
 
     endmodule
     module fir_filter_top (
-        d,
-        enable,
-        clr,
         clk,
+        clr,
+        enable,
+        d,
         q
     );
 
-        input [15:0] d;
-        input enable;
-        input clr;
         input clk;
+        input clr;
+        input enable;
+        input [15:0] d;
         output [31:0] q;
 
         wire [15:0] signal_wire;

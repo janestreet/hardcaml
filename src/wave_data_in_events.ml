@@ -125,7 +125,12 @@ module Bits = struct
 
   let create width max_time = { t = Event_store.create (); width; max_time }
   let length t = !(t.max_time) + 1
-  let get t = Event_store.get t.t
+
+  let get t time =
+    (* If there are no events at all, just return 0 so we dont crash. *)
+    if Event_store.length t.t = 0 then Bits.zero t.width else Event_store.get t.t time
+  ;;
+
   let%template equal _ _ = false [@@mode __ = (local, global)]
   let width t = t.width
 

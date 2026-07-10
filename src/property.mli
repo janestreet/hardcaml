@@ -1,3 +1,5 @@
+open Core0
+
 type atomic_proposition = Signal.t [@@deriving sexp_of]
 
 module CTL : sig

@@ -10,6 +10,7 @@ module Generate_functions
 struct
   open Untyped
 
+  let clock t = t.clock
   let of_untyped x = x
   let to_untyped x = x
   let add_clear t clear = { t with clear = Signal.( |: ) t.clear clear }
