@@ -23,7 +23,9 @@ end
 
 module Verilog = struct
   module Verilog_base = Make_verilog (struct
-      let reserved_words = Reserved_words.verilog
+      (* Yosys reserves IEEE 1800 keywords in its Verilog output. Use the same superset
+         so generated netlists remain compatible with its parser. *)
+      let reserved_words = Reserved_words.systemverilog
     end)
 
   include Verilog_base

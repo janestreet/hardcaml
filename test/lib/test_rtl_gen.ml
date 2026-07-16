@@ -556,9 +556,9 @@ let%expect_test "initial value of resisters with comment (only in Verilog)" =
     |}]
 ;;
 
-let%expect_test "detects system verilog keyword" =
+let%expect_test "escapes system verilog keywords in Yosys-compatible Verilog" =
   let circuit =
-    Circuit.create_exn ~name:"test" [ output "q" (wireof (input "d" 1) -- "virtual") ]
+    Circuit.create_exn ~name:"test" [ output "q" (wireof (input "d" 1) -- "dist") ]
   in
   Rtl.print Verilog circuit;
   [%expect
@@ -571,9 +571,9 @@ let%expect_test "detects system verilog keyword" =
         input d;
         output q;
 
-        wire virtual;
-        assign virtual = d;
-        assign q = virtual;
+        wire \dist ;
+        assign \dist  = d;
+        assign q = \dist ;
 
     endmodule
     |}];
@@ -588,9 +588,9 @@ let%expect_test "detects system verilog keyword" =
         input d;
         output q;
 
-        wire \virtual ;
-        assign \virtual  = d;
-        assign q = \virtual ;
+        wire \dist ;
+        assign \dist  = d;
+        assign q = \dist ;
 
     endmodule
     |}];
@@ -610,12 +610,12 @@ let%expect_test "detects system verilog keyword" =
 
     architecture rtl of test is
 
-        signal virtual : std_logic;
+        signal dist : std_logic;
 
     begin
 
-        virtual <= d;
-        q <= virtual;
+        dist <= d;
+        q <= dist;
 
     end architecture;
     |}]
