@@ -925,7 +925,12 @@ let%expect_test "memory initialization" =
         signal signal_const_1 : std_logic_vector(1 downto 0);
         signal gnd : std_logic;
         type signal_multiport_mem_type is array (0 to 3) of std_logic_vector(7 downto 0);
-        signal signal_multiport_mem : signal_multiport_mem_type;
+        signal signal_multiport_mem : signal_multiport_mem_type := (
+            0 => "00000000",
+            1 => "00000001",
+            2 => "00000010",
+            3 => "00000011"
+        );
         signal signal_mem_read_port : std_logic_vector(7 downto 0);
 
     begin
@@ -939,13 +944,6 @@ let%expect_test "memory initialization" =
                     signal_multiport_mem(to_integer(unsigned(signal_const_1))) <= signal_const;
                 end if;
             end if;
-        end process;
-        process begin
-            signal_multiport_mem(0) <= "00000000";
-            signal_multiport_mem(1) <= "00000001";
-            signal_multiport_mem(2) <= "00000010";
-            signal_multiport_mem(3) <= "00000011";
-            wait;
         end process;
         signal_mem_read_port <= signal_multiport_mem(to_integer(unsigned(read_address)));
         q0 <= signal_mem_read_port;
@@ -1006,7 +1004,16 @@ let%expect_test "memory initialization" =
         signal signal_const_1 : std_logic_vector(2 downto 0);
         signal gnd : std_logic;
         type signal_multiport_mem_type is array (0 to 7) of std_logic;
-        signal signal_multiport_mem : signal_multiport_mem_type;
+        signal signal_multiport_mem : signal_multiport_mem_type := (
+            0 => '0',
+            1 => '1',
+            2 => '0',
+            3 => '1',
+            4 => '0',
+            5 => '1',
+            6 => '0',
+            7 => '1'
+        );
         signal signal_mem_read_port : std_logic;
 
     begin
@@ -1020,17 +1027,6 @@ let%expect_test "memory initialization" =
                     signal_multiport_mem(to_integer(unsigned(signal_const_1))) <= signal_const;
                 end if;
             end if;
-        end process;
-        process begin
-            signal_multiport_mem(0) <= '0';
-            signal_multiport_mem(1) <= '1';
-            signal_multiport_mem(2) <= '0';
-            signal_multiport_mem(3) <= '1';
-            signal_multiport_mem(4) <= '0';
-            signal_multiport_mem(5) <= '1';
-            signal_multiport_mem(6) <= '0';
-            signal_multiport_mem(7) <= '1';
-            wait;
         end process;
         signal_mem_read_port <= signal_multiport_mem(to_integer(unsigned(read_address)));
         q0 <= signal_mem_read_port;
@@ -1225,7 +1221,12 @@ let%expect_test "rom" =
         signal signal_add : std_logic_vector(1 downto 0);
         signal signal_mem_read_port : std_logic_vector(3 downto 0);
         type signal_multiport_mem_type is array (0 to 3) of std_logic_vector(3 downto 0);
-        signal signal_multiport_mem : signal_multiport_mem_type;
+        signal signal_multiport_mem : signal_multiport_mem_type := (
+            0 => "0000",
+            1 => "0001",
+            2 => "0010",
+            3 => "0011"
+        );
         signal signal_mem_read_port_1 : std_logic_vector(3 downto 0);
 
     begin
@@ -1233,13 +1234,6 @@ let%expect_test "rom" =
         signal_const <= "01";
         signal_add <= std_logic_vector(unsigned(read_address) + unsigned(signal_const));
         signal_mem_read_port <= signal_multiport_mem(to_integer(unsigned(signal_add)));
-        process begin
-            signal_multiport_mem(0) <= "0000";
-            signal_multiport_mem(1) <= "0001";
-            signal_multiport_mem(2) <= "0010";
-            signal_multiport_mem(3) <= "0011";
-            wait;
-        end process;
         signal_mem_read_port_1 <= signal_multiport_mem(to_integer(unsigned(read_address)));
         q0 <= signal_mem_read_port_1;
         q1 <= signal_mem_read_port;

@@ -221,15 +221,24 @@ let declaration (decl : Rtl_ast.declaration) ~two_state =
           ~class_:"label"
           logic.write.attributes
       ]
-  | Multiport_memory { memory; memory_type; depth; range = _ } ->
+  | Multiport_memory { memory; memory_type; depth; range = _; initialize_to } ->
     let attrs = attributes_of_var ~class_:"signal" memory in
     let memory_name = name_to_rope memory.name in
     let memory_type = name_to_rope memory_type in
+    let initialize_to =
+      Option.value_map ~default:Rope.empty initialize_to ~f:(fun initialize_to ->
+        let contents =
+          List.mapi (Array.to_list initialize_to) ~f:(fun index value ->
+            [%rope "%{index#Int} => %{vhdl_constant value}"])
+          |> Rope.concat ~sep:[%rope ",\n%{tab2}"]
+        in
+        [%rope " := (\n%{tab2}%{contents}\n%{tab})"])
+    in
     Rope.concat
       [ [%rope
           "%{tab}type %{ memory_type} is array (0 to %{(depth-1)#Int}) of %{slv \
            memory.range false};\n"]
-      ; [%rope "%{tab}signal %{memory_name} : %{memory_type};\n"]
+      ; [%rope "%{tab}signal %{memory_name} : %{memory_type}%{initialize_to};\n"]
       ; attrs
       ]
 ;;
@@ -533,9 +542,10 @@ let rec statement ast two_state (stat : Rtl_ast.statement) =
     write_always ast two_state sensitivity_list [ always ]
   | Initial { always } -> write_initial ast two_state always
   | Instantiation instantiation -> write_instantiation instantiation
-  | Multiport_mem { always; initial } ->
+  | Multiport_mem { always; initial = _ } ->
     (* Convert multiport mems to have all of their write ports in one process, this is
-       necessary to simulate multiple write ports in VHDL *)
+       necessary to simulate multiple write ports in VHDL. Initialization is part of the
+       declaration to avoid adding another driver. *)
     let all_write_clocks =
       List.concat_map always ~f:(function
         | Always { sensitivity_list; always = _ } ->
@@ -549,12 +559,9 @@ let rec statement ast two_state (stat : Rtl_ast.statement) =
         | Always { sensitivity_list = _; always } -> always
         | _ -> failwith "not allowed to have non-always statements in a memory write port")
     in
-    Rope.concat
-      [ (if List.is_empty all_write_statements
-         then Rope.empty
-         else write_always ast two_state (Edges all_write_clocks) all_write_statements)
-      ; Option.value_map ~default:Rope.empty initial ~f:(statement ast two_state)
-      ]
+    if List.is_empty all_write_statements
+    then Rope.empty
+    else write_always ast two_state (Edges all_write_clocks) all_write_statements
   | Mem_read_port { lhs; memory; address } ->
     let memory_name = name_to_rope memory.name in
     let lhs_name = name_to_rope lhs.name in

@@ -38,6 +38,7 @@ type multiport_memory_declaration =
   ; memory_type : Rtl_name.For_backend.t
   ; depth : int
   ; range : range
+  ; initialize_to : Bits.t array option
   }
 [@@deriving sexp_of]
 
