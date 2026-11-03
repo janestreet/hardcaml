@@ -6,7 +6,7 @@ module type S = Value_intf.S
 
 module Make_with_wave_format (S : Arg_with_wave_format) = struct
   module T = struct
-    type 'a t = 'a [@@deriving equal ~localize, compare ~localize]
+    type 'a t = 'a [@@deriving equal, compare]
 
     let sexp_of_t sexp_of_a a = [%sexp_of: string * a] (S.port_name, a)
     let port_names_and_widths = S.port_name, S.port_width

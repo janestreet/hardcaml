@@ -8,17 +8,7 @@ let print_circuit c =
   |> Signal_graph.iter ~f:(fun signal -> Signal.to_string signal |> Stdio.print_endline)
 ;;
 
-let dedup outputs =
-  Circuit.create_exn
-    ~name:"test"
-    ~config:
-      { Circuit.Config.default with
-        (* Ensure printed signal UIDs are stable *)
-        normalize_uids = true
-      }
-    outputs
-  |> Dedup.deduplicate
-;;
+let dedup outputs = Circuit.create_exn ~name:"test" outputs |> Dedup.deduplicate
 
 let%expect_test "simple" =
   let v = of_string "1111" +: of_string "1111" in
@@ -26,9 +16,9 @@ let%expect_test "simple" =
   print_circuit c;
   [%expect
     {|
-    Wire[id:1 bits:4 names:out deps:3] -> 3
-    Op[id:3 bits:4 names: deps:2,2] = add
-    Const[id:2 bits:4 names: deps:] = 1111
+    Wire[id:4 bits:4 names:out deps:3] -> 3
+    Op[id:3 bits:4 names: deps:1,1] = add
+    Const[id:1 bits:4 names: deps:] = 1111
     |}];
   let v =
     of_string "1111"
@@ -42,11 +32,11 @@ let%expect_test "simple" =
      deduplicated. *)
   [%expect
     {|
-    Wire[id:1 bits:4 names:out deps:6] -> 6
-    Op[id:6 bits:4 names: deps:5,3] = add
-    Op[id:5 bits:4 names: deps:3,4] = add
-    Op[id:3 bits:4 names: deps:2,2] = add
-    Const[id:2 bits:4 names: deps:] = 1111
+    Wire[id:10 bits:4 names:out deps:9] -> 9
+    Op[id:9 bits:4 names: deps:8,3] = add
+    Op[id:8 bits:4 names: deps:3,4] = add
+    Op[id:3 bits:4 names: deps:1,1] = add
+    Const[id:1 bits:4 names: deps:] = 1111
     Const[id:4 bits:4 names: deps:] = 1110
     |}]
 ;;
@@ -68,13 +58,13 @@ let%expect_test "register" =
   *)
   [%expect
     {|
-    Wire[id:4 bits:4 names:out deps:6] -> 6
-    Op[id:6 bits:4 names: deps:3,5] = add
-    Wire[id:3 bits:4 names: deps:7] -> 7
-    Reg[id:7 bits:4 names: deps:2,1]
-    Wire[id:2 bits:4 names: deps:6] -> 6
-    Wire[id:1 bits:1 names:clock deps:] -> ()
-    Const[id:5 bits:4 names: deps:] = 1111
+    Wire[id:8 bits:4 names:out deps:5] -> 5
+    Op[id:5 bits:4 names: deps:4,1] = add
+    Wire[id:4 bits:4 names: deps:9] -> 9
+    Reg[id:9 bits:4 names: deps:6,2]
+    Wire[id:6 bits:4 names: deps:5] -> 5
+    Wire[id:2 bits:1 names:clock deps:] -> ()
+    Const[id:1 bits:4 names: deps:] = 1111
     |}]
 ;;
 
@@ -85,9 +75,9 @@ let%expect_test "wires" =
   (* Unnamed wires are collapsed. *)
   [%expect
     {|
-    Wire[id:2 bits:4 names:out deps:1] -> 1
-    Wire[id:1 bits:4 names:x deps:3] -> 3
-    Const[id:3 bits:4 names: deps:] = 1100
+    Wire[id:6 bits:4 names:out deps:3] -> 3
+    Wire[id:3 bits:4 names:x deps:1] -> 1
+    Const[id:1 bits:4 names: deps:] = 1100
     |}]
 ;;
 
@@ -114,17 +104,17 @@ let%expect_test "memory" =
   print_circuit c;
   [%expect
     {|
-    Wire[id:3 bits:4 names:out deps:11] -> 11
-    Op[id:11 bits:4 names: deps:9,10] = add
-    Op[id:9 bits:4 names: deps:2,2] = add
-    Wire[id:2 bits:4 names: deps:8] -> 8
-    Mem_read_port[id:8 bits:4 names: deps:4,7]
-    Const[id:4 bits:4 names: deps:] = 1011
-    Multiport_mem[id:7 bits:4 names:memory1 deps:1,5,5,6]
-    Wire[id:1 bits:1 names:clock deps:] -> ()
-    Const[id:5 bits:4 names: deps:] = 1100
-    Const[id:6 bits:1 names: deps:] = 1
-    Const[id:10 bits:4 names: deps:] = 1111
+    Wire[id:15 bits:4 names:out deps:14] -> 14
+    Op[id:14 bits:4 names: deps:13,1] = add
+    Op[id:13 bits:4 names: deps:5,5] = add
+    Wire[id:5 bits:4 names: deps:4] -> 4
+    Mem_read_port[id:4 bits:4 names: deps:2,16]
+    Const[id:2 bits:4 names: deps:] = 1011
+    Multiport_mem[id:16 bits:4 names:memory1 deps:6,7,7,9]
+    Wire[id:6 bits:1 names:clock deps:] -> ()
+    Const[id:7 bits:4 names: deps:] = 1100
+    Const[id:9 bits:1 names: deps:] = 1
+    Const[id:1 bits:4 names: deps:] = 1111
     |}]
 ;;
 

@@ -40,31 +40,31 @@ end
 module Config = struct
   type t =
     { detect_combinational_loops : bool
-    ; normalize_uids : bool
-    ; assertions : Assertion_manager.t option
+    ; property_manager : Property_manager.t option
+    ; trace_properties : Property_manager.Trace_properties.t
     ; port_checks : Port_checks.t
     ; add_phantom_inputs : bool
-    ; modify_outputs : (Signal.t list -> Signal.t list[@sexp.opaque])
     }
   [@@deriving sexp_of]
 
+  (* [trace_properties] defaults to [none]. A config that carries a [property_manager]
+     must set [trace_properties] to select which properties are emitted (e.g. via
+     [Scope.circuit_config_with_properties]). *)
   let default =
     { detect_combinational_loops = true
-    ; normalize_uids = false
-    ; assertions = None
+    ; property_manager = None
+    ; trace_properties = Property_manager.Trace_properties.none
     ; port_checks = Port_sets_and_widths
     ; add_phantom_inputs = true
-    ; modify_outputs = Fn.id
     }
   ;;
 
   let default_for_simulations =
     { detect_combinational_loops = false
-    ; normalize_uids = false
-    ; assertions = None
+    ; property_manager = None
+    ; trace_properties = Property_manager.Trace_properties.none
     ; port_checks = Port_sets_and_widths
     ; add_phantom_inputs = true
-    ; modify_outputs = Fn.id
     }
   ;;
 end
@@ -72,12 +72,11 @@ end
 module Port = struct
   module T = struct
     type t = string * (int[@compare.ignore] [@hash.ignore])
-    [@@deriving compare ~localize, hash, sexp_of]
+    [@@deriving compare, hash, sexp_of]
   end
 
   include T
-
-  include%template Comparable.Make_plain [@mode local] (T)
+  include Comparable.Make_plain (T)
 end
 
 module Rtl_name_map = struct
@@ -100,6 +99,7 @@ module Rtl_name_map = struct
     ; multiport_mem_names : (Rtl_name.t * Rtl_name.t) Hashtbl.M(Signal.Type.Uid).t
     ; port_names : Rtl_name.t Hashtbl.M(Signal.Type.Uid).t
     ; phantom_port_names : Rtl_name.t Hashtbl.M(Port).t
+    ; property_names : Rtl_name.t Hashtbl.M(String).t
     }
   [@@deriving sexp_of]
 
@@ -161,7 +161,14 @@ module Rtl_name_map = struct
       ~data:(Rtl_name.Scope.add_phantom_port_name t.scope name)
   ;;
 
-  let create_with_ports signal_graph ~inputs ~phantom_inputs ~outputs =
+  let add_property t property_name =
+    Hashtbl.add_exn
+      t.property_names
+      ~key:property_name
+      ~data:(Rtl_name.Scope.mangle_name t.scope property_name)
+  ;;
+
+  let create_with_ports signal_graph ~inputs ~phantom_inputs ~outputs ~properties =
     let ports =
       List.concat_map [ inputs; outputs ] ~f:(List.map ~f:Signal.uid)
       |> Hash_set.of_list (module Signal.Type.Uid)
@@ -182,12 +189,16 @@ module Rtl_name_map = struct
       ; multiport_mem_names = Hashtbl.create (module Signal.Type.Uid)
       ; port_names = Hashtbl.create (module Signal.Type.Uid)
       ; phantom_port_names = Hashtbl.create (module Port)
+      ; property_names = Hashtbl.create (module String)
       }
     in
     (* Add ports first so that any internal names that conflict with ports are mangled. *)
     List.iter inputs ~f:(fun input -> add_port t input);
     List.iter phantom_inputs ~f:(fun phantom_input -> add_phantom_port t phantom_input);
     List.iter outputs ~f:(fun output -> add_port t output);
+    Option.iter properties ~f:(fun properties ->
+      Hashtbl.iteri properties ~f:(fun ~key:property_name ~data:_ ->
+        add_property t property_name));
     t
   ;;
 
@@ -219,8 +230,9 @@ type t =
   ; outputs : Signal.t list
   ; phantom_inputs : (string * int) list
   ; signal_graph : Signal_graph.t
-  ; assertions : Signal.t Map.M(String).t
   ; instantiations : Instantiation_sexp.t list
+  ; sva_properties : (string, Signal.t Property.Sva.t) Hashtbl.t option
+  ; sva_propositions : Set.M(Signal.Type.Signal_compared_by_uid).t
   ; rtl_name_map : Rtl_name_map.t Set_once.t
   }
 [@@deriving fields ~getters, sexp_of]
@@ -300,6 +312,7 @@ let get_or_create_rtl_name_map t include_ =
           ~inputs:t.inputs
           ~outputs:t.outputs
           ~phantom_inputs:t.phantom_inputs
+          ~properties:t.sva_properties
       in
       Set_once.set_exn t.rtl_name_map map;
       map
@@ -311,64 +324,97 @@ let get_or_create_rtl_name_map t include_ =
   map
 ;;
 
+type properties =
+  { ltl : (string, Property.LTL.t) Hashtbl.t option
+  ; ltl_propositions : Set.M(Signal.Type.Signal_compared_by_uid).t
+  ; sva : (string, Signal.t Property.Sva.t) Hashtbl.t option
+  ; sva_propositions : Set.M(Signal.Type.Signal_compared_by_uid).t
+  ; assertions : (string, Signal.t) Hashtbl.t option
+  ; filtered_property_manager : Property_manager.t option
+  }
+
+let get_properties property_manager trace_properties =
+  let filtered_property_manager =
+    Option.map property_manager ~f:(fun properties ->
+      Property_manager.filter properties trace_properties)
+  in
+  let ltl = Option.map filtered_property_manager ~f:Property_manager.get_ltl_properties in
+  let sva = Option.map filtered_property_manager ~f:Property_manager.get_sva_properties in
+  let assertions =
+    Option.map filtered_property_manager ~f:Property_manager.get_assertions
+  in
+  let ltl_propositions =
+    Option.value_map
+      ~default:(Set.empty (module Signal.Type.Signal_compared_by_uid))
+      filtered_property_manager
+      ~f:Property_manager.get_ltl_atomic_propositions
+  in
+  let sva_propositions =
+    Option.value_map
+      ~default:(Set.empty (module Signal.Type.Signal_compared_by_uid))
+      filtered_property_manager
+      ~f:Property_manager.get_sva_atomic_propositions
+  in
+  { ltl; ltl_propositions; sva; sva_propositions; assertions; filtered_property_manager }
+;;
+
 let create_exn ?(config = Config.default) ~name outputs =
   Instantiation.Expert.validate_module_name name;
-  let assertions =
-    match config.assertions with
-    | Some assertions -> Assertion_manager.finalize assertions
-    | None -> Map.empty (module String)
-  in
+  (* Property management *)
+  let properties = get_properties config.property_manager config.trace_properties in
+  (* Update the config with the filtered property manager that is actually used to
+     generate properties within the circuit *)
+  let config = { config with property_manager = properties.filtered_property_manager } in
   let output_names =
     List.concat_map outputs ~f:(fun signal ->
       if Signal.is_empty signal then [] else Signal.names signal)
     |> Set.of_list (module String)
   in
-  (* We have to filter out the assertions that are already in the output because they are
-     from [Cyclesim_with_properties.With_interface.create]
+  (* Add assertions and LTL propositions to the circuit output.
 
-     We add the assertions as output to make sure they show up on the waveform and their
-     signals are not optimized away *)
-  let output_assertions =
-    assertions
-    |> Map.to_alist
-    |> List.filter ~f:(fun (n, _) -> not (Set.mem output_names n))
-    |> List.map ~f:(fun (n, s) -> Signal.output n s)
+     If we get a name clash on an output we just assert (we used to filter and can do that
+     again, but it's a little harder to think about in the new world) *)
+  let output_propositions =
+    let output_assertions =
+      Option.value_map ~default:[] properties.assertions ~f:Hashtbl.to_alist
+      |> List.map ~f:(fun (name, assertion) ->
+        if Set.mem output_names name
+        then
+          raise_s
+            [%message
+              "Assertion name clashes with an existing output name" (name : string)];
+        Signal.output name assertion)
+    in
+    let output_propositions =
+      Set.to_list properties.ltl_propositions
+      |> List.map ~f:(fun ltl_property ->
+        Signal.Type.valid_output_exn ltl_property;
+        let property_name = List.hd_exn (Signal.names ltl_property) in
+        if Set.mem output_names property_name
+        then
+          raise_s
+            [%message
+              "LTL atomic proposition name clashes with an existing output name"
+                ~circuit_name:(name : string)
+                (property_name : string)];
+        ltl_property)
+    in
+    output_assertions @ output_propositions
   in
-  let outputs = outputs @ output_assertions in
-  let signal_graph = Signal_graph.create outputs in
+  let outputs = outputs @ output_propositions in
   (* check that all outputs are assigned wires with 1 name *)
-  ok_exn (Signal_graph.validate_outputs signal_graph);
-  (* uid normalization *)
+  ok_exn (Signal_graph.validate_outputs (Signal_graph.create outputs));
   let signal_graph =
-    if config.normalize_uids
-    then Signal_graph.normalize_uids signal_graph
-    else signal_graph
+    Signal_graph.create (outputs @ Set.to_list properties.sva_propositions)
   in
-  (* get new output wires *)
-  let outputs = Signal_graph.outputs signal_graph in
   (* get inputs checking that they are valid *)
   let inputs = ok_exn (Signal_graph.inputs signal_graph) in
-  (* update the assertions map to the new normalized signals and find all instantiations. *)
-  let assertions, instantiations =
-    Signal_graph.fold
-      signal_graph
-      ~init:(assertions, [])
-      ~f:(fun (assertions, instantiations) signal ->
-        if Signal.is_empty signal
-        then assertions, instantiations
-        else (
-          let assertions =
-            List.fold (Signal.names signal) ~init:assertions ~f:(fun assertions name ->
-              Map.change assertions name ~f:(function
-                | Some _ -> Some signal
-                | None -> None))
-          in
-          let instantiations =
-            match signal with
-            | Signal.Type.Inst inst -> inst :: instantiations
-            | _ -> instantiations
-          in
-          assertions, instantiations))
+  (* find all instantiations. *)
+  let instantiations =
+    Signal_graph.fold signal_graph ~init:[] ~f:(fun instantiations signal ->
+      match signal with
+      | Signal.Type.Inst inst -> inst :: instantiations
+      | _ -> instantiations)
   in
   (* check for combinational loops *)
   if config.detect_combinational_loops
@@ -384,8 +430,9 @@ let create_exn ?(config = Config.default) ~name outputs =
   ; outputs
   ; phantom_inputs
   ; signal_graph
-  ; assertions
   ; instantiations
+  ; sva_properties = properties.sva
+  ; sva_propositions = properties.sva_propositions
   ; rtl_name_map = Set_once.create ()
   }
 ;;
@@ -424,8 +471,8 @@ let uid_equal a b = Signal.Type.Uid.equal (Signal.uid a) (Signal.uid b)
 let is_input t signal = List.mem t.inputs signal ~equal:uid_equal
 let is_output t signal = List.mem t.outputs signal ~equal:uid_equal
 let signal_map t = Signal_map.create t.signal_graph
-let assertions t = t.assertions
 let config t = t.config
+let property_manager t = (config t).property_manager
 
 let structural_compare ?check_names c0 c1 =
   (* Number of inputs and outputs match *)
@@ -503,6 +550,13 @@ module Name_for_rtl = struct
       Hashtbl.find
         (get_or_create_rtl_name_map t include_).multiport_mem_names
         mem.info.uid
+    in
+    maybe_find_with_name find
+  ;;
+
+  let property_name_exn t property_name =
+    let find include_ =
+      Hashtbl.find (get_or_create_rtl_name_map t include_).property_names property_name
     in
     maybe_find_with_name find
   ;;
@@ -678,9 +732,7 @@ module With_interface (I : Interface.S) (O : Interface.S) = struct
       O.iter2 circuit_outputs output_attributes ~f:Signal.Type.set_attributes);
     O.iter2 circuit_outputs O.wave_formats ~f:Signal.set_wave_format;
     (* Create the circuit. *)
-    let circuit =
-      create_exn ~config ~name (config.modify_outputs (O.to_list circuit_outputs))
-    in
+    let circuit = create_exn ~config ~name (O.to_list circuit_outputs) in
     let circuit = { circuit with inputs = sort_inputs_by_port_order circuit.inputs } in
     (* Bodge - create phantom inputs which are inputs which may not be used in the
        implementation (perhaps due to some configuration option) but exist in the

@@ -818,9 +818,7 @@ let str_of_type ~options ({ ptype_loc = loc; _ } as type_decl) =
             type nonrec 'a t = 'a t
 
             let equal = equal
-            let equal__local = equal__local
             let compare = compare
-            let compare__local = compare__local
             let sexp_of_t = sexp_of_t
             let port_names_and_widths = port_names_and_widths
             let map2 = map2
@@ -832,9 +830,7 @@ let str_of_type ~options ({ ptype_loc = loc; _ } as type_decl) =
             type nonrec 'a t = 'a t
 
             let equal = equal
-            let equal__local = equal__local
             let compare = compare
-            let compare__local = compare__local
             let sexp_of_t = sexp_of_t
             let port_names_and_widths = port_names_and_widths
             let iter = iter

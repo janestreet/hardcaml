@@ -192,7 +192,7 @@ end
 
 module Sim_bits = struct
   include Comb.Make (struct
-      type t = Bits.t ref [@@deriving sexp_of, equal ~localize, compare ~localize]
+      type t = Bits.t ref [@@deriving sexp_of, equal, compare]
 
       let empty = ref Bits.empty
       let is_empty t = Bits.is_empty !t
@@ -230,50 +230,28 @@ module Sim_bits = struct
 end
 
 module Waveform = struct
-  module Data = Wave_data_in_cycles
-
-  let lookup_node sim cycle (t : Traced.internal_signal) =
-    let width = Signal.width t.signal in
-    let data = Data.create width in
-    let v = lookup_node_or_reg sim t in
-    Option.map v ~f:(fun v ->
-      let d = Node.data v in
-      let byte_address = Node.byte_address v in
-      let set_from_bytes = Data.set_from_bytes width in
-      data, fun _ -> set_from_bytes data !cycle d byte_address)
+  (* In [`All_one_domain] mode clocks are not driven by the simulation, so we synthesize
+     them as ordinary event-backed waves. We give each cycle two time steps so that the
+     clock can be high for the first and low for the second, producing a representable
+     period-2 square wave. In [`By_input_clocks] mode the clocks are genuine traced
+     signals, so one time step per cycle suffices. *)
+  let time_steps_per_cycle sim =
+    match clock_mode sim with
+    | `All_one_domain -> 2
+    | `By_input_clocks -> 1
   ;;
 
-  let lookup_port find_port sim cycle (t : Traced.io_port) =
-    let width = Signal.width t.signal in
-    let data = Data.create width in
-    let v = find_port sim t.name in
-    data, fun _ -> Data.set data !cycle !v
-  ;;
-
-  let lookup_in_port sim cycle t = lookup_port in_port sim cycle t
-  let lookup_out_port sim cycle t = lookup_port (out_port ~clock_edge:Before) sim cycle t
-
-  let create_wave ~signal ~name ~typ ~is_pseudo_clock wave_data =
+  let create_wave ~signal ~name ~typ wave_data =
     { Wave_data.Wave.name
     ; width = Signal.width signal
     ; typ
     ; wave_format = Signal.Type.get_wave_format signal
-    ; is_pseudo_clock
     ; wave_data
     }
   ;;
 
-  let is_clock x ~clock_mode =
-    match clock_mode with
-    | `All_one_domain ->
-      String.equal "clock" x
-      || String.equal "clk" x
-      || String.is_suffix ~suffix:"$clock" x
-      || String.is_suffix ~suffix:"_clock" x
-    | `By_input_clocks ->
-      (* Clocks are driven in the sim and don't need to be special cased here for the
-         waveform *)
-      false
+  let is_clock_signal sim signal =
+    Set.mem (Cyclesim0.clock_signal_uids sim) (Signal.uid signal)
   ;;
 
   let is_reset = function
@@ -281,62 +259,12 @@ module Waveform = struct
     | _ -> false
   ;;
 
-  let trace sim cycle ~clock_mode =
-    let traced = traced sim in
-    let io_port typ lookup (t : Traced.io_port) =
-      if is_clock t.name ~clock_mode
-      then
-        ( create_wave
-            ~signal:t.signal
-            ~name:t.name
-            ~typ
-            ~is_pseudo_clock:true
-            (Data.create 1)
-        , None )
-      else if is_reset t.name
-      then (
-        let data, _ = lookup sim cycle t in
-        ( create_wave ~signal:t.signal ~name:t.name ~typ ~is_pseudo_clock:false data
-        , Some (fun v -> Data.set data !cycle (if v then Bits.vdd else Bits.gnd)) ))
-      else (
-        let data, update = lookup sim cycle t in
-        ( create_wave ~signal:t.signal ~name:t.name ~typ ~is_pseudo_clock:false data
-        , Some update ))
-    in
-    let internal_signal (t : Traced.internal_signal) =
-      Option.value_map (lookup_node sim cycle t) ~default:[] ~f:(fun (data, update) ->
-        List.mapi t.mangled_names ~f:(fun i name ->
-          if is_clock name ~clock_mode
-          then
-            ( create_wave
-                ~signal:t.signal
-                ~name
-                ~typ:Internal
-                ~is_pseudo_clock:true
-                (Data.create 1)
-            , None )
-          else (
-            (* Only trace each signal once, but add an entry per name that all points to
-               the same data *)
-            let update = if i = 0 then Some update else None in
-            ( create_wave ~signal:t.signal ~name ~typ:Internal ~is_pseudo_clock:false data
-            , update ))))
-    in
-    List.concat
-      [ List.map traced.input_ports ~f:(io_port Input lookup_in_port)
-      ; List.map traced.output_ports ~f:(io_port Output lookup_out_port)
-      ; List.map traced.internal_signals ~f:internal_signal |> List.concat
-      ]
-  ;;
-
-  let wrap sim =
-    let cycle = ref 0 in
-    let traced = trace sim cycle ~clock_mode:(clock_mode sim) in
+  let wrap sim traced ~after_tasks =
     let waves = Array.of_list_map traced ~f:fst in
     let updates = List.filter_map traced ~f:snd |> Array.of_list in
     let tasks rst () =
       Array.iter ~f:(fun f -> f rst) updates;
-      Int.incr cycle
+      after_tasks ()
     in
     let sim =
       Private.modify sim [ After, Reset, tasks true; Before, At_clock_edge, tasks false ]
@@ -344,10 +272,184 @@ module Waveform = struct
     sim, waves
   ;;
 
-  let create sim =
-    let sim, waves = wrap sim in
-    Wave_data.By_cycle waves, sim
-  ;;
+  module By_mutable_event = struct
+    module Data = Wave_data_in_mutable_events
+
+    let num_words width = (width + 63) / 64
+
+    let rec bytes_equal_loop a a_pos b b_pos words word =
+      if word = words
+      then true
+      else if Int64.equal
+                (Bytes.unsafe_get_int64 a (a_pos + (8 * word)))
+                (Bytes.unsafe_get_int64 b (b_pos + (8 * word)))
+      then bytes_equal_loop a a_pos b b_pos words (word + 1)
+      else false
+    ;;
+
+    let bytes_equal ~width a a_pos b b_pos =
+      bytes_equal_loop a a_pos b b_pos (num_words width) 0
+    ;;
+
+    let copy_bytes ~width ~src ~src_pos ~dst ~dst_pos =
+      Bytes.unsafe_blit ~src ~src_pos ~dst ~dst_pos ~len:(8 * num_words width)
+    ;;
+
+    let bits_underlying_repr bits = Bits.Expert.unsafe_underlying_repr bits
+    let time_of_cycle sim cycle = cycle * time_steps_per_cycle sim
+
+    let lookup_node sim max_time cycle (t : Traced.internal_signal) =
+      let width = Signal.width t.signal in
+      let data = Data.create width max_time in
+      Data.insert data 0 (Bits.zero width);
+      let v = lookup_node_or_reg sim t in
+      Option.map v ~f:(fun v ->
+        let d = Node.data v in
+        let byte_address = Node.byte_address v in
+        let last_data = Bytes.make (8 * num_words width) '\000' in
+        ( data
+        , fun _ ->
+            if not (bytes_equal ~width d byte_address last_data 0)
+            then (
+              Data.insert_from_bytes data (time_of_cycle sim !cycle) d byte_address;
+              copy_bytes ~width ~src:d ~src_pos:byte_address ~dst:last_data ~dst_pos:0) ))
+    ;;
+
+    let lookup_port find_port max_time sim cycle (t : Traced.io_port) =
+      let width = Signal.width t.signal in
+      let data = Data.create width max_time in
+      Data.insert data 0 (Bits.zero width);
+      let v = find_port sim t.name in
+      let last_data = Bytes.make (8 * num_words width) '\000' in
+      ( data
+      , fun (_ : bool) ->
+          let bits = !v in
+          let bits_data = bits_underlying_repr bits in
+          let byte_address = Bits.Expert.offset_for_data in
+          if not (bytes_equal ~width bits_data byte_address last_data 0)
+          then (
+            Data.insert data (time_of_cycle sim !cycle) bits;
+            copy_bytes
+              ~width
+              ~src:bits_data
+              ~src_pos:byte_address
+              ~dst:last_data
+              ~dst_pos:0) )
+    ;;
+
+    let lookup_in_port max_time sim cycle t = lookup_port in_port max_time sim cycle t
+
+    let lookup_out_port max_time sim cycle t =
+      lookup_port (out_port ~clock_edge:Before) max_time sim cycle t
+    ;;
+
+    (* Synthesize a clock that is high for the first half of the cycle and low for the
+       second. This is only used in [`All_one_domain] mode, where [time_steps_per_cycle]
+       is 2 and so the half period is a single time step. *)
+    let clock_data sim max_time cycle =
+      let data = Data.create 1 max_time in
+      Data.insert data 0 Bits.vdd;
+      ( data
+      , fun (_ : bool) ->
+          let time = time_of_cycle sim !cycle in
+          Data.insert data time Bits.vdd;
+          Data.insert data (time + (time_steps_per_cycle sim / 2)) Bits.gnd )
+    ;;
+
+    let trace sim max_time cycle =
+      let traced = traced sim in
+      (* In [`All_one_domain] mode all clocks are synthesized and identical, so create a
+         single clock wave and share it between every clock signal, however it is named.
+         The first clock signal traced creates the wave and registers its update task;
+         later clock signals share the data with no update. *)
+      let shared_synthesized_clock : Data.t Set_once.t = Set_once.create () in
+      let synthesized_clock () =
+        match Set_once.get shared_synthesized_clock with
+        | Some data -> data, None
+        | None ->
+          let data, update = clock_data sim max_time cycle in
+          Set_once.set_exn shared_synthesized_clock data;
+          data, Some update
+      in
+      let io_port typ lookup (t : Traced.io_port) =
+        if is_clock_signal sim t.signal
+        then (
+          let data, update =
+            match clock_mode sim with
+            | `All_one_domain -> synthesized_clock ()
+            | `By_input_clocks ->
+              let data, update = lookup max_time sim cycle t in
+              data, Some update
+          in
+          create_wave ~signal:t.signal ~name:t.name ~typ data, update)
+        else if is_reset t.name
+        then (
+          let data = Data.create (Signal.width t.signal) max_time in
+          Data.insert data 0 Bits.gnd;
+          let last_value = ref false in
+          ( create_wave ~signal:t.signal ~name:t.name ~typ data
+          , Some
+              (fun v ->
+                if not (Bool.equal !last_value v)
+                then (
+                  Data.insert
+                    data
+                    (time_of_cycle sim !cycle)
+                    (if v then Bits.vdd else Bits.gnd);
+                  last_value := v)) ))
+        else (
+          let data, update = lookup max_time sim cycle t in
+          create_wave ~signal:t.signal ~name:t.name ~typ data, Some update)
+      in
+      let internal_signal (t : Traced.internal_signal) =
+        (* We require the signal to be locatable in the simulation before tracing it. In
+           [`All_one_domain] mode clocks are not driven, so for clock signals we ignore
+           the looked-up value and synthesize a clock instead. In [`By_input_clocks] mode
+           clocks are genuine driven signals, so we trace them like any other signal. *)
+        Option.value_map
+          (lookup_node sim max_time cycle t)
+          ~default:[]
+          ~f:(fun (data, update) ->
+            let data, update =
+              if is_clock_signal sim t.signal
+              then (
+                match clock_mode sim with
+                | `All_one_domain -> synthesized_clock ()
+                | `By_input_clocks -> data, Some update)
+              else data, Some update
+            in
+            List.mapi t.mangled_names ~f:(fun i name ->
+              (* Only trace each signal once, but add an entry per name that all points to
+                 the same data. *)
+              let update = if i = 0 then update else None in
+              create_wave ~signal:t.signal ~name ~typ:Internal data, update))
+      in
+      List.concat
+        [ List.map traced.input_ports ~f:(io_port Input lookup_in_port)
+        ; List.map traced.output_ports ~f:(io_port Output lookup_out_port)
+        ; List.map traced.internal_signals ~f:internal_signal |> List.concat
+        ]
+    ;;
+
+    let create sim =
+      let cycle = ref 0 in
+      let max_time = ref 0 in
+      let traced = trace sim max_time cycle in
+      let sim, waves =
+        wrap sim traced ~after_tasks:(fun () ->
+          (* Extend [max_time] to cover the whole of this cycle's time-step span, so that
+             the trailing edge of a synthesized clock is included. *)
+          let last_time_in_cycle =
+            time_of_cycle sim !cycle + (time_steps_per_cycle sim - 1)
+          in
+          max_time := max !max_time last_time_in_cycle;
+          Int.incr cycle)
+      in
+      Wave_data.By_mutable_event waves, sim
+    ;;
+  end
+
+  let create sim = By_mutable_event.create sim
 
   let create_if ~enabled sim =
     if enabled

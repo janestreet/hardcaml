@@ -400,7 +400,7 @@ module Make (Config : Config) = struct
       | Swap_pivot
       | Update_range
       | Recurse
-    [@@deriving sexp_of, compare ~localize, enumerate]
+    [@@deriving sexp_of, compare, enumerate]
   end
   (* $MDX part-end *)
 
@@ -794,8 +794,8 @@ let%expect_test "debugging" =
       (Hardcaml_waveterm.Waveform.expect_exact
          ~signals_alignment:Right
          ~display_rules
-         ~start_cycle:125
-         ~wave_width:1);
+         ~start_time:250
+         ~wave_scale:1);
   [%expect_exact
     {|((0 0 15) (ram (9 4 7 6 5 5 0 3 1 4 8 6 4 0 2 3)))
 ((0 0 3) (ram (0 1 0 2 3 5 9 3 4 4 8 6 4 7 6 5)))
@@ -810,7 +810,7 @@ let%expect_test "debugging" =
 ((12 11 13) (ram (0 0 1 2 3 3 4 4 4 5 5 6 7 6 8 9)))
 
 ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────────┐
-│             clock││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ │
+│             clock││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ │
 │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─│
 │             clear││                                                                    │
 │                  ││────────────────────────────────────────────────────────────────────│
@@ -881,7 +881,7 @@ let%expect_test "debugging" =
 │rtition$high$valid││                                            ┌───┐                   │
 │                  ││────────────────────────────────────────────┘   └───────────────────│
 └──────────────────┘└────────────────────────────────────────────────────────────────────┘
-71b1dfcf58bbd1d8a5c5fba17d4635c6
+f4303d34b4506388e1ee9817a5ac0d57
 |}]
 ;;
 

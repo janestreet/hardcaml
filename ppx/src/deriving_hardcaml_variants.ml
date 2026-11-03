@@ -416,9 +416,7 @@ let expand_make_functor ~loc cases =
          ~expr:
            (pmod_structure
               ~loc
-              [ [%stri
-                  type nonrec 'a t = 'a t
-                  [@@deriving equal ~localize, compare ~localize, sexp_of]]
+              [ [%stri type nonrec 'a t = 'a t [@@deriving equal, compare, sexp_of]]
               ; pstr_value
                   ~loc
                   Nonrecursive
@@ -460,9 +458,7 @@ let expand_make_functor ~loc cases =
                       type nonrec 'a t = 'a t
 
                       let equal = equal
-                      let equal__local = equal__local
                       let compare = compare
-                      let compare__local = compare__local
                       let sexp_of_t = sexp_of_t
                       let port_names_and_widths = port_names_and_widths
                       let iter = iter

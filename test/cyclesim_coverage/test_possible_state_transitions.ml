@@ -12,7 +12,7 @@ module State = struct
     | B
     | C
     | D
-  [@@deriving compare ~localize, enumerate, sexp_of, variants]
+  [@@deriving compare, enumerate, sexp_of, variants]
 end
 
 let create_sm encoding =

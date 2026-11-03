@@ -7,7 +7,7 @@ module Cases = struct
     | C2
     | C3
     | C4
-  [@@deriving sexp_of, compare ~localize, enumerate, variants, equal ~localize]
+  [@@deriving sexp_of, compare, enumerate, variants, equal]
 end
 
 module Enum = Enum.Make_enums (Cases)

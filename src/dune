@@ -1,10 +1,11 @@
 (library
  (name hardcaml)
  (public_name hardcaml)
- (libraries core core_kernel.flags hardcaml_kernel hardcaml_vcd base.md5
-   core_kernel.pairing_heap jane_rope sexplib stdio)
+ (libraries bignum.bigint core core_kernel.flags hardcaml_kernel hardcaml_vcd
+   base.md5 core_kernel.pairing_heap jane_rope sexplib stdio)
  (preprocess
-  (pps ppx_jane ppx_hardcaml0 ppx_rope -require-template-extension))
+  (pps ppx_jane -compare-require-explicit-locality ppx_hardcaml0 ppx_rope
+    -require-template-extension))
  (ocamlopt_flags
   :standard
   (:include ocamlopt-flags)))

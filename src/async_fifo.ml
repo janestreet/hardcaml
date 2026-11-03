@@ -18,15 +18,29 @@ module Fifo_memory_type = struct
     | Registers
 end
 
+let base_name = "hardcaml_async_fifo"
+
+module Register_names = struct
+  let waddr_wd = "waddr_wd"
+  let waddr_rd = "waddr_rd"
+  let waddr_rd_ff index = [%string "waddr_rd_ff_%{index#Int}"]
+  let raddr_rd = "raddr_rd"
+  let raddr_wd = "raddr_wd"
+  let raddr_wd_ff index = [%string "raddr_wd_ff_%{index#Int}"]
+
+  (* Named explicitly with the [_0] suffix: the register would otherwise collide with the
+     [data_out] output port, and RTL generation would mangle it to [data_out_0] anyway.
+     Naming it directly keeps the exported name equal to the emitted one. *)
+  let data_out = "data_out_0"
+  let ram = "ram"
+end
+
 module Make (M : S) = struct
-  open Clocked_design
   open Signal
 
   let address_width = M.log2_depth
   let fifo_capacity = 1 lsl address_width
   let gray_inc ~by x = mux x (gray_inc_mux_inputs (module Signal) address_width ~by)
-  let read_dom = Clock_domain.create "read"
-  let write_dom = Clock_domain.create "write"
 
   module I = struct
     type 'a t =
@@ -39,17 +53,6 @@ module Make (M : S) = struct
       ; read_enable : 'a
       }
     [@@deriving hardcaml]
-
-    let domains =
-      { clock_write = write_dom
-      ; reset_write = write_dom
-      ; write_enable = write_dom
-      ; data_in = write_dom
-      ; clock_read = read_dom
-      ; reset_read = read_dom
-      ; read_enable = read_dom
-      }
-    ;;
   end
 
   module O = struct
@@ -63,17 +66,6 @@ module Make (M : S) = struct
       ; prog_empty : 'a
       }
     [@@deriving hardcaml]
-
-    let domains =
-      { full = write_dom
-      ; almost_full = write_dom
-      ; prog_full = write_dom
-      ; data_out = read_dom
-      ; valid = read_dom
-      ; almost_empty = read_dom
-      ; prog_empty = read_dom
-      }
-    ;;
   end
 
   module Ram = struct
@@ -89,13 +81,11 @@ module Make (M : S) = struct
       ; read_address : Signal.t
       }
 
-    let create_clocked ~(memory_type : Fifo_memory_type.t) ~name ~clock_write ~clock_read =
-      let read_dom = Signal.get_domain clock_read in
-      let write_dom = Signal.get_domain clock_write in
-      let write_data = Signal.wire M.width ~dom:write_dom in
-      let write_address = Signal.wire address_width ~dom:write_dom in
-      let read_address = Signal.wire address_width ~dom:read_dom in
-      let write_enable = Always.Variable.wire ~dom:write_dom ~default:Signal.gnd in
+    let create ~(memory_type : Fifo_memory_type.t) ~name ~clock_write ~clock_read =
+      let write_data = Signal.wire M.width in
+      let write_address = Signal.wire address_width in
+      let read_address = Signal.wire address_width in
+      let write_enable = Always.Variable.wire ~default:Signal.gnd () in
       let multiport_mem =
         Signal.multiport_memory
           ~name
@@ -128,12 +118,11 @@ module Make (M : S) = struct
     ;;
 
     let read t ~address =
-      let read_dom = Signal.get_domain t.clock_read in
       assert (width address = address_width);
       if t.is_read then raise_s [%message "Async_ram has already previously been read"];
       t.is_read <- true;
       t.read_address <-- address;
-      t.multiport_mem |> Clocked_signal.Unsafe.set_domain ~dom:read_dom
+      t.multiport_mem
     ;;
 
     let write t ~address ~data =
@@ -223,7 +212,7 @@ module Make (M : S) = struct
     { valid; almost_empty; prog_empty }
   ;;
 
-  let create_internal_clocked
+  let create_internal
     ?(use_synchronous_clear_semantics = false)
     ?(use_negedge_sync_chain = false)
     ?(sync_stages = 2)
@@ -241,7 +230,7 @@ module Make (M : S) = struct
         [%message "[sync_stages] must be even when using negedge!" (sync_stages : int)];
     let ( -- ) =
       match scope with
-      | Some scope -> Scope.naming_clocked scope
+      | Some scope -> Scope.naming scope
       | None -> ( -- )
     in
     let reg_spec ~clock ~reset =
@@ -270,7 +259,7 @@ module Make (M : S) = struct
         ~clock:i.clock_read
         ~reset:i.reset_read
         ~width:address_width
-        ~name:"waddr_rd"
+        ~name:Register_names.waddr_rd
     in
     let clock_edge_of_sync_chain idx =
       if use_negedge_sync_chain
@@ -282,7 +271,7 @@ module Make (M : S) = struct
         async_reg_var
           ~clock_edge:(clock_edge_of_sync_chain idx)
           ()
-          ~name:[%string "waddr_rd_ff_%{idx#Int}"]
+          ~name:(Register_names.waddr_rd_ff idx)
           ~clock:i.clock_read
           ~reset:i.reset_read
           ~width:address_width)
@@ -292,7 +281,7 @@ module Make (M : S) = struct
         ~clock:i.clock_read
         ~reset:i.reset_read
         ~width:address_width
-        ~name:"raddr_rd"
+        ~name:Register_names.raddr_rd
     in
     let data_out =
       async_reg_var
@@ -300,14 +289,14 @@ module Make (M : S) = struct
         ~clock:i.clock_read
         ~reset:i.reset_read
         ~width:M.width
-        ~name:"data_out"
+        ~name:Register_names.data_out
     in
     let waddr_wd =
       reg_var
         ~clock:i.clock_write
         ~reset:i.reset_write
         ~width:address_width
-        ~name:"waddr_wd"
+        ~name:Register_names.waddr_wd
     in
     let raddr_wd =
       if M.optimize_for_same_clock_rate_and_always_reading
@@ -319,14 +308,14 @@ module Make (M : S) = struct
             ~clock:i.clock_write
             ~reset:i.reset_write
             ~width:address_width
-            ~name:"raddr_wd"
+            ~name:Register_names.raddr_wd
         in
         let raddr_wd_ffs =
           Array.init (sync_stages - 1) ~f:(fun idx ->
             async_reg_var
               ~clock_edge:(clock_edge_of_sync_chain idx)
               ()
-              ~name:[%string "raddr_wd_ff_%{idx#Int}"]
+              ~name:(Register_names.raddr_wd_ff idx)
               ~clock:i.clock_write
               ~reset:i.reset_write
               ~width:address_width)
@@ -346,8 +335,10 @@ module Make (M : S) = struct
       read_side_flags ~waddr_rd:waddr_rd.value ~raddr_rd:raddr_rd.value ~prog_empty_thresh
     in
     let ram =
-      Ram.create_clocked
-        ~name:(Option.value_map scope ~default:"ram" ~f:(fun s -> Scope.name s "ram"))
+      Ram.create
+        ~name:
+          (Option.value_map scope ~default:Register_names.ram ~f:(fun s ->
+             Scope.name s Register_names.ram))
         ~clock_write:i.clock_write
         ~clock_read:i.clock_read
         ~memory_type
@@ -358,16 +349,12 @@ module Make (M : S) = struct
       in
       mux2 (read_enable &: vld) (gray_inc ~by:1 raddr_rd.value) raddr_rd.value
     in
-    let read_dom = Signal.get_domain i.clock_read in
-    let write_dom = Signal.get_domain i.clock_write in
     Always.(
       compile
         [ (* @(posedge clk_read) *)
           Array.init (Array.length waddr_rd_ffs) ~f:(fun idx ->
             if idx = 0
-            then
-              waddr_rd_ffs.(idx)
-              <-- Clocked_signal.Unsafe.set_domain ~dom:read_dom waddr_wd.value
+            then waddr_rd_ffs.(idx) <-- waddr_wd.value
             else waddr_rd_ffs.(idx) <-- waddr_rd_ffs.(idx - 1).value)
           |> Array.to_list
           |> proc
@@ -378,9 +365,7 @@ module Make (M : S) = struct
              proc
                [ Array.init (Array.length raddr_wd_ffs) ~f:(fun idx ->
                    if idx = 0
-                   then
-                     raddr_wd_ffs.(idx)
-                     <-- Clocked_signal.Unsafe.set_domain ~dom:write_dom raddr_rd.value
+                   then raddr_wd_ffs.(idx) <-- raddr_rd.value
                    else raddr_wd_ffs.(idx) <-- raddr_wd_ffs.(idx - 1).value)
                  |> Array.to_list
                  |> proc
@@ -408,18 +393,17 @@ module Make (M : S) = struct
     }
   ;;
 
-  let create_clocked = create_internal_clocked ~use_synchronous_clear_semantics:false
+  let create = create_internal ~use_synchronous_clear_semantics:false
 
-  let create_with_delay_clocked
+  let create_with_delay
     ?prog_full_thresh
     ?prog_empty_thresh
     ?(delay = 0)
     scope
     (i : _ I.t)
     =
-    let read_dom = Signal.get_domain i.clock_read in
-    let ( -- ) = Scope.naming_clocked scope in
-    let async_fifo_has_valid_value = wire ~dom:read_dom 1 in
+    let ( -- ) = Scope.naming scope in
+    let async_fifo_has_valid_value = wire 1 in
     (* If delay is 0 we don't count, otherwise start a counter each time we see valid low
        on the FIFO output, and only set it back to 0 when the FIFO valid goes low again *)
     let delay_val =
@@ -428,7 +412,7 @@ module Make (M : S) = struct
       else (
         let min_bits = Bits.num_bits_to_represent delay in
         let spec = Reg_spec.create () ~clock:i.clock_read ~reset:i.reset_read in
-        let delay_cnt_wire = wire ~dom:read_dom min_bits in
+        let delay_cnt_wire = wire min_bits in
         let delay_cnt =
           reg_fb spec ~enable:vdd ~width:min_bits ~f:(fun d ->
             mux2
@@ -440,7 +424,7 @@ module Make (M : S) = struct
         delay_cnt ==:. delay)
     in
     let async_fifo =
-      create_clocked
+      create
         ?prog_full_thresh
         ?prog_empty_thresh
         ~scope
@@ -461,7 +445,7 @@ module Make (M : S) = struct
     }
   ;;
 
-  module H = Hierarchy.In_clocked_scope (I) (O)
+  module H = Hierarchy.In_scope (I) (O)
 
   let make_create_or_hierarchical_basic
     ~how_to_instantiate
@@ -483,10 +467,9 @@ module Make (M : S) = struct
     H.hierarchical
       ?name
       ~how_to_instantiate
-      ~caller_signal_type:Signal
       ~scope
       (fun scope (input : _ I.t) ->
-        create_internal_clocked
+        create_internal
           ~use_synchronous_clear_semantics
           ?use_negedge_sync_chain
           ?sync_stages
@@ -510,9 +493,8 @@ module Make (M : S) = struct
     H.hierarchical
       ?name
       ~how_to_instantiate
-      ~caller_signal_type:Signal
       ~scope
-      (create_with_delay_clocked ?prog_full_thresh ?prog_empty_thresh ?delay)
+      (create_with_delay ?prog_full_thresh ?prog_empty_thresh ?delay)
       input
   ;;
 
@@ -525,10 +507,6 @@ module Make (M : S) = struct
       ~scope
       i
   ;;
-
-  (* The tcl scripts that constrain the name of this module depend on the module name
-     being [hardcaml_async_fifo*]. *)
-  let base_name = "hardcaml_async_fifo"
 
   let create =
     make_create_or_hierarchical_basic

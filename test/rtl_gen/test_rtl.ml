@@ -4,8 +4,7 @@ open Hardcaml
 let circuit =
   let module I = struct
     type 'a t =
-      { clock : 'a
-      ; clear : 'a
+      { clocking : 'a Clocking.t
       ; reset : 'a
       ; foo : 'a
       ; bar : 'a
@@ -26,7 +25,13 @@ let circuit =
   let circuit =
     C.create_exn ~name:"temp" (fun (i : _ I.t) ->
       let open Signal.Unoptimized in
-      let spec = Signal.Reg_spec.create ~clock:i.clock ~clear:i.clear ~reset:i.reset () in
+      let spec =
+        Signal.Reg_spec.create
+          ~clock:i.clocking.clock
+          ~clear:i.clocking.clear
+          ~reset:i.reset
+          ()
+      in
       let zoo = i.foo +: i.bar in
       let sum = Unsigned.(i.foo +: i.bar) in
       let coo = i.foo -: ~:(i.bar) -- "coo" in

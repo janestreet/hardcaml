@@ -43,7 +43,7 @@ module T = struct
     Bytes.unsafe_get_int64 t ((i lsl shift_bytes_to_words) + offset_for_data)
   ;;
 
-  let%template[@mode local] compare a b =
+  let compare_internal a b =
     let width_compare = Int.compare (width a) (width b) in
     if width_compare <> 0
     then width_compare
@@ -60,11 +60,11 @@ module T = struct
       backwards (words a - 1) [@nontail])
   ;;
 
-  let%template compare = [%eta2 compare [@mode local]]
+  let compare = [%eta2 compare_internal]
 end
 
 include T
-module%template Comparable = Comparable.Make [@mode local] (T)
+module Comparable = Comparable.Make (T)
 
 let width_mask = 0b11_1111
 let bytes_of_width width = words_of_width width lsl shift_bytes_to_words

@@ -10,7 +10,7 @@ module type Comb = Bits_list_intf.Comb
 module type Comb_binable = Bits_list_intf.Comb_binable
 
 module Make_gates (T : T) = struct
-  type t = T.t list [@@deriving equal ~localize, sexp]
+  type t = T.t list [@@deriving equal, sexp]
 
   let empty = []
   let is_empty = List.is_empty
@@ -99,7 +99,7 @@ module Make_gates (T : T) = struct
 end
 
 module Int = struct
-  type t = int [@@deriving bin_io, compare ~localize, equal ~localize, sexp]
+  type t = int [@@deriving bin_io, compare, equal, sexp]
 
   let optimise_muxs = true
   let constant_only = true
@@ -124,7 +124,7 @@ module Int = struct
 end
 
 module Bool = struct
-  type t = bool [@@deriving bin_io, compare ~localize, equal ~localize, sexp]
+  type t = bool [@@deriving bin_io, compare, equal, sexp]
 
   let optimise_muxs = true
   let constant_only = true
@@ -152,7 +152,7 @@ module X = struct
     | F
     | T
     | X
-  [@@deriving bin_io, compare ~localize, equal ~localize, sexp]
+  [@@deriving bin_io, compare, equal, sexp]
 
   let optimise_muxs = false
   let constant_only = true

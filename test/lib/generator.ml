@@ -5,7 +5,7 @@ open Quickcheck
 open Quickcheck.Let_syntax
 
 let clock = input "clock" 1
-let reset_sig = Some (input "reset" 1)
+let reset = input "reset" 1
 
 let gen_bits_string width =
   let%map w = Generator.list_with_length width Generator.bool in
@@ -103,7 +103,7 @@ and gen_register width depth inputs =
   (* cyclesim only supports global reset signal *)
   let%bind reset_to = gen_bits width in
   let reg_spec =
-    Reg_spec.create ~clock ~clock_edge:Rising ?reset:reset_sig ~reset_level:High ?clear ()
+    Reg_spec.create ~clock ~clock_edge:Rising ~reset ~reset_level:High ?clear ()
   in
   (* reg_fb *)
   let d = wire width in
@@ -118,15 +118,21 @@ and gen_memory width depth inputs =
   let%bind write_address = gen_signal address_size (depth - 1) inputs in
   let%bind read_address = gen_signal address_size (depth - 1) inputs in
   let%bind write_enable = gen_signal 1 (depth - 1) inputs in
+  let%map initialize_to =
+    Generator.list_with_length 4 (gen_bits width)
+    |> Generator.map ~f:Array.of_list
+    |> Option.quickcheck_generator
+  in
   let arr =
     Signal.multiport_memory
       ~name:"mem"
       ~attributes:[ Hardcaml.Rtl_attribute.Vivado.Ram_style.distributed ]
+      ?initialize_to
       ~write_ports:[| { write_clock = clock; write_data; write_enable; write_address } |]
       ~read_addresses:[| read_address |]
       4
   in
-  Generator.return arr.(0)
+  arr.(0)
 
 and gen_wire width depth inputs =
   let%map s = gen_signal width (depth - 1) inputs in

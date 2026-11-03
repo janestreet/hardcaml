@@ -18,5 +18,9 @@ val insert : ?share:bool (** default is [true] *) -> t -> Circuit.t -> string
 (** Find a circuit in the database, given its name. *)
 val find : t -> mangled_name:string -> Circuit.t option
 
+(** The original name of the circuit that was inserted under [mangled_name], before any
+    mangling was applied by [insert]. *)
+val unmangled_name : t -> mangled_name:string -> string option
+
 (** Return a list of all circuits in the database. *)
 val get_circuits : t -> Circuit.t list

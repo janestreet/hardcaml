@@ -9,8 +9,7 @@ module type S_enums = Enum_intf.S_enums
 module Make_enums (Cases : Enum_intf.Cases) = struct
   module Cases = struct
     include Cases
-
-    include%template Comparable.Make_plain [@mode local] (Cases)
+    include Comparable.Make_plain (Cases)
   end
 
   let to_rank =
@@ -30,7 +29,7 @@ module Make_enums (Cases : Enum_intf.Cases) = struct
       | `One_hot -> "ont_hot_variant", List.length Cases.all
     ;;
 
-    type 'a t = 'a [@@deriving equal ~localize, compare ~localize, sexp_of]
+    type 'a t = 'a [@@deriving equal, compare, sexp_of]
 
     let to_list t = [ t ]
     let map t ~f = f t

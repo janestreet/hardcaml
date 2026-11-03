@@ -1,7 +1,7 @@
 open! Core0
 
 module Name : sig
-  type t [@@deriving bin_io, compare ~localize, sexp, hash]
+  type t [@@deriving bin_io, compare, sexp, hash]
 
   include Stringable.S with type t := t
   include Comparable.S_plain with type t := t

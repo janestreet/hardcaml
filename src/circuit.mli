@@ -20,20 +20,15 @@ module Config : sig
     { detect_combinational_loops : bool
     (** Check circuit for combinational loops (cyclic paths that do not pass through a
         register or memory). *)
-    ; normalize_uids : bool
-    (** Renumber the [Uid]s of all signals in the circuit starting at one.
-
-        Uid normalization ensures that circuits will print the same (as sexps) regardless
-        of the environment in which they are constructed (in particular with regard to the
-        global uid generator). *)
-    ; assertions : Assertion_manager.t option
+    ; property_manager : Property_manager.t option
+    ; trace_properties : Property_manager.Trace_properties.t
+    (** Selects which of the [property_manager]'s properties are emitted (by type and
+        group). *)
     ; port_checks : Port_checks.t
     (** Perform validation checks on inputs and outputs ([With_interface] only) *)
     ; add_phantom_inputs : bool
     (** Add inputs defined in an [Interface] but not used within the [Circuit]
         ([With_interface] only). *)
-    ; modify_outputs : Signal.t list -> Signal.t list
-    (** Map over circuit outputs just before constructing the circuit. *)
     }
   [@@deriving sexp_of]
 
@@ -81,7 +76,6 @@ val is_output : t -> Signal.t -> bool
 val set_phantom_inputs : t -> (string * int) list -> t
 
 val phantom_inputs : t -> (string * int) list
-val assertions : t -> Signal.t Map.M(String).t
 
 (** Construct a map of [uid]s to [Signal.t]s. *)
 val signal_map : t -> Signal.t Signal.Type.Uid.Map.t
@@ -91,6 +85,12 @@ val structural_compare : ?check_names:bool -> t -> t -> bool
 
 (** returns the list of instantiations in this circuit *)
 val instantiations : t -> Signal.t Signal.Type.Inst.t list
+
+(** {2 Properties} *)
+
+val property_manager : t -> Property_manager.t option
+val sva_properties : t -> (string, Signal.t Property.Sva.t) Hashtbl.t option
+val sva_propositions : t -> Set.M(Signal.Type.Signal_compared_by_uid).t
 
 (** {2 Sanitized and mangled RTL names for circuit components} *)
 module Name_for_rtl : sig
@@ -116,6 +116,9 @@ module Name_for_rtl : sig
   (** Rtl name for a phantom port. This will fail if there is no phantom port with the
       given name and size *)
   val phantom_port_exn : t -> string * int -> Rtl_name.t
+
+  (** Names of properties *)
+  val property_name_exn : t -> string -> Rtl_name.t
 end
 
 module With_interface (I : Interface.S) (O : Interface.S) : sig

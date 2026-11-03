@@ -77,92 +77,11 @@ end
 let%expect_test "flattened" =
   let name = "outer" in
   let module Circuit = Circuit.With_interface (Outer.I) (Outer.O) in
-  let test (naming_scheme : Scope.Naming_scheme.t) =
-    let scope = Scope.create ~flatten_design:true ~naming_scheme ~name () in
-    Rtl.print
-      ~database:(Scope.circuit_database scope)
-      Verilog
-      (Circuit.create_exn ~name (Outer.create scope))
-  in
-  test No_path;
-  [%expect
-    {|
-    module outer (
-        a,
-        b,
-        c_0,
-        d_0,
-        c_1,
-        d_1,
-        x
-    );
-
-        input a;
-        input b;
-        output c_0;
-        output d_0;
-        output c_1;
-        output d_1;
-        output x;
-
-        wire x_0;
-        wire a_0;
-        wire signal_wire;
-        wire signal_wire_1;
-        wire a_1;
-        assign x_0 = 1'b0;
-        assign a_0 = ~ signal_wire_1;
-        assign signal_wire = b;
-        assign signal_wire_1 = a;
-        assign a_1 = ~ signal_wire_1;
-        assign c_0 = a_1;
-        assign d_0 = signal_wire;
-        assign c_1 = a_0;
-        assign d_1 = signal_wire;
-        assign x = x_0;
-
-    endmodule
-    |}];
-  test Local_path;
-  [%expect
-    {|
-    module outer (
-        a,
-        b,
-        c_0,
-        d_0,
-        c_1,
-        d_1,
-        x
-    );
-
-        input a;
-        input b;
-        output c_0;
-        output d_0;
-        output c_1;
-        output d_1;
-        output x;
-
-        wire the_middle$x;
-        wire inner_1$a;
-        wire signal_wire;
-        wire signal_wire_1;
-        wire inner$a;
-        assign the_middle$x = 1'b0;
-        assign inner_1$a = ~ signal_wire_1;
-        assign signal_wire = b;
-        assign signal_wire_1 = a;
-        assign inner$a = ~ signal_wire_1;
-        assign c_0 = inner$a;
-        assign d_0 = signal_wire;
-        assign c_1 = inner_1$a;
-        assign d_1 = signal_wire;
-        assign x = the_middle$x;
-
-    endmodule
-    |}];
-  test Full_path;
+  let scope = Scope.create ~flatten_design:true () |> Scope.sub_scope _ name in
+  Rtl.print
+    ~database:(Scope.circuit_database scope)
+    Verilog
+    (Circuit.create_exn ~name (Outer.create scope));
   [%expect
     {|
     module outer (
@@ -206,14 +125,11 @@ let%expect_test "flattened" =
 let%expect_test "hierarchical" =
   let name = "outer" in
   let module Circuit = Circuit.With_interface (Outer.I) (Outer.O) in
-  let test (naming_scheme : Scope.Naming_scheme.t) =
-    let scope = Scope.create ~flatten_design:false ~naming_scheme ~name () in
-    Rtl.print
-      ~database:(Scope.circuit_database scope)
-      Verilog
-      (Circuit.create_exn ~name (Outer.create scope))
-  in
-  test No_path;
+  let scope = Scope.create ~flatten_design:false () |> Scope.sub_scope _ name in
+  Rtl.print
+    ~database:(Scope.circuit_database scope)
+    Verilog
+    (Circuit.create_exn ~name (Outer.create scope));
   [%expect
     {|
     module inner (
@@ -262,128 +178,8 @@ let%expect_test "hierarchical" =
         wire signal_select_1;
         wire signal_wire;
         wire signal_wire_1;
-        wire a_0;
-        assign x_0 = 1'b0;
-        assign signal_select = signal_inst[1:1];
-        (* keep_hierarchy="yes" *)
-        inner
-            inner_1
-            ( .a(signal_wire_1),
-              .b(signal_wire),
-              .c(signal_inst[0:0]),
-              .d(signal_inst[1:1]) );
-        assign signal_select_1 = signal_inst[0:0];
-        assign signal_wire = b;
-        assign signal_wire_1 = a;
-        assign a_0 = ~ signal_wire_1;
-        assign c_0 = a_0;
-        assign d_0 = signal_wire;
-        assign c_1 = signal_select_1;
-        assign d_1 = signal_select;
-        assign x = x_0;
-
-    endmodule
-    module outer (
-        a,
-        b,
-        c_0,
-        d_0,
-        c_1,
-        d_1,
-        x
-    );
-
-        input a;
-        input b;
-        output c_0;
-        output d_0;
-        output c_1;
-        output d_1;
-        output x;
-
-        wire signal_select;
-        wire signal_select_1;
-        wire signal_select_2;
-        wire signal_select_3;
-        wire signal_wire;
-        wire signal_wire_1;
-        wire [4:0] signal_inst;
-        wire signal_select_4;
-        assign signal_select = signal_inst[4:4];
-        assign signal_select_1 = signal_inst[3:3];
-        assign signal_select_2 = signal_inst[2:2];
-        assign signal_select_3 = signal_inst[1:1];
-        assign signal_wire = b;
-        assign signal_wire_1 = a;
-        middle
-            the_middle
-            ( .a(signal_wire_1),
-              .b(signal_wire),
-              .c_0(signal_inst[0:0]),
-              .d_0(signal_inst[1:1]),
-              .c_1(signal_inst[2:2]),
-              .d_1(signal_inst[3:3]),
-              .x(signal_inst[4:4]) );
-        assign signal_select_4 = signal_inst[0:0];
-        assign c_0 = signal_select_4;
-        assign d_0 = signal_select_3;
-        assign c_1 = signal_select_2;
-        assign d_1 = signal_select_1;
-        assign x = signal_select;
-
-    endmodule
-    |}];
-  test Local_path;
-  [%expect
-    {|
-    module inner (
-        a,
-        b,
-        c,
-        d
-    );
-
-        input a;
-        input b;
-        output c;
-        output d;
-
-        wire signal_wire;
-        wire signal_wire_1;
-        wire inner_1$a;
-        assign signal_wire = b;
-        assign signal_wire_1 = a;
-        assign inner_1$a = ~ signal_wire_1;
-        assign c = inner_1$a;
-        assign d = signal_wire;
-
-    endmodule
-    module middle (
-        a,
-        b,
-        c_0,
-        d_0,
-        c_1,
-        d_1,
-        x
-    );
-
-        input a;
-        input b;
-        output c_0;
-        output d_0;
-        output c_1;
-        output d_1;
-        output x;
-
-        wire the_middle$x;
-        wire signal_select;
-        wire [1:0] signal_inst;
-        wire signal_select_1;
-        wire signal_wire;
-        wire signal_wire_1;
         wire inner$a;
-        assign the_middle$x = 1'b0;
+        assign x_0 = 1'b0;
         assign signal_select = signal_inst[1:1];
         (* keep_hierarchy="yes" *)
         inner
@@ -400,127 +196,7 @@ let%expect_test "hierarchical" =
         assign d_0 = signal_wire;
         assign c_1 = signal_select_1;
         assign d_1 = signal_select;
-        assign x = the_middle$x;
-
-    endmodule
-    module outer (
-        a,
-        b,
-        c_0,
-        d_0,
-        c_1,
-        d_1,
-        x
-    );
-
-        input a;
-        input b;
-        output c_0;
-        output d_0;
-        output c_1;
-        output d_1;
-        output x;
-
-        wire signal_select;
-        wire signal_select_1;
-        wire signal_select_2;
-        wire signal_select_3;
-        wire signal_wire;
-        wire signal_wire_1;
-        wire [4:0] signal_inst;
-        wire signal_select_4;
-        assign signal_select = signal_inst[4:4];
-        assign signal_select_1 = signal_inst[3:3];
-        assign signal_select_2 = signal_inst[2:2];
-        assign signal_select_3 = signal_inst[1:1];
-        assign signal_wire = b;
-        assign signal_wire_1 = a;
-        middle
-            the_middle
-            ( .a(signal_wire_1),
-              .b(signal_wire),
-              .c_0(signal_inst[0:0]),
-              .d_0(signal_inst[1:1]),
-              .c_1(signal_inst[2:2]),
-              .d_1(signal_inst[3:3]),
-              .x(signal_inst[4:4]) );
-        assign signal_select_4 = signal_inst[0:0];
-        assign c_0 = signal_select_4;
-        assign d_0 = signal_select_3;
-        assign c_1 = signal_select_2;
-        assign d_1 = signal_select_1;
-        assign x = signal_select;
-
-    endmodule
-    |}];
-  test Full_path;
-  [%expect
-    {|
-    module inner (
-        a,
-        b,
-        c,
-        d
-    );
-
-        input a;
-        input b;
-        output c;
-        output d;
-
-        wire signal_wire;
-        wire signal_wire_1;
-        wire outer$the_middle$inner_1$a;
-        assign signal_wire = b;
-        assign signal_wire_1 = a;
-        assign outer$the_middle$inner_1$a = ~ signal_wire_1;
-        assign c = outer$the_middle$inner_1$a;
-        assign d = signal_wire;
-
-    endmodule
-    module middle (
-        a,
-        b,
-        c_0,
-        d_0,
-        c_1,
-        d_1,
-        x
-    );
-
-        input a;
-        input b;
-        output c_0;
-        output d_0;
-        output c_1;
-        output d_1;
-        output x;
-
-        wire outer$the_middle$x;
-        wire signal_select;
-        wire [1:0] signal_inst;
-        wire signal_select_1;
-        wire signal_wire;
-        wire signal_wire_1;
-        wire outer$the_middle$inner$a;
-        assign outer$the_middle$x = 1'b0;
-        assign signal_select = signal_inst[1:1];
-        (* keep_hierarchy="yes" *)
-        inner
-            inner_1
-            ( .a(signal_wire_1),
-              .b(signal_wire),
-              .c(signal_inst[0:0]),
-              .d(signal_inst[1:1]) );
-        assign signal_select_1 = signal_inst[0:0];
-        assign signal_wire = b;
-        assign signal_wire_1 = a;
-        assign outer$the_middle$inner$a = ~ signal_wire_1;
-        assign c_0 = outer$the_middle$inner$a;
-        assign d_0 = signal_wire;
-        assign c_1 = signal_select_1;
-        assign d_1 = signal_select;
-        assign x = outer$the_middle$x;
+        assign x = x_0;
 
     endmodule
     module outer (
@@ -630,7 +306,7 @@ let%expect_test "floating ports not in interface" =
 
 let%expect_test "[hierarchical_here] uses the file name as the module name" =
   let module Circuit = Circuit.With_interface (Middle.I) (Middle.O) in
-  let scope = Scope.create ~flatten_design:true ~naming_scheme:Full_path () in
+  let scope = Scope.create ~flatten_design:true () in
   Rtl.print
     ~database:(Scope.circuit_database scope)
     Verilog

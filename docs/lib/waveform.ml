@@ -4,8 +4,7 @@ open Signal
 
 module I = struct
   type 'a t =
-    { clock : 'a
-    ; clear : 'a
+    { clocking : 'a Clocking.t
     ; incr : 'a
     }
   [@@deriving hardcaml]
@@ -17,11 +16,7 @@ end
 
 let create (i : _ I.t) =
   { O.dout =
-      reg_fb
-        (Reg_spec.create ~clock:i.clock ~clear:i.clear ())
-        ~enable:i.incr
-        ~width:8
-        ~f:(fun d -> d +:. 1)
+      reg_fb (Clocking.to_spec i.clocking) ~enable:i.incr ~width:8 ~f:(fun d -> d +:. 1)
   }
 ;;
 
@@ -30,7 +25,7 @@ module Simulator = Cyclesim.With_interface (I) (O)
 let testbench sim =
   let inputs : _ I.t = Cyclesim.inputs sim in
   let step ~clear ~incr =
-    inputs.clear := if clear = 1 then Bits.vdd else Bits.gnd;
+    inputs.clocking.clear := if clear = 1 then Bits.vdd else Bits.gnd;
     inputs.incr := if incr = 1 then Bits.vdd else Bits.gnd;
     Cyclesim.cycle sim
   in

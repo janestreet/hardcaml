@@ -217,7 +217,7 @@ module type S = sig
     end
 
     module type State = sig
-      type t [@@deriving compare ~localize, enumerate, sexp_of]
+      type t [@@deriving compare, enumerate, sexp_of]
     end
 
     (** [create reg_spec ~e] creates a new state machine where the state is stored in a
@@ -252,14 +252,4 @@ module type Always = sig
   module type S = S
 
   include S with module Signal := Signal
-
-  module Clocked : sig
-    include S with module Signal := Clocked_signal
-
-    val set_variable_dom : Variable.t -> dom:Clock_domain.Runtime.t -> Variable.t
-
-    module Variable_overrides : sig
-      val wire : default:Clocked_signal.t -> dom:Clock_domain.Runtime.t -> Variable.t
-    end
-  end
 end

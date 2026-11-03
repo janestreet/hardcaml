@@ -2,7 +2,7 @@ open! Core0
 
 module Name = struct
   module T = struct
-    type t = string [@@deriving bin_io, compare ~localize, sexp, hash]
+    type t = string [@@deriving bin_io, compare, sexp, hash]
   end
 
   include T

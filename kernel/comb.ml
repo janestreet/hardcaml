@@ -142,7 +142,7 @@ type nonrec ('a, 'b) with_valid2 = ('a, 'b) with_valid2 =
 type nonrec 'a with_valid = 'a with_valid
 
 module Make (Prims : Primitives) = struct
-  type t = Prims.t [@@deriving equal ~localize]
+  type t = Prims.t [@@deriving equal]
 
   let empty = Prims.empty
   let is_empty = Prims.is_empty

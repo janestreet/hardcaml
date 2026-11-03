@@ -3,7 +3,7 @@ open! Core0
 (** An enumerated type (generally a variant type with no arguments) which should derive
     [compare, enumerate, sexp_of, variants]. *)
 module type Cases = sig
-  type t [@@deriving compare ~localize, enumerate, sexp_of]
+  type t [@@deriving compare, enumerate, sexp_of]
 end
 
 (** Functions to project an [Cases] type into and out of hardcaml bit vectors

@@ -235,7 +235,7 @@ module State = struct
     | A
     | B
     | C
-  [@@deriving compare ~localize, enumerate, sexp_of, variants]
+  [@@deriving compare, enumerate, sexp_of, variants]
 end
 
 let create_sm reg_spec encoding =

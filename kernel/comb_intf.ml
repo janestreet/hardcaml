@@ -121,7 +121,7 @@ end
 module type Gates = sig
   type t [@@deriving sexp_of]
 
-  include%template Equal.S [@mode local] with type t := t
+  include Equal.S with type t := t
 
   (** the empty signal *)
   val empty : t
@@ -220,13 +220,13 @@ module type Constructors = sig
 
   (** Same as [of_int_trunc] *)
   val of_int : width:int -> int -> t
-  [@@deprecated "[since 2024-11] use [of_int_trunc]"]
+  [@@deprecated "[since 2024-11] use [of_unsigned_int] or [of_signed_int]"]
 
   val of_int32 : width:int -> int32 -> t
-  [@@deprecated "[since 2024-11] use [of_int32_trunc]"]
+  [@@deprecated "[since 2024-11] use [of_unsigned_int32] or [of_signed_int32]"]
 
   val of_int64 : width:int -> int64 -> t
-  [@@deprecated "[since 2024-11] use [of_int64_trunc]"]
+  [@@deprecated "[since 2024-11] use [of_unsigned_int64] or [of_signed_int64]"]
 
   (** Convert non-negative values to constant. Input values which are not representable in
       [width] bits will raise. *)
@@ -304,8 +304,7 @@ end
 module type S = sig
   type t [@@deriving sexp_of]
 
-  include%template Equal.S [@mode local] with type t := t
-
+  include Equal.S with type t := t
   include Constructors with type t := t
 
   (** the empty signal *)
@@ -359,7 +358,7 @@ module type S = sig
 
   (** [select t ~high ~low] selects from [t] bits in the range [high]...[low], inclusive.
       [select] raises unless [high] and [low] fall within [0 .. width t - 1] and
-      [high >= lo]. *)
+      [high >= low]. *)
   val select : t -> high:int -> low:int -> t
 
   (** select a single bit *)
@@ -368,13 +367,15 @@ module type S = sig
   (** get most significant bit *)
   val msb : t -> t
 
-  (** get least significant bits *)
+  (** All bits except the most significant bit. For an n-bit input, returns n-1 bits.
+      Raises if the input is 1 bit wide. *)
   val lsbs : t -> t
 
   (** get least significant bit *)
   val lsb : t -> t
 
-  (** get most significant bits *)
+  (** All bits except the least significant bit. For an n-bit input, returns n-1 bits.
+      Raises if the input is 1 bit wide. *)
   val msbs : t -> t
 
   (** [drop_bottom s ~width] drop bottom [width] bits of [s] *)
@@ -403,7 +404,7 @@ module type S = sig
       to the msb of the vector ie [x.:-[None, width]] == [sel_top x width] *)
   val ( .:-[] ) : t -> int option * int -> t
 
-  (** [x.(i)] == [bit x i] *)
+  (** [x.:(i)] == [bit x ~pos:i] *)
   val ( .:() ) : t -> int -> t
 
   (** [insert ~into:t x ~at_offset] insert [x] into [t] at given offet *)
@@ -548,10 +549,13 @@ module type S = sig
 
   (** Same as [to_int_trunc]. *)
   val to_int : t -> int
-  [@@deprecated "[since 2024-11] use [to_int_trunc]"]
+  [@@deprecated "[since 2024-11] use [to_unsigned_int] or [to_signed_int]"]
 
-  val to_int32 : t -> int32 [@@deprecated "[since 2024-11] use [to_int32_trunc]"]
-  val to_int64 : t -> int64 [@@deprecated "[since 2024-11] use [to_int64_trunc]"]
+  val to_int32 : t -> int32
+  [@@deprecated "[since 2024-11] use [to_unsigned_int32] or [to_signed_int32]"]
+
+  val to_int64 : t -> int64
+  [@@deprecated "[since 2024-11] use [to_unsigned_int64] or [to_signed_int64]"]
 
   (** [to_signed_int t] treats [t] as signed and resizes it to fit exactly within an OCaml
       [Int.t].

@@ -23,7 +23,7 @@ type t =
       (* ; set : Bytes.t -> int -> Bits.t -> unit [@compare.ignore] *)
   ; setter_index : int
   }
-[@@deriving sexp_of, compare ~localize, fields ~getters, equal ~localize]
+[@@deriving sexp_of, compare, fields ~getters, equal]
 
 let get64u = Bytes.unsafe_get_int64
 let set64u = Bytes.unsafe_set_int64
@@ -462,6 +462,16 @@ let get t index =
   else get_multi_word t index
 ;;
 
+let num_events = length
+
+let find_insertion_index t time =
+  let length = length t in
+  if length = 0 || time < 0 then None else Some (Int.min time (length - 1))
+;;
+
+let get_time_at_index _ index = index
+let get_data_at_index = get
+
 let init length ~width ~f =
   let t = create width in
   for index = 0 to length - 1 do
@@ -471,3 +481,151 @@ let init length ~width ~f =
 ;;
 
 let get_digestible_string t = raw_data t, used_raw_data_bytes t
+
+module Serialization = struct
+  module Bytes_slice = struct
+    type t =
+      { used_bytes : int
+      ; data : bytes
+      }
+
+    let bin_shape_t = Bytes.bin_shape_t
+
+    let validate_for_write t =
+      if t.used_bytes < 0 || t.used_bytes > Bytes.length t.data
+      then
+        raise_s
+          [%message
+            "Invalid byte slice length"
+              (t.used_bytes : int)
+              ~data_length:(Bytes.length t.data : int)]
+    ;;
+
+    let bin_size_t t =
+      validate_for_write t;
+      let used_bytes = Bin_prot.Nat0.unsafe_of_int t.used_bytes in
+      Bin_prot.Size.bin_size_nat0 used_bytes + (used_bytes :> int)
+    ;;
+
+    let bin_write_t buf ~pos t =
+      validate_for_write t;
+      let used_bytes = Bin_prot.Nat0.unsafe_of_int t.used_bytes in
+      let pos = Bin_prot.Write.bin_write_nat0 buf ~pos used_bytes in
+      let next = pos + (used_bytes :> int) in
+      Bin_prot.Common.check_next buf next;
+      Bin_prot.Common.unsafe_blit_bytes_buf
+        ~src_pos:0
+        t.data
+        ~dst_pos:pos
+        buf
+        ~len:(used_bytes :> int);
+      next
+    ;;
+
+    let bin_read_t buf ~pos_ref =
+      let data = Bytes.bin_read_t buf ~pos_ref in
+      { used_bytes = Bytes.length data; data }
+    ;;
+
+    let __bin_read_t__ _buf ~pos_ref _vint =
+      Bin_prot.Common.raise_variant_wrong_type
+        "Wave_data_in_cycles.Bytes_slice.t"
+        !pos_ref
+    ;;
+  end
+
+  module For_bin_io = struct
+    type t_outer = t
+
+    type t =
+      { width : int
+      ; length : int
+      ; data : Bytes_slice.t
+      }
+    [@@deriving bin_io]
+
+    (* The data is serialized padded to a whole number of 64-bit words (the getters and
+       setters access full words, so deserialization must produce word-aligned buffers).
+       The padding bytes of a live buffer are always zero, so the serialized form remains
+       deterministic. *)
+    let padded_data_length ~width ~length =
+      Int.round_up (number_of_bytes_used width length) ~to_multiple_of:8
+    ;;
+
+    let of_t (t : t_outer) =
+      { width = t.width
+      ; length = t.length
+      ; data =
+          { used_bytes = padded_data_length ~width:t.width ~length:t.length
+          ; data = t.data
+          }
+      }
+    ;;
+
+    let to_t { width; length; data = { used_bytes; data } } =
+      if width <= 0 || length < 0
+      then
+        raise_s
+          [%message "Invalid serialized waveform dimensions" (width : int) (length : int)];
+      let expected_data_length = padded_data_length ~width ~length in
+      if not (Int.equal used_bytes (Bytes.length data))
+      then
+        raise_s
+          [%message
+            "Invalid serialized byte slice length"
+              (used_bytes : int)
+              ~data_length:(Bytes.length data : int)];
+      if not (Int.equal expected_data_length used_bytes)
+      then
+        raise_s
+          [%message
+            "Invalid serialized waveform data length"
+              (width : int)
+              (length : int)
+              (expected_data_length : int)
+              ~actual_data_length:(used_bytes : int)];
+      let t = create width in
+      (match expected_data_length with
+       | 0 -> ()
+       | _ ->
+         t.data <- data;
+         t.total_length <- total_length expected_data_length t.rounded_width);
+      t.length <- length;
+      t
+    ;;
+  end
+
+  include
+    Binable.Of_binable_with_uuid
+      (For_bin_io)
+      (struct
+        type nonrec t = t
+
+        let to_binable = For_bin_io.of_t
+        let of_binable = For_bin_io.to_t
+
+        let caller_identity =
+          Bin_prot.Shape.Uuid.of_string "6f5a9b78-8ea7-4fda-93a8-e5a7b0377102"
+        ;;
+      end)
+
+  let%expect_test "bin_io ignores unused capacity" =
+    let t = create 8 in
+    set t 0 (Bits.of_unsigned_int ~width:8 1);
+    set t 1 (Bits.of_unsigned_int ~width:8 2);
+    let serialized = Bin_prot.Writer.to_string bin_writer_t t in
+    for _ = 1 to 5 do
+      resize t
+    done;
+    let resized_serialized = Bin_prot.Writer.to_string bin_writer_t t in
+    let serialized_length = String.length serialized in
+    let resized_serialized_length = String.length resized_serialized in
+    let equal = String.equal serialized resized_serialized in
+    print_s
+      [%message
+        (serialized_length : int) (resized_serialized_length : int) (equal : bool)];
+    [%expect {| ((serialized_length 11) (resized_serialized_length 11) (equal true)) |}]
+  ;;
+end
+
+include Serialization

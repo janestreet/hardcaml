@@ -9,7 +9,7 @@ module type S = sig
     ; write_enable : 'a
     ; write_data : 'a
     }
-  [@@deriving sexp_of, equal ~localize, compare ~localize]
+  [@@deriving sexp_of, equal, compare]
 
   include Hardcaml_interface_types.Pre_partial with type 'a t := 'a t
 

@@ -5,7 +5,7 @@ open! Core0
 (** Specification of attributes which may be attached to various objects within a RTL
     design. Such attributes are used to provide implementation hints to down stream CAD
     tools and do not affect any functionality within Hardcaml. *)
-type t [@@deriving bin_io, compare ~localize, equal ~localize, hash, sexp_of]
+type t [@@deriving bin_io, compare, equal, hash, sexp_of]
 
 include Comparator.S with type t := t
 
@@ -15,7 +15,7 @@ module Value : sig
     | Int of int
     | String of string
     | Bool of bool
-  [@@deriving bin_io, compare ~localize, equal ~localize, sexp_of]
+  [@@deriving bin_io, compare, equal, sexp_of]
 end
 
 module Applies_to : sig
@@ -24,7 +24,7 @@ module Applies_to : sig
     | Regs
     | Memories
     | Instantiations
-  [@@deriving bin_io, compare ~localize, equal ~localize, sexp_of]
+  [@@deriving bin_io, compare, equal, sexp_of]
 end
 
 (** Create a new attribute. [applies_to], if specified, constrains what type of signal the
@@ -78,6 +78,10 @@ module Vivado : sig
   (** For registers, set the maximun fanout for that net. Suggests to Vivado to use
       register replication if fanout above [n]. *)
   val max_fanout : int -> t
+
+  (** Similar to above, but forces Vivado to use register replication if fanout is above
+      [n], rather than suggesting it. *)
+  val force_max_fanout : int -> t
 
   (** EXTRACT_ENABLE controls whether registers infer enables. Typically, Vivado will
       extract or not extract enables based on heuristics that typically benefit the most

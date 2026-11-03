@@ -1,5 +1,4 @@
 module Generator = Generator
-module Test_auto_names = Test_auto_names
 module Test_bits = Test_bits
 module Test_constant_propagation = Test_constant_propagation
 module Test_constants = Test_constants

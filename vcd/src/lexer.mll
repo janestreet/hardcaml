@@ -29,26 +29,78 @@ let reset_state () =
   in_sim_phase := false
 ;;
 
+(* Scalar and binary values use Verilog's 0/1/x/z; VHDL simulators also emit
+   U (uninitialized), W (weak unknown), L (weak 0), H (weak 1) and - (don't care).
+   Weak values map to their strong equivalents and the unknowns to X. *)
+let bit_of_char c =
+  match c with
+  | '0' | 'l' | 'L' -> Types.Bit.V0
+  | '1' | 'h' | 'H' -> V1
+  | 'z' | 'Z' -> Vz
+  | _ -> Vx
+;;
+
+(* Text tokens (comments, dates, versions) can span lines: account for their newlines so
+   the positions in error messages stay accurate. *)
+let count_newlines lexbuf s =
+  String.iteri
+    (fun i c ->
+      if Char.equal c '\n'
+      then (
+        let pos = lexbuf.Lexing.lex_curr_p in
+        lexbuf.Lexing.lex_curr_p
+        <- { pos with
+             pos_lnum = pos.pos_lnum + 1
+           ; pos_bol = lexbuf.Lexing.lex_start_p.pos_cnum + i + 1
+           }))
+    s
+;;
+
 }
 
 let whitespace = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
 
 let decimal_num = ['0'-'9']+
-let scalar_num = ['0' '1' 'x' 'X' 'z' 'Z']
-let bin_num = ['b' 'B'] ['0' '1' 'x' 'X' 'z' 'Z']+
-let real_num = ['r' 'R'] ['0'-'9']+ ('.' ['0'-'9']+)?
+let scalar_num = ['0' '1' 'x' 'X' 'z' 'Z' 'u' 'U' 'w' 'W' 'l' 'L' 'h' 'H' '-']
+
+(* Zero digits are allowed: some producers write a bare [b] for an empty bit vector,
+   which pads to all-zeros like any other short vector. *)
+let bin_num = ['b' 'B'] ['0' '1' 'x' 'X' 'z' 'Z' 'u' 'U' 'w' 'W' 'l' 'L' 'h' 'H' '-']*
+
+(* A string value is [s] followed by the string, which runs to the next whitespace;
+   awkward characters are written as [\nnn] octal escapes, which [parse_string_value]
+   decodes. The string may be empty. *)
+let string_num = ['s' 'S'] [^ ' ' '\t' '\r' '\n']*
+
+(* Simulators format reals with the equivalent of [%g], so accept a sign, a bare or
+   trailing decimal point, and an exponent. [parse_real_value] hands the text to
+   [float_of_string], which copes with all of these. *)
+let real_num =
+  ['r' 'R'] ['+' '-']?
+  (['0'-'9']+ ('.' ['0'-'9']*)? | '.' ['0'-'9']+)
+  (['e' 'E'] ['+' '-']? ['0'-'9']+)?
 
 let identifier_code =
   ['a'-'z' 'A'-'Z' '_' '0'-'9' '!' '/' ',' '.' '@' '\'' ':' '~'
    '#' '*' '(' ')' '+' '{' '}' '$' '%' '[' ']' '`' '"' '&' ';'
    '<' '>' '=' '?' '-' '^' '|' '\\']+
 
-(* Verilog identifiers, with the additional concession of allowing leading and embedded
-   ['-'] to support Hardcaml's synthesised [-clock], [-reset], [-inputs] and [-outputs]
-   names. *)
-let scope_identifier =
-  ['a'-'z' 'A'-'Z' '_' '-'] ['a'-'z' 'A'-'Z' '_' '0'-'9' '(' ')' '-']*
+(* Scope names in the wild are exotic: Xcelium writes [dft_buffer[11]], Verilator [|cpu],
+   VCS [$unit], iverilog [$ivl_for_loop0], Yosys [output__payload$13], and so on. Accept
+   any non-whitespace sequence; [$end] and the scope-type keywords still win ties because
+   they are listed first. *)
+let scope_name = [^ ' ' '\t' '\r' '\n']+
+
+(* A [$var] reference is the printable signal name that follows the identifier code.
+   Accept any non-whitespace sequence that does not start with ['[': a whitespace-
+   separated range such as [foo [7:0]] is still parsed as a reference plus range, while
+   names with attached brackets (escaped identifiers, or flattened names like
+   [in[0].payload] and [sp_arr[0][15:0]]) are kept whole. [$end] is separated from the
+   reference by whitespace, and wins the tie with this rule because it is listed
+   first. *)
+let reference_identifier =
+  [^ ' ' '\t' '\r' '\n' '['] [^ ' ' '\t' '\r' '\n']*
 
 let comment_text = [^ '$']*
 
@@ -95,39 +147,34 @@ and initial = parse
   | "$dumpon"           { state := In_val_changes; TOK_KW_DUMPON }
   | "$dumpvars"         { state := In_val_changes; TOK_KW_DUMPVARS }
   | '#'                 { state := In_simtime; TOK_HASH }
-  | scalar_num as c     {
-      state := In_val_idcode;
-      let bit = match c with
-        | '0' -> Types.Bit.V0
-        | '1' -> V1
-        | 'x' | 'X' -> Vx
-        | 'z' | 'Z' -> Vz
-        | _ -> Vx
-      in
-      TOK_VALUE bit
-    }
+  | scalar_num as c     { state := In_val_idcode; TOK_VALUE (bit_of_char c) }
   | bin_num as s        { state := In_val_idcode; TOK_BIN_NUM s }
   | real_num as s       { state := In_val_idcode; TOK_REAL_NUM s }
+  | string_num as s     { state := In_val_idcode; TOK_STRING_NUM s }
+  (* Simulators emit non-standard commands, such as nvc's [$attrbegin ... $end] blocks or
+     bare markers like [$crash]. Skip to the [$end] or the end of the line, whichever
+     comes first. Known keywords win ties with this rule because they are listed first. *)
+  | '$' ['a'-'z' 'A'-'Z' '0'-'9' '_']+ { skip_unknown_command lexbuf }
 
 and in_comment = parse
   | "$end"       { state := Initial; TOK_KW_END }
-  | comment_text as s { TOK_COMMENT_TEXT s }
+  | comment_text as s { count_newlines lexbuf s; TOK_COMMENT_TEXT s }
 
 and in_date = parse
   | "$end"       { state := Initial; TOK_KW_END }
-  | comment_text as s { TOK_DATE_TEXT s }
+  | comment_text as s { count_newlines lexbuf s; TOK_DATE_TEXT s }
 
 and in_version = parse
   | "$end"       { state := Initial; TOK_KW_END }
-  | comment_text as s { TOK_VERSION_TEXT s }
+  | comment_text as s { count_newlines lexbuf s; TOK_VERSION_TEXT s }
 
 and in_timescale = parse
   | whitespace   { in_timescale lexbuf }
   | newline      { Lexing.new_line lexbuf; in_timescale lexbuf }
   | "$end"       { state := Initial; TOK_KW_END }
-  | "100"        { TOK_TIME_NUMBER 100 }
-  | "10"         { TOK_TIME_NUMBER 10 }
-  | "1"          { TOK_TIME_NUMBER 1 }
+  (* The spec allows only 1, 10 and 100, but producers write other values (gameroy writes
+     [$timescale 244 ns $end]). *)
+  | decimal_num as s { TOK_TIME_NUMBER (int_of_string s) }
   | "fs"         { TOK_TIME_UNIT Types.Time_unit.Fs }
   | "ps"         { TOK_TIME_UNIT Types.Time_unit.Ps }
   | "ns"         { TOK_TIME_UNIT Types.Time_unit.Ns }
@@ -144,7 +191,25 @@ and in_scope = parse
   | "function"   { TOK_KW_FUNCTION Types.Scope.Function }
   | "module"     { TOK_KW_MODULE Types.Scope.Module }
   | "task"       { TOK_KW_TASK Types.Scope.Task }
-  | scope_identifier as s { TOK_IDENTIFIER s }
+  | "class"     { TOK_SCOPE_TYPE Types.Scope.Class }
+  | "generate"  { TOK_SCOPE_TYPE Types.Scope.Generate }
+  | "interface" { TOK_SCOPE_TYPE Types.Scope.Interface }
+  | "package"   { TOK_SCOPE_TYPE Types.Scope.Package }
+  | "program"   { TOK_SCOPE_TYPE Types.Scope.Program }
+  | "struct"    { TOK_SCOPE_TYPE Types.Scope.Struct }
+  | "union"     { TOK_SCOPE_TYPE Types.Scope.Union }
+  | "vhdl_architecture" { TOK_SCOPE_TYPE Types.Scope.Vhdl_architecture }
+  | "vhdl_block"        { TOK_SCOPE_TYPE Types.Scope.Vhdl_block }
+  | "vhdl_for_generate" { TOK_SCOPE_TYPE Types.Scope.Vhdl_for_generate }
+  | "vhdl_function"     { TOK_SCOPE_TYPE Types.Scope.Vhdl_function }
+  | "vhdl_generate"     { TOK_SCOPE_TYPE Types.Scope.Vhdl_generate }
+  | "vhdl_if_generate"  { TOK_SCOPE_TYPE Types.Scope.Vhdl_if_generate }
+  | "vhdl_package"      { TOK_SCOPE_TYPE Types.Scope.Vhdl_package }
+  | "vhdl_procedure"    { TOK_SCOPE_TYPE Types.Scope.Vhdl_procedure }
+  | "vhdl_process"      { TOK_SCOPE_TYPE Types.Scope.Vhdl_process }
+  | "vhdl_record"       { TOK_SCOPE_TYPE Types.Scope.Vhdl_record }
+  | "unknown"           { TOK_SCOPE_TYPE Types.Scope.Unknown }
+  | scope_name as s { TOK_IDENTIFIER s }
 
 and in_var = parse
   | whitespace   { in_var lexbuf }
@@ -168,6 +233,17 @@ and in_var = parse
   | "wand"       { TOK_VAR_TYPE Types.Var_type.Wand }
   | "wire"       { TOK_VAR_TYPE Types.Var_type.Wire }
   | "wor"        { TOK_VAR_TYPE Types.Var_type.Wor }
+  | "bit"        { TOK_VAR_TYPE Types.Var_type.Bit }
+  | "byte"       { TOK_VAR_TYPE Types.Var_type.Byte }
+  | "enum"       { TOK_VAR_TYPE Types.Var_type.Enum }
+  | "int"        { TOK_VAR_TYPE Types.Var_type.Int }
+  | "logic"      { TOK_VAR_TYPE Types.Var_type.Logic }
+  | "longint"    { TOK_VAR_TYPE Types.Var_type.Longint }
+  | "port"       { TOK_VAR_TYPE Types.Var_type.Port }
+  | "shortint"   { TOK_VAR_TYPE Types.Var_type.Shortint }
+  | "shortreal"  { TOK_VAR_TYPE Types.Var_type.Shortreal }
+  | "string"     { TOK_VAR_TYPE Types.Var_type.String }
+  | "real_parameter" { TOK_VAR_TYPE Types.Var_type.Real_parameter }
   | decimal_num as s { state := In_var_psize; TOK_DECIMAL_NUM (int_of_string s) }
 
 and in_var_psize = parse
@@ -181,7 +257,7 @@ and in_var_pid = parse
   | newline      { Lexing.new_line lexbuf; in_var_pid lexbuf }
   | "$end"       { state := Initial; TOK_KW_END }
   | '['          { state := In_var_rng; TOK_BRACKET_O }
-  | scope_identifier as s { TOK_IDENTIFIER s }
+  | reference_identifier as s { TOK_IDENTIFIER s }
 
 and in_var_rng = parse
   | whitespace   { in_var_rng lexbuf }
@@ -194,28 +270,35 @@ and in_var_rng = parse
 and in_simtime = parse
   | whitespace   { in_simtime lexbuf }
   | newline      { Lexing.new_line lexbuf; in_simtime lexbuf }
-  | decimal_num as s { state := Initial; TOK_DECIMAL_NUM (int_of_string s) }
+  (* Some producers (migen) write fractional timestamps such as [#0.5]; truncate the
+     fractional part. *)
+  | (decimal_num as s) ('.' decimal_num)?
+    { state := Initial; TOK_DECIMAL_NUM (int_of_string s) }
 
 and in_val_changes = parse
   | whitespace   { in_val_changes lexbuf }
   | newline      { Lexing.new_line lexbuf; in_val_changes lexbuf }
   | "$end"       { state := Initial; TOK_KW_END }
-  | scalar_num as c {
-      state := In_val_idcode;
-      let bit = match c with
-        | '0' -> Types.Bit.V0
-        | '1' -> V1
-        | 'x' | 'X' -> Vx
-        | 'z' | 'Z' -> Vz
-        | _ -> Vx
-      in
-      TOK_VALUE bit
-    }
+  (* Some producers never terminate [$dumpvars] with [$end]; the [#] of the next
+     timestamp ends the block instead. *)
+  | '#'           { state := In_simtime; TOK_HASH }
+  | scalar_num as c { state := In_val_idcode; TOK_VALUE (bit_of_char c) }
   | bin_num as s  { state := In_val_idcode; TOK_BIN_NUM s }
   | real_num as s { state := In_val_idcode; TOK_REAL_NUM s }
+  | string_num as s { state := In_val_idcode; TOK_STRING_NUM s }
 
 and in_val_idcode = parse
   | whitespace   { in_val_idcode lexbuf }
   | newline      { Lexing.new_line lexbuf; in_val_idcode lexbuf }
   | "$end"       { state := Initial; TOK_KW_END }
   | identifier_code as s { state := Initial; TOK_IDENTIFIER s }
+
+(* Skip an unknown [$command], up to its [$end] or the end of the line. Commands like
+   nvc's [$attrbegin ...] fit on one line and are terminated by [$end], while bare
+   markers like [$crash] have no [$end] at all. *)
+and skip_unknown_command = parse
+  | "$end"  { token lexbuf }
+  | newline { Lexing.new_line lexbuf; token lexbuf }
+  | eof     { EOF }
+  | [^ '$' '\r' '\n']+ { skip_unknown_command lexbuf }
+  | '$'     { skip_unknown_command lexbuf }

@@ -6,7 +6,7 @@ module Value = struct
       | Int of int
       | String of string
       | Bool of bool
-    [@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]
+    [@@deriving bin_io, sexp_of, compare, equal, hash]
   end
 
   include T
@@ -20,7 +20,7 @@ module Applies_to = struct
       | Regs
       | Memories
       | Instantiations
-    [@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]
+    [@@deriving bin_io, sexp_of, compare, equal, hash]
   end
 
   include T
@@ -33,7 +33,7 @@ module T = struct
     ; value : Value.t option
     ; applies_to : Applies_to.t list
     }
-  [@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]
+  [@@deriving bin_io, sexp_of, compare, equal, hash]
 end
 
 include T
@@ -103,6 +103,7 @@ module Vivado = struct
   ;;
 
   let max_fanout n = create "max_fanout" ~value:(Value.Int n)
+  let force_max_fanout n = create "force_max_fanout" ~value:(Value.Int n)
   let retiming_forward n = create "retiming_forward" ~value:(Value.Int n)
   let retiming_backward n = create "retiming_backward" ~value:(Value.Int n)
 

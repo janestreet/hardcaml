@@ -157,7 +157,7 @@ let basic_test ?sync_stages () =
       ; port_name_is ~alignment:Right "valid" ~wave_format:Bit
       ]
   in
-  Waveform.print waves ~display_rules ~wave_width:1 ~display_width:130
+  Waveform.print waves ~display_rules ~wave_scale:1 ~display_width:130
 ;;
 
 let%expect_test "programmable full and empty flags" =
@@ -260,7 +260,7 @@ let%expect_test "programmable full and empty flags" =
       ; port_name_is ~alignment:Right "data_out" ~wave_format:Hex
       ]
   in
-  Waveform.print waves ~display_rules ~wave_width:1 ~display_width:150;
+  Waveform.print waves ~display_rules ~wave_scale:1 ~display_width:150;
   [%expect
     {|
     ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -403,7 +403,7 @@ let%expect_test "works with a synchronous clock in delayed mode" =
       ; port_name_is ~alignment:Right "valid" ~wave_format:Bit
       ]
   in
-  Waveform.print waves ~display_rules ~wave_width:1 ~display_width:130;
+  Waveform.print waves ~display_rules ~wave_scale:1 ~display_width:130;
   [%expect
     {|
     ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────────────────────────────────────────────────┐

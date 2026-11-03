@@ -4,12 +4,12 @@ module type S = Uid_builder_intf.S
 
 module Make () = struct
   module T = struct
-    type t = Int.t [@@deriving bin_io, compare ~localize, sexp]
+    type t = Int.t [@@deriving bin_io, compare, sexp]
 
     (* We need a hash function compatible with native code and javascript. Currently the
        only type which allows this is [Int64]. So we perform a conversion to int64 here,
        and reach out directly to the (unboxed) hash_fold function in base to implement it.
-       This allows zero alloc operation even in fast-build mode. *)
+       This allows zero alloc operation even in BUILD_PROFILE=dev mode. *)
 
     external fold_int64
       :  Hash.state
@@ -25,8 +25,7 @@ module Make () = struct
   include T
   include Comparator.Make (T)
   include Hashable.Make_binable (T)
-
-  include%template Comparable.Make [@mode local] (T)
+  include Comparable.Make (T)
 
   let zero = Int.of_int 0
   let one = Int.of_int 1

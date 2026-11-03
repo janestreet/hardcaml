@@ -1,7 +1,7 @@
 open! Core0
 
 module type S = sig
-  type !'a t [@@deriving equal ~localize, compare ~localize, globalize, sexp_of]
+  type !'a t [@@deriving equal, compare, globalize, sexp_of]
 
   include Interface.S with type 'a t := 'a t
 

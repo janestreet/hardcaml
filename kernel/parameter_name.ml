@@ -1,7 +1,7 @@
 open! Core0
 
-type t = string [@@deriving bin_io, compare ~localize, sexp]
+type t = string [@@deriving bin_io, compare, sexp]
 
-let%template equal = ([%compare.equal: t] [@mode local]) [@@mode __ = (global, local)]
+let equal = [%compare.equal: t]
 let of_string n = n
 let to_string n = n

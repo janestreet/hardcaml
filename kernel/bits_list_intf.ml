@@ -5,7 +5,7 @@
 open! Core0
 
 module type T = sig
-  type t [@@deriving equal ~localize, sexp]
+  type t [@@deriving equal, sexp]
 
   (** Only constants are valid (ie the type [t] does not represent a notion of inputs).
       This allows more compact sexp printing. *)
@@ -67,7 +67,7 @@ module type Bits_list = sig
       | F
       | T
       | X
-    [@@deriving bin_io, compare ~localize, equal ~localize, sexp_of]
+    [@@deriving bin_io, compare, equal, sexp_of]
 
     include T with type t := t
   end

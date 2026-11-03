@@ -3,6 +3,7 @@ open Ppxlib
 open Ppxlib.Ast_builder.Default
 
 let wrap_with_subscope ~loc ~name expr =
+  let loc = { loc with loc_ghost = true } in
   (* Wraps a function body with subscope creation. Only supports functions.
 
      Transforms:
@@ -28,7 +29,7 @@ let wrap_with_subscope ~loc ~name expr =
         ~expr:[%expr Hardcaml.Scope.sub_scope scope [%e estring ~loc name]]
     in
     let wrap_body body_expr = pexp_let ~loc Nonrecursive [ subscope_binding ] body_expr in
-    let wrapped_body : Ppxlib_jane.Shim.Pexp_function.function_body =
+    let wrapped_body : function_body =
       match body with
       | Pfunction_body body_expr -> Pfunction_body (wrap_body body_expr)
       | Pfunction_cases (cases, cases_loc, attrs) ->

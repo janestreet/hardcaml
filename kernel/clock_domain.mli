@@ -38,7 +38,7 @@ module Runtime : sig
     | Exact of Exact.t
     (** A signal with an [Exact] clock domain is one that is mapped to a specific clock
         domain. *)
-  [@@deriving sexp_of, equal ~localize]
+  [@@deriving sexp_of, equal]
 
   val get_name : t -> string
   val exact_exn : t -> Exact.t

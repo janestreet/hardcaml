@@ -3,7 +3,7 @@ open! Core0
 type t =
   | Simulation
   | Synthesis
-[@@deriving sexp_of, compare ~localize, equal ~localize]
+[@@deriving sexp_of, compare, equal]
 
 let of_string = function
   | "simulation" -> Simulation

@@ -9,7 +9,7 @@ open Type
 
 let names = Type.names
 let names_and_locs = Type.names_and_locs
-let%template uid = (Type.uid [@mode m]) [@@mode m = (local, global)]
+let uid = Type.uid
 let to_rep t = t, ()
 let from_rep t () = t
 let update_rep t ~info:() = t
@@ -150,18 +150,14 @@ module Base = struct
 
   type nonrec t = t
 
-  let%template[@mode local] equal t1 t2 =
+  let equal_internal t1 t2 =
     match t1, t2 with
     | Empty, Empty -> true
-    | Const { constant = c1; _ }, Const { constant = c2; _ } ->
-      (Bits.equal [@mode local]) c1 c2
-    | _ ->
-      (Uid.equal [@mode local])
-        ((uid [@mode local]) t1)
-        ((uid [@mode local]) t2) [@nontail]
+    | Const { constant = c1; _ }, Const { constant = c2; _ } -> Bits.equal c1 c2
+    | _ -> Uid.equal (uid t1) (uid t2) [@nontail]
   ;;
 
-  let%template equal = [%eta2 equal [@mode local]]
+  let equal = [%eta2 equal_internal]
   let width = width
   let to_string = to_string
   let sexp_of_t = sexp_of_t

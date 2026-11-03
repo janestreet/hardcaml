@@ -3,4 +3,4 @@
  (names test_comb_bits_primitives)
  (libraries base core_unix.command_unix core hardcaml hardcaml_test stdio)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

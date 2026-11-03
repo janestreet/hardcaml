@@ -111,12 +111,11 @@ module Memory = struct
       ; depth : int
       ; total_bits : int
       }
-    [@@deriving sexp_of, compare ~localize]
+    [@@deriving sexp_of, compare]
   end
 
   include T
-
-  include%template Comparable.Make_plain [@mode local] (T)
+  include Comparable.Make_plain (T)
 end
 
 module Memories = struct

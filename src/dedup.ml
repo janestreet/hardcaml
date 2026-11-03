@@ -20,7 +20,7 @@ module Structure_kind = struct
     | Select of int * int
     | Mem_read_port
     | Dont_dedup of Signal.Type.Uid.t
-  [@@deriving sexp_of, compare ~localize, hash]
+  [@@deriving sexp_of, compare, hash]
 
   let equal a b = compare a b = 0
 end
@@ -239,17 +239,10 @@ let deduplicate circuit =
   let all_original_signals =
     Circuit.signal_graph circuit |> Signal_graph.filter ~f:(Fn.const true)
   in
-  let canonical =
-    canonicalize (all_original_signals @ Map.data (Circuit.assertions circuit))
-  in
+  let canonical = canonicalize all_original_signals in
   let outputs = Circuit.outputs circuit in
-  let assertions =
-    Map.map (Circuit.assertions circuit) ~f:(fun signal ->
-      Hashtbl.find_exn canonical (Signal.uid signal))
-    |> Assertion_manager.of_signals
-  in
   Circuit.create_exn
-    ~config:{ (Circuit.config circuit) with assertions = Some assertions }
+    ~config:{ (Circuit.config circuit) with property_manager = None }
     ~name:(Circuit.name circuit)
     (List.map outputs ~f:(fun signal -> Hashtbl.find_exn canonical (Signal.uid signal)))
 ;;

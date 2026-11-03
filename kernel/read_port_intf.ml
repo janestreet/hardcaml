@@ -8,7 +8,7 @@ module type S = sig
     ; read_address : 'a
     ; read_enable : 'a
     }
-  [@@deriving bin_io, sexp_of, equal ~localize, compare ~localize]
+  [@@deriving bin_io, sexp_of, equal, compare]
 
   include Hardcaml_interface_types.Pre_partial with type 'a t := 'a t
 

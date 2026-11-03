@@ -101,13 +101,13 @@ end = struct
 end
 
 module Mangled_and_validated : sig
-  type t [@@deriving to_string, sexp_of, equal ~localize]
+  type t [@@deriving to_string, sexp_of, equal]
 
   val mangle : Mangler.t -> Validated.t -> t
   val add : Mangler.t -> Validated.t -> [ `Ok of t | `Duplicate ]
   val from_raw_external_name : string -> t
 end = struct
-  type t = string [@@deriving to_string, sexp_of, equal ~localize]
+  type t = string [@@deriving to_string, sexp_of, equal]
 
   let from_raw_external_name name = name
   let mangle mangler validated = Mangler.mangle mangler (Validated.to_string validated)
@@ -122,13 +122,13 @@ end
 
 module For_backend = struct
   module T = struct
-    type name = Mangled_and_validated.t [@@deriving sexp_of, equal ~localize]
+    type name = Mangled_and_validated.t [@@deriving sexp_of, equal]
 
     type t =
       { for_backed : string
       ; backend_agnostic : name
       }
-    [@@deriving sexp_of, equal ~localize, fields ~getters]
+    [@@deriving sexp_of, equal, fields ~getters]
 
     let legalize backend_agnostic ~(language : Rtl_language.t) =
       let name = Mangled_and_validated.to_string backend_agnostic in
@@ -150,7 +150,7 @@ module For_backend = struct
   include Comparable.Make_plain (T)
 end
 
-type t = Mangled_and_validated.t [@@deriving sexp_of, equal ~localize]
+type t = Mangled_and_validated.t [@@deriving sexp_of, equal]
 
 let from_raw_external_name name = Mangled_and_validated.from_raw_external_name name
 let backend_agnostic t = Mangled_and_validated.to_string t

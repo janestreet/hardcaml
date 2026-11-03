@@ -33,8 +33,6 @@ val scope : Scope.t = <abstr>
   will retain hierarchy.
 - `auto_label_hierarchical_ports` a useful option when using the Hardcaml waveform viewer
   that allows it to show the hierarchical structure of a design.
-- `naming_scheme` control how names are generated. The defaults are set up to work with
-  the value of `flatten_design`, but can be overridden.
 
 ### Flattening a Design
 

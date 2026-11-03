@@ -1,13 +1,13 @@
 open! Core0
 
-type t [@@deriving sexp_of, equal ~localize]
+type t [@@deriving sexp_of, equal]
 
 val from_raw_external_name : string -> t
 val backend_agnostic : t -> string
 
 module For_backend : sig
   type name = t
-  type t [@@deriving sexp_of, to_string, equal ~localize]
+  type t [@@deriving sexp_of, to_string, equal]
 
   val backend_agnostic : t -> name
   val backend_agnostic_string : t -> string

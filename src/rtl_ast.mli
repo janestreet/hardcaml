@@ -3,12 +3,12 @@ open! Core0
 type range =
   | Vector of { width : int }
   | Bit
-[@@deriving equal ~localize, sexp_of]
+[@@deriving equal, sexp_of]
 
 type reg_or_wire =
   | Reg
   | Wire
-[@@deriving equal ~localize, sexp_of]
+[@@deriving equal, sexp_of]
 
 type var =
   { name : Rtl_name.For_backend.t
@@ -17,7 +17,7 @@ type var =
   ; attributes : Rtl_attribute.t list
   ; comment : string option
   }
-[@@deriving equal ~localize, sexp_of]
+[@@deriving equal, sexp_of]
 
 type output =
   { output : var
@@ -207,6 +207,10 @@ type statement =
       ; memory : var
       ; address : var
       }
+  | Sva_property of
+      { name : Rtl_name.For_backend.t
+      ; property : var Property.Sva.t
+      }
 [@@deriving sexp_of]
 
 type t =
@@ -231,15 +235,13 @@ val of_circuit
 (** Map signal names to mangled RTL names. This used in [Hardcaml_verilator]. *)
 module Signals_name_map : sig
   module Uid_with_index : sig
-    type t = Signal.Type.Uid.t * int [@@deriving compare ~localize, sexp_of]
+    type t = Signal.Type.Uid.t * int [@@deriving compare, sexp_of]
 
     include Comparator.S with type t := t
   end
 
   type t_rtl_ast = t
-
-  type t = Rtl_name.For_backend.t Map.M(Uid_with_index).t
-  [@@deriving equal ~localize, sexp_of]
+  type t = Rtl_name.For_backend.t Map.M(Uid_with_index).t [@@deriving equal, sexp_of]
 
   val create : t_rtl_ast -> t
 end

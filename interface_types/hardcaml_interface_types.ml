@@ -1,7 +1,7 @@
 open! Core
 
 module type Pre_partial = sig
-  type 'a t [@@deriving equal ~localize, compare ~localize, sexp_of]
+  type 'a t [@@deriving equal, compare, sexp_of]
 
   val iter : 'a t -> f:('a -> unit) -> unit
   val iter2 : 'a t -> 'b t -> f:('a -> 'b -> unit) -> unit

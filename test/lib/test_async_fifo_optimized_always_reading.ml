@@ -54,7 +54,7 @@ let test ~probability_write_enable () =
       ; port_name_is ~alignment:Right "valid" ~wave_format:Bit
       ]
   in
-  Waveform.print waves ~display_rules ~wave_width:1 ~display_width:90;
+  Waveform.print waves ~display_rules ~wave_scale:1 ~display_width:90;
   [%test_result: int Queue.t] ~expect:q_write q_read
 ;;
 

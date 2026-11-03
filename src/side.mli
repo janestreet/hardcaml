@@ -4,4 +4,4 @@
 type t =
   | Before
   | After
-[@@deriving compare ~localize, sexp_of]
+[@@deriving compare, sexp_of]

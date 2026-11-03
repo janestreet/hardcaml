@@ -89,9 +89,16 @@ module type Comb_monomorphic = sig
   (** Multiplex a list of interfaces. *)
   val mux : comb -> t list -> t
 
-  val mux2 : comb -> t -> t -> t
+  (** Same as [mux] except the number of inputs must exactly match the number of values
+      representable by the select signal. *)
+  val mux_strict : comb -> t list -> t
 
-  (** Concatenate a list of interfaces. *)
+  val mux2 : comb -> t -> t -> t
+  val mux_init : comb -> int -> f:(int -> t) -> t
+  val cases : default:t -> comb -> (comb * t) list -> t
+
+  (** Concatenate a list of interfaces (the MSB of the head of the list will become the
+      MSB of the result). *)
   val concat : t list -> t
 
   val priority_select
@@ -207,8 +214,7 @@ end
 
 module type S = sig
   include Pre
-
-  include%template Equal.S1 [@mode local] with type 'a t := 'a t
+  include Equal.S1 with type 'a t := 'a t
 
   (** RTL names specified in the interface definition - commonly also the OCaml field
       name. *)
@@ -220,7 +226,7 @@ module type S = sig
   (** [const x] sets each port to [x] *)
   val const : 'a -> 'a t
 
-  type tag [@@deriving equal ~localize]
+  type tag [@@deriving equal]
 
   val tags : tag t
 
@@ -309,29 +315,6 @@ module type S = sig
       with type t := t
        and type bits_t = Bits.t interface
        and module Signal := Signal
-  end
-
-  module Of_clocked_signal : sig
-    type 'a interface := 'a t
-
-    include Comb with type comb = Clocked_signal.t
-    include Of_signal_functions with type t := t and module Signal := Clocked_signal
-
-    val wires
-      :  ?named:bool (** default is [false]. *)
-      -> [ `From of t | `Domains of Clock_domain.Runtime.t interface ]
-      -> t
-
-    val inputs : Clock_domain.Runtime.t interface -> t
-
-    (** Apply name to field of the interface. Add [prefix] and [suffix] if specified. *)
-    val apply_names
-      :  ?prefix:string (** Default is [""] *)
-      -> ?suffix:string (** Default is [""] *)
-      -> ?naming_op:(?loc:Stdlib.Lexing.position -> Signal.t -> string -> Signal.t)
-           (** Default is [Signal.(--)] *)
-      -> t
-      -> t
   end
 
   (** Helper functions to ease usage of the Always API when working with interfaces. *)
@@ -484,7 +467,7 @@ module type Interface = sig
   module Make_interface_with_conversion
       (Repr : S)
       (M : sig
-         type 'a t [@@deriving equal ~localize, compare ~localize, sexp_of]
+         type 'a t [@@deriving equal, compare, sexp_of]
 
          val t_of_repr : 'a Repr.t -> 'a t
          val repr_of_t : 'a t -> 'a Repr.t

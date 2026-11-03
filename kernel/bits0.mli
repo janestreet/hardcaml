@@ -14,9 +14,9 @@ open! Core0
 
 (** Comparison of two [Bits.t]: first the widths are compared and if they are same the
     unsigned numerical value is compared. *)
-type t = private Bytes.t [@@deriving bin_io, compare ~localize, sexp]
+type t = private Bytes.t [@@deriving bin_io, compare, sexp]
 
-module%template Comparable : Comparable.S [@mode local] with type t := t
+module Comparable : Comparable.S with type t := t
 
 val bits_per_word : int
 val log_bits_per_word : int

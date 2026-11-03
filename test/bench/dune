@@ -2,4 +2,4 @@
  (name hardcaml_bench)
  (libraries base_bigstring hardcaml)
  (preprocess
-  (pps ppx_jane)))
+  (pps ppx_jane -compare-require-explicit-locality)))

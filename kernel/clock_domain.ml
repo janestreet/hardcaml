@@ -13,10 +13,7 @@ module Exact = struct
   [@@deriving sexp_of, fields ~getters]
 
   let get_name ({ name; _ } : t) = name
-
-  let%template equal { uid = uid1; _ } { uid = uid2; _ } = (Uid.equal [@mode m]) uid1 uid2
-  [@@mode m = (local, global)]
-  ;;
+  let equal { uid = uid1; _ } { uid = uid2; _ } = Uid.equal uid1 uid2
 
   let create_domain ?(loc = Stdlib.Lexing.dummy_pos) name =
     { uid = gen_uid (); name; loc }
@@ -33,7 +30,7 @@ module Runtime = struct
     | Constant
     | Unknown
     | Exact of Exact.t
-  [@@deriving sexp_of, equal ~localize]
+  [@@deriving sexp_of, equal]
 
   let get_name = function
     | Constant -> "constant"

@@ -2,6 +2,7 @@ open! Core0
 
 module type S = Clocking_intf.S
 
+module Property_clocked = Property_clocked
 module Untyped = Clocking_intf.Untyped
 
 module Generate_functions
@@ -16,11 +17,15 @@ struct
   let add_clear t clear = { t with clear = Signal.( |: ) t.clear clear }
   let to_spec t = Signal.Reg_spec.create ~clock:t.clock ~clear:t.clear ()
   let to_spec_no_clear t = Signal.Reg_spec.create ~clock:t.clock ()
-  let reg t ?enable ?clear ?clear_to d = Signal.reg ?enable ?clear ?clear_to (to_spec t) d
+
+  let reg t ?enable ?clear ?clear_to ?initialize_to d =
+    Signal.reg ?enable ?clear ?clear_to ?initialize_to (to_spec t) d
+  ;;
+
   let reg_no_clear t ?enable d = Signal.reg ?enable (to_spec_no_clear t) d
 
-  let reg_fb ?enable ?clear ?clear_to t ~width ~f =
-    Signal.reg_fb ?enable ?clear ?clear_to (to_spec t) ~width ~f
+  let reg_fb ?enable ?clear ?clear_to ?initialize_to t ~width ~f =
+    Signal.reg_fb ?enable ?clear ?clear_to ?initialize_to (to_spec t) ~width ~f
   ;;
 
   let reg_fb_and_next ?enable ?clear ?clear_to t ~width ~f =
@@ -45,6 +50,11 @@ struct
 
   let cut_through_reg t ?clear ?clear_to ~enable d =
     Signal.cut_through_reg ?clear ?clear_to (to_spec t) ~enable d
+  ;;
+
+  let to_property_clocked ?(disable_iff = true) t =
+    let disable_iff = Option.some_if disable_iff t.clear in
+    Property_clocked.create ?disable_iff Rising t.clock
   ;;
 
   module Cdc = struct
@@ -108,11 +118,6 @@ end
 module Implementation_for_untyped = struct
   include Untyped
   include Generate_functions (Signal) (Always)
-
-  module Clocked = struct
-    include Untyped
-    include Generate_functions (Clocked_signal) (Always.Clocked)
-  end
 end
 
 (* This implementation has Make().t = Untyped.t to be the same type, but this equality

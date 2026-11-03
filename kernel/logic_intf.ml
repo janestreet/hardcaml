@@ -11,9 +11,9 @@ module type Std_logic = sig
     | L (** Weak - prefer 0 *)
     | H (** Weak - prefer 1 *)
     | Don't_care (** Dont care *)
-  [@@deriving bin_io, compare ~localize, enumerate, sexp, variants]
+  [@@deriving bin_io, compare, enumerate, sexp, variants]
 
-  include%template Equal.S [@mode local] with type t := t
+  include Equal.S with type t := t
 
   (** Provide the index of [t] in textual order. When passing a std_logic parameter from
       verilog to vhdl, we need to encode this type into an integer. For example, L1 =
@@ -32,9 +32,9 @@ module type Four_state = sig
     | Z
     | L0
     | L1
-  [@@deriving bin_io, compare ~localize, enumerate, sexp, variants]
+  [@@deriving bin_io, compare, enumerate, sexp, variants]
 
-  include%template Equal.S [@mode local] with type t := t
+  include Equal.S with type t := t
 
   (** Provide the index of [t] in textual order. *)
   val to_int : t -> int

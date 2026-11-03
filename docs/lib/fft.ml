@@ -155,8 +155,7 @@ end
 
 module I = struct
   type 'a t =
-    { clock : 'a
-    ; clear : 'a
+    { clocking : 'a Clocking.t
     ; start : 'a
     ; write : 'a Write_port.t [@rtlprefix "i$"]
     ; read_address : 'a [@bits 4]
@@ -177,11 +176,11 @@ module State = struct
   type t =
     | Start
     | Loop
-  [@@deriving sexp_of, compare ~localize, enumerate]
+  [@@deriving sexp_of, compare, enumerate]
 end
 
 let loop_controller (i : _ I.t) =
-  let spec = Reg_spec.create ~clock:i.clock ~clear:i.clear () in
+  let spec = Clocking.to_spec i.clocking in
   let pass = Always.Variable.reg spec ~width:(Int.ceil_log2 4) in
   let count = Always.Variable.reg spec ~width:3 in
   let sm = Always.State_machine.create (module State) spec in
@@ -300,7 +299,7 @@ let create (i : _ I.t) =
   let%hw.Dcomplex.Of_signal a_next, b_next = butterfly a b w in
   let memory_buffer =
     memory_buffer
-      ~clock:i.clock
+      ~clock:i.clocking.clock
       ~ext_write:i.write
       ~int_write_a:{ enable = ~:done_; address = j; data = a_next }
       ~int_write_b:{ enable = ~:done_; address = k; data = b_next }
@@ -359,9 +358,9 @@ open Bits
 
 let clear_core (sim : Sim.t) =
   let inputs = Cyclesim.inputs sim in
-  inputs.clear := vdd;
+  inputs.clocking.clear := vdd;
   Cyclesim.cycle sim;
-  inputs.clear := gnd
+  inputs.clocking.clear := gnd
 ;;
 
 let load_fft_coefficients (sim : Sim.t) =
@@ -419,7 +418,7 @@ let hw_test () =
   load_fft_coefficients sim;
   run_fft sim;
   read_results sim;
-  Waveform.expect waves ~wave_width:2 ~display_rules ~start_cycle:38
+  Waveform.expect waves ~wave_scale:2 ~display_rules ~start_time:76
 ;;
 
 (* $MDX part-end *)
@@ -446,7 +445,7 @@ let%expect_test "" =
     [14] -8.000000 -19.313708i
     [15] -8.000000 -40.218716i
     ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
-    │clock          ││┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──│
+    │clock          ││───┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──│
     │               ││   └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  │
     │clear          ││                                                   │
     │               ││───────────────────────────────────────────────────│
@@ -490,13 +489,13 @@ let%expect_test "" =
     │o$im           ││ 0.                                                │
     │               ││───────────────────────────────────────────────────│
     │               ││──────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬──│
-    │a$re           ││ 32.  │-8.0.│-8.  │-7.9.│64.  │-8.0.│-8.0.│-8.0.│-8│
+    │a$re           ││ 32.  │-8.0.│-8.  │-7.9.│64.  │-8.0.│-8.0.│-8.0.│-.│
     │               ││──────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴──│
     │               ││──────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬──│
     │a$im           ││ 0.   │8.   │0.   │-8.  │0.   │19.3.│8.   │3.31.│0.│
     │               ││──────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴──│
     │               ││──────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬──│
-    │b$re           ││ 40.  │-8.0.│-8.  │-7.9.│72.  │-8.0.│-8.0.│-8.0.│-8│
+    │b$re           ││ 40.  │-8.0.│-8.  │-7.9.│72.  │-8.0.│-8.0.│-8.0.│-.│
     │               ││──────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴──│
     │               ││──────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬──│
     │b$im           ││ 0.   │8.   │0.   │-8.  │0.   │19.3.│8.   │3.31.│0.│
@@ -505,22 +504,22 @@ let%expect_test "" =
     │w$re           ││ 1.   │0.70.│1.61.│-0.7.│1.   │0.92.│0.70.│0.38.│1.│
     │               ││──────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴──│
     │               ││──────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬──│
-    │w$im           ││ -0.  │-0.7.│-1.  │-0.7.│-0.  │-0.3.│-0.7.│-0.9.│-1│
+    │w$im           ││ -0.  │-0.7.│-1.  │-0.7.│-0.  │-0.3.│-0.7.│-0.9.│-.│
     │               ││──────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴──│
     │               ││──────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬──│
-    │a_next$re      ││ 72.  │-8.0.│-8.0.│-8.0.│136. │-8.0.│-8.0.│-8.0.│-8│
+    │a_next$re      ││ 72.  │-8.0.│-8.0.│-8.0.│136. │-8.0.│-8.0.│-8.0.│-.│
     │               ││──────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴──│
     │               ││──────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬──│
     │a_next$im      ││ 0.   │19.3.│8.   │3.31.│0.   │40.2.│19.3.│11.9.│8.│
     │               ││──────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴──│
     │               ││──────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬──│
-    │b_next$re      ││ -8.  │-7.9.│-7.9.│-7.9.│-8.  │-7.9.│-7.9.│-7.9.│-7│
+    │b_next$re      ││ -8.  │-7.9.│-7.9.│-7.9.│-8.  │-7.9.│-7.9.│-7.9.│-.│
     │               ││──────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴──│
     │               ││──────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬──│
-    │b_next$im      ││ 0.   │-3.3.│-8.  │-19..│0.   │-1.5.│-3.3.│-5.3.│-8│
+    │b_next$im      ││ 0.   │-3.3.│-8.  │-19..│0.   │-1.5.│-3.3.│-5.3.│-.│
     │               ││──────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴──│
     └───────────────┘└───────────────────────────────────────────────────┘
-    7a788a5d3036c98ecb7da5ed09414842
+    159aeee598ac02f44287c5a6a020e51b
     |}]
 ;;
 

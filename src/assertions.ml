@@ -1,7 +1,7 @@
 open! Core0
 
 type t' =
-  { assertions : Signal.t Map.M(String).t
+  { assertions : Signal.t Hashtbl.M(String).t
   ; asserted : (string, int list) Hashtbl.t
   }
 
@@ -14,25 +14,16 @@ module Violated_or_not = struct
   [@@deriving sexp_of]
 end
 
-let circuit_config_with_assertions
-  ?(config = Circuit.Config.default_for_simulations)
-  scope
-  =
-  if Scope.trace_properties scope
-  then { config with assertions = Scope.assertion_manager scope; port_checks = Relaxed }
-  else config
-;;
-
-let trace' sim assertion_manager =
+let trace' sim property_manager =
   let cycle_no = ref 0 in
-  let assertions = Assertion_manager.finalize assertion_manager in
+  let assertions = Property_manager.get_assertions property_manager in
   let asserted = Hashtbl.create (module String) in
   let clear_violated_assertions () =
     cycle_no := 0;
     Hashtbl.clear asserted
   in
   let asserts =
-    Map.to_alist assertions
+    Hashtbl.to_alist assertions
     |> List.map ~f:(fun (port_name, _) ->
       port_name, Cyclesim.out_port sim ~clock_edge:Before port_name)
   in
@@ -60,13 +51,13 @@ let trace sim assertion_manager =
 
 let results t =
   Option.map t ~f:(fun t ->
-    Map.mapi t.assertions ~f:(fun ~key ~data:_ ->
+    Hashtbl.mapi t.assertions ~f:(fun ~key ~data:_ ->
       match Hashtbl.find t.asserted key with
       | Some cycles -> Violated_or_not.Violated (List.rev cycles)
       | None -> Violated_or_not.Not_violated))
 ;;
 
-let sexp_of_t t = [%sexp (results t : Violated_or_not.t Map.M(String).t option)]
+let sexp_of_t t = [%sexp (results t : Violated_or_not.t Hashtbl.M(String).t option)]
 
 let check_assertion_width name assertion =
   if Signal.width assertion <> 1
@@ -77,9 +68,7 @@ let check_assertion_width name assertion =
 
 let add scope name assertion =
   check_assertion_width name assertion;
-  Option.iter (Scope.assertion_manager scope) ~f:(fun assertion_manager ->
-    let name = Scope.name scope name in
-    Assertion_manager.add assertion_manager name assertion)
+  Scope.add_assertion scope name assertion
 ;;
 
 module Always = struct

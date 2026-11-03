@@ -6,8 +6,7 @@ module Make (Outer : Interface.S) (Inner : Interface.S) = struct
   module type S = Interface.S with type 'a t = 'a Inner.t Outer.t
 
   module Pre = struct
-    type 'a t = 'a Inner.t Outer.t
-    [@@deriving equal ~localize, compare ~localize, sexp_of]
+    type 'a t = 'a Inner.t Outer.t [@@deriving equal, compare, sexp_of]
 
     let map t ~f = Outer.map t ~f:(Inner.map ~f) [@nontail]
     let iter t ~f = Outer.iter t ~f:(Inner.iter ~f) [@nontail]

@@ -32,7 +32,7 @@ end
 
 module Interface_list (X : Interface_with_length) = struct
   module Pre = struct
-    type 'a t = 'a X.t List.t [@@deriving equal ~localize, compare ~localize, sexp_of]
+    type 'a t = 'a X.t List.t [@@deriving equal, compare, sexp_of]
 
     let map a ~f = List.map a ~f:(fun a -> X.map a ~f) [@nontail]
     let iter a ~f = List.iter a ~f:(fun a -> X.iter a ~f) [@nontail]
@@ -54,7 +54,7 @@ end
 
 module Interface_array (X : Interface_with_length) = struct
   module Pre = struct
-    type 'a t = 'a X.t Array.t [@@deriving equal ~localize, compare ~localize, sexp_of]
+    type 'a t = 'a X.t Array.t [@@deriving equal, compare, sexp_of]
 
     let map a ~f = Array.map a ~f:(fun a -> X.map a ~f) [@nontail]
     let iter a ~f = Array.iter a ~f:(fun a -> X.iter a ~f) [@nontail]

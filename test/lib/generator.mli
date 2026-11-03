@@ -1,6 +1,12 @@
 (** This module generates random Hardcaml circuits. Intended for testing simulators and
     circuit graph transformations. *)
 
+(** Clock used by generated registers and memories. *)
+val clock : Hardcaml.Signal.t
+
+(** Reset used by generated registers. *)
+val reset : Hardcaml.Signal.t
+
 (** Generates a random circuit with maximum depth [depth]. The circuit won't have any
     inputs unless [allow_inputs] is true. *)
 val gen_circuit
@@ -14,7 +20,7 @@ val gen_input_data
   -> (string * Hardcaml.Bits.t) list Core.Quickcheck.Generator.t
 
 (** Generates a random signal, with children being other random signals and signals from
-    [inputs]. *)
+    [inputs]. Generated memories have random initial contents. *)
 val gen
   :  width:int
   -> depth:int

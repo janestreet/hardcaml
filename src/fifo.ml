@@ -85,8 +85,7 @@ struct
 
   module I = struct
     type 'a t =
-      { clock : 'a
-      ; clear : 'a
+      { clocking : 'a Clocking.t
       ; wr : 'a
       ; rd : 'a
       }
@@ -105,11 +104,11 @@ struct
     [@@deriving hardcaml]
   end
 
-  let create ?nearly_full ?(nearly_empty = 1) ~scope ({ clock; clear; wr; rd } : _ I.t)
+  let create ?nearly_full ?(nearly_empty = 1) ~scope ({ clocking; wr; rd } : _ I.t)
     : _ O.t
     =
     let ( -- ) = Scope.naming scope in
-    let reg_spec = Reg_spec.create ~clock ~clear () in
+    let reg_spec = Clocking.to_spec clocking in
     let reg ?initialize_to ~enable d =
       reg
         reg_spec
@@ -167,13 +166,13 @@ let create
   ?ram_primitive
   ()
   ~capacity:ram_capacity
-  ~clock
-  ~clear
+  ~clocking
   ~wr
   ~d
   ~rd
   =
   let ( -- ) = Scope.naming scope in
+  let clock = Clocking.clock clocking in
   (* Check if read_latency is set that its value makes sense. *)
   Option.iter read_latency ~f:(fun read_latency ->
     if showahead && read_latency <> 0
@@ -183,7 +182,7 @@ let create
           "Cannot set showahead = true and read_latency <> 0 for Fifo."
             (read_latency : int)
             (showahead : bool)]);
-  let reg_spec = Reg_spec.create ~clock ~clear () in
+  let reg_spec = Clocking.to_spec clocking in
   let reg ?initialize_to ~enable d =
     reg
       reg_spec
@@ -204,7 +203,7 @@ let create
     end)
   in
   let%tydi { used; used_next; empty; nearly_empty; full; nearly_full } =
-    Fifo_helper.create ?nearly_full ?nearly_empty ~scope { clock; clear; wr; rd }
+    Fifo_helper.create ?nearly_full ?nearly_empty ~scope { clocking; wr; rd }
   in
   full' <-- full;
   empty' <-- empty;
@@ -242,8 +241,9 @@ let create
     else (
       let ra, _ = addr_count rd "READ_ADDRESS" in
       let wa, _ = addr_count wr "WRITE_ADDRESS" in
-      let spec = Reg_spec.create ~clock ~clear () in
-      ram_rbw
+      let spec = Clocking.to_spec clocking in
+      let ram_primitive = Option.value ram_primitive ~default:ram_rbw in
+      ram_primitive
         ~attributes:ram_attributes
         ram_capacity
         ~write_port:
@@ -272,13 +272,12 @@ let create_classic_with_extra_reg
   ?ram_primitive
   ()
   ~capacity
-  ~clock
-  ~clear
+  ~clocking
   ~wr
   ~d
   ~rd
   =
-  let spec = Reg_spec.create ~clock ~clear () in
+  let spec = Clocking.to_spec clocking in
   let fifo_valid = wire 1 in
   let middle_valid = wire 1 in
   let fifo_rd_en = wire 1 in
@@ -297,8 +296,7 @@ let create_classic_with_extra_reg
       ~scope
       ()
       ~capacity
-      ~clock
-      ~clear
+      ~clocking
       ~wr
       ~d
       ~rd:fifo_rd_en
@@ -361,8 +359,7 @@ let create_showahead_from_classic
       ~scope
       ()
       ~capacity
-      ~clock:write_clock
-      ~clear
+      ~clocking:{ Clocking.clock = write_clock; clear }
       ~wr
       ~d
       ~rd
@@ -371,7 +368,8 @@ let create_showahead_from_classic
   let create_showahead_fifo =
     Staged.unstage (showahead_fifo_of_classic_fifo create_fifo)
   in
-  fun ~capacity ~clock ~clear ~wr ~d ~rd ->
+  fun ~capacity ~clocking ~wr ~d ~rd ->
+    let { Clocking.clock; clear } = clocking in
     let write_clock = clock in
     let read_clock = clock in
     match create_showahead_fifo ~capacity ~write_clock ~read_clock ~clear ~wr ~d ~rd with
@@ -389,13 +387,12 @@ let create_showahead_with_read_latency
   ?ram_primitive
   ()
   ~capacity
-  ~clock
-  ~clear
+  ~clocking
   ~wr
   ~d
   ~rd
   =
-  let spec = Reg_spec.create ~clock ~clear () in
+  let spec = Clocking.to_spec clocking in
   let fifo_rd_en = wire 1 in
   let full', empty' = wire 1, wire 1 in
   let rd = if underflow_check then rd &: ~:empty' else rd in
@@ -413,8 +410,7 @@ let create_showahead_with_read_latency
       ~overflow_check
       ~underflow_check
       ~capacity
-      ~clock
-      ~clear
+      ~clocking
       ~wr
       ~d
       ~rd:fifo_rd_en
@@ -436,7 +432,7 @@ let create_showahead_with_read_latency
     end)
   in
   let%tydi { used; used_next = _; empty = _; nearly_empty; full; nearly_full = _ } =
-    Fifo_helper.create ?nearly_full ?nearly_empty ~scope { clock; clear; wr; rd }
+    Fifo_helper.create ?nearly_full ?nearly_empty ~scope { clocking; wr; rd }
   in
   empty' <-- ~:dout_valid;
   full' <-- full;
@@ -449,6 +445,8 @@ type 'a showahead_with_extra_reg =
   }
 
 let create_showahead_with_extra_reg_wrapper
+  ~clear_output_data_registers
+  ~ram_output_register
   ?(nearly_empty = 1)
   ?nearly_full
   ~scope
@@ -456,12 +454,17 @@ let create_showahead_with_extra_reg_wrapper
   ~overflow_check
   ~underflow_check
   ~capacity
-  ~clock
-  ~clear
+  ~clocking
   ~wr
   ~rd
   =
-  let spec = Reg_spec.create ~clock ~clear () in
+  let spec = Clocking.to_spec clocking in
+  (* [middle_dout] and [dout] hold data that is only consumed when [dout_valid] (which
+     always keeps its clear) is high, so their clear is optional; dropping it reduces the
+     fanout of the clear signal. *)
+  let data_spec =
+    if clear_output_data_registers then spec else Clocking.to_spec_no_clear clocking
+  in
   let fifo_rd_en = wire 1 in
   let full', empty' = wire 1, wire 1 in
   let rd = if underflow_check then rd &: ~:empty' else rd in
@@ -469,13 +472,42 @@ let create_showahead_with_extra_reg_wrapper
   let fifo_valid = wire 1 in
   let middle_valid = wire 1 in
   let dout_valid = wire 1 in
-  let will_update_dout = middle_valid |: fifo_valid &: (rd |: ~:dout_valid) in
-  let will_update_middle = fifo_valid &: (middle_valid ==: will_update_dout) in
-  let middle_dout = reg spec ~enable:will_update_middle fifo.q in
-  let dout = reg spec ~enable:will_update_dout (mux2 middle_valid middle_dout fifo.q) in
-  fifo_rd_en <-- (~:(fifo.empty) &: ~:(middle_valid &: dout_valid &: fifo_valid));
-  fifo_valid
-  <-- reg spec ~enable:(fifo_rd_en |: will_update_middle |: will_update_dout) fifo_rd_en;
+  (* With [ram_output_register], data always flows [fifo.q] -> [middle_dout] -> [dout]
+     rather than allowing [fifo.q] to bypass straight into [dout]. The RAM output then
+     feeds exactly one register with no logic in between, which lets synthesis pack
+     [middle_dout] into the RAM primitive's output register. This costs one extra cycle of
+     fall-through latency; throughput is unchanged. *)
+  let will_update_dout =
+    let data_behind_dout =
+      if ram_output_register then middle_valid else middle_valid |: fifo_valid
+    in
+    data_behind_dout &: (rd |: ~:dout_valid)
+  in
+  let will_update_middle =
+    if ram_output_register
+    then fifo_valid &: (will_update_dout |: ~:middle_valid)
+    else fifo_valid &: (middle_valid ==: will_update_dout)
+  in
+  let middle_dout = reg data_spec ~enable:will_update_middle fifo.q in
+  let dout =
+    let d =
+      if ram_output_register then middle_dout else mux2 middle_valid middle_dout fifo.q
+    in
+    reg data_spec ~enable:will_update_dout d
+  in
+  fifo_rd_en
+  <--
+  if ram_output_register
+  then ~:(fifo.empty) &: (will_update_middle |: ~:fifo_valid)
+  else ~:(fifo.empty) &: ~:(middle_valid &: dout_valid &: fifo_valid);
+  (fifo_valid
+   <--
+   let enable =
+     if ram_output_register
+     then fifo_rd_en |: will_update_middle
+     else fifo_rd_en |: will_update_middle |: will_update_dout
+   in
+   reg spec ~enable fifo_rd_en);
   middle_valid
   <-- reg spec ~enable:(will_update_middle |: will_update_dout) will_update_middle;
   dout_valid <-- reg spec ~enable:(will_update_dout |: rd) will_update_dout;
@@ -492,7 +524,7 @@ let create_showahead_with_extra_reg_wrapper
     end)
   in
   let%tydi { used; used_next = _; empty = _; nearly_empty; full; nearly_full } =
-    Fifo_helper.create ~scope ?nearly_full ~nearly_empty { clock; clear; wr; rd }
+    Fifo_helper.create ~scope ?nearly_full ~nearly_empty { clocking; wr; rd }
   in
   empty' <-- ~:dout_valid;
   full' <-- full;
@@ -502,6 +534,8 @@ let create_showahead_with_extra_reg_wrapper
 ;;
 
 let create_showahead_with_extra_reg
+  ~clear_output_data_registers
+  ~ram_output_register
   ?(nearly_empty = 1)
   ?nearly_full
   ?(overflow_check = true)
@@ -511,8 +545,7 @@ let create_showahead_with_extra_reg
   ?ram_primitive
   ()
   ~capacity
-  ~clock
-  ~clear
+  ~clocking
   ~wr
   ~d
   ~rd
@@ -530,14 +563,15 @@ let create_showahead_with_extra_reg
       ~underflow_check
       ~nearly_empty
       ~capacity
-      ~clock
-      ~clear
+      ~clocking
       ~wr
       ~d
       ~rd:fifo_rd_en'
   in
   let { fifo; fifo_rd_en } =
     create_showahead_with_extra_reg_wrapper
+      ~clear_output_data_registers
+      ~ram_output_register
       ~nearly_empty
       ?nearly_full
       ~scope
@@ -545,240 +579,13 @@ let create_showahead_with_extra_reg
       ~overflow_check
       ~underflow_check
       ~capacity
-      ~clock
-      ~clear
+      ~clocking
       ~wr
       ~rd
   in
   fifo_rd_en' <-- fifo_rd_en;
   fifo
 ;;
-
-module Clocked = struct
-  let create
-    ?read_latency
-    ?showahead
-    ?nearly_empty
-    ?nearly_full
-    ?overflow_check
-    ?underflow_check
-    ?ram_attributes
-    ~scope
-    ?ram_primitive
-    ()
-    ~capacity
-    ~clock
-    ~clear
-    ~wr
-    ~d
-    ~rd
-    =
-    let dom = Clocked_signal.get_domain clock in
-    app
-      (create
-         ?read_latency
-         ?showahead
-         ?nearly_empty
-         ?nearly_full
-         ?overflow_check
-         ?underflow_check
-         ?ram_attributes
-         ~scope
-         ?ram_primitive
-         ()
-         ~capacity)
-      ~clock
-      ~clear
-      ~wr
-      ~d
-      ~rd
-      ~f:(Clocked_signal.unwrap_signal ~dom)
-    |> map ~f:(Clocked_signal.to_clocked ~dom)
-  ;;
-
-  let create_classic_with_extra_reg
-    ?nearly_empty
-    ?nearly_full
-    ?overflow_check
-    ?underflow_check
-    ?ram_attributes
-    ~scope
-    ?ram_primitive
-    ()
-    ~capacity
-    ~clock
-    ~clear
-    ~wr
-    ~d
-    ~rd
-    =
-    let dom = Clocked_signal.get_domain clock in
-    app
-      (create_classic_with_extra_reg
-         ?nearly_empty
-         ?nearly_full
-         ?overflow_check
-         ?underflow_check
-         ?ram_attributes
-         ~scope
-         ?ram_primitive
-         ()
-         ~capacity)
-      ~clock
-      ~clear
-      ~wr
-      ~d
-      ~rd
-      ~f:(Clocked_signal.unwrap_signal ~dom)
-    |> map ~f:(Clocked_signal.to_clocked ~dom)
-  ;;
-
-  let create_showahead_from_classic
-    ?nearly_empty
-    ?nearly_full
-    ?overflow_check
-    ?underflow_check
-    ?ram_attributes
-    ~scope
-    ?ram_primitive
-    ()
-    ~capacity
-    ~clock
-    ~clear
-    ~wr
-    ~d
-    ~rd
-    =
-    let dom = Clocked_signal.get_domain clock in
-    app
-      (create_showahead_from_classic
-         ?nearly_empty
-         ?nearly_full
-         ?overflow_check
-         ?underflow_check
-         ?ram_attributes
-         ~scope
-         ?ram_primitive
-         ()
-         ~capacity)
-      ~clock
-      ~clear
-      ~wr
-      ~d
-      ~rd
-      ~f:(Clocked_signal.unwrap_signal ~dom)
-    |> map ~f:(Clocked_signal.to_clocked ~dom)
-  ;;
-
-  let create_showahead_with_read_latency
-    ~read_latency
-    ?nearly_empty
-    ?nearly_full
-    ?overflow_check
-    ?underflow_check
-    ?ram_attributes
-    ~scope
-    ?ram_primitive
-    ()
-    ~capacity
-    ~clock
-    ~clear
-    ~wr
-    ~d
-    ~rd
-    =
-    let dom = Clocked_signal.get_domain clock in
-    app
-      (create_showahead_with_read_latency
-         ~read_latency
-         ?nearly_empty
-         ?nearly_full
-         ?overflow_check
-         ?underflow_check
-         ?ram_attributes
-         ~scope
-         ?ram_primitive
-         ()
-         ~capacity)
-      ~clock
-      ~clear
-      ~wr
-      ~d
-      ~rd
-      ~f:(Clocked_signal.unwrap_signal ~dom)
-    |> map ~f:(Clocked_signal.to_clocked ~dom)
-  ;;
-
-  let create_showahead_with_extra_reg_wrapper
-    ?nearly_empty
-    ?nearly_full
-    ~scope
-    fifo
-    ~overflow_check
-    ~underflow_check
-    ~capacity
-    ~clock
-    ~clear
-    ~wr
-    ~rd
-    =
-    let dom = Clocked_signal.get_domain clock in
-    let unwrap = Clocked_signal.unwrap_signal ~dom in
-    let wrap = Clocked_signal.to_clocked ~dom in
-    let { fifo; fifo_rd_en } =
-      (create_showahead_with_extra_reg_wrapper
-         ?nearly_empty
-         ?nearly_full
-         ~scope
-         (map fifo ~f:unwrap)
-         ~overflow_check
-         ~underflow_check
-         ~capacity)
-        ~clock:(unwrap clock)
-        ~clear:(unwrap clear)
-        ~wr:(unwrap wr)
-        ~rd:(unwrap rd)
-    in
-    { fifo = map fifo ~f:wrap; fifo_rd_en = wrap fifo_rd_en }
-  ;;
-
-  let create_showahead_with_extra_reg
-    ?nearly_empty
-    ?nearly_full
-    ?overflow_check
-    ?underflow_check
-    ?ram_attributes
-    ~scope
-    ?ram_primitive
-    ()
-    ~capacity
-    ~clock
-    ~clear
-    ~wr
-    ~d
-    ~rd
-    =
-    let dom = Clocked_signal.get_domain clock in
-    app
-      (create_showahead_with_extra_reg
-         ?nearly_empty
-         ?nearly_full
-         ?overflow_check
-         ?underflow_check
-         ?ram_attributes
-         ~scope
-         ?ram_primitive
-         ()
-         ~capacity)
-      ~clock
-      ~clear
-      ~wr
-      ~d
-      ~rd
-      ~f:(Clocked_signal.unwrap_signal ~dom)
-    |> map ~f:(Clocked_signal.to_clocked ~dom)
-  ;;
-end
 
 module type Config = Fifo_intf.Config
 
@@ -789,8 +596,7 @@ module With_interface (Config : Config) = struct
 
   module I = struct
     type 'a t =
-      { clock : 'a
-      ; clear : 'a
+      { clocking : 'a Clocking.t
       ; wr : 'a
       ; d : 'a [@bits Config.data_width]
       ; rd : 'a
@@ -834,8 +640,7 @@ module With_interface (Config : Config) = struct
       ?ram_primitive
       ()
       ~capacity:Config.capacity
-      ~clock:i.clock
-      ~clear:i.clear
+      ~clocking:i.clocking
       ~wr:i.wr
       ~d:i.d
       ~rd:i.rd
@@ -846,7 +651,12 @@ module With_interface (Config : Config) = struct
     | false, false -> create_fn ~f:(create ~showahead:false ?read_latency:None)
     | true, false -> create_fn ~f:create_classic_with_extra_reg
     | false, true -> create_fn ~f:create_showahead_from_classic
-    | true, true -> create_fn ~f:create_showahead_with_extra_reg
+    | true, true ->
+      create_fn
+        ~f:
+          (create_showahead_with_extra_reg
+             ~clear_output_data_registers:true
+             ~ram_output_register:false)
   ;;
 
   let create = create_fn ~f:(create ~showahead:Config.showahead ?read_latency:None)
@@ -889,8 +699,7 @@ let typed_fifo
       ?ram_primitive
       ~showahead:true
       ~capacity
-      ~clock:clocking.clock
-      ~clear:clocking.clear
+      ~clocking
       ~wr:input.valid
       ~d:(C.Of_signal.pack input.value)
       ~rd:read

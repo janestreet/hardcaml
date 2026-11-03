@@ -66,7 +66,7 @@ module _ = struct
              ])
       in
       Simulator.run ~time_limit:100 simulator;
-      Hardcaml_waveterm.Waveform.expect waves ~wave_width:(-1) ~display_width:82;
+      Hardcaml_waveterm.Waveform.expect waves ~wave_scale:0 ~display_width:82;
       [%expect
         {|
         ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────┐
@@ -127,7 +127,7 @@ module _ = struct
         │waddr_wd          ││ 0                       │1                  │3             │
         │                  ││─────────────────────────┴───────────────────┴──────────────│
         └──────────────────┘└────────────────────────────────────────────────────────────┘
-        d48ac445081ca5ba7cf65df33edcea3b
+        68fd9ceb80e5d7e74d1d1748c04c832b
         |}])
   ;;
 end
@@ -176,7 +176,7 @@ module%test Cyclesim_tests = struct
         on_cycle ~times:3 update_read i;
         Cyclesim.cycle sim
       done;
-      Waveform.print waves ~wave_width:(-1) ~display_width:90;
+      Waveform.print waves ~wave_scale:0 ~display_width:90;
       [%expect
         {|
         ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────────┐
@@ -257,7 +257,7 @@ module%test Cyclesim_tests = struct
         let waves, simulator = Cyclesim.Waveform.create simulator in
         let f () = Step.run_until_finished () ~show_steps:true ~simulator ~testbench in
         run f ~count;
-        if print_waves then Waveform.print waves ~wave_width:(-1)
+        if print_waves then Waveform.print waves ~wave_scale:0
       ;;
 
       let read_write_test ~count ~print_waves =
@@ -312,7 +312,7 @@ module%test Cyclesim_tests = struct
             ~testbench:(fun handler -> testbench handler ~inputs ~outputs)
         in
         run f ~count;
-        if print_waves then Waveform.print waves ~wave_width:(-1)
+        if print_waves then Waveform.print waves ~wave_scale:0
       ;;
 
       let read_write_test ~count ~print_waves =

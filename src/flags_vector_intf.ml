@@ -5,7 +5,7 @@
 open! Core0
 
 module type Cases = sig
-  type t [@@deriving sexp_of, compare ~localize, enumerate]
+  type t [@@deriving sexp_of, compare, enumerate]
 
   val port_name : string
 end

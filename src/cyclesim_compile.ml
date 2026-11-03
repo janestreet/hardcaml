@@ -40,6 +40,7 @@ module Clocks = struct
     type t =
       { domains : Clock_domain.Group.t
       ; clocks_to_domains : (Clock_domain.indexed * Signal.t) Signal.Type.Map.t
+      ; clock_signal_uids : Signal.Type.Uid.Set.t
       ; double_frequency : bool
           (* True when we need to step two cycles per user cycle. This is necessary when
              there are clocks with a odd period so that we can have them fall half way
@@ -125,6 +126,8 @@ module Clocks = struct
       let t =
         { domains
         ; clocks_to_domains
+        ; clock_signal_uids =
+            Signal_graph.clock_signal_uids (Circuit.signal_graph circuit)
         ; double_frequency
         ; cycle = Not_started
         ; clocks_before_edge_this_cycle = Clock_domain.Set.create domains ~default:false
@@ -168,6 +171,7 @@ module Clocks = struct
         { indexed : Clock_domain.indexed
         ; group : Clock_domain.Group.t
         ; set : Clock_domain.Set.t
+        ; clock_signal_uids : Signal.Type.Uid.Set.t
         }
     | Multi_domain of Multi_domain.t
   [@@deriving sexp_of]
@@ -181,13 +185,21 @@ module Clocks = struct
       let group = Clock_domain.Group.create_exn [ domain ] in
       let indexed = Clock_domain.Group.get group domain.name |> Option.value_exn in
       let set = Clock_domain.Set.create group ~default:true in
-      Single_domain { indexed; group; set }
+      let clock_signal_uids =
+        Signal_graph.clock_signal_uids (Circuit.signal_graph circuit)
+      in
+      Single_domain { indexed; group; set; clock_signal_uids }
     | By_input_clocks clocks -> Multi_domain (Multi_domain.create circuit clocks)
   ;;
 
   let domains = function
     | Single_domain { group; _ } -> group
     | Multi_domain { domains; _ } -> domains
+  ;;
+
+  let clock_signal_uids = function
+    | Single_domain { clock_signal_uids; _ } -> clock_signal_uids
+    | Multi_domain { clock_signal_uids; _ } -> clock_signal_uids
   ;;
 
   let cycle_multiple = function
@@ -1054,6 +1066,7 @@ let create_cyclesim circuit t (traced : Cyclesim0.Traced.t) =
       (match clocks with
        | Single_domain _ -> `All_one_domain
        | Multi_domain _ -> `By_input_clocks)
+    ~clock_signal_uids:(Clocks.clock_signal_uids clocks)
     ~clocks_aligned
     ~cycle_multiple:(Clocks.cycle_multiple clocks)
     ~cycle_check

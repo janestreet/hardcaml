@@ -30,7 +30,7 @@ let%expect_test "switch" =
       | A
       | B
       | C
-    [@@deriving compare ~localize, enumerate, sexp_of, variants]
+    [@@deriving compare, enumerate, sexp_of, variants]
   end
   in
   let create_sm reg_spec encoding =
@@ -108,7 +108,7 @@ let%expect_test "switch - self transition" =
     type t =
       | A
       | B
-    [@@deriving compare ~localize, enumerate, sexp_of, variants]
+    [@@deriving compare, enumerate, sexp_of, variants]
   end
   in
   let create_sm reg_spec encoding =

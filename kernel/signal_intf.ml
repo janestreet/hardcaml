@@ -403,6 +403,5 @@ module type Signal = sig
   include S with type t := Signal__type.t
 
   (** Returns the unique id of the signal. *)
-  val%template uid : t -> Type.Uid.t
-  [@@mode m = (local, global)]
+  val uid : t -> Type.Uid.t
 end

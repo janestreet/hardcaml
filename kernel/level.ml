@@ -1,7 +1,7 @@
 type t =
   | High
   | Low
-[@@deriving bin_io, sexp_of, equal ~localize, compare ~localize]
+[@@deriving bin_io, sexp_of, equal, compare]
 
 let to_int = function
   | High -> 1

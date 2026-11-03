@@ -185,7 +185,7 @@ module Alu = struct
         | Not
         | Less
         | Equal
-      [@@deriving sexp_of, compare ~localize, enumerate]
+      [@@deriving sexp_of, compare, enumerate]
     end
 
     include Hardcaml.Enum.Make_enums (Enum)

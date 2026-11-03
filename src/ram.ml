@@ -6,12 +6,11 @@ module Collision_mode = struct
     type t =
       | Read_before_write
       | Write_before_read
-    [@@deriving sexp_of, compare ~localize]
+    [@@deriving sexp_of, compare]
   end
 
   include T
-
-  include%template Comparable.Make_plain [@mode local] (T)
+  include Comparable.Make_plain (T)
 end
 
 let if_write_before_read_mode ~collision_mode (r : _ Read_port.t array) =

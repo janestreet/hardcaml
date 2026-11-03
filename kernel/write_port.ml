@@ -8,7 +8,7 @@ type 'a t =
   ; write_enable : 'a
   ; write_data : 'a
   }
-[@@deriving bin_io, sexp_of, equal ~localize, compare ~localize]
+[@@deriving bin_io, sexp_of, equal, compare]
 
 let iter t ~f =
   f t.write_clock;

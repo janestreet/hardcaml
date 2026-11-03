@@ -1,6 +1,16 @@
 open! Core0
 open Coverage_prim
 
+module Normalized_signal_uid = struct
+  include Signal.Type.Uid
+
+  let compute_normalized_uids t =
+    let `New fresh_id, _ = Signal.Type.Uid.generator () in
+    let create_fresh_id norm_ids signal = (fresh_id (), signal) :: norm_ids in
+    Signal_graph.depth_first_search t ~init:[] ~f_before:create_fresh_id
+  ;;
+end
+
 type 'a coverage =
   { observed : 'a list
   ; unexpectedly_observed : 'a list
@@ -26,7 +36,7 @@ module type S = sig
 
   val mark_choice : t -> choice -> unit
   val coverage : t -> coverage_unit coverage
-  val id : t -> Signal_graph.Normalized_signal_uid.t
+  val id : t -> Normalized_signal_uid.t
   val signal_names : t -> Name_and_loc.t list
   val call_stack : t -> Call_stack.t
 end
@@ -199,7 +209,7 @@ module Mux = struct
     type t =
       { case_count : int
       ; covered_cases : Covered_cases.t
-      ; id : Signal_graph.Normalized_signal_uid.t
+      ; id : Normalized_signal_uid.t
       ; signal_names : Name_and_loc.t list
       ; call_stack : Call_stack.t
       ; debug_info : Debug_info.t
@@ -273,7 +283,7 @@ module Cases = struct
       { covered_cases : Covered_cases.t
       ; case_mapping : Case.Positional_with_state.t Map.M(Case.Positional).t
       ; case_count : int
-      ; id : Signal_graph.Normalized_signal_uid.t
+      ; id : Normalized_signal_uid.t
       ; signal_names : Name_and_loc.t list
       ; call_stack : Call_stack.t
       ; debug_info : Debug_info.t
@@ -402,7 +412,7 @@ module Reg = struct
     type t =
       { covered_cases : Covered_cases.t
       ; bits : int
-      ; id : Signal_graph.Normalized_signal_uid.t
+      ; id : Normalized_signal_uid.t
       ; signal_names : Name_and_loc.t list
       ; call_stack : Call_stack.t
       }
@@ -442,7 +452,7 @@ module Always_state = struct
     type t =
       { covered_cases : Covered_cases.t
       ; states_by_value : State.Named.t Map.M(Int).t
-      ; id : Signal_graph.Normalized_signal_uid.t
+      ; id : Normalized_signal_uid.t
       ; signal_names : Name_and_loc.t list
       ; call_stack : Call_stack.t
       }

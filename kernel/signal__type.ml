@@ -17,7 +17,7 @@ module Op = struct
     | Xor
     | Eq
     | Lt
-  [@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]
+  [@@deriving bin_io, sexp_of, compare, equal, hash]
 end
 
 module Metadata = struct
@@ -451,9 +451,6 @@ module Deps = Make_deps (struct
     ;;
   end)
 
-[%%template
-[@@@alloc.default a @ m = (heap_global, stack_local)]
-
 let info s =
   match s with
   | Empty -> None
@@ -468,16 +465,14 @@ let info s =
   | Mux { info; _ }
   | Cases { info; _ }
   | Cat { info; _ }
-  | Not { info; _ } -> Some info [@exclave_if_stack a]
+  | Not { info; _ } -> Some info
 ;;
 
 let uid s =
-  match[@exclave_if_stack a] (info [@alloc a]) s with
+  match info s with
   | None -> Uid.zero
   | Some s -> s.uid
-;;]
-
-let%template[@mode local] uid = (uid [@alloc stack])
+;;
 
 let width s =
   match info s with
@@ -1255,6 +1250,25 @@ let map_dependant t ~f =
   | Mem_read_port mem_read -> Mem_read_port (Mem_read_port.map mem_read ~f)
   | Inst inst -> Inst (Inst.map inst ~f)
   | Wire wire -> Wire (Wire.map wire ~f)
+;;
+
+let valid_output_exn output_signal =
+  match output_signal with
+  | Wire _ ->
+    (match Deps.to_list output_signal with
+     | [] | [ Empty ] ->
+       raise_s [%message "circuit output signal is not driven" (output_signal : t)]
+     | _ ->
+       (match names output_signal with
+        | [ _ ] -> ()
+        | [] ->
+          raise_s
+            [%message "circuit output signal must have a port name" (output_signal : t)]
+        | _ ->
+          raise_s
+            [%message
+              "circuit output signal should only have one port name" (output_signal : t)]))
+  | _ -> raise_s [%message "circuit output signal must be a wire" (output_signal : t)]
 ;;
 
 module Signal_compared_by_uid = struct

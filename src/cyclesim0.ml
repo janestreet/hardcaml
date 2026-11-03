@@ -86,6 +86,7 @@ type ('i, 'o) t =
   ; outputs_before_clock_edge : 'o
   ; reset : task
   ; clock_mode : [ `All_one_domain | `By_input_clocks ]
+  ; clock_signal_uids : Signal.Type.Uid.Set.t
   ; clocks_aligned : unit -> bool
   ; cycle_multiple : int
   ; cycle_check : task
@@ -221,6 +222,7 @@ module Private = struct
     ~out_ports_after_clock_edge
     ~reset
     ~clock_mode
+    ~clock_signal_uids
     ~clocks_aligned
     ~cycle_multiple
     ~cycle_check
@@ -243,6 +245,7 @@ module Private = struct
     ; outputs_after_clock_edge = out_ports_after_clock_edge
     ; reset
     ; clock_mode
+    ; clock_signal_uids
     ; clocks_aligned
     ; cycle_multiple
     ; cycle_check

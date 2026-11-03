@@ -159,7 +159,7 @@ let data = Signal.input "data" 32;;
     ; write_enable = write_enable
     ; write_data = data }
 val write_port : Signal.t Write_port.t =
-  {Hardcaml.Write_port.write_clock = (wire (names (clock)) (width 1));
+  {Write_port.write_clock = (wire (names (clock)) (width 1));
    write_address = (wire (names (address)) (width 8));
    write_enable = (wire (names (write_enable)) (width 1));
    write_data = (wire (names (data)) (width 32))}
@@ -199,7 +199,7 @@ later.
     ; read_address
     ; read_enable = Signal.input "read_enable" 1 }
 val read_port : Signal.t Read_port.t =
-  {Hardcaml.Read_port.read_clock = (wire (names (clock)) (width 1));
+  {Read_port.read_clock = (wire (names (clock)) (width 1));
    read_address = (wire (names (address)) (width 8));
    read_enable = (wire (names (read_enable)) (width 1))}
 ```

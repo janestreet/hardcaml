@@ -1,13 +1,12 @@
 open! Core0
 
 module type S = sig
-  type t [@@deriving bin_io, compare ~localize, hash, sexp_of]
+  type t [@@deriving bin_io, compare, hash, sexp_of]
 
   include Comparator.S with type t := t
-
-  include%template Equal.S [@mode local] with type t := t
-  include%template Comparable.S [@mode local] with type t := t
-  include%template Hashable.S_binable [@mode local] with type t := t
+  include Equal.S with type t := t
+  include Comparable.S with type t := t
+  include Hashable.S_binable with type t := t
 
   val zero : t
   val one : t

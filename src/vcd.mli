@@ -57,7 +57,7 @@ module Var : sig
       | Trireg
       | Tri0
       | Tri1
-      | Want
+      | Wand
       | Wire
       | Wor
     [@@deriving sexp_of]
@@ -65,7 +65,7 @@ module Var : sig
     val to_string : t -> string
   end
 
-  type t [@@deriving sexp_of, compare ~localize, hash]
+  type t [@@deriving sexp_of, compare, hash]
 
   val create
     :  ?typ:Type.t
@@ -177,55 +177,64 @@ val write_time : Out_channel.t -> int -> unit
     Flush the out channel! *)
 val wrap : Out_channel.t -> ('i, 'o) Cyclesim.t -> ('i, 'o) Cyclesim.t
 
-(** Generate a VCD file from cycle-based waveform data that has already been populated.
+(** Generate a VCD file from mutable event-based waveform data that has already been
+    populated.
 
-    This mirrors {!wrap}: it synthesises an implicit [-clock] and [-reset] pair, places
-    them in the [inputs] scope alongside other [Input]-typed waves, and emits one VCD
-    cycle for each entry in the wave data. Index 0 is treated as the post-reset state and
-    is emitted at [t = 0] with [-clock = 0] and [-reset = 1]; index [N >= 1] is emitted at
-    [t = N * vcdcycle] with [-clock = 1] / [-reset = 0], followed by a clock-low
-    half-cycle. Waves named ["clock"] or ["reset"] are dropped to avoid colliding with the
-    synthesised pair.
-
-    Flush the out channel! *)
-val write_cycle_based
-  :  ?config:Config.t
-  -> Out_channel.t
-  -> Wave_data_in_cycles.t Wave_data.Wave.t array
-  -> unit
-
-(** Generate a VCD file from event-based waveform data that has already been populated.
-
-    The waves are walked in time order using {!Wave_data.event_sequence_in_time_order};
-    multiple events at the same time share a single [#time] marker. Variables are split
-    into [inputs] / [outputs] / [various] scopes based on {!Wave_data.Type.t}, matching
-    the layout produced by [wrap]; empty scopes are omitted. Hierarchical names are split
-    on [$] like {!Scope.create_auto_hierarchy}.
+    The waves are walked in time order; multiple events at the same time share a single
+    [#time] marker. Variables are split into [inputs] / [outputs] / [various] scopes based
+    on {!Wave_data.Type.t}, matching the layout produced by [wrap]; empty scopes are
+    omitted. Hierarchical names are split on [$] like {!Scope.create_auto_hierarchy}.
 
     Unlike [wrap], this does not synthesise a clock or reset signal — those are expected
     to already be present in [waves] when relevant.
 
     Flush the out channel! *)
-val write_event_based
+val write_mutable_event_based
   :  ?config:Config.t
   -> Out_channel.t
-  -> Wave_data_in_events.Bits.t Wave_data.Wave.t array
+  -> Wave_data_in_mutable_events.t Wave_data.Wave.t array
   -> unit
 
-(** Parse a VCD into an event-based wave-data array.
+(** Like {!write_mutable_event_based}, for 4-state waveform data. Impure [Binary] values
+    use ["01XZ"] notation; [Index] and [Map] values are written as all-X because those
+    formats have no impure mapping. *)
+val write_mutable_event_based_four_state
+  :  ?config:Config.t
+  -> Out_channel.t
+  -> Wave_data_in_mutable_events_four_state.t Wave_data.Wave.t array
+  -> unit
 
-    This is intended to round-trip VCDs produced by {!wrap}, {!write_event_based} and
-    {!write_cycle_based}. The top-level scope name is used to recover the
-    {!Wave_data.Type.t}: ["inputs"] / ["outputs"] / ["various"] map to [Input] / [Output]
-    / [Internal]; any other top-level scope name falls back to [Internal]. The remaining
-    scope path is rejoined with [$] (matching the convention used by the writers), with
-    ["-inputs"] / ["-outputs"] mapped back to ["i"] / ["o"]. The {!Wave_format.t} cannot
-    be recovered and is always [Bit_or Hex].
+(** VCD is a 4-state format, so this always returns 4-state wave data. Use
+    {!Wave_data.to_two_state} for a lossy conversion to 2-state data.
 
-    Some VCD features are not representable in [Bits.t] and raise on encounter:
+    This round-trips VCDs produced by {!wrap}, {!write_mutable_event_based}, and
+    {!write_mutable_event_based_four_state}. Top-level scopes ["inputs"], ["outputs"], and
+    ["various"] map to [Input], [Output], and [Internal]; other names map to [Internal].
+    Remaining scope paths are joined with [$], with ["-inputs"] and ["-outputs"] mapped
+    back to ["i"] and ["o"]. Wave formats cannot be recovered and are always [Bit_or Hex],
+    except for real- and string-valued signals (below).
 
-    - X / Z bits in mid-simulation value changes (initial all-X [$dumpvars] entries
-      written by Hardcaml are silently skipped),
-    - real-valued signals,
-    - [$dumpoff] regions. *)
-val read_event_based : Hardcaml_vcd.t -> Wave_data_in_events.Bits.t Wave_data.Wave.t array
+    Several [$var]s may declare the same identifier, which external simulators emit when a
+    signal is dumped under more than one name. Each becomes its own wave, and all of them
+    share one wave data allocation (so they have equal
+    [Wave_data_in_mutable_events_four_state.unique_id]s and receive every value change).
+
+    Real-valued signals get a 64-bit wave holding the IEEE bits of each double, displayed
+    with a [Custom] wave format that prints the float with [%g]. Note that [Custom]
+    formats do not survive bin_io serialization.
+
+    String-valued signals ([$var string], written for VHDL enum and string types) get a
+    32-bit wave: each distinct string the signal takes is interned in first-seen order,
+    the wave stores indexes into that table, and the wave format is [Index] of the table
+    (which does survive bin_io serialization).
+
+    Every value change is recorded as an event, including changes in [$dumpvars],
+    [$dumpall], [$dumpon], and [$dumpoff]. Hardcaml writers emit an initial all-X
+    [$dumpvars] block, so each signal is X until its first driven value.
+
+    @raise Error
+      if the kind of a value change (bit vector, real, or string) does not match its
+      signal's declaration. *)
+val read_mutable_event_based_four_state
+  :  Hardcaml_vcd.t
+  -> Wave_data_in_mutable_events_four_state.t Wave_data.Wave.t array

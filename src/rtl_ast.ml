@@ -3,12 +3,12 @@ open! Core0
 type range =
   | Vector of { width : int }
   | Bit
-[@@deriving sexp_of, equal ~localize]
+[@@deriving sexp_of, equal]
 
 type reg_or_wire =
   | Reg
   | Wire
-[@@deriving equal ~localize, sexp_of]
+[@@deriving equal, sexp_of]
 
 type var =
   { name : Rtl_name.For_backend.t
@@ -17,7 +17,7 @@ type var =
   ; attributes : Rtl_attribute.t list
   ; comment : string option
   }
-[@@deriving sexp_of, equal ~localize]
+[@@deriving sexp_of, equal]
 
 type output =
   { output : var
@@ -206,6 +206,10 @@ type statement =
       { lhs : var
       ; memory : var
       ; address : var
+      }
+  | Sva_property of
+      { name : Rtl_name.For_backend.t
+      ; property : var Property.Sva.t
       }
 [@@deriving sexp_of]
 
@@ -755,6 +759,20 @@ let create_outputs ~blackbox var_map outputs output_vars =
   outputs, var_map
 ;;
 
+let create_sva_properties ~language circuit var_map =
+  let find signal = (find_logic var_map signal).read in
+  Option.value_map ~default:[] (Circuit.sva_properties circuit) ~f:(fun properties ->
+    properties
+    |> Hashtbl.to_alist
+    |> List.map ~f:(fun (name, sva_property) ->
+      Sva_property
+        { name =
+            Circuit.Name_for_rtl.property_name_exn circuit name
+            |> Rtl_name.legalize ~language
+        ; property = Property.Sva.map_atomic_propositions sva_property ~f:find
+        }))
+;;
+
 let of_circuit ~blackbox ~(language : Rtl_language.t) ~(config : Rtl_config.t) circuit =
   let module_name = Circuit.name circuit in
   let inputs = Circuit.inputs circuit |> List.map ~f:(var_of_io_port circuit language) in
@@ -774,7 +792,7 @@ let of_circuit ~blackbox ~(language : Rtl_language.t) ~(config : Rtl_config.t) c
     ; config
     })
   else (
-    let signal_graph = Signal_graph.create (Circuit.outputs circuit) in
+    let signal_graph = Circuit.signal_graph circuit in
     let internal =
       Signal_graph.filter
         ~deps:(module Signal_graph.Deps_without_case_matches)
@@ -785,11 +803,12 @@ let of_circuit ~blackbox ~(language : Rtl_language.t) ~(config : Rtl_config.t) c
     let var_map = add_io_vars ~var_map inputs in
     let statements = create_statements ~rtl_config:config ~language var_map internal in
     let outputs, var_map = create_outputs ~blackbox var_map outputs output_vars in
+    let property_statements = create_sva_properties ~language circuit var_map in
     { name = module_name
     ; inputs = List.map inputs ~f:snd @ phantom_inputs
     ; outputs
     ; declarations
-    ; statements
+    ; statements = statements @ property_statements
     ; var_map
     ; config
     })
@@ -798,7 +817,7 @@ let of_circuit ~blackbox ~(language : Rtl_language.t) ~(config : Rtl_config.t) c
 module Signals_name_map = struct
   module Uid_with_index = struct
     module T = struct
-      type t = Signal.Type.Uid.t * int [@@deriving compare ~localize, sexp_of]
+      type t = Signal.Type.Uid.t * int [@@deriving compare, sexp_of]
     end
 
     include T
@@ -806,9 +825,7 @@ module Signals_name_map = struct
   end
 
   type t_rtl_ast = t
-
-  type t = Rtl_name.For_backend.t Map.M(Uid_with_index).t
-  [@@deriving equal ~localize, sexp_of]
+  type t = Rtl_name.For_backend.t Map.M(Uid_with_index).t [@@deriving equal, sexp_of]
 
   let create (t : t_rtl_ast) =
     let empty = Map.empty (module Uid_with_index) in

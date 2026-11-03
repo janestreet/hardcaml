@@ -220,7 +220,7 @@ let%expect_test "simulate - simple byte enables" =
   cycle ();
   cycle ();
   print_endline "";
-  Waveform.print ~wave_width:4 ~display_width:90 waves;
+  Waveform.print ~wave_scale:4 ~display_width:90 waves;
   [%expect_exact
     {|
 ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────────┐
@@ -242,7 +242,7 @@ let%expect_test "simulate - simple byte enables" =
 │                  ││────────────────────────────────────────────────────────────────────│
 │write_address0    ││ 001                                                                │
 │                  ││────────────────────────────────────────────────────────────────────│
-│write_clock       ││┌────┐    ┌────┐    ┌────┐    ┌────┐    ┌────┐    ┌────┐    ┌────┐  │
+│write_clock       ││─────┐    ┌────┐    ┌────┐    ┌────┐    ┌────┐    ┌────┐    ┌────┐  │
 │                  ││     └────┘    └────┘    └────┘    └────┘    └────┘    └────┘    └──│
 │                  ││──────────────────────────────────────────────────┬─────────────────│
 │read_address      ││ 001                                              │002              │
@@ -270,7 +270,7 @@ let%expect_test "simulate - squirly enable ratios" =
   cycle ();
   cycle ();
   print_endline "";
-  Waveform.print ~wave_width:4 ~display_width:90 waves;
+  Waveform.print ~wave_scale:4 ~display_width:90 waves;
   [%expect_exact
     {|
 ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────────┐
@@ -292,8 +292,8 @@ let%expect_test "simulate - squirly enable ratios" =
 │                  ││──────────────────────────────────────────────────                  │
 │write_address0    ││ 7                                                                  │
 │                  ││──────────────────────────────────────────────────                  │
-│write_clock       ││┌────┐    ┌────┐    ┌────┐    ┌────┐    ┌────┐    ┌────┐    ┌────┐  │
-│                  ││     └────┘    └────┘    └────┘    └────┘    └────┘    └────┘    └──│
+│write_clock       ││─────┐    ┌────┐    ┌────┐    ┌────┐    ┌────┐                      │
+│                  ││     └────┘    └────┘    └────┘    └────┘    └────                  │
 │                  ││──────────────────────────────────────────────────                  │
 │read_address      ││ 7                                                                  │
 │                  ││──────────────────────────────────────────────────                  │

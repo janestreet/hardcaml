@@ -38,7 +38,8 @@ module For_cyclesim = struct
 
   let create_coverage_for_sim sim circuit =
     let coverage = find_or_create_coverage_for_circuit circuit in
-    Signal_graph.compute_normalized_uids (Circuit.signal_graph circuit)
+    Signal_coverage.Normalized_signal_uid.compute_normalized_uids
+      (Circuit.signal_graph circuit)
     |> List.filter_map ~f:(fun (normalized_uid, signal) ->
       let%map.Option signal_coverage =
         Circuit_coverage.maybe_find_or_create_signal_coverage

@@ -41,7 +41,7 @@ module%test [@name "Wave formats applied to signals are correctly rendered"] _ =
 
   module Sim = Cyclesim.With_interface (I) (O)
 
-  let%expect_test _ =
+  let run () =
     let sim = Sim.create ~config:Cyclesim.Config.trace_all (create (Scope.create ())) in
     let waves, sim = Cyclesim.Waveform.create sim in
     let inputs = Cyclesim.inputs sim in
@@ -50,7 +50,13 @@ module%test [@name "Wave formats applied to signals are correctly rendered"] _ =
       inputs.a <--. i;
       Cyclesim.cycle sim
     done;
-    Waveform.print ~display_rules:[ Display_rule.port_name_matches (Posix ".*_0") ] waves;
+    Waveform.to_string
+      ~display_rules:[ Display_rule.port_name_matches (Posix ".*_0") ]
+      waves
+  ;;
+
+  let%expect_test _ =
+    print_string (run ());
     [%expect
       {|
       ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
@@ -80,6 +86,65 @@ module%test [@name "Wave formats applied to signals are correctly rendered"] _ =
   ;;
 end
 
+module%test [@name "Mutable event traces render stable tails"] _ = struct
+  module I = struct
+    type 'a t =
+      { a : 'a [@bits 4]
+      ; b : 'a [@bits 4]
+      }
+    [@@deriving hardcaml]
+  end
+
+  module O = struct
+    type 'a t =
+      { passthrough : 'a [@bits 4]
+      ; constant : 'a [@bits 4]
+      }
+    [@@deriving hardcaml]
+  end
+
+  let create _scope (i : _ I.t) =
+    { O.passthrough = i.a +: i.b; constant = of_unsigned_int ~width:4 7 }
+  ;;
+
+  module Sim = Cyclesim.With_interface (I) (O)
+
+  let run () =
+    let waves, sim =
+      Sim.create ~config:Cyclesim.Config.trace_all (create (Scope.create ()))
+      |> Cyclesim.Waveform.create
+    in
+    let inputs = Cyclesim.inputs sim in
+    let open Bits in
+    List.iter2_exn [ 1; 2; 3; 3; 3; 3; 9 ] [ 2; 2; 1; 1; 1; 1; 1 ] ~f:(fun v1 v2 ->
+      inputs.a <--. v1;
+      inputs.b <--. v2;
+      Cyclesim.cycle sim);
+    Waveform.to_string ~wave_scale:2 waves
+  ;;
+
+  let%expect_test _ =
+    print_string (run ());
+    [%expect
+      {|
+      ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
+      │               ││──────┬─────┬───────────────────────┬─────         │
+      │a              ││ 1    │2    │3                      │9             │
+      │               ││──────┴─────┴───────────────────────┴─────         │
+      │               ││────────────┬─────────────────────────────         │
+      │b              ││ 2          │1                                     │
+      │               ││────────────┴─────────────────────────────         │
+      │               ││──────┬─────────────────────────────┬─────         │
+      │passthrough    ││ 3    │4                            │A             │
+      │               ││──────┴─────────────────────────────┴─────         │
+      │               ││──────────────────────────────────────────         │
+      │constant       ││ 7                                                 │
+      │               ││──────────────────────────────────────────         │
+      └───────────────┘└───────────────────────────────────────────────────┘
+      |}]
+  ;;
+end
+
 module%test [@name "Propagation of formats through interfaces and %hw specifications"] _ =
 struct
   module X = (val Types.value ~wave_format:Int ~name:"x" 4)
@@ -92,7 +157,7 @@ struct
     type t =
       | A
       | B
-    [@@deriving sexp_of, compare ~localize, enumerate]
+    [@@deriving sexp_of, compare, enumerate]
   end
 
   module I = struct
@@ -162,8 +227,8 @@ struct
     [%expect
       {|
       ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
-      │clock          ││┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌──│
-      │               ││    └───┘   └───┘   └───┘   └───┘   └───┘   └───┘  │
+      │clock          ││────┐   ┌───┐   ┌───┐                              │
+      │               ││    └───┘   └───┘   └───                           │
       │               ││────────────────────────                           │
       │y$a            ││ 5                                                 │
       │               ││────────────────────────                           │
@@ -178,8 +243,8 @@ struct
       │               ││────────────────────────                           │
       │h$foo$x        ││ -6                                                │
       │               ││────────────────────────                           │
-      │h$i$clock      ││┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌──│
-      │               ││    └───┘   └───┘   └───┘   └───┘   └───┘   └───┘  │
+      │h$i$clock      ││────┐   ┌───┐   ┌───┐                              │
+      │               ││    └───┘   └───┘   └───                           │
       │               ││────────────────────────                           │
       │h$i$y$a        ││ 5                                                 │
       │               ││────────────────────────                           │

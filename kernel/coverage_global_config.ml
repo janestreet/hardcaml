@@ -15,7 +15,7 @@ module Mode = struct
     | Disabled
     | Exe
     | Expect_test
-  [@@deriving equal ~localize]
+  [@@deriving equal]
 end
 
 type t =

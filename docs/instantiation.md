@@ -79,7 +79,7 @@ The optional `parameters` argument allows them to be specified. It takes a list 
 ```ocaml
 # let parameter = Parameter.create ~name:"bus_width" ~value:(Int 3)
 val parameter : Parameter.t =
-  {Hardcaml.Parameter.name = <abstr>; value = Hardcaml.Parameter.Value.Int 3}
+  {Parameter.name = <abstr>; value = Parameter.Value.Int 3}
 ```
 
 Each parameter is specified using a `name` and a `type` with a value. Various

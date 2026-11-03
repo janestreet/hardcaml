@@ -129,7 +129,7 @@ module type Type = sig
       | Xor
       | Eq
       | Lt
-    [@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]
+    [@@deriving bin_io, sexp_of, compare, equal, hash]
   end
 
   module Metadata : sig
@@ -479,8 +479,7 @@ module type Signal__type = sig
   val info : t -> Info.t option
 
   (** Returns the unique id of the signal. *)
-  val%template uid : t -> Uid.t
-  [@@mode m = (local, global)]
+  val uid : t -> Uid.t
 
   (** Width in bits of [t]. *)
   val width : t -> int
@@ -576,4 +575,7 @@ module type Signal__type = sig
   (** This function creates a copy of the signal with [f] applied to each of the signal's
       dependants. *)
   val map_dependant : t -> f:(t -> t) -> t
+
+  (** Check that the given signal is a valid as an output, or raise. *)
+  val valid_output_exn : t -> unit
 end

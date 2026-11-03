@@ -16,6 +16,7 @@ module type Functions = sig
     -> ?enable:Signal.t
     -> ?clear:Signal.t
     -> ?clear_to:Signal.t
+    -> ?initialize_to:Bits.t
     -> Signal.t
     -> Signal.t
 
@@ -51,6 +52,7 @@ module type Functions = sig
     :  ?enable:Signal.t
     -> ?clear:Signal.t
     -> ?clear_to:Signal.t
+    -> ?initialize_to:Bits.t
     -> Signal.t t
     -> width:int
     -> f:(Signal.t -> Signal.t)
@@ -82,6 +84,8 @@ module type Functions = sig
     -> width:int
     -> f:(Signal.t -> Signal.t)
     -> Signal.t
+
+  val to_property_clocked : ?disable_iff:bool -> Signal.t t -> Signal.t Property_clocked.t
 
   module Var : sig
     val reg
@@ -160,28 +164,13 @@ module type S = sig
     with module Signal := Signal
      and module Always := Always
      and type 'a t := 'a t
-
-  module Clocked : sig
-    type nonrec 'a t = 'a t =
-      { clock : 'a
-      ; clear : 'a
-      }
-
-    (** Interface is included here with the type reexported intentionally. This is so that
-        users can write [module Clocking = Clocking.Clocked] at the top of modules that
-        just use the Clocked_signal.t versions of the functions above. *)
-    include Interface.S with type 'a t := 'a t
-
-    include
-      Functions
-      with module Signal := Clocked_signal
-       and module Always := Always.Clocked
-      with type 'a t := 'a t
-  end
 end
 
 module type Clocking = sig
   module type S = S
+
+  module Property_clocked :
+    module type of Property_clocked with type 'a t = 'a Property_clocked.t
 
   module Make () : S
   include S with type 'a t = 'a Untyped.t

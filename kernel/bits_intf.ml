@@ -1,7 +1,7 @@
 open! Core0
 
 module type Bits = sig
-  type t = private Constant.t [@@deriving bin_io, compare ~localize, sexp_of]
+  type t = private Constant.t [@@deriving bin_io, compare, sexp_of]
 
   include Comb.S with type t := t
   include Comparator.S with type t := t
@@ -104,7 +104,7 @@ module type Bits = sig
   val generate : int -> t Quickcheck.Generator.t
 
   module type To_sexp_and_string := sig
-    type nonrec t = t [@@deriving compare ~localize, sexp_of, to_string]
+    type nonrec t = t [@@deriving compare, sexp_of, to_string]
   end
 
   module Binary : To_sexp_and_string

@@ -7,8 +7,7 @@ open Hardcaml_waveterm_kernel
 
 module I = struct
   type 'a t =
-    { clock : 'a
-    ; clear : 'a
+    { clocking : 'a Clocking.t
     ; wr : 'a
     ; d : 'a [@bits 32]
     ; rd : 'a
@@ -45,7 +44,7 @@ let wrap ?(capacity = 4) ~create_fn (i : _ I.t) =
       ; rd_rst_busy = _
       }
     =
-    create_fn ~capacity ~clock:i.clock ~clear:i.clear ~wr:i.wr ~d:i.d ~rd:i.rd
+    create_fn ~capacity ~clocking:i.clocking ~wr:i.wr ~d:i.d ~rd:i.rd
   in
   let o =
     { O.q; full; empty; nearly_full; nearly_empty; used = uresize used ~width:used_bits }
@@ -62,13 +61,13 @@ let display_rules =
     |> List.concat)
 ;;
 
-let fill_then_empty ?(wave_width = 1) (waves, sim) =
+let fill_then_empty ?(wave_scale = 1) (waves, sim) =
   let inputs : _ I.t = Cyclesim.inputs sim in
   let outputs : _ O.t = Cyclesim.outputs sim in
   let open Cyclesim.Sim_bits in
-  inputs.clear <-- vdd;
+  inputs.clocking.clear <-- vdd;
   Cyclesim.cycle sim;
-  inputs.clear <-- gnd;
+  inputs.clocking.clear <-- gnd;
   inputs.wr <-- vdd;
   let rec write i =
     if not (to_bool outputs.full)
@@ -93,7 +92,7 @@ let fill_then_empty ?(wave_width = 1) (waves, sim) =
   inputs.rd <-- gnd;
   Cyclesim.cycle sim;
   Cyclesim.cycle sim;
-  Waveform.print ~display_width:87 ~wave_width ~display_rules waves
+  Waveform.print ~display_width:87 ~wave_scale ~display_rules waves
 ;;
 
 let%expect_test "classic" =
@@ -105,8 +104,8 @@ let%expect_test "classic" =
   [%expect
     {|
     ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
-    │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
-    │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
+    │clock             ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐                  │
+    │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─                 │
     │clear             ││────┐                                                            │
     │                  ││    └───────────────────────────────────────────                 │
     │wr                ││    ┌───────────────┐                                            │
@@ -143,8 +142,8 @@ let%expect_test "showahead" =
   [%expect
     {|
     ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
-    │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
-    │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
+    │clock             ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐          │
+    │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─         │
     │clear             ││────┐                                                            │
     │                  ││    └───────────────────────────────────────────────────         │
     │wr                ││    ┌───────────────────┐                                        │
@@ -181,8 +180,8 @@ let%expect_test "classic with reg" =
   [%expect
     {|
     ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
-    │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
-    │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
+    │clock             ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐  │
+    │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─ │
     │clear             ││────┐                                                            │
     │                  ││    └─────────────────────────────────────────────────────────── │
     │wr                ││    ┌───────────────────────┐                                    │
@@ -219,8 +218,8 @@ let%expect_test "showahead from classic" =
   [%expect
     {|
     ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
-    │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
-    │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
+    │clock             ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐          │
+    │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─         │
     │clear             ││────┐                                                            │
     │                  ││    └───────────────────────────────────────────────────         │
     │wr                ││    ┌───────────────────┐                                        │
@@ -250,15 +249,21 @@ let%expect_test "showahead from classic" =
 
 let%expect_test "showahead with extra reg" =
   let module Sim = Cyclesim.With_interface (I) (O) in
-  wrap ~create_fn:(Fifo.create_showahead_with_extra_reg ~scope:(Scope.create ()) ())
+  wrap
+    ~create_fn:
+      (Fifo.create_showahead_with_extra_reg
+         ~clear_output_data_registers:true
+         ~ram_output_register:false
+         ~scope:(Scope.create ())
+         ())
   |> Sim.create
   |> Cyclesim.Waveform.create
   |> fill_then_empty;
   [%expect
     {|
     ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
-    │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
-    │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
+    │clock             ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐                  │
+    │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─                 │
     │clear             ││────┐                                                            │
     │                  ││    └───────────────────────────────────────────                 │
     │wr                ││    ┌───────────────┐                                            │
@@ -286,6 +291,52 @@ let%expect_test "showahead with extra reg" =
     |}]
 ;;
 
+let%expect_test "showahead with extra reg and ram output register" =
+  (* Compared to the test above: one extra cycle of fall-through latency (the data always
+     goes through the middle register), same throughput. *)
+  let module Sim = Cyclesim.With_interface (I) (O) in
+  wrap
+    ~create_fn:
+      (Fifo.create_showahead_with_extra_reg
+         ~clear_output_data_registers:true
+         ~ram_output_register:true
+         ~scope:(Scope.create ())
+         ())
+  |> Sim.create
+  |> Cyclesim.Waveform.create
+  |> fill_then_empty;
+  [%expect
+    {|
+    ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
+    │clock             ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐                  │
+    │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─                 │
+    │clear             ││────┐                                                            │
+    │                  ││    └───────────────────────────────────────────                 │
+    │wr                ││    ┌───────────────┐                                            │
+    │                  ││────┘               └───────────────────────────                 │
+    │                  ││────┬───┬───┬───┬───┬───────────────────────────                 │
+    │d                 ││ 0  │10 │20 │30 │40 │0                                           │
+    │                  ││────┴───┴───┴───┴───┴───────────────────────────                 │
+    │rd                ││                        ┌───────────────┐                        │
+    │                  ││────────────────────────┘               └───────                 │
+    │                  ││────────────────────┬───────┬───┬───┬───────────                 │
+    │q                 ││ 0                  │10     │20 │30 │40                          │
+    │                  ││────────────────────┴───────┴───┴───┴───────────                 │
+    │full              ││                    ┌───────┐                                    │
+    │                  ││────────────────────┘       └───────────────────                 │
+    │empty             ││────────────────────┐                   ┌───────                 │
+    │                  ││                    └───────────────────┘                        │
+    │nearly_full       ││                ┌───────────────┐                                │
+    │                  ││────────────────┘               └───────────────                 │
+    │nearly_empty      ││────────────┐                       ┌───────────                 │
+    │                  ││            └───────────────────────┘                            │
+    │                  ││────────┬───┬───┬───┬───────┬───┬───┬───┬───────                 │
+    │used              ││ 0      │1  │2  │3  │4      │3  │2  │1  │0                       │
+    │                  ││────────┴───┴───┴───┴───────┴───┴───┴───┴───────                 │
+    └──────────────────┘└─────────────────────────────────────────────────────────────────┘
+    |}]
+;;
+
 let%expect_test "non-default nearly empty/full threshold values" =
   let module Sim = Cyclesim.With_interface (I) (O) in
   wrap
@@ -302,8 +353,8 @@ let%expect_test "non-default nearly empty/full threshold values" =
   [%expect
     {|
     ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
-    │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
-    │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
+    │clock             ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐          │
+    │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─         │
     │clear             ││────┐                                                            │
     │                  ││    └───────────────────────────────────────────────────         │
     │wr                ││    ┌───────────────────┐                                        │
@@ -342,12 +393,12 @@ let%expect_test "showahead with read_latency" =
          ())
   |> Sim.create
   |> Cyclesim.Waveform.create
-  |> fill_then_empty ~wave_width:0;
+  |> fill_then_empty ~wave_scale:0;
   [%expect
     {|
     ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
-    │clock             ││┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌│
-    │                  ││ └┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘│
+    │clock             ││─┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐┌┐                   │
+    │                  ││ └┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└┘└                   │
     │clear             ││──┐                                                              │
     │                  ││  └───────────────────────────────────────────                   │
     │wr                ││  ┌─────┐                                                        │
@@ -386,8 +437,7 @@ module%test Typed_tests = struct
 
   module I = struct
     type 'a t =
-      { clock : 'a
-      ; clear : 'a
+      { clocking : 'a Clocking.t
       ; wr : 'a
       ; a : 'a [@bits 16]
       ; b : 'a [@bits 16]
@@ -432,7 +482,7 @@ module%test Typed_tests = struct
         (module Data_entry)
         ~scope:(Scope.create ())
         ~capacity
-        ~clocking:{ clock = i.clock; clear = i.clear }
+        ~clocking:i.clocking
         ~input:{ valid = i.wr; value = { Data_entry.field_a = i.a; field_b = i.b } }
         ~read:i.rd
     in
@@ -452,12 +502,12 @@ module%test Typed_tests = struct
     o
   ;;
 
-  let fill_while_reading ?(wave_width = 1) (waves, sim) =
+  let fill_while_reading ?(wave_scale = 1) (waves, sim) =
     let inputs : _ I.t = Cyclesim.inputs sim in
     let open Cyclesim.Sim_bits in
-    inputs.clear <-- vdd;
+    inputs.clocking.clear <-- vdd;
     Cyclesim.cycle sim;
-    inputs.clear <-- gnd;
+    inputs.clocking.clear <-- gnd;
     inputs.wr <-- vdd;
     inputs.rd <-- vdd;
     let rec write i =
@@ -476,18 +526,18 @@ module%test Typed_tests = struct
     (* The typed fifo currently does not handle read delays so we don't need to worry
        about counting reads, they should all flush in a few cycles. *)
     Cyclesim.cycle ~n:3 sim;
-    Waveform.print ~display_width:87 ~wave_width ~display_rules waves
+    Waveform.print ~display_width:87 ~wave_scale ~display_rules waves
   ;;
 
   (* This is a copy of the previous fill_then_empty method modified to accept the new I.t
      and O.t. *)
-  let fill_then_empty ?(wave_width = 1) (waves, sim) =
+  let fill_then_empty ?(wave_scale = 1) (waves, sim) =
     let inputs : _ I.t = Cyclesim.inputs sim in
     let outputs : _ O.t = Cyclesim.outputs sim in
     let open Cyclesim.Sim_bits in
-    inputs.clear <-- vdd;
+    inputs.clocking.clear <-- vdd;
     Cyclesim.cycle sim;
-    inputs.clear <-- gnd;
+    inputs.clocking.clear <-- gnd;
     inputs.wr <-- vdd;
     let rec write i =
       if not (to_bool outputs.full)
@@ -514,7 +564,7 @@ module%test Typed_tests = struct
     inputs.rd <-- gnd;
     Cyclesim.cycle sim;
     Cyclesim.cycle sim;
-    Waveform.print ~display_width:87 ~wave_width ~display_rules waves
+    Waveform.print ~display_width:87 ~wave_scale ~display_rules waves
   ;;
 
   let%expect_test "typed fifo fill then empty" =
@@ -523,8 +573,8 @@ module%test Typed_tests = struct
     [%expect
       {|
       ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
-      │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
-      │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
+      │clock             ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐          │
+      │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─         │
       │clear             ││────┐                                                            │
       │                  ││    └───────────────────────────────────────────────────         │
       │wr                ││    ┌───────────────────┐                                        │
@@ -570,8 +620,8 @@ module%test Typed_tests = struct
     [%expect
       {|
       ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
-      │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
-      │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
+      │clock             ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐          │
+      │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─         │
       │clear             ││────┐                                                            │
       │                  ││    └───────────────────────────────────────────────────         │
       │wr                ││    ┌───────────────────┐                                        │
@@ -620,8 +670,8 @@ module%test Typed_tests = struct
     [%expect
       {|
       ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
-      │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
-      │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
+      │clock             ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐          │
+      │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─         │
       │clear             ││────┐                                                            │
       │                  ││    └───────────────────────────────────────────────────         │
       │wr                ││    ┌───────────────────────────────────────┐                    │
@@ -667,8 +717,8 @@ module%test Typed_tests = struct
     [%expect
       {|
       ┌Signals───────────┐┌Waves────────────────────────────────────────────────────────────┐
-      │clock             ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌│
-      │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘│
+      │clock             ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐          │
+      │                  ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─         │
       │clear             ││────┐                                                            │
       │                  ││    └───────────────────────────────────────────────────         │
       │wr                ││    ┌───────────────────────────────────────┐                    │

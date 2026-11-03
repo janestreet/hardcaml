@@ -7,7 +7,7 @@ type 'a t =
   ; read_address : 'a
   ; read_enable : 'a
   }
-[@@deriving bin_io, sexp_of, equal ~localize, compare ~localize]
+[@@deriving bin_io, sexp_of, equal, compare]
 
 let iter t ~f =
   f t.read_clock;

@@ -533,7 +533,7 @@ module Mutable = struct
   module Comb = Comb.Make (struct
       type t = Bits0.t
 
-      let%template equal = (Bits0.Comparable.equal [@mode m]) [@@mode m = (local, global)]
+      let equal = Bits0.Comparable.equal
       let empty = empty
       let is_empty = is_empty
       let width = width
@@ -675,7 +675,7 @@ module _ = Pretty_printer.Register (struct
   end)
 
 module Binary = struct
-  type nonrec t = t [@@deriving compare ~localize]
+  type nonrec t = t [@@deriving compare]
 
   let to_string t =
     let width = width t in
@@ -687,7 +687,7 @@ module Binary = struct
 end
 
 module Hex = struct
-  type nonrec t = t [@@deriving compare ~localize]
+  type nonrec t = t [@@deriving compare]
 
   let to_string t =
     let width = width t in
@@ -699,7 +699,7 @@ module Hex = struct
 end
 
 module Unsigned_int = struct
-  type nonrec t = t [@@deriving compare ~localize]
+  type nonrec t = t [@@deriving compare]
 
   let to_string t =
     let width = width t in
@@ -711,7 +711,7 @@ module Unsigned_int = struct
 end
 
 module Signed_int = struct
-  type nonrec t = t [@@deriving compare ~localize]
+  type nonrec t = t [@@deriving compare]
 
   let to_string t =
     let width = width t in
