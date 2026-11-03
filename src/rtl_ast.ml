@@ -38,6 +38,7 @@ type multiport_memory_declaration =
   ; memory_type : Rtl_name.For_backend.t
   ; depth : int
   ; range : range
+  ; initialize_to : Bits.t array option
   }
 [@@deriving sexp_of]
 
@@ -287,6 +288,7 @@ let declaration_of_multiport_memory circuit language signal =
     ; memory_type = Rtl_name.legalize type_ ~language
     ; depth = mem.size
     ; range = bit_or_vec (Signal.width signal)
+    ; initialize_to = mem.initialize_to
     }
   | _ -> assert false
 ;;
