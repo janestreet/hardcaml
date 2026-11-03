@@ -89,9 +89,16 @@ module type Comb_monomorphic = sig
   (** Multiplex a list of interfaces. *)
   val mux : comb -> t list -> t
 
-  val mux2 : comb -> t -> t -> t
+  (** Same as [mux] except the number of inputs must exactly match the number of values
+      representable by the select signal. *)
+  val mux_strict : comb -> t list -> t
 
-  (** Concatenate a list of interfaces. *)
+  val mux2 : comb -> t -> t -> t
+  val mux_init : comb -> int -> f:(int -> t) -> t
+  val cases : default:t -> comb -> (comb * t) list -> t
+
+  (** Concatenate a list of interfaces (the MSB of the head of the list will become the
+      MSB of the result). *)
   val concat : t list -> t
 
   val priority_select
@@ -329,29 +336,6 @@ module type S = sig
       with type t := t
        and type bits_t = Bits.t interface
        and module Signal := Signal
-  end
-
-  module Of_clocked_signal : sig
-    type 'a interface := 'a t
-
-    include Comb with type comb = Clocked_signal.t
-    include Of_signal_functions with type t := t and module Signal := Clocked_signal
-
-    val wires
-      :  ?named:bool (** default is [false]. *)
-      -> [ `From of t | `Domains of Clock_domain.Runtime.t interface ]
-      -> t
-
-    val inputs : Clock_domain.Runtime.t interface -> t
-
-    (** Apply name to field of the interface. Add [prefix] and [suffix] if specified. *)
-    val apply_names
-      :  ?prefix:string (** Default is [""] *)
-      -> ?suffix:string (** Default is [""] *)
-      -> ?naming_op:(loc:[%call_pos] -> Signal.t -> string -> Signal.t)
-           (** Default is [Signal.(--)] *)
-      -> t
-      -> t
   end
 
   (** Helper functions to ease usage of the Always API when working with interfaces. *)

@@ -150,7 +150,7 @@ module Base = struct
 
   type nonrec t = t
 
-  let%template[@mode local] equal (t1 @ local) (t2 @ local) =
+  let equal_internal (t1 @ local) (t2 @ local) =
     match t1, t2 with
     | Empty, Empty -> true
     | Const { constant = c1; _ }, Const { constant = c2; _ } ->
@@ -161,7 +161,7 @@ module Base = struct
         ((uid [@mode local]) t2) [@nontail]
   ;;
 
-  let%template equal = [%eta2 equal [@mode local]]
+  let%template[@mode __ = (local, global)] equal = [%eta2 equal_internal]
   let width = width
   let to_string = to_string
   let sexp_of_t = sexp_of_t

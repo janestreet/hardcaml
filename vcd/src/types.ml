@@ -7,6 +7,27 @@ module Scope = struct
     | Function
     | Module
     | Task
+    (* SystemVerilog scope types. *)
+    | Class
+    | Generate
+    | Interface
+    | Package
+    | Program
+    | Struct
+    | Union
+    (* VHDL scope types, as emitted by GHDL, nvc and GTKWave. *)
+    | Vhdl_architecture
+    | Vhdl_block
+    | Vhdl_for_generate
+    | Vhdl_function
+    | Vhdl_generate
+    | Vhdl_if_generate
+    | Vhdl_package
+    | Vhdl_procedure
+    | Vhdl_process
+    | Vhdl_record
+    (* Questa writes [$scope unknown name $end] for some scopes. *)
+    | Unknown
   [@@deriving sexp_of]
 end
 
@@ -30,6 +51,19 @@ module Var_type = struct
     | Wand
     | Wire
     | Wor
+    (* SystemVerilog variable types. *)
+    | Bit
+    | Byte
+    | Enum
+    | Int
+    | Logic
+    | Longint
+    | Port
+    | Shortint
+    | Shortreal
+    | String
+    (* A GTKWave extension. *)
+    | Real_parameter
   [@@deriving sexp_of]
 end
 
@@ -67,6 +101,7 @@ module Value_change = struct
     | Scalar_value of Bit.t * string
     | Vector_value of Bit.t list * string
     | Real_value of float * string
+    | String_value of string * string
   [@@deriving sexp_of]
 end
 

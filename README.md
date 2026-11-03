@@ -1,5 +1,4 @@
-"Hardcaml"
-==========
+# Hardcaml
 
 <h1 align="center">
   <picture>

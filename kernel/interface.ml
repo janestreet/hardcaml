@@ -321,7 +321,17 @@ module Make_with_wave_formats (X : sig
     ;;
 
     let mux s l = map ~f:(Comb.mux s) (of_interface_list l)
+    let mux_strict s l = map ~f:(Comb.mux_strict s) (of_interface_list l)
     let mux2 s h l = mux s [ l; h ]
+    let mux_init s n ~f = mux s (List.init n ~f)
+
+    let cases ~default select cases =
+      let values_for_fields = of_interface_list (List.map cases ~f:snd) in
+      let cases = List.map cases ~f:fst in
+      map2 default values_for_fields ~f:(fun default values_for_field ->
+        Comb.cases ~default select (List.zip_exn cases values_for_field))
+    ;;
+
     let concat l = map ~f:Comb.concat_msb (of_interface_list l)
 
     let distribute_valids (ts : (comb, t) with_valid2 list) =
@@ -466,40 +476,6 @@ module Make_with_wave_formats (X : sig
 
   module Of_signal = struct
     include Make_signal_functions (Signal)
-  end
-
-  module Of_clocked_signal = struct
-    include Make_signal_functions (Clocked_signal)
-
-    let wires ?named arg =
-      let output =
-        let from =
-          match arg with
-          | `From from -> Some from
-          | `Domains _ -> None
-        in
-        wires ?named ?from ()
-      in
-      match arg with
-      | `Domains doms ->
-        map2 doms output ~f:(fun dom signal ->
-          Clocked_signal.Unsafe.set_domain signal ~dom)
-      | `From _ -> output
-    ;;
-
-    let inputs doms = wires ~named:true (`Domains doms)
-    let outputs t = wires ~named:true (`From t)
-
-    let apply_names ?prefix ?suffix ?naming_op t =
-      Of_signal.apply_names
-        ?prefix
-        ?suffix
-        ?naming_op
-        (X.map t ~f:(fun t ->
-           Clocked_signal.unwrap_signal ~dom:(Clocked_signal.get_domain t) t))
-      |> map2 t ~f:(fun t s ->
-        Clocked_signal.to_clocked ~dom:(Clocked_signal.get_domain t) s)
-    ;;
   end
 
   module Names_and_widths = struct

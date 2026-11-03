@@ -239,6 +239,15 @@ If no case matches, the `default` value is output.
 
 ## Select
 
+A single bit can be selected with `bit`, or the operator `(.:())`:
+
+```ocaml
+# bit (of_string "001100") ~pos:2
+- : t = 1
+# (of_string "001100").:(2)
+- : t = 1
+```
+
 A range of bits can be extracted from the vector using `select`.
 
 ```ocaml
@@ -261,6 +270,22 @@ The operator `(.:+[, Some x])` can also be used similar to Verilog:
 ```ocaml
 # (of_string "001100").:+[3, Some 2]
 - : t = 01
+```
+
+`msb` and `lsb` select the most and least significant bit respectively. `msbs` returns all
+bits except the least significant bit, and `lsbs` returns all bits except the most
+significant bit. For an n-bit input, `msbs` and `lsbs` return n-1 bits, and raise if the
+input is only 1 bit wide.
+
+```ocaml
+# msb (of_string "1000")
+- : t = 1
+# lsb (of_string "1000")
+- : t = 0
+# msbs (of_string "1000")
+- : t = 100
+# lsbs (of_string "1000")
+- : t = 000
 ```
 
 Other selection functions include `sel_top`, `sel_bottom`, `drop_top`,

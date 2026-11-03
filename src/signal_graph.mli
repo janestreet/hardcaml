@@ -8,15 +8,6 @@
 
 open! Core0
 
-module Normalized_signal_uid : sig
-  type t = private Signal.Type.Uid.t
-  [@@deriving compare ~localize, hash, sexp_of, to_string]
-
-  include Comparator.S with type t := t
-
-  include%template Equal.S [@mode local] with type t := t
-end
-
 type t [@@deriving sexp_of]
 
 (** Create a [Signal_graph.t] from a list of signals (commonly, circuit outputs). *)
@@ -75,14 +66,6 @@ val rewrite
   -> f_upto:(Signal.t -> Signal.t)
   -> t * Signal.t Signal.Type.Uid.Map.t
 
-(** [normalize_uids t] creates a copy of [t] that is identical to [t] except the uids are
-    numbered starting at 1. *)
-val normalize_uids : t -> t
-
-(** Creates a mapping from current uids to normalized uids (starting from 1), without
-    modifying the current graph. *)
-val compute_normalized_uids : t -> (Normalized_signal_uid.t * Signal.t) list
-
 (** Fan-out of each signal in the signal graph. The fan-out of a signal is the set of
     signals it drives. *)
 val fan_out_map : t -> Signal.Type.Uid.Set.t Signal.Type.Uid.Map.t
@@ -103,6 +86,14 @@ val topological_sort_exn : deps:(module Signal.Type.Deps) -> t -> Signal.t list
 (** Map all clock signals to their driving input signals. This mapping can be used to
     identify clock domains of Registers and Memories. *)
 val resolve_clock_domains : t -> Signal.t option Signal.Type.Map.t
+
+(** The uids of all signals that act as clocks. For each Register/Memory clock pin, if it
+    is driven from an input purely through wires (including across flattened hierarchy
+    boundaries) then every wire on that path is included, so a clock passed through
+    intermediate wires still renders as a clock. Clock pins reached through combinational
+    logic (e.g. gated or inverted clocks) are omitted, since the simulator cannot
+    faithfully reconstruct them. *)
+val clock_signal_uids : t -> Signal.Type.Uid.Set.t
 
 (** For rtl generation the case matches are written explicitly and do not need to be
     tracked. *)

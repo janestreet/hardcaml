@@ -8,10 +8,12 @@ module Slot : sig
     ; defname : string
     }
 
-  type t = t' option [@@deriving bin_io, sexp_of, compare, equal, hash]
+  type t = t' option
+  [@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]
 
   val create : Stdlib.Printexc.Slot.t -> t
   val format : t -> string
 end
 
-type t = Slot.t list [@@deriving bin_io, sexp_of, compare, equal, hash]
+type t = Slot.t list
+[@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]

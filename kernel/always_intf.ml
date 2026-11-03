@@ -251,14 +251,4 @@ module type Always = sig
   module type S = S
 
   include S with module Signal := Signal
-
-  module Clocked : sig
-    include S with module Signal := Clocked_signal
-
-    val set_variable_dom : Variable.t -> dom:Clock_domain.Runtime.t -> Variable.t
-
-    module Variable_overrides : sig
-      val wire : default:Clocked_signal.t -> dom:Clock_domain.Runtime.t -> Variable.t
-    end
-  end
 end

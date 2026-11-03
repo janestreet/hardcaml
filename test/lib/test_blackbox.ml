@@ -17,15 +17,15 @@ let%expect_test "top level blackbox" =
   [%expect
     {|
     module fir_filter_blackbox (
-        clk,
-        clr,
+        clock,
+        clear,
         enable,
         d,
         q
     );
 
-        input clk;
-        input clr;
+        input clock;
+        input clear;
         input enable;
         input [15:0] d;
         output [31:0] q;
@@ -49,15 +49,15 @@ let%expect_test "Instantiation blackbox" =
   [%expect
     {|
     module fir_filter (
-        clk,
-        clr,
+        clock,
+        clear,
         enable,
         d,
         q
     );
 
-        input clk;
-        input clr;
+        input clock;
+        input clear;
         input enable;
         input [15:0] d;
         output [31:0] q;
@@ -92,8 +92,8 @@ let%expect_test "Instantiation blackbox" =
         assign signal_const_3 = 16'b0101011010100001;
         assign signal_const_4 = 16'b0000000000000000;
         assign signal_wire = enable;
-        assign signal_wire_1 = clr;
-        assign signal_wire_2 = clk;
+        assign signal_wire_1 = clear;
+        assign signal_wire_2 = clock;
         assign signal_wire_3 = d;
         always @(posedge signal_wire_2) begin
             if (signal_wire_1)
@@ -130,15 +130,15 @@ let%expect_test "Instantiation blackbox" =
 
     endmodule
     module fir_filter_top (
-        clk,
-        clr,
+        clock,
+        clear,
         enable,
         d,
         q
     );
 
-        input clk;
-        input clr;
+        input clock;
+        input clear;
         input enable;
         input [15:0] d;
         output [31:0] q;
@@ -151,12 +151,12 @@ let%expect_test "Instantiation blackbox" =
         wire [31:0] signal_wire_4;
         assign signal_wire = d;
         assign signal_wire_1 = enable;
-        assign signal_wire_2 = clr;
-        assign signal_wire_3 = clk;
+        assign signal_wire_2 = clear;
+        assign signal_wire_3 = clock;
         fir_filter
             fir_filter
-            ( .clk(signal_wire_3),
-              .clr(signal_wire_2),
+            ( .clock(signal_wire_3),
+              .clear(signal_wire_2),
               .enable(signal_wire_1),
               .d(signal_wire),
               .q(signal_inst[31:0]) );
@@ -170,15 +170,15 @@ let%expect_test "Instantiation blackbox" =
   [%expect
     {|
     module fir_filter (
-        clk,
-        clr,
+        clock,
+        clear,
         enable,
         d,
         q
     );
 
-        input clk;
-        input clr;
+        input clock;
+        input clear;
         input enable;
         input [15:0] d;
         output [31:0] q;
@@ -186,15 +186,15 @@ let%expect_test "Instantiation blackbox" =
 
     endmodule
     module fir_filter_top (
-        clk,
-        clr,
+        clock,
+        clear,
         enable,
         d,
         q
     );
 
-        input clk;
-        input clr;
+        input clock;
+        input clear;
         input enable;
         input [15:0] d;
         output [31:0] q;
@@ -207,12 +207,12 @@ let%expect_test "Instantiation blackbox" =
         wire [31:0] signal_wire_4;
         assign signal_wire = d;
         assign signal_wire_1 = enable;
-        assign signal_wire_2 = clr;
-        assign signal_wire_3 = clk;
+        assign signal_wire_2 = clear;
+        assign signal_wire_3 = clock;
         fir_filter
             fir_filter
-            ( .clk(signal_wire_3),
-              .clr(signal_wire_2),
+            ( .clock(signal_wire_3),
+              .clear(signal_wire_2),
               .enable(signal_wire_1),
               .d(signal_wire),
               .q(signal_inst[31:0]) );

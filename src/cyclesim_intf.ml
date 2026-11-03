@@ -164,7 +164,7 @@ module type Cyclesim = sig
   end
 
   module Waveform : sig
-    (** Create a waveform from the given simulator *)
+    (** Create a waveform from the given simulator. Only value transitions are stored. *)
     val create : ('i, 'o) t -> Wave_data.t * ('i, 'o) t
 
     (** Create a waveform if [enabled] is true. Otherwise waves are not traced. *)

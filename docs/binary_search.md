@@ -405,9 +405,7 @@ let test ~waves ~input_data ~find_key =
   load_inputs sim input_data;
   let result = run_core sim find_key in
   (* Optionally show the waveform. *)
-  Option.iter
-    waves
-    ~f:(Waveform.expect_exact ~wave_width:3 ~start_cycle:16 ~display_rules);
+  Option.iter waves ~f:(Waveform.expect_exact ~wave_scale:3 ~start_time:32 ~display_rules);
   (* Check the results are valid. *)
   validate ~input_data ~find_key ~result
 ;;
@@ -451,8 +449,8 @@ let%expect_test "debug waveform" =
   [%expect_exact
     {|
 ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────────┐
-│clock             ││┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───│
-│                  ││    └───┘   └───┘   └───┘   └───┘   └───┘   └───┘   └───┘   └───┘   │
+│clock             ││────┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐               │
+│                  ││    └───┘   └───┘   └───┘   └───┘   └───┘   └───┘   └───            │
 │clear             ││                                                                    │
 │                  ││────────────────────────────────────────────────────────            │
 │write_enable      ││────────────────────────────────────────────────────────            │
@@ -497,7 +495,7 @@ let%expect_test "debug waveform" =
 │sm                ││ Start          │Loop                           │Start              │
 │                  ││────────────────┴───────────────────────────────┴───────            │
 └──────────────────┘└────────────────────────────────────────────────────────────────────┘
-c55f6d1c162be347d7d0654ae22a7310
+84ab80b525c667974061327ea83c8fd2
 |}]
 ;;
 ```

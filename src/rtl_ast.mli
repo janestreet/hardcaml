@@ -207,6 +207,10 @@ type statement =
       ; memory : var
       ; address : var
       }
+  | Sva_property of
+      { name : Rtl_name.For_backend.t
+      ; property : var Property.Sva.t
+      }
 [@@deriving sexp_of]
 
 type t =

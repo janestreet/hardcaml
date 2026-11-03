@@ -17,8 +17,7 @@ end
 
 module I = struct
   type 'a t =
-    { clock : 'a
-    ; clear : 'a
+    { clocking : 'a Clocking.t
     ; start : 'a
     }
   [@@deriving hardcaml]
@@ -32,7 +31,7 @@ let create ?attribute ?encoding (i : _ I.t) =
   let attributes =
     Option.map attribute ~f:(fun a -> [ Rtl_attribute.Vivado.fsm_encoding a ])
   in
-  let spec = Reg_spec.create ~clock:i.clock ~clear:i.clear () in
+  let spec = Clocking.to_spec i.clocking in
   let sm = State_machine.create ?attributes ?encoding (module State) spec in
   let cnt = Variable.reg spec ~width:4 in
   compile
@@ -324,7 +323,7 @@ let%expect_test "show that the pseudo-constants for matches are not printed sepe
 
 let create ~unreachable cases =
   let i = I.Of_signal.wires () in
-  let spec = Reg_spec.create ~clock:i.clock ~clear:i.clear () in
+  let spec = Clocking.to_spec i.clocking in
   let sm = State_machine.create ~unreachable (module State) spec in
   compile [ sm.switch (cases sm.set_next) ];
   { O.is_done = sm.is A }

@@ -8,9 +8,10 @@ module Slot = struct
     ; start_char : int
     ; defname : string
     }
-  [@@deriving bin_io, compare, sexp_of, equal, hash]
+  [@@deriving bin_io, compare ~localize, sexp_of, equal ~localize, hash]
 
-  type t = t' option [@@deriving bin_io, compare, sexp_of, equal, hash]
+  type t = t' option
+  [@@deriving bin_io, compare ~localize, sexp_of, equal ~localize, hash]
 
   let create (s : Printexc.Slot.t) =
     let l = Printexc.Slot.location s in
@@ -38,4 +39,5 @@ module Slot = struct
   ;;
 end
 
-type t = Slot.t list [@@deriving bin_io, sexp_of, compare, equal, hash]
+type t = Slot.t list
+[@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]

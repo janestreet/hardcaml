@@ -72,7 +72,11 @@ type t =
   }
 [@@deriving sexp_of, fields ~getters]
 
-let equal { uid = uid1; _ } { uid = uid2; _ } = Uid.equal uid1 uid2
+let%template equal ({ uid = uid1; _ } @ m) ({ uid = uid2; _ } @ m) =
+  (Uid.equal [@mode m]) uid1 uid2
+[@@mode m = (global, local)]
+;;
+
 let create_with_uid ~(loc : [%call_pos]) name uid = { uid; name; loc }
 let create ~(loc : [%call_pos]) name = create_with_uid ~loc name (gen_uid ())
 let get_name ({ name; _ } : t) = name

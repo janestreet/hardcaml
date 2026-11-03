@@ -23,8 +23,7 @@ end
 
 module I : sig
   type 'a t =
-    { clock : 'a
-    ; clear : 'a
+    { clocking : 'a Clocking.t
     ; start : 'a
     ; write : 'a Write_port.t
     ; read_address : 'a

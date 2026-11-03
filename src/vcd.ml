@@ -61,7 +61,7 @@ module Var = struct
       | Trireg
       | Tri0
       | Tri1
-      | Want
+      | Wand
       | Wire
       | Wor
     [@@deriving sexp_of, compare ~localize, hash]
@@ -194,6 +194,28 @@ module Var = struct
       |> String.of_char_list
     in
     write_string chan t s
+  ;;
+
+  (* Write a 4-state value. Pure values go through the ordinary [write_bits] path; impure
+     values are written in "01XZ" notation for [Binary] formats. The string-valued formats
+     ([Index] / [Map]) have no mapping for impure values, so those are written as all-X. *)
+  let write_bits_four_state
+    chan
+    ({ typ = _; name = _; id = _; width; wave_format } as t)
+    ~bits
+    ~mask
+    =
+    if Bits.width bits <> width || Bits.width mask <> width
+    then raise_s [%message "Invalid bit width" (t : t) (bits : Bits.t) (mask : Bits.t)];
+    let value = Four_state_logic.create_exn ~bits ~mask in
+    match Four_state_logic.impurity value with
+    | Pure -> write_bits chan t bits
+    | X | Z ->
+      (match wave_format with
+       | Binary ->
+         (* Lowercase to match the x / z characters written elsewhere in the file. *)
+         write_string chan t (String.lowercase (Four_state_logic.to_string value))
+       | Index _ | Map _ -> write_all_x chan t)
   ;;
 
   module Generator = struct
@@ -364,9 +386,8 @@ let write_header chan ~config ~scopes =
 
 let write_time chan time = Out_channel.output_string chan [%string "#%{time#Int}\n"]
 
-(* Synthesise the implicit [-clock] and [-reset] [Var.t]s used by both [wrap] and
-   [write_cycle_based]. Prefix the names with dashes so that a sorted waveform viewer
-   shows them first. *)
+(* Synthesise the implicit [-clock] and [-reset] [Var.t]s used by [wrap]. Prefix the names
+   with dashes so that a sorted waveform viewer shows them first. *)
 let make_implicit_clock_and_reset_vars var_generator =
   let clock =
     Var.create ~name:"-clock" ~id:(Var.Generator.next var_generator) ~width:1 ()
@@ -377,22 +398,13 @@ let make_implicit_clock_and_reset_vars var_generator =
   clock, reset
 ;;
 
-(* Build the standard [inputs] / [outputs] / [various] scopes used by both [wrap] and
-   [write_cycle_based]. The synthesised clock and reset live in [inputs]. *)
+(* Build the standard [inputs] / [outputs] / [various] scopes used by [wrap]. The
+   synthesised clock and reset live in [inputs]. *)
 let build_clocked_scopes ~clock ~reset ~input_vars ~output_vars ~internal_vars =
   [ Scope.create_auto_hierarchy ~name:"inputs" ~vars:(clock :: reset :: input_vars) ()
   ; Scope.create_auto_hierarchy ~name:"outputs" ~vars:output_vars ()
   ; Scope.create_auto_hierarchy ~name:"various" ~vars:internal_vars ()
   ]
-;;
-
-(* Write one signal value, dispatching on [wave_format] so we use [Bits.to_bstr] for the
-   plain [Binary] case (cheaper, matches what [wrap] does today) and [Var.write_bits] for
-   the formats that require ASCII/Index/Map encoding. *)
-let write_signal_bits chan (var : Var.t) bits =
-  match var.wave_format with
-  | Binary -> Var.write_string chan var (Bits.to_bstr bits)
-  | _ -> Var.write_bits chan var bits
 ;;
 
 let wrap chan sim =
@@ -498,100 +510,18 @@ let wrap chan sim =
     [ After, Reset, write_reset; Before, At_clock_edge, write_cycle ]
 ;;
 
-(* Write a VCD file from cycle-based waveform data already populated up front.
-
-   This mirrors [wrap]: index 0 of each wave is treated as the post-reset state and is
-   emitted at [t = 0] with the synthesised [-clock = 0] and [-reset = 1]. Index [N >= 1]
-   is emitted at [t = N * vcdcycle] with [-clock = 1] and [-reset = 0], followed by a
-   clock-low half-cycle. As in [wrap], waves named ["clock"] or ["reset"] are dropped to
-   avoid colliding with the synthesised pair. *)
-let write_cycle_based
-  ?(config = Config.default)
-  chan
-  (waves : Wave_data_in_cycles.t Wave_data.Wave.t array)
-  =
-  let vcdcycle = 2 in
-  let var_generator = Var.Generator.create () in
-  let clock, reset = make_implicit_clock_and_reset_vars var_generator in
-  let write_var_fast v d = Var.write_string chan v d in
-  let traces =
-    Array.filter_map waves ~f:(fun (wave : _ Wave_data.Wave.t) ->
-      if String.equal wave.name "clock" || String.equal wave.name "reset"
-      then None
-      else (
-        let var =
-          Var.create
-            ~name:wave.name
-            ~id:(Var.Generator.next var_generator)
-            ~width:wave.width
-            ~wave_format:wave.wave_format
-            ()
-        in
-        let prev = Bits.Mutable.create wave.width in
-        Some (wave, var, prev)))
-  in
-  let vars_of_typ typ =
-    Array.to_list traces
-    |> List.filter_map ~f:(fun (wave, var, _) ->
-      if Wave_data.Type.equal wave.typ typ then Some var else None)
-  in
-  let scopes =
-    build_clocked_scopes
-      ~clock
-      ~reset
-      ~input_vars:(vars_of_typ Input)
-      ~output_vars:(vars_of_typ Output)
-      ~internal_vars:(vars_of_typ Internal)
-  in
-  write_header chan ~config:{ config with version = "hardcaml-cyclesim" } ~scopes;
-  let num_cycles =
-    Array.fold traces ~init:0 ~f:(fun acc (wave, _, _) ->
-      Int.max acc (Wave_data_in_cycles.length wave.wave_data))
-  in
-  if num_cycles = 0
-  then ()
-  else (
-    (* Write a single signal value at [cycle], updating [prev] if we wrote. With
-       [~force:true] the value is always written (used during the reset phase and on the
-       first cycle, mirroring [wrap]'s [first] flag). *)
-    let write_value ((wave : _ Wave_data.Wave.t), var, prev) ~cycle ~force =
-      if cycle < Wave_data_in_cycles.length wave.wave_data
-      then (
-        let bits = Wave_data_in_cycles.get wave.wave_data cycle in
-        if force || not (Bits.Mutable.equal_bits bits prev)
-        then (
-          write_signal_bits chan var bits;
-          Bits.Mutable.copy_bits ~src:bits ~dst:prev))
-    in
-    let time = ref 0 in
-    (* Reset phase: t = 0, clock = 0, reset = 1, dump cycle 0. *)
-    write_time chan !time;
-    write_var_fast clock "0";
-    write_var_fast reset "1";
-    Array.iter traces ~f:(fun trace -> write_value trace ~cycle:0 ~force:true);
-    time := !time + vcdcycle;
-    (* Cycle phases: t = N * vcdcycle for N >= 1, dumping cycle N. *)
-    let first = ref true in
-    for cycle = 1 to num_cycles - 1 do
-      write_time chan !time;
-      write_var_fast clock "1";
-      write_var_fast reset "0";
-      Array.iter traces ~f:(fun trace -> write_value trace ~cycle ~force:!first);
-      write_time chan (!time + (vcdcycle / 2));
-      write_var_fast clock "0";
-      first := false;
-      time := !time + vcdcycle
-    done)
-;;
-
 (* Write a VCD file from event-based waveform data already populated up front.
 
    Unlike [wrap], this does not synthesise clock/reset signals: any such waves are
    expected to already be present in [waves] and are emitted like any other signal. *)
-let write_event_based
-  ?(config = Config.default)
+let write_mutable_event_based_gen
+  (type wave_data)
+  ~(config : Config.t)
+  ~(num_events : wave_data -> int)
+  ~(get_time_at_index : wave_data -> int -> int)
+  ~(write_event : Out_channel.t -> Var.t -> wave_data -> int -> unit)
   chan
-  (waves : Wave_data_in_events.Bits.t Wave_data.Wave.t array)
+  (waves : wave_data Wave_data.Wave.t array)
   =
   let var_generator = Var.Generator.create () in
   let vars =
@@ -625,12 +555,13 @@ let write_event_based
   in
   write_header chan ~config ~scopes;
   let last_time_written = ref None in
-  Wave_data.event_sequence_in_time_order waves
+  Wave_data.event_sequence_in_time_order
+    waves
+    ~num_events:(fun wave -> num_events wave.wave_data)
+    ~time_at_index:(fun wave event_index -> get_time_at_index wave.wave_data event_index)
   |> Sequence.iter ~f:(fun { Wave_data.wave_index; event_index } ->
     let wave = waves.(wave_index) in
-    let store = Wave_data_in_events.Bits.event_store wave.wave_data in
-    let time = Wave_data_in_events.Bits.Event_store.get_time_at_index store event_index in
-    let bits = Wave_data_in_events.Bits.Event_store.get_data_at_index store event_index in
+    let time = get_time_at_index wave.wave_data event_index in
     (* Only emit a [#time] marker when the time advances; multiple events at the same time
        are written under a single marker. *)
     (match !last_time_written with
@@ -638,7 +569,38 @@ let write_event_based
      | _ ->
        write_time chan time;
        last_time_written := Some time);
-    Var.write_bits chan vars.(wave_index) bits)
+    write_event chan vars.(wave_index) wave.wave_data event_index)
+;;
+
+let write_mutable_event_based ?(config = Config.default) chan waves =
+  write_mutable_event_based_gen
+    ~config
+    ~num_events:Wave_data_in_mutable_events.num_events
+    ~get_time_at_index:Wave_data_in_mutable_events.get_time_at_index
+    ~write_event:(fun chan var wave_data event_index ->
+      Var.write_bits
+        chan
+        var
+        (Wave_data_in_mutable_events.get_data_at_index wave_data event_index))
+    chan
+    waves
+;;
+
+let write_mutable_event_based_four_state ?(config = Config.default) chan waves =
+  write_mutable_event_based_gen
+    ~config
+    ~num_events:Wave_data_in_mutable_events_four_state.num_events
+    ~get_time_at_index:Wave_data_in_mutable_events_four_state.get_time_at_index
+    ~write_event:(fun chan var wave_data event_index ->
+      let bits =
+        Wave_data_in_mutable_events_four_state.get_data_at_index wave_data event_index
+      in
+      let mask =
+        Wave_data_in_mutable_events_four_state.get_mask_at_index wave_data event_index
+      in
+      Var.write_bits_four_state chan var ~bits ~mask)
+    chan
+    waves
 ;;
 
 (* Reverse the [-inputs] / [-outputs] rename done by [Scope.create_helper] when reading
@@ -662,64 +624,166 @@ let typ_and_hierarchy_of_scope_path path =
   | rest -> Internal, List.map rest ~f:unrename_io_scope_name
 ;;
 
-let bit_to_binary_char (bit : Hardcaml_vcd.Types.Bit.t) =
-  match bit with
-  | V0 -> '0'
-  | V1 -> '1'
-  | Vx | Vz ->
-    raise_s
-      [%message
-        "[Vcd.read_event_based]: cannot represent VCD X/Z bit in a [Bits.t] value"
-          (bit : Hardcaml_vcd.Types.Bit.t)]
+let four_state_chars_of_bit (bit : Hardcaml_vcd.Types.Bit.t) =
+  Four_state_logic.plane_chars
+    (match bit with
+     | V0 -> L0
+     | V1 -> L1
+     | Vx -> X
+     | Vz -> Z)
 ;;
 
-(* Returns [None] if any bit in the value is X / Z (and [allow_skip_xz] is set),
-   [Some (id, bits)] otherwise. Raises on real values, or on X/Z when not allowed. *)
-let value_change_to_id_and_bits
-  ?(allow_skip_xz = false)
+(* Real-valued signals have no natural [Bits.t] encoding, so their waves are 64 bits wide
+   whatever size their [$var] declared, hold the IEEE bits of each double, and format the
+   float back for display. Note that [Custom] wave formats do not survive bin_io
+   serialization (they degrade to a bit string). *)
+let real_width = 64
+
+let real_wave_format : Wave_format.t =
+  Custom (fun bits -> sprintf "%g" (Int64.float_of_bits (Bits.to_int64_trunc bits)))
+;;
+
+(* String-valued signals ([$var string]) also have no natural [Bits.t] encoding. Each
+   distinct string a signal takes is interned in first-seen order as values are read, the
+   wave stores indexes into that table, and the completed table becomes the wave's
+   [Wave_format.Index] format (which, unlike [Custom], survives bin_io serialization). *)
+let string_width = 32
+
+module Value_kind = struct
+  type t =
+    | Bits
+    | Real
+    | String
+  [@@deriving equal ~localize, sexp_of]
+
+  let of_var_type : Hardcaml_vcd.Types.Var_type.t -> t = function
+    | Real | Realtime | Shortreal | Real_parameter -> Real
+    | String -> String
+    | Event
+    | Integer
+    | Parameter
+    | Reg
+    | Supply0
+    | Supply1
+    | Time
+    | Tri
+    | Triand
+    | Trior
+    | Trireg
+    | Tri0
+    | Tri1
+    | Wand
+    | Wire
+    | Wor
+    | Bit
+    | Byte
+    | Enum
+    | Int
+    | Logic
+    | Longint
+    | Port
+    | Shortint -> Bits
+  ;;
+end
+
+module String_intern = struct
+  type t =
+    { index_by_string : (string, int) Hashtbl.t
+    ; strings : string Queue.t
+    }
+
+  let create () =
+    { index_by_string = Hashtbl.create (module String); strings = Queue.create () }
+  ;;
+
+  let index t string =
+    Hashtbl.find_or_add t.index_by_string string ~default:(fun () ->
+      Queue.enqueue t.strings string;
+      Queue.length t.strings - 1)
+  ;;
+
+  let wave_format t : Wave_format.t = Index (Queue.to_list t.strings)
+end
+
+(* Convert a value change to its (bits, mask) planes. Raises when the kind of value does
+   not match the signal's declaration. *)
+let value_change_to_id_and_planes
+  ~kind_of_id
   ~width_of_id
+  ~string_index
   (vc : Hardcaml_vcd.Types.Value_change.t)
   =
-  let contains_xz_bit = function
-    | Hardcaml_vcd.Types.Bit.Vx | Vz -> true
-    | V0 | V1 -> false
+  let check_kind id (expected : Value_kind.t) =
+    let declared : Value_kind.t = kind_of_id id in
+    if not (Value_kind.equal declared expected)
+    then
+      raise_s
+        [%message
+          "[Vcd.read_mutable_event_based_four_state]: value change does not match the \
+           signal's declared type"
+            (vc : Hardcaml_vcd.Types.Value_change.t)
+            (declared : Value_kind.t)]
   in
   match vc with
-  | Real_value _ ->
-    raise_s
-      [%message
-        "[Vcd.read_event_based]: real-valued VCD signals are not supported"
-          (vc : Hardcaml_vcd.Types.Value_change.t)]
+  | Real_value (f, id) ->
+    check_kind id Real;
+    ( id
+    , Bits.of_int64_trunc ~width:real_width (Int64.bits_of_float f)
+    , Bits.zero real_width )
+  | String_value (s, id) ->
+    check_kind id String;
+    id, Bits.of_int_trunc ~width:string_width (string_index id s), Bits.zero string_width
   | Scalar_value (b, id) ->
-    if allow_skip_xz && contains_xz_bit b
-    then None
-    else (
-      let s = String.make 1 (bit_to_binary_char b) in
-      Some (id, Bits.of_string s))
+    check_kind id Bits;
+    let bit, mask = four_state_chars_of_bit b in
+    id, Bits.of_string (String.make 1 bit), Bits.of_string (String.make 1 mask)
   | Vector_value (bs, id) ->
-    if allow_skip_xz && List.exists bs ~f:contains_xz_bit
-    then None
-    else (
-      let width = width_of_id id in
-      let s = String.of_char_list (List.map bs ~f:bit_to_binary_char) in
-      (* The VCD spec allows shorter values than the declared width to be left-padded with
-         zeros (or with the leading X/Z bit, which we don't support here). *)
-      let s = String.pad_left s ~char:'0' ~len:width in
-      Some (id, Bits.of_string s))
+    check_kind id Bits;
+    let width = width_of_id id in
+    let bits_s =
+      String.of_char_list (List.map bs ~f:(fun b -> fst (four_state_chars_of_bit b)))
+    in
+    let mask_s =
+      String.of_char_list (List.map bs ~f:(fun b -> snd (four_state_chars_of_bit b)))
+    in
+    (* The VCD spec left-extends values shorter than the declared width: with 0 when the
+       leading bit is 0 or 1, and with the leading bit itself when it is X or Z. *)
+    let pad_bit, pad_mask =
+      match List.hd bs with
+      | Some (Vx | Vz) -> four_state_chars_of_bit (List.hd_exn bs)
+      | Some (V0 | V1) | None -> '0', '0'
+    in
+    ( id
+    , Bits.of_string (String.pad_left bits_s ~char:pad_bit ~len:width)
+    , Bits.of_string (String.pad_left mask_s ~char:pad_mask ~len:width) )
 ;;
 
-(* Parse a VCD into a [Wave_data_in_events.Bits.t Wave_data.Wave.t array].
+(* Result of the reader's first pass over the declarations. *)
+type declarations =
+  { waves : Wave_data_in_mutable_events_four_state.t Wave_data.Wave.t Queue.t
+  ; wave_by_id :
+      Wave_data_in_mutable_events_four_state.t Wave_data.Wave.t Hashtbl.M(String).t
+      (* Maps each identifier to the wave of its first [$var]. Later [$var]s with the same
+         identifier are aliases and share that wave's [wave_data]. *)
+  ; kind_by_id : Value_kind.t Hashtbl.M(String).t
+      (* Whether each identifier's values are bit vectors, floats, or strings. *)
+  ; intern_by_id : String_intern.t Hashtbl.M(String).t
+      (* String tables for [$var string] signals, keyed by identifier for value processing
+         and by [wave_data] unique id so the final wave formats can be filled in at the
+         end (aliases share both a table and a [wave_data]). *)
+  ; intern_by_unique_id : String_intern.t Hashtbl.M(Int).t
+  ; max_time : int ref
+  (* Shared by all the waves; the second pass updates it as it sees [#time] markers. *)
+  }
 
-   This is intended to round-trip VCDs produced by [wrap], [write_event_based] and
-   [write_cycle_based]. Some VCD features that aren't trivially representable raise: X/Z
-   values in mid-simulation value changes, real-valued signals, [$dumpoff] regions.
-   Initial all-X [$dumpvars] blocks (as written by Hardcaml's writers) are skipped. *)
-let read_event_based (vcd : Hardcaml_vcd.t) =
-  (* First pass: walk declarations to build the wave list and an id -> wave map. *)
+let read_declarations (vcd : Hardcaml_vcd.t) =
   let scope_stack = ref [] in
   let waves = Queue.create () in
-  let max_time_by_id = Hashtbl.create (module String) in
+  let max_time = ref 0 in
   let wave_by_id = Hashtbl.create (module String) in
+  let kind_by_id = Hashtbl.create (module String) in
+  let intern_by_id = Hashtbl.create (module String) in
+  let intern_by_unique_id = Hashtbl.create (module Int) in
   List.iter vcd.declarations ~f:(fun (d : Hardcaml_vcd.Types.Declaration.t) ->
     match d with
     | Comment _ | Date _ | Version _ | Timescale _ | Enddefinitions -> ()
@@ -728,77 +792,149 @@ let read_event_based (vcd : Hardcaml_vcd.t) =
       (match !scope_stack with
        | _ :: rest -> scope_stack := rest
        | [] ->
-         raise_s [%message "[Vcd.read_event_based]: $upscope without matching $scope"])
-    | Var { var_type = _; var_size; var_id; var_ref } ->
+         raise_s
+           [%message
+             "[Vcd.read_mutable_event_based_four_state]: $upscope without matching $scope"])
+    | Var { var_type; var_size; var_id; var_ref } ->
+      let kind = Value_kind.of_var_type var_type in
+      let width, wave_format =
+        match kind with
+        | Real -> real_width, real_wave_format
+        | String ->
+          (* A placeholder: replaced with the interned [Index] format once every value has
+             been read. *)
+          string_width, (Index [] : Wave_format.t)
+        | Bits ->
+          ( (* Some producers declare zero-size vars, such as [$var parameter 0], but
+               [Bits.t] widths must be positive. *)
+            Int.max 1 var_size
+          , (Bit_or Hex : Wave_format.t) )
+      in
       let path = List.rev !scope_stack in
       let typ, hierarchy = typ_and_hierarchy_of_scope_path path in
       let name =
         String.concat
           ~sep:(String.make 1 default_hierarchy_separator)
-          (hierarchy @ [ var_ref.ref_name ])
+          (List.filter hierarchy ~f:(fun s -> not (String.is_empty s))
+           @ [ var_ref.ref_name ])
       in
-      let max_time = ref 0 in
-      let wave_data = Wave_data_in_events.Bits.create var_size max_time in
-      let wave : _ Wave_data.Wave.t =
-        { name
-        ; width = var_size
-        ; typ
-        ; wave_format = Bit_or Hex
-        ; is_pseudo_clock = false
-        ; wave_data
-        }
+      (* Several [$var]s may share an identifier when a signal is dumped under more than
+         one name, such as a port and the net it connects to. Each alias becomes its own
+         wave, but they share one [wave_data]: inserting a value change once updates all
+         of them. *)
+      let existing = Hashtbl.find wave_by_id var_id in
+      (match existing with
+       | None -> ()
+       | Some (alias : _ Wave_data.Wave.t) ->
+         let declared = Hashtbl.find_exn kind_by_id var_id in
+         if not (Value_kind.equal declared kind)
+         then
+           raise_s
+             [%message
+               "[Vcd.read_mutable_event_based_four_state]: VCD identifier declared with \
+                inconsistent types"
+                 (var_id : string)
+                 ~kinds:((declared, kind) : Value_kind.t * Value_kind.t)];
+         if alias.width <> width
+         then
+           raise_s
+             [%message
+               "[Vcd.read_mutable_event_based_four_state]: VCD identifier declared with \
+                inconsistent widths"
+                 (var_id : string)
+                 ~widths:((alias.width, width) : int * int)]);
+      Hashtbl.set kind_by_id ~key:var_id ~data:kind;
+      let wave_data =
+        match existing with
+        | Some alias -> alias.wave_data
+        | None -> Wave_data_in_mutable_events_four_state.create width max_time
+      in
+      (match kind with
+       | Bits | Real -> ()
+       | String ->
+         let intern =
+           Hashtbl.find_or_add intern_by_id var_id ~default:String_intern.create
+         in
+         Hashtbl.set
+           intern_by_unique_id
+           ~key:(Wave_data_in_mutable_events_four_state.unique_id wave_data)
+           ~data:intern);
+      let wave : Wave_data_in_mutable_events_four_state.t Wave_data.Wave.t =
+        { name; width; typ; wave_format; wave_data }
       in
       Queue.enqueue waves wave;
-      (match Hashtbl.add wave_by_id ~key:var_id ~data:wave with
-       | `Ok -> ()
-       | `Duplicate ->
-         raise_s
-           [%message
-             "[Vcd.read_event_based]: duplicate VCD identifier in declarations"
-               (var_id : string)]);
-      Hashtbl.add_exn max_time_by_id ~key:var_id ~data:max_time);
+      if Option.is_none existing then Hashtbl.add_exn wave_by_id ~key:var_id ~data:wave);
   (match !scope_stack with
    | [] -> ()
    | _ ->
      raise_s
        [%message
-         "[Vcd.read_event_based]: VCD ended with unclosed scopes"
+         "[Vcd.read_mutable_event_based_four_state]: VCD ended with unclosed scopes"
            (!scope_stack : string list)]);
-  let width_of_id id = (Hashtbl.find_exn wave_by_id id).width in
-  let current_time = ref 0 in
-  let insert_event ~id ~bits =
-    let wave = Hashtbl.find_exn wave_by_id id in
-    let max_time = Hashtbl.find_exn max_time_by_id id in
-    let store = Wave_data_in_events.Bits.event_store wave.wave_data in
-    Wave_data_in_events.Bits.Event_store.insert store !current_time bits;
-    if !current_time > !max_time then max_time := !current_time
+  { waves; wave_by_id; kind_by_id; intern_by_id; intern_by_unique_id; max_time }
+;;
+
+let read_mutable_event_based_four_state (vcd : Hardcaml_vcd.t)
+  : Wave_data_in_mutable_events_four_state.t Wave_data.Wave.t array
+  =
+  let { waves; wave_by_id; kind_by_id; intern_by_id; intern_by_unique_id; max_time } =
+    read_declarations vcd
   in
-  let process_dump_block vcs =
-    (* [$dumpvars], [$dumpall], [$dumpon] all set the value of every signal at the current
-       time. Hardcaml's writers emit a leading [$dumpvars] block of all-X values; we skip
-       any X/Z entries and process the rest as ordinary value changes. *)
-    List.iter vcs ~f:(fun vc ->
-      match value_change_to_id_and_bits ~allow_skip_xz:true ~width_of_id vc with
-      | None -> ()
-      | Some (id, bits) -> insert_event ~id ~bits)
+  let undeclared id =
+    raise_s
+      [%message
+        "[Vcd.read_mutable_event_based_four_state]: value change for undeclared VCD \
+         identifier"
+          (id : string)]
+  in
+  let wave_of_id id : Wave_data_in_mutable_events_four_state.t Wave_data.Wave.t =
+    match Hashtbl.find wave_by_id id with
+    | Some wave -> wave
+    | None -> undeclared id
+  in
+  let kind_of_id id =
+    match Hashtbl.find kind_by_id id with
+    | Some kind -> kind
+    | None -> undeclared id
+  in
+  let string_index id s = String_intern.index (Hashtbl.find_exn intern_by_id id) s in
+  let width_of_id id = (wave_of_id id).width in
+  let current_time = ref 0 in
+  let process_value_change vc =
+    let id, bits, mask =
+      value_change_to_id_and_planes ~kind_of_id ~width_of_id ~string_index vc
+    in
+    Wave_data_in_mutable_events_four_state.insert
+      (wave_of_id id).wave_data
+      !current_time
+      ~bits
+      ~mask
   in
   List.iter
     vcd.simulation_commands
     ~f:(fun (cmd : Hardcaml_vcd.Types.Simulation_command.t) ->
       match cmd with
-      | Sim_time t -> current_time := t
+      | Sim_time t ->
+        current_time := t;
+        max_time := max !max_time t
       | Sim_comment _ -> ()
-      | Sim_dumpvars vcs | Sim_dumpall vcs | Sim_dumpon vcs -> process_dump_block vcs
-      | Sim_dumpoff _ ->
-        raise_s
-          [%message
-            "[Vcd.read_event_based]: [$dumpoff] regions are not supported (X / Z values \
-             cannot be represented in [Bits.t])"]
-      | Sim_value_change vc ->
-        (match value_change_to_id_and_bits ~allow_skip_xz:false ~width_of_id vc with
-         | Some (id, bits) -> insert_event ~id ~bits
-         | None ->
-           (* [allow_skip_xz=false] should always return [Some] or raise. *)
-           assert false));
+      (* [$dumpvars] / [$dumpall] / [$dumpon] set the value of every signal at the current
+         time, and [$dumpoff] lists the values signals hold as dumping stops. All of them
+         are representable in 4-state wave data, so they are recorded like any other value
+         change. *)
+      | Sim_dumpvars vcs | Sim_dumpall vcs | Sim_dumpon vcs | Sim_dumpoff vcs ->
+        List.iter vcs ~f:process_value_change
+      | Sim_value_change vc -> process_value_change vc);
+  (* Every value has been read, so the string tables are complete: give string waves their
+     [Index] formats. *)
   Queue.to_array waves
+  |> Array.map
+       ~f:(fun (wave : Wave_data_in_mutable_events_four_state.t Wave_data.Wave.t) ->
+         match
+           Hashtbl.find
+             intern_by_unique_id
+             (Wave_data_in_mutable_events_four_state.unique_id wave.wave_data)
+         with
+         | None -> wave
+         | Some intern -> { wave with wave_format = String_intern.wave_format intern })
 ;;

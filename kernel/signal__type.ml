@@ -275,7 +275,7 @@ module Inst = struct
       ; output_width : int
       ; output_low_index : int
       }
-    [@@deriving bin_io, sexp_of, equal]
+    [@@deriving bin_io, sexp_of, equal ~localize]
   end
 
   module Vhdl_instance = struct
@@ -1255,6 +1255,25 @@ let map_dependant t ~f =
   | Mem_read_port mem_read -> Mem_read_port (Mem_read_port.map mem_read ~f)
   | Inst inst -> Inst (Inst.map inst ~f)
   | Wire wire -> Wire (Wire.map wire ~f)
+;;
+
+let valid_output_exn output_signal =
+  match output_signal with
+  | Wire _ ->
+    (match Deps.to_list output_signal with
+     | [] | [ Empty ] ->
+       raise_s [%message "circuit output signal is not driven" (output_signal : t)]
+     | _ ->
+       (match names output_signal with
+        | [ _ ] -> ()
+        | [] ->
+          raise_s
+            [%message "circuit output signal must have a port name" (output_signal : t)]
+        | _ ->
+          raise_s
+            [%message
+              "circuit output signal should only have one port name" (output_signal : t)]))
+  | _ -> raise_s [%message "circuit output signal must be a wire" (output_signal : t)]
 ;;
 
 module Signal_compared_by_uid = struct

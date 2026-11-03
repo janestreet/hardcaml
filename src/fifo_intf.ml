@@ -20,8 +20,13 @@ module T = struct
   [@@deriving hardcaml]
 
   (* [app] is used to lift the various fifo creation functions into a clocked domain. *)
-  let app create ~clock ~clear ~wr ~d ~rd ~f =
-    create ~clock:(f clock) ~clear:(f clear) ~wr:(f wr) ~d:(f d) ~rd:(f rd)
+  let app create ~clocking ~wr ~d ~rd ~f =
+    create
+      ~clocking:
+        { Clocking.clock = f clocking.Clocking.clock; clear = f clocking.Clocking.clear }
+      ~wr:(f wr)
+      ~d:(f d)
+      ~rd:(f rd)
   ;;
 
   (** A type for specifying the RAM primitive to be used internally by the FIFO. *)
@@ -52,8 +57,7 @@ module T = struct
   type 'signal create_fifo =
     (unit
      -> capacity:int
-     -> clock:'signal
-     -> clear:'signal
+     -> clocking:'signal Clocking.t
      -> wr:'signal
      -> d:'signal
      -> rd:'signal
@@ -97,7 +101,8 @@ module type Fifo = sig
 
   (** {4 Base RTL FIFO} *)
 
-  (** [create ~clock ~clear ~wr ~d ~rd capacity] builds a FIFO with [capacity] elements
+  (** [create ~clocking ~wr ~d ~rd capacity] builds a FIFO with [capacity] elements
+
       which is written with [d] when [wr] is high and read when [rd] is high.
 
       Optional overflow and underflow checking may be used. Data will not be
@@ -151,7 +156,14 @@ module type Fifo = sig
       output data is registered. Has 3 cycles of latency, but is slightly faster than
       [create ~showahead:true] - it seems to only be limited by the underlying RAM
       frequency. *)
-  val create_showahead_with_extra_reg : Signal.t create_fifo
+  val create_showahead_with_extra_reg
+    :  clear_output_data_registers:bool
+         (** Whether the output data registers are cleared. *)
+    -> ram_output_register:bool
+         (** Always register the RAM output, so Vivado infers the BRAM output register
+             (better for timing on the read path). Costs one extra cycle of write-to-read
+             latency (4 cycles from write to empty low). Throughput unchanged. *)
+    -> Signal.t create_fifo
 
   type 'a showahead_with_extra_reg =
     { fifo : 'a t
@@ -160,15 +172,16 @@ module type Fifo = sig
 
   (** A generic wrapper that takes any [Fifo.t] interface and wraps it as described above. *)
   val create_showahead_with_extra_reg_wrapper
-    :  ?nearly_empty:int
+    :  clear_output_data_registers:bool
+    -> ram_output_register:bool
+    -> ?nearly_empty:int
     -> ?nearly_full:int
     -> scope:Scope.t
     -> Signal.t t
     -> overflow_check:bool
     -> underflow_check:bool
     -> capacity:int
-    -> clock:Signal.t
-    -> clear:Signal.t
+    -> clocking:Signal.t Clocking.t
     -> wr:Signal.t
     -> rd:Signal.t
     -> Signal.t showahead_with_extra_reg
@@ -181,48 +194,13 @@ module type Fifo = sig
       much larger FIFOs. *)
   val create_showahead_with_read_latency : read_latency:int -> Signal.t create_fifo
 
-  (** Clocked versions of the different FIFO architectures. The runtime domain of the
-      clock signal should match all other input signals. The outputs will also be put into
-      that domain.
-
-      Functionally they are identical to the unclocked versions. *)
-  module Clocked : sig
-    val create
-      :  ?read_latency:int
-      -> ?showahead:bool (** default is [false] *)
-      -> Clocked_signal.t create_fifo
-
-    val create_classic_with_extra_reg : Clocked_signal.t create_fifo
-    val create_showahead_from_classic : Clocked_signal.t create_fifo
-    val create_showahead_with_extra_reg : Clocked_signal.t create_fifo
-
-    val create_showahead_with_extra_reg_wrapper
-      :  ?nearly_empty:int
-      -> ?nearly_full:int
-      -> scope:Scope.t
-      -> Clocked_signal.t t
-      -> overflow_check:bool
-      -> underflow_check:bool
-      -> capacity:int
-      -> clock:Clocked_signal.t
-      -> clear:Clocked_signal.t
-      -> wr:Clocked_signal.t
-      -> rd:Clocked_signal.t
-      -> Clocked_signal.t showahead_with_extra_reg
-
-    val create_showahead_with_read_latency
-      :  read_latency:int
-      -> Clocked_signal.t create_fifo
-  end
-
   module type Config = Config
 
   (** Create FIFO using interfaces. *)
   module With_interface (Config : Config) : sig
     module I : sig
       type 'a t =
-        { clock : 'a
-        ; clear : 'a
+        { clocking : 'a Clocking.t
         ; wr : 'a
         ; d : 'a
         ; rd : 'a

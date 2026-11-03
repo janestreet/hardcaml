@@ -1,21 +1,19 @@
-open Hardcaml_kernel
-
 (** {1 Design} *)
 
-module Always = Always
+module Always = Hardcaml_kernel.Always
 module Assertions = Assertions
-module Caller_id = Caller_id
-module Call_stack = Call_stack
-module Comb = Comb
-module Constant = Constant
-module Interface = Interface
+module Caller_id = Hardcaml_kernel.Caller_id
+module Call_stack = Hardcaml_kernel.Call_stack
+module Comb = Hardcaml_kernel.Comb
+module Constant = Hardcaml_kernel.Constant
+module Interface = Hardcaml_kernel.Interface
 module Instantiation = Instantiation
-module Parameter = Parameter
-module Parameter_name = Parameter_name
+module Parameter = Hardcaml_kernel.Parameter
+module Parameter_name = Hardcaml_kernel.Parameter_name
 module Property = Property
 module Property_manager = Property_manager
 module Scope = Scope
-module Signal = Signal
+module Signal = Hardcaml_kernel.Signal
 module Structural = Structural
 
 (** {1 Circuits} *)
@@ -28,20 +26,21 @@ module Mangler = Mangler
 
 (** {1 Simulation and modelling} *)
 
-module Bits = Bits
-module Bits_list = Bits_list
+module Bits = Hardcaml_kernel.Bits
+module Bits_list = Hardcaml_kernel.Bits_list
 module Combinational_op = Combinational_op
 module Combinational_ops_database = Combinational_ops_database
-module Coverage_prim = Coverage_prim
+module Coverage_prim = Hardcaml_kernel.Coverage_prim
 module Cyclesim = Cyclesim
 module Cyclesim_clock_domain = Cyclesim_clock_domain
 module Cyclesim_coverage_expect_test = Cyclesim_coverage.For_expect_tests
 module Cyclesim_float_ops = Cyclesim_float_ops
-module Logic = Logic
+module Four_state_logic = Four_state_logic
+module Logic = Hardcaml_kernel.Logic
 module Vcd = Vcd
 module Wave_data = Wave_data
-module Wave_data_in_cycles = Wave_data_in_cycles
-module Wave_data_in_events = Wave_data_in_events
+module Wave_data_in_mutable_events = Wave_data_in_mutable_events
+module Wave_data_in_mutable_events_four_state = Wave_data_in_mutable_events_four_state
 module Wave_format = Wave_format
 
 (** {1 Rtl generation} *)
@@ -55,7 +54,7 @@ module Rtl = struct
   module Config = Rtl_config
 end
 
-module Rtl_attribute = Rtl_attribute
+module Rtl_attribute = Hardcaml_kernel.Rtl_attribute
 module Reserved_words = Reserved_words
 
 (** {1 Transformations and passes} *)
@@ -70,17 +69,17 @@ module Architecture = Architecture
 module Before_and_after_edge = Before_and_after_edge
 module Binable_circuit = Binable_circuit
 module Build_mode = Build_mode
-module Clocking = Clocking
-module Edge = Edge
-module Enum = Enum
+module Clocking = Hardcaml_kernel.Clocking
+module Edge = Hardcaml_kernel.Edge
+module Enum = Hardcaml_kernel.Enum
 module Flags_vector = Flags_vector
-module Level = Level
-module Name_and_loc = Name_and_loc
+module Level = Hardcaml_kernel.Level
+module Name_and_loc = Hardcaml_kernel.Name_and_loc
 module Read_port = Read_write_port.Read_port
 module Side = Side
-module Signedness = Signedness
-module Types = Types
-module With_valid = With_valid
+module Signedness = Hardcaml_kernel.Signedness
+module Types = Hardcaml_kernel.Types
+module With_valid = Hardcaml_kernel.With_valid
 module Write_port = Read_write_port.Write_port
 
 (** {1 Core circuits} *)
@@ -88,12 +87,6 @@ module Write_port = Read_write_port.Write_port
 module Async_fifo = Async_fifo
 module Fifo = Fifo
 module Ram = Ram
-
-(** {1 Circuit design with clock domain checking} *)
-
-module Clock_domain = Clock_domain
-module Clocked_design = Clocked_design
-module Clocked_signal = Clocked_signal
 
 (**/**)
 

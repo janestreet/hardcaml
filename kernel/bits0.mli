@@ -53,7 +53,7 @@ val unsafe_get_byte : t -> int -> char
 
 (** Get the n-th 64-bit word of the constant. [unsafe_get_int64 t pos] accesses the data
     at the [pos * 8]-th byte of t. *)
-val unsafe_get_int64 : local_ t -> int -> int64
+val unsafe_get_int64 : t @ local -> int -> int64
 
 (** Similar to [unsafe_get_int64], but for writing instead of reading. *)
 val unsafe_set_int64 : t -> int -> int64 -> unit

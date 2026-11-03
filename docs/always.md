@@ -58,7 +58,7 @@ Both kinds of variable will return the same type, namely an `Always.Variable.t`
 ```ocaml
 # let foo = Always.Variable.wire ~default:Signal.gnd () ;;
 val foo : Always.Variable.t =
-  {Hardcaml.Always.Variable.value = (wire (width 1)); internal = <abstr>}
+  {Always.Variable.value = (wire (width 1)); internal = <abstr>}
 ```
 
 Variables may be assigned within an Always block. To read the value

@@ -35,6 +35,55 @@ let%expect_test "bits and signals" =
     |}]
 ;;
 
+let%expect_test "interface comb selection and concatenation functions" =
+  let select = Bits.of_int_trunc ~width:1 1 in
+  let zero = I.Of_bits.zero () in
+  let one = I.Of_bits.of_unsigned_int 1 in
+  let two = I.Of_bits.of_unsigned_int 2 in
+  print_s [%sexp (I.Of_bits.mux_strict select [ zero; one ] : Bits.t I.t)];
+  [%expect
+    {|
+    ((x 0001)
+     (y 00000001))
+    |}];
+  print_s [%sexp (I.Of_bits.mux_init select 2 ~f:I.Of_bits.of_unsigned_int : Bits.t I.t)];
+  [%expect
+    {|
+    ((x 0001)
+     (y 00000001))
+    |}];
+  print_s [%sexp (I.Of_bits.cases ~default:zero select [ select, two ] : Bits.t I.t)];
+  [%expect
+    {|
+    ((x 0010)
+     (y 00000010))
+    |}];
+  require_does_raise (fun () ->
+    ignore
+      (I.Of_signal.mux_strict
+         Signal.gnd
+         [ I.Of_signal.zero (); I.Of_signal.of_int_trunc 1; I.Of_signal.of_int_trunc 2 ]
+       : Signal.t I.t));
+  [%expect
+    {|
+    ("[mux] select does not exactly index the number of data elements"
+     (width_of_sel            1)
+     (number_of_data_elements 3))
+    |}];
+  require_does_raise (fun () ->
+    ignore
+      (I.Of_signal.mux_strict
+         (Signal.of_string "2'b00")
+         [ I.Of_signal.zero (); I.Of_signal.of_int_trunc 1 ]
+       : Signal.t I.t));
+  [%expect
+    {|
+    ("[mux] select does not exactly index the number of data elements"
+     (width_of_sel            2)
+     (number_of_data_elements 2))
+    |}]
+;;
+
 let%expect_test "[port_names], [port_widths], [widths]" =
   print_s [%sexp (I.port_names : string I.t)];
   [%expect

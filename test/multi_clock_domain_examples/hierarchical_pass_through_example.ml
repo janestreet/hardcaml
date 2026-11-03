@@ -70,14 +70,14 @@ module Harness = Hardcaml_test_harness.Step_harness.Imperative.Make (Dut.I) (Dut
 module Step = Harness.Step
 module Display_rule = Hardcaml_waveterm.Display_rule
 
-let test ?(wave_width = 0) ~fast_period () =
+let test ?(wave_scale = 1) ~fast_period () =
   let slow_period = 2 * fast_period in
   Harness.run_advanced
     ~trace:`All_named
     ~print_waves_after_test:
       (Hardcaml_waveterm.Waveform.print
          ~display_width:100
-         ~wave_width
+         ~wave_scale
          ~display_rules:
            [ Display_rule.port_name_is ~wave_format:Bit "clock_fast"
            ; Display_rule.port_name_matches ~wave_format:(Bit_or Hex) (Perl "^fast.*incr")
@@ -187,7 +187,7 @@ let%expect_test "period 2 and 4" =
 ;;
 
 let%expect_test "period 3 and 6" =
-  test ~fast_period:3 ~wave_width:(-1) ();
+  test ~fast_period:3 ~wave_scale:0 ();
   [%expect
     {|
     ┌Signals───────────┐┌Waves─────────────────────────────────────────────────────────────────────────┐

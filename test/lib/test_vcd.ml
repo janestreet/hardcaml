@@ -705,6 +705,51 @@ let%expect_test "parse vcd with empty dump blocks" =
     |}]
 ;;
 
+let%expect_test "parse vcd with special characters" =
+  let vcd =
+    {|
+    $scope module top $end
+    $var wire 1 ! :jasper_formal_reset $end
+    $var wire 8 " signal_mux_12[7:0] $end
+    $var wire 1 # clocking$clear $end
+    $enddefinitions $end
+    |}
+  in
+  print_s [%message (Hardcaml_vcd.from_string vcd : Hardcaml_vcd.t)];
+  [%expect
+    {|
+    ("Hardcaml_vcd.from_string vcd" (
+      (declarations (
+        (Scope Module top)
+        (Var (
+          (var_type Wire)
+          (var_size 1)
+          (var_id   !)
+          (var_ref (
+            (ref_name :jasper_formal_reset)
+            (lindex   -1)
+            (rindex   -1)))))
+        (Var (
+          (var_type Wire)
+          (var_size 8)
+          (var_id   "\"")
+          (var_ref (
+            (ref_name signal_mux_12[7:0])
+            (lindex   -1)
+            (rindex   -1)))))
+        (Var (
+          (var_type Wire)
+          (var_size 1)
+          (var_id   #)
+          (var_ref (
+            (ref_name clocking$clear)
+            (lindex   -1)
+            (rindex   -1)))))
+        Enddefinitions))
+      (simulation_commands ())))
+    |}]
+;;
+
 let%expect_test "parse vcd" =
   print_s [%message (Hardcaml_vcd.from_string vcd : Hardcaml_vcd.t)];
   [%expect
@@ -747,9 +792,9 @@ let%expect_test "parse vcd" =
           (var_size 32)
           (var_id   "(k")
           (var_ref (
-            (ref_name accumulator)
-            (lindex   31)
-            (rindex   0)))))
+            (ref_name accumulator[31:0])
+            (lindex   -1)
+            (rindex   -1)))))
         (Var (
           (var_type Integer)
           (var_size 32)
@@ -815,21 +860,17 @@ let%expect_test "parse vcd" =
     |}]
 ;;
 
-(* Tests for [Vcd.write_event_based]. *)
+(* Tests for [Vcd.write_mutable_event_based]. *)
 
-(* Build an event-based wave with the given (time, value) pairs.
+(* Build a mutable-event wave with the given (time, value) pairs.
 
    Values are interpreted as unsigned ints and converted to [Bits.t] of the requested
    width. *)
 let make_event_wave ~name ?(typ = Wave_data.Type.Internal) ?wave_format ~width events =
   let max_time = ref 0 in
-  let bits = Wave_data_in_events.Bits.create width max_time in
-  let store = Wave_data_in_events.Bits.event_store bits in
+  let bits = Wave_data_in_mutable_events.create width max_time in
   List.iter events ~f:(fun (time, value) ->
-    Wave_data_in_events.Bits.Event_store.insert
-      store
-      time
-      (Bits.of_int_trunc ~width value);
+    Wave_data_in_mutable_events.insert bits time (Bits.of_int_trunc ~width value);
     if time > !max_time then max_time := time);
   { Wave_data.Wave.name
   ; width
@@ -838,12 +879,11 @@ let make_event_wave ~name ?(typ = Wave_data.Type.Internal) ?wave_format ~width e
       (match wave_format with
        | Some f -> f
        | None -> Wave_format.Binary)
-  ; is_pseudo_clock = false
   ; wave_data = bits
   }
 ;;
 
-let%expect_test "write_event_based: simple multi-wave example" =
+let%expect_test "write_mutable_event_based: simple multi-wave example" =
   let waves =
     [| make_event_wave ~name:"clk" ~typ:Input ~width:1 [ 0, 0; 5, 1; 10, 0; 15, 1; 20, 0 ]
      ; make_event_wave ~name:"in_a" ~typ:Input ~width:8 [ 0, 0; 10, 0xab; 20, 0x42 ]
@@ -851,7 +891,7 @@ let%expect_test "write_event_based: simple multi-wave example" =
      ; make_event_wave ~name:"state" ~typ:Internal ~width:2 [ 0, 0; 10, 1; 20, 2 ]
     |]
   in
-  Vcd.write_event_based Stdio.stdout waves;
+  Vcd.write_mutable_event_based Stdio.stdout waves;
   [%expect
     {|
     $date
@@ -904,8 +944,8 @@ let%expect_test "write_event_based: simple multi-wave example" =
     |}]
 ;;
 
-let%expect_test "write_event_based: empty input" =
-  Vcd.write_event_based Stdio.stdout [||];
+let%expect_test "write_mutable_event_based: empty input" =
+  Vcd.write_mutable_event_based Stdio.stdout [||];
   [%expect
     {|
     $date
@@ -924,13 +964,13 @@ let%expect_test "write_event_based: empty input" =
     |}]
 ;;
 
-let%expect_test "write_event_based: empty scopes are omitted" =
+let%expect_test "write_mutable_event_based: empty scopes are omitted" =
   let waves =
     [| make_event_wave ~name:"a" ~typ:Internal ~width:4 [ 0, 1; 3, 2 ]
      ; make_event_wave ~name:"b" ~typ:Internal ~width:4 [ 1, 5 ]
     |]
   in
-  Vcd.write_event_based Stdio.stdout waves;
+  Vcd.write_mutable_event_based Stdio.stdout waves;
   [%expect
     {|
     $date
@@ -961,14 +1001,16 @@ let%expect_test "write_event_based: empty scopes are omitted" =
     |}]
 ;;
 
-let%expect_test "write_event_based: simultaneous events share a single #time marker" =
+let%expect_test "write_mutable_event_based: simultaneous events share a single #time \
+                 marker"
+  =
   let waves =
     [| make_event_wave ~name:"a" ~typ:Input ~width:1 [ 0, 0; 10, 1 ]
      ; make_event_wave ~name:"b" ~typ:Input ~width:1 [ 0, 1; 10, 0 ]
      ; make_event_wave ~name:"c" ~typ:Output ~width:1 [ 0, 0; 10, 1 ]
     |]
   in
-  Vcd.write_event_based Stdio.stdout waves;
+  Vcd.write_mutable_event_based Stdio.stdout waves;
   [%expect
     {|
     $date
@@ -1005,13 +1047,13 @@ let%expect_test "write_event_based: simultaneous events share a single #time mar
     |}]
 ;;
 
-let%expect_test "write_event_based: hierarchical names are split on $" =
+let%expect_test "write_mutable_event_based: hierarchical names are split on $" =
   let waves =
     [| make_event_wave ~name:"top$mod_a$signal" ~typ:Internal ~width:1 [ 0, 0; 5, 1 ]
      ; make_event_wave ~name:"top$mod_b$signal" ~typ:Internal ~width:1 [ 0, 1; 5, 0 ]
     |]
   in
-  Vcd.write_event_based Stdio.stdout waves;
+  Vcd.write_mutable_event_based Stdio.stdout waves;
   [%expect
     {|
     $date
@@ -1048,7 +1090,7 @@ let%expect_test "write_event_based: hierarchical names are split on $" =
     |}]
 ;;
 
-let%expect_test "write_event_based: indexed wave format" =
+let%expect_test "write_mutable_event_based: indexed wave format" =
   let waves =
     [| make_event_wave
          ~name:"state"
@@ -1058,7 +1100,7 @@ let%expect_test "write_event_based: indexed wave format" =
          [ 0, 0; 5, 1; 10, 2 ]
     |]
   in
-  Vcd.write_event_based Stdio.stdout waves;
+  Vcd.write_mutable_event_based Stdio.stdout waves;
   [%expect
     {|
     $date
@@ -1087,355 +1129,10 @@ let%expect_test "write_event_based: indexed wave format" =
     |}]
 ;;
 
-(* Tests for [Vcd.write_cycle_based]. *)
+(* Tests for [Vcd.read_mutable_event_based_four_state], the one VCD reader. *)
 
-(* Build a cycle-based wave with the given list of integer values, one per cycle. *)
-let make_cycle_wave ~name ?(typ = Wave_data.Type.Internal) ?wave_format ~width values =
-  let arr = Array.of_list values in
-  let data =
-    Wave_data_in_cycles.init (Array.length arr) ~width ~f:(fun i ->
-      Bits.of_int_trunc ~width arr.(i))
-  in
-  { Wave_data.Wave.name
-  ; width
-  ; typ
-  ; wave_format =
-      (match wave_format with
-       | Some f -> f
-       | None -> Wave_format.Binary)
-  ; is_pseudo_clock = false
-  ; wave_data = data
-  }
-;;
-
-let%expect_test "write_cycle_based: simple multi-wave example" =
-  (* 4 cycles total: index 0 = post-reset, indices 1..3 = three normal cycles. *)
-  let waves =
-    [| make_cycle_wave ~name:"in_a" ~typ:Input ~width:8 [ 0; 0xab; 0xab; 0x42 ]
-     ; make_cycle_wave ~name:"out_x" ~typ:Output ~width:8 [ 0; 0; 0xab; 0xab ]
-     ; make_cycle_wave ~name:"state" ~typ:Internal ~width:2 [ 0; 1; 2; 0 ]
-    |]
-  in
-  Vcd.write_cycle_based Stdio.stdout waves;
-  [%expect
-    {|
-    $date
-      ...
-    $end
-    $version
-      hardcaml-cyclesim
-    $end
-    $comment
-      Hardware design in ocaml
-    $end
-    $timescale 1ns $end
-    $scope module inputs $end
-    $var wire 1 ! -clock $end
-    $var wire 1 " -reset $end
-    $var wire 8 # in_a $end
-    $upscope $end
-    $scope module outputs $end
-    $var wire 8 $ out_x $end
-    $upscope $end
-    $scope module various $end
-    $var wire 2 % state $end
-    $upscope $end
-    $enddefinitions $end
-    $dumpvars
-    x!
-    x"
-    bxxxxxxxx #
-    bxxxxxxxx $
-    bxx %
-    $end
-    #0
-    0!
-    1"
-    b00000000 #
-    b00000000 $
-    b00 %
-    #2
-    1!
-    0"
-    b10101011 #
-    b00000000 $
-    b01 %
-    #3
-    0!
-    #4
-    1!
-    0"
-    b10101011 $
-    b10 %
-    #5
-    0!
-    #6
-    1!
-    0"
-    b01000010 #
-    b00 %
-    #7
-    0!
-    |}]
-;;
-
-let%expect_test "write_cycle_based: filters waves named clock and reset" =
-  let waves =
-    [| make_cycle_wave ~name:"clock" ~typ:Input ~width:1 [ 0; 1; 0; 1 ]
-     ; make_cycle_wave ~name:"reset" ~typ:Input ~width:1 [ 1; 0; 0; 0 ]
-     ; make_cycle_wave ~name:"data" ~typ:Input ~width:4 [ 0; 1; 2; 3 ]
-    |]
-  in
-  Vcd.write_cycle_based Stdio.stdout waves;
-  [%expect
-    {|
-    $date
-      ...
-    $end
-    $version
-      hardcaml-cyclesim
-    $end
-    $comment
-      Hardware design in ocaml
-    $end
-    $timescale 1ns $end
-    $scope module inputs $end
-    $var wire 1 ! -clock $end
-    $var wire 1 " -reset $end
-    $var wire 4 # data $end
-    $upscope $end
-    $scope module outputs $end
-    $upscope $end
-    $scope module various $end
-    $upscope $end
-    $enddefinitions $end
-    $dumpvars
-    x!
-    x"
-    bxxxx #
-    $end
-    #0
-    0!
-    1"
-    b0000 #
-    #2
-    1!
-    0"
-    b0001 #
-    #3
-    0!
-    #4
-    1!
-    0"
-    b0010 #
-    #5
-    0!
-    #6
-    1!
-    0"
-    b0011 #
-    #7
-    0!
-    |}]
-;;
-
-let%expect_test "write_cycle_based: empty input" =
-  Vcd.write_cycle_based Stdio.stdout [||];
-  [%expect
-    {|
-    $date
-      ...
-    $end
-    $version
-      hardcaml-cyclesim
-    $end
-    $comment
-      Hardware design in ocaml
-    $end
-    $timescale 1ns $end
-    $scope module inputs $end
-    $var wire 1 ! -clock $end
-    $var wire 1 " -reset $end
-    $upscope $end
-    $scope module outputs $end
-    $upscope $end
-    $scope module various $end
-    $upscope $end
-    $enddefinitions $end
-    $dumpvars
-    x!
-    x"
-    $end
-    |}]
-;;
-
-let%expect_test "write_cycle_based: only reset cycle (length-1 wave)" =
-  let waves = [| make_cycle_wave ~name:"a" ~typ:Internal ~width:4 [ 7 ] |] in
-  Vcd.write_cycle_based Stdio.stdout waves;
-  [%expect
-    {|
-    $date
-      ...
-    $end
-    $version
-      hardcaml-cyclesim
-    $end
-    $comment
-      Hardware design in ocaml
-    $end
-    $timescale 1ns $end
-    $scope module inputs $end
-    $var wire 1 ! -clock $end
-    $var wire 1 " -reset $end
-    $upscope $end
-    $scope module outputs $end
-    $upscope $end
-    $scope module various $end
-    $var wire 4 # a $end
-    $upscope $end
-    $enddefinitions $end
-    $dumpvars
-    x!
-    x"
-    bxxxx #
-    $end
-    #0
-    0!
-    1"
-    b0111 #
-    |}]
-;;
-
-let%expect_test "write_cycle_based: only changed values are written after the first cycle"
-  =
-  let waves =
-    [| make_cycle_wave ~name:"a" ~typ:Internal ~width:4 [ 0; 1; 1; 1; 2 ]
-     ; make_cycle_wave ~name:"b" ~typ:Internal ~width:4 [ 0; 5; 5; 6; 6 ]
-    |]
-  in
-  Vcd.write_cycle_based Stdio.stdout waves;
-  [%expect
-    {|
-    $date
-      ...
-    $end
-    $version
-      hardcaml-cyclesim
-    $end
-    $comment
-      Hardware design in ocaml
-    $end
-    $timescale 1ns $end
-    $scope module inputs $end
-    $var wire 1 ! -clock $end
-    $var wire 1 " -reset $end
-    $upscope $end
-    $scope module outputs $end
-    $upscope $end
-    $scope module various $end
-    $var wire 4 # a $end
-    $var wire 4 $ b $end
-    $upscope $end
-    $enddefinitions $end
-    $dumpvars
-    x!
-    x"
-    bxxxx #
-    bxxxx $
-    $end
-    #0
-    0!
-    1"
-    b0000 #
-    b0000 $
-    #2
-    1!
-    0"
-    b0001 #
-    b0101 $
-    #3
-    0!
-    #4
-    1!
-    0"
-    #5
-    0!
-    #6
-    1!
-    0"
-    b0110 $
-    #7
-    0!
-    #8
-    1!
-    0"
-    b0010 #
-    #9
-    0!
-    |}]
-;;
-
-let%expect_test "write_cycle_based: indexed wave format" =
-  let waves =
-    [| make_cycle_wave
-         ~name:"state"
-         ~typ:Internal
-         ~width:2
-         ~wave_format:(Wave_format.Index [ "IDLE"; "RUN"; "DONE" ])
-         [ 0; 1; 2 ]
-    |]
-  in
-  Vcd.write_cycle_based Stdio.stdout waves;
-  [%expect
-    {|
-    $date
-      ...
-    $end
-    $version
-      hardcaml-cyclesim
-    $end
-    $comment
-      Hardware design in ocaml
-    $end
-    $timescale 1ns $end
-    $scope module inputs $end
-    $var wire 1 ! -clock $end
-    $var wire 1 " -reset $end
-    $upscope $end
-    $scope module outputs $end
-    $upscope $end
-    $scope module various $end
-    $var wire 32 # state $end
-    $upscope $end
-    $enddefinitions $end
-    $dumpvars
-    x!
-    x"
-    bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx #
-    $end
-    #0
-    0!
-    1"
-    b01001001010001000100110001000101 #
-    #2
-    1!
-    0"
-    b00000000010100100101010101001110 #
-    #3
-    0!
-    #4
-    1!
-    0"
-    b01000100010011110100111001000101 #
-    #5
-    0!
-    |}]
-;;
-
-(* Tests for [Vcd.read_event_based]. *)
-
-(* Write [waves] to a temporary VCD file with [write_fn], then parse it back through
-   [Vcd.read_event_based] and return the result. *)
+(* Write [waves] to a temporary VCD file with [write_fn], then parse it back and return
+   the result. Reading a VCD always produces 4-state wave data, whatever was written. *)
 let round_trip_via_temp_file ~write_fn waves =
   let filename = Stdlib.Filename.temp_file "hardcaml_vcd_test" ".vcd" in
   Exn.protect
@@ -1443,19 +1140,27 @@ let round_trip_via_temp_file ~write_fn waves =
       let chan = Stdio.Out_channel.create filename in
       write_fn chan waves;
       Stdio.Out_channel.close chan;
-      Vcd.read_event_based (Hardcaml_vcd.from_file filename))
+      Vcd.read_mutable_event_based_four_state (Hardcaml_vcd.from_file filename))
     ~finally:(fun () -> Stdlib.Sys.remove filename)
 ;;
 
-(* Print all events in a wave for ease of inspection in expect tests. *)
-let print_wave (wave : Wave_data_in_events.Bits.t Wave_data.Wave.t) =
-  let store = Wave_data_in_events.Bits.event_store wave.wave_data in
-  let n = Wave_data_in_events.Bits.Event_store.length store in
+(* Print all events in a wave for ease of inspection in expect tests. Values are shown in
+   "01XZ" notation. *)
+let print_wave (wave : Wave_data_in_mutable_events_four_state.t Wave_data.Wave.t) =
   let events =
-    List.init n ~f:(fun i ->
-      let t = Wave_data_in_events.Bits.Event_store.get_time_at_index store i in
-      let bits = Wave_data_in_events.Bits.Event_store.get_data_at_index store i in
-      t, Bits.to_bstr bits)
+    List.init
+      (Wave_data_in_mutable_events_four_state.num_events wave.wave_data)
+      ~f:(fun i ->
+        let t =
+          Wave_data_in_mutable_events_four_state.get_time_at_index wave.wave_data i
+        in
+        let bits =
+          Wave_data_in_mutable_events_four_state.get_data_at_index wave.wave_data i
+        in
+        let mask =
+          Wave_data_in_mutable_events_four_state.get_mask_at_index wave.wave_data i
+        in
+        t, Four_state_logic.create_exn ~bits ~mask |> Four_state_logic.to_string)
   in
   print_s
     [%message
@@ -1467,7 +1172,42 @@ let print_wave (wave : Wave_data_in_events.Bits.t Wave_data.Wave.t) =
         (events : (int * string) list)]
 ;;
 
-let%expect_test "read_event_based: round-trip event-based VCD" =
+let%expect_test "read: all waves use final VCD time as length" =
+  let vcd_string =
+    {|$timescale 1ns $end
+$scope module various $end
+$var wire 1 ! a $end
+$var wire 1 " b $end
+$upscope $end
+$enddefinitions $end
+#0
+0!
+0"
+#3
+1!
+#10
+1"
+#20
+|}
+  in
+  let waves =
+    Vcd.read_mutable_event_based_four_state (Hardcaml_vcd.from_string vcd_string)
+  in
+  Array.iter waves ~f:(fun wave ->
+    print_s
+      [%message
+        (wave.name : string)
+          ~length:(Wave_data_in_mutable_events_four_state.length wave.wave_data : int)]);
+  [%expect
+    {|
+    ((wave.name a)
+     (length    21))
+    ((wave.name b)
+     (length    21))
+    |}]
+;;
+
+let%expect_test "read: round-trip event-based VCD" =
   let waves =
     [| make_event_wave ~name:"clk" ~typ:Input ~width:1 [ 0, 0; 5, 1; 10, 0; 15, 1; 20, 0 ]
      ; make_event_wave ~name:"in_a" ~typ:Input ~width:8 [ 0, 0; 10, 0xab; 20, 0x42 ]
@@ -1475,7 +1215,7 @@ let%expect_test "read_event_based: round-trip event-based VCD" =
      ; make_event_wave ~name:"state" ~typ:Internal ~width:2 [ 0, 0; 10, 1; 20, 2 ]
     |]
   in
-  let waves' = round_trip_via_temp_file ~write_fn:Vcd.write_event_based waves in
+  let waves' = round_trip_via_temp_file ~write_fn:Vcd.write_mutable_event_based waves in
   Array.iter waves' ~f:print_wave;
   [%expect
     {|
@@ -1502,6 +1242,7 @@ let%expect_test "read_event_based: round-trip event-based VCD" =
      (typ   Output)
      (wave_format (Bit_or Hex))
      (events (
+       (0  XXXXXXXX)
        (5  00000000)
        (15 10101011)
        (25 01000010))))
@@ -1516,13 +1257,13 @@ let%expect_test "read_event_based: round-trip event-based VCD" =
     |}]
 ;;
 
-let%expect_test "read_event_based: hierarchical names round-trip via $" =
+let%expect_test "read: hierarchical names round-trip via $" =
   let waves =
     [| make_event_wave ~name:"top$mod_a$signal" ~typ:Internal ~width:1 [ 0, 0; 5, 1 ]
      ; make_event_wave ~name:"top$mod_b$signal" ~typ:Internal ~width:1 [ 0, 1; 5, 0 ]
     |]
   in
-  let waves' = round_trip_via_temp_file ~write_fn:Vcd.write_event_based waves in
+  let waves' = round_trip_via_temp_file ~write_fn:Vcd.write_mutable_event_based waves in
   Array.iter waves' ~f:print_wave;
   [%expect
     {|
@@ -1543,13 +1284,13 @@ let%expect_test "read_event_based: hierarchical names round-trip via $" =
     |}]
 ;;
 
-let%expect_test "read_event_based: -inputs / -outputs scope rename is reversed" =
+let%expect_test "read: -inputs / -outputs scope rename is reversed" =
   let waves =
     [| make_event_wave ~name:"i$x" ~typ:Internal ~width:4 [ 0, 0; 5, 0xa ]
      ; make_event_wave ~name:"o$y" ~typ:Internal ~width:4 [ 0, 0; 5, 0xb ]
     |]
   in
-  let waves' = round_trip_via_temp_file ~write_fn:Vcd.write_event_based waves in
+  let waves' = round_trip_via_temp_file ~write_fn:Vcd.write_mutable_event_based waves in
   Array.iter waves' ~f:print_wave;
   [%expect
     {|
@@ -1570,64 +1311,13 @@ let%expect_test "read_event_based: -inputs / -outputs scope rename is reversed" 
     |}]
 ;;
 
-let%expect_test "read_event_based: round-trip cycle-based VCD as events" =
-  let waves =
-    [| make_cycle_wave ~name:"a" ~typ:Input ~width:4 [ 0; 1; 1; 2 ]
-     ; make_cycle_wave ~name:"b" ~typ:Output ~width:4 [ 0; 0; 3; 4 ]
-    |]
-  in
-  let waves' = round_trip_via_temp_file ~write_fn:Vcd.write_cycle_based waves in
-  Array.iter waves' ~f:print_wave;
-  [%expect
-    {|
-    ((name  -clock)
-     (width 1)
-     (typ   Input)
-     (wave_format (Bit_or Hex))
-     (events (
-       (0 0)
-       (2 1)
-       (3 0)
-       (4 1)
-       (5 0)
-       (6 1)
-       (7 0))))
-    ((name  -reset)
-     (width 1)
-     (typ   Input)
-     (wave_format (Bit_or Hex))
-     (events (
-       (0 1)
-       (2 0)
-       (4 0)
-       (6 0))))
-    ((name  a)
-     (width 4)
-     (typ   Input)
-     (wave_format (Bit_or Hex))
-     (events (
-       (0 0000)
-       (2 0001)
-       (6 0010))))
-    ((name  b)
-     (width 4)
-     (typ   Output)
-     (wave_format (Bit_or Hex))
-     (events (
-       (0 0000)
-       (2 0000)
-       (4 0011)
-       (6 0100))))
-    |}]
-;;
-
-let%expect_test "read_event_based: empty inputs / outputs / various scopes round-trip" =
+let%expect_test "read: empty inputs / outputs / various scopes round-trip" =
   (* Only [Internal] waves; [inputs] / [outputs] scopes are omitted by the writer, so the
      reader has to handle their absence. *)
   let waves =
     [| make_event_wave ~name:"only_internal" ~typ:Internal ~width:1 [ 0, 0; 5, 1 ] |]
   in
-  let waves' = round_trip_via_temp_file ~write_fn:Vcd.write_event_based waves in
+  let waves' = round_trip_via_temp_file ~write_fn:Vcd.write_mutable_event_based waves in
   Array.iter waves' ~f:print_wave;
   [%expect
     {|
@@ -1641,54 +1331,43 @@ let%expect_test "read_event_based: empty inputs / outputs / various scopes round
     |}]
 ;;
 
-let%expect_test "read_event_based: empty VCD" =
-  let waves = round_trip_via_temp_file ~write_fn:Vcd.write_event_based [||] in
+let%expect_test "read: empty VCD" =
+  let waves = round_trip_via_temp_file ~write_fn:Vcd.write_mutable_event_based [||] in
   print_s [%message (Array.length waves : int)];
   [%expect {| ("Array.length waves" 0) |}]
 ;;
 
-let%expect_test "read_event_based: X bits in $dumpvars are skipped" =
-  (* Hardcaml's [write_event_based] writes an all-X [$dumpvars] block at the start. We
-     should be able to round-trip such VCDs without error - the X entries are dropped, and
-     only events at real timestamps survive. *)
-  let waves = [| make_event_wave ~name:"sig" ~typ:Internal ~width:4 [ 0, 5; 5, 6 ] |] in
-  let waves' = round_trip_via_temp_file ~write_fn:Vcd.write_event_based waves in
+let%expect_test "read: signals are X until their first driven value" =
+  (* Hardcaml's writers emit an all-X [$dumpvars] block before the first [#time], so a
+     signal whose first event is after time 0 reads back as X up to that point. [early],
+     which is driven at time 0, has its X overwritten. *)
+  let waves =
+    [| make_event_wave ~name:"early" ~typ:Internal ~width:4 [ 0, 5; 5, 6 ]
+     ; make_event_wave ~name:"late" ~typ:Internal ~width:4 [ 5, 6 ]
+    |]
+  in
+  let waves' = round_trip_via_temp_file ~write_fn:Vcd.write_mutable_event_based waves in
   Array.iter waves' ~f:print_wave;
   [%expect
     {|
-    ((name  sig)
+    ((name  early)
      (width 4)
      (typ   Internal)
      (wave_format (Bit_or Hex))
      (events (
        (0 0101)
        (5 0110))))
+    ((name  late)
+     (width 4)
+     (typ   Internal)
+     (wave_format (Bit_or Hex))
+     (events (
+       (0 XXXX)
+       (5 0110))))
     |}]
 ;;
 
-let%expect_test "read_event_based: X bits in mid-simulation value changes raise" =
-  let vcd_string =
-    {|$timescale 1ns $end
-$scope module various $end
-$var wire 1 ! sig $end
-$upscope $end
-$enddefinitions $end
-#0
-0!
-#5
-x!
-|}
-  in
-  require_does_raise (fun () ->
-    Vcd.read_event_based (Hardcaml_vcd.from_string vcd_string));
-  [%expect
-    {|
-    ("[Vcd.read_event_based]: cannot represent VCD X/Z bit in a [Bits.t] value"
-     (bit Vx))
-    |}]
-;;
-
-let%expect_test "read_event_based: $dumpoff regions raise" =
+let%expect_test "read: $dumpoff regions record the values they list" =
   let vcd_string =
     {|$timescale 1ns $end
 $scope module various $end
@@ -1703,35 +1382,325 @@ x!
 $end
 |}
   in
-  require_does_raise (fun () ->
-    Vcd.read_event_based (Hardcaml_vcd.from_string vcd_string));
+  let waves =
+    Vcd.read_mutable_event_based_four_state (Hardcaml_vcd.from_string vcd_string)
+  in
+  Array.iter waves ~f:print_wave;
   [%expect
-    {| "[Vcd.read_event_based]: [$dumpoff] regions are not supported (X / Z values cannot be represented in [Bits.t])" |}]
+    {|
+    ((name  sig)
+     (width 1)
+     (typ   Internal)
+     (wave_format (Bit_or Hex))
+     (events (
+       (0 0)
+       (5 X))))
+    |}]
 ;;
 
-let%expect_test "read_event_based: real-valued signals raise" =
+let%expect_test "read: aliased identifiers share wave data" =
+  (* External simulators such as Xcelium dump a signal under every name it is visible as,
+     sharing one identifier between the [$var]s. *)
+  let vcd_string =
+    {|$timescale 1ns $end
+$scope module top $end
+$var wire 4 ! port $end
+$var wire 4 ! net $end
+$var wire 4 " other $end
+$upscope $end
+$enddefinitions $end
+#0
+b0101 !
+b0001 "
+#5
+b0110 !
+|}
+  in
+  let waves =
+    Vcd.read_mutable_event_based_four_state (Hardcaml_vcd.from_string vcd_string)
+  in
+  Array.iter waves ~f:print_wave;
+  print_s
+    [%message
+      ""
+        ~port_and_net_share_wave_data:
+          (phys_equal waves.(0).wave_data waves.(1).wave_data : bool)
+        ~port_and_other_share_wave_data:
+          (phys_equal waves.(0).wave_data waves.(2).wave_data : bool)];
+  [%expect
+    {|
+    ((name  top$port)
+     (width 4)
+     (typ   Internal)
+     (wave_format (Bit_or Hex))
+     (events (
+       (0 0101)
+       (5 0110))))
+    ((name  top$net)
+     (width 4)
+     (typ   Internal)
+     (wave_format (Bit_or Hex))
+     (events (
+       (0 0101)
+       (5 0110))))
+    ((name  top$other)
+     (width 4)
+     (typ   Internal)
+     (wave_format (Bit_or Hex))
+     (events ((0 0001))))
+    ((port_and_net_share_wave_data   true)
+     (port_and_other_share_wave_data false))
+    |}]
+;;
+
+let%expect_test "read: aliased identifiers with different widths raise" =
+  let vcd_string =
+    {|$timescale 1ns $end
+$scope module top $end
+$var wire 4 ! port $end
+$var wire 8 ! net $end
+$upscope $end
+$enddefinitions $end
+#0
+b0101 !
+|}
+  in
+  require_does_raise (fun () ->
+    Vcd.read_mutable_event_based_four_state (Hardcaml_vcd.from_string vcd_string));
+  [%expect
+    {|
+    ("[Vcd.read_mutable_event_based_four_state]: VCD identifier declared with inconsistent widths"
+     (var_id !)
+     (widths (4 8)))
+    |}]
+;;
+
+(* Print a real-valued wave, formatting each event's bits with the wave's [Custom] format. *)
+let print_formatted_wave
+  (wave : Wave_data_in_mutable_events_four_state.t Wave_data.Wave.t)
+  =
+  let format =
+    match wave.wave_format with
+    | Custom f -> f
+    | Index strings ->
+      fun bits ->
+        (match List.nth strings (Bits.to_int_trunc bits) with
+         | Some s -> s
+         | None -> Bits.to_string bits)
+    | _ -> fun bits -> Bits.to_string bits
+  in
+  let events =
+    List.init
+      (Wave_data_in_mutable_events_four_state.num_events wave.wave_data)
+      ~f:(fun i ->
+        ( Wave_data_in_mutable_events_four_state.get_time_at_index wave.wave_data i
+        , format
+            (Wave_data_in_mutable_events_four_state.get_data_at_index wave.wave_data i) ))
+  in
+  print_s
+    [%message
+      ""
+        ~name:(wave.name : string)
+        ~width:(wave.width : int)
+        (events : (int * string) list)]
+;;
+
+let%expect_test "read: real-valued signals are displayed" =
+  (* Real signals have no natural [Bits.t] encoding, so they are stored as the IEEE bits
+     of each double (whatever the declared [$var] size) and displayed with a [%g] format.
+     Simulators write reals in the full range of [%g] output: signs, bare or trailing
+     decimal points, and exponents. *)
   let vcd_string =
     {|$timescale 1ns $end
 $scope module various $end
-$var real 64 ! sig $end
+$var real 1 ! temperature $end
+$var real 64 " negative $end
+$var real 64 # exponent $end
+$var real 64 $ trailing_point $end
+$var wire 4 % bit_sig $end
 $upscope $end
 $enddefinitions $end
 #0
 r1.5 !
+r-1.5 "
+r1.5e-09 #
+r2. $
+b0101 %
+#5
+r-7.044325338467268e+20 !
 |}
   in
-  require_does_raise (fun () ->
-    Vcd.read_event_based (Hardcaml_vcd.from_string vcd_string));
+  let waves =
+    Vcd.read_mutable_event_based_four_state (Hardcaml_vcd.from_string vcd_string)
+  in
+  Array.iter waves ~f:(fun wave ->
+    match wave.wave_format with
+    | Custom _ -> print_formatted_wave wave
+    | _ -> print_wave wave);
   [%expect
     {|
-    ("[Vcd.read_event_based]: real-valued VCD signals are not supported"
-     (vc (Real_value 1.5 !)))
+    ((name  temperature)
+     (width 64)
+     (events (
+       (0 1.5)
+       (5 -7.04433e+20))))
+    ((name  negative)
+     (width 64)
+     (events ((0 -1.5))))
+    ((name  exponent)
+     (width 64)
+     (events ((0 1.5e-09))))
+    ((name  trailing_point)
+     (width 64)
+     (events ((0 2))))
+    ((name  bit_sig)
+     (width 4)
+     (typ   Internal)
+     (wave_format (Bit_or Hex))
+     (events ((0 0101))))
     |}]
 ;;
 
-let%expect_test "read_event_based: short vector values are zero-padded to width" =
-  (* The VCD spec lets short vectors be left-padded with the leading bit. We support the
-     V0-leading case; any leading X / Z would be unrepresentable and rejected separately. *)
+let%expect_test "read: string-valued signals are interned and displayed" =
+  (* VHDL simulators dump enum and string signals as [$var string] with [s...] values,
+     escaping awkward characters as [\nnn] octal. Each signal's strings are interned in
+     first-seen order, the wave stores indexes, and the completed table becomes the wave's
+     [Index] format. *)
+  let vcd_string =
+    {|$timescale 1ns $end
+$scope module various $end
+$var string 0 ! state $end
+$var string 0 " message $end
+$upscope $end
+$enddefinitions $end
+#0
+sidle !
+sEn\040l\345ng\040r\366d\040r\344v "
+#5
+srunning !
+s "
+#10
+sidle !
+|}
+  in
+  let waves =
+    Vcd.read_mutable_event_based_four_state (Hardcaml_vcd.from_string vcd_string)
+  in
+  Array.iter waves ~f:(fun wave ->
+    print_formatted_wave wave;
+    print_s [%sexp (wave.wave_format : Wave_format.t)]);
+  [%expect
+    {|
+    ((name  state)
+     (width 32)
+     (events (
+       (0  idle)
+       (5  running)
+       (10 idle))))
+    (Index (idle running))
+    ((name  message)
+     (width 32)
+     (events (
+       (0 "En l\229ng r\246d r\228v")
+       (5 ""))))
+    (Index ("En l\229ng r\246d r\228v" ""))
+    |}]
+;;
+
+let%expect_test "read: value changes of the wrong kind raise" =
+  (* One VCD per mismatch: a real value on a bit signal, a bit value on a real signal, and
+     a string value on a real signal (MyHDL dumps enum state names on [$var real] signals,
+     which we reject rather than guess at). *)
+  let read_string vcd_string =
+    require_does_raise (fun () ->
+      Vcd.read_mutable_event_based_four_state (Hardcaml_vcd.from_string vcd_string))
+  in
+  read_string
+    {|$timescale 1ns $end
+$scope module various $end
+$var wire 4 ! sig $end
+$upscope $end
+$enddefinitions $end
+#0
+r1.5 !
+|};
+  [%expect
+    {|
+    ("[Vcd.read_mutable_event_based_four_state]: value change does not match the signal's declared type"
+     (vc (Real_value 1.5 !))
+     (declared Bits))
+    |}];
+  read_string
+    {|$timescale 1ns $end
+$scope module various $end
+$var real 1 ! sig $end
+$upscope $end
+$enddefinitions $end
+#0
+b0101 !
+|};
+  [%expect
+    {|
+    ("[Vcd.read_mutable_event_based_four_state]: value change does not match the signal's declared type"
+     (vc (Vector_value (V0 V1 V0 V1) !))
+     (declared Real))
+    |}];
+  read_string
+    {|$timescale 1ns $end
+$scope module various $end
+$var real 1 ! state $end
+$upscope $end
+$enddefinitions $end
+#0
+scount !
+|};
+  [%expect
+    {|
+    ("[Vcd.read_mutable_event_based_four_state]: value change does not match the signal's declared type"
+     (vc (String_value count !))
+     (declared Real))
+    |}]
+;;
+
+let%expect_test "read: simulator quirks" =
+  (* A grab-bag of things real simulators write that stray from the VCD spec: an unknown
+     [$attrbegin] command (nvc), a non-power-of-ten timescale (gameroy), a scope name with
+     brackets (Xcelium), an SV [logic] var type, an escaped identifier containing brackets
+     (Vivado, amaranth), an unterminated [$dumpvars] (treadle), VHDL logic values (GHDL:
+     L/H are weak 0/1; U, W and - map to X), and a fractional timestamp, which is
+     truncated (migen). *)
+  let vcd_string =
+    {|$timescale 244 ns $end
+$attrbegin misc 03 foo 1 $end
+$scope module top[3] $end
+$var logic 4 ! \counter[0] [3:0] $end
+$upscope $end
+$enddefinitions $end
+$dumpvars
+b01HL !
+#2.5
+bUW-Z !
+|}
+  in
+  let waves =
+    Vcd.read_mutable_event_based_four_state (Hardcaml_vcd.from_string vcd_string)
+  in
+  Array.iter waves ~f:print_wave;
+  [%expect
+    {|
+    ((name  "top[3]$\\counter[0]")
+     (width 4)
+     (typ   Internal)
+     (wave_format (Bit_or Hex))
+     (events (
+       (0 0110)
+       (2 XXXZ))))
+    |}]
+;;
+
+let%expect_test "read: short vector values are zero-padded to width" =
+  (* The VCD spec lets short vectors be left-padded with the leading bit; see below for
+     the X / Z leading cases. *)
   let vcd_string =
     {|$timescale 1ns $end
 $scope module various $end
@@ -1742,7 +1711,9 @@ $enddefinitions $end
 b101 !
 |}
   in
-  let waves = Vcd.read_event_based (Hardcaml_vcd.from_string vcd_string) in
+  let waves =
+    Vcd.read_mutable_event_based_four_state (Hardcaml_vcd.from_string vcd_string)
+  in
   Array.iter waves ~f:print_wave;
   [%expect
     {|
@@ -1764,12 +1735,12 @@ let%expect_test "test roundtrips with waveterm" =
   let sim = create () in
   let waves, sim = Cyclesim.Waveform.create sim in
   run sim;
-  Hardcaml_waveterm_kernel.Waveform.print waves ~wave_width:1;
+  Hardcaml_waveterm_kernel.Waveform.print waves ~wave_scale:1;
   [%expect
     {|
     ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
-    │clock          ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐│
-    │               ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └│
+    │clock          ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐                │
+    │               ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─               │
     │clear          ││                                                   │
     │               ││────────────────────────────────────               │
     │               ││────┬───┬───┬───┬───┬───┬───┬───┬───               │
@@ -1788,36 +1759,218 @@ let%expect_test "test roundtrips with waveterm" =
     |}];
   let cycle_waves =
     match waves with
-    | By_cycle waves -> waves
-    | By_event _ -> failwith ""
+    | By_mutable_event waves -> waves
+    | By_mutable_event_four_state _ -> raise_s [%message "expected a 2-state waveform"]
   in
-  let vcdfile = to_tmp_file (fun chan -> Vcd.write_cycle_based chan cycle_waves) in
-  let waves = Vcd.read_event_based (Hardcaml_vcd.from_file vcdfile) in
-  (* There is a scaling difference here - cyclesim waveforms have a timestep of 1 per
-     cycle (so 0.5 per half cycle which we can't represent in vcd). The vcd is 2 per
-     cycle. *)
-  Hardcaml_waveterm_kernel.Waveform.print (By_event waves) ~wave_width:0;
+  let vcdfile =
+    to_tmp_file (fun chan -> Vcd.write_mutable_event_based chan cycle_waves)
+  in
+  let waves = Vcd.read_mutable_event_based_four_state (Hardcaml_vcd.from_file vcdfile) in
+  (* Reading a VCD always produces 4-state data. Every signal here is driven at time 0, so
+     demoting back to 2-state recovers exactly what was written. *)
+  Hardcaml_waveterm_kernel.Waveform.print
+    (Wave_data.to_two_state (By_mutable_event_four_state waves))
+    ~wave_scale:1;
   [%expect
     {|
     ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
+    │clock          ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐                │
+    │               ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─               │
     │clear          ││                                                   │
-    │               ││──────                                             │
-    │-clock         ││    ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐                │
-    │               ││────┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─               │
-    │-reset         ││────┐                                              │
-    │               ││    └─────────────────────────────                 │
-    │               ││────────────┬───────────┬─                         │
-    │a              ││ 00         │0A         │.                         │
-    │               ││────────────┴───────────┴─                         │
-    │               ││────┬───┬───┬───┬───┬───┬───┬───┬─                 │
-    │b              ││ 00 │0A │14 │00 │0A │14 │00 │0A │.                 │
-    │               ││────┴───┴───┴───┴───┴───┴───┴───┴─                 │
-    │               ││────────┬───┬───┬───┬───┬───┬───┬─                 │
-    │c              ││ 00     │0A │14 │0A │14 │1E │14 │.                 │
-    │               ││────────┴───┴───┴───┴───┴───┴───┴─                 │
-    │               ││────────────┬───┬───┬───┬───┬───┬─                 │
-    │d              ││ 00         │F6 │EC │0A │00 │F6 │.                 │
-    │               ││────────────┴───┴───┴───┴───┴───┴─                 │
+    │               ││────────────────────────────────────               │
+    │               ││────────────┬───────────┬───────────               │
+    │a              ││ 00         │0A         │14                        │
+    │               ││────────────┴───────────┴───────────               │
+    │               ││────┬───┬───┬───┬───┬───┬───┬───┬───               │
+    │b              ││ 00 │0A │14 │00 │0A │14 │00 │0A │14                │
+    │               ││────┴───┴───┴───┴───┴───┴───┴───┴───               │
+    │               ││────────┬───┬───┬───┬───┬───┬───┬───               │
+    │c              ││ 00     │0A │14 │0A │14 │1E │14 │1E                │
+    │               ││────────┴───┴───┴───┴───┴───┴───┴───               │
+    │               ││────────────┬───┬───┬───┬───┬───┬───               │
+    │d              ││ 00         │F6 │EC │0A │00 │F6 │14                │
+    │               ││────────────┴───┴───┴───┴───┴───┴───               │
     └───────────────┘└───────────────────────────────────────────────────┘
+    |}]
+;;
+
+(* Tests for the 4-state VCD writer, and reader tests that need 4-state input. *)
+
+module Events_four_state = Wave_data_in_mutable_events_four_state
+
+let make_four_state_wave ~name ?(typ = Wave_data.Type.Internal) ?wave_format ~width events
+  =
+  let max_time = ref 0 in
+  let wave_data = Events_four_state.create width max_time in
+  List.iter events ~f:(fun (time, string) ->
+    let value = Four_state_logic.of_string string in
+    Events_four_state.insert
+      wave_data
+      time
+      ~bits:(Four_state_logic.bits value)
+      ~mask:(Four_state_logic.mask value);
+    if time > !max_time then max_time := time);
+  { Wave_data.Wave.name
+  ; width
+  ; typ
+  ; wave_format = Option.value wave_format ~default:Wave_format.Binary
+  ; wave_data
+  }
+;;
+
+let%expect_test "write_mutable_event_based_four_state: X/Z values in 01XZ notation" =
+  let waves =
+    [| make_four_state_wave ~name:"a" ~width:4 [ 0, "XXXX"; 5, "01ZX"; 10, "0110" ]
+     ; make_four_state_wave ~name:"b" ~width:1 [ 0, "X"; 5, "Z"; 10, "1" ]
+    |]
+  in
+  Vcd.write_mutable_event_based_four_state Stdio.stdout waves;
+  [%expect
+    {|
+    $date
+      ...
+    $end
+    $version
+      hardcaml
+    $end
+    $comment
+      Hardware design in ocaml
+    $end
+    $timescale 1ns $end
+    $scope module various $end
+    $var wire 4 ! a $end
+    $var wire 1 " b $end
+    $upscope $end
+    $enddefinitions $end
+    $dumpvars
+    bxxxx !
+    x"
+    $end
+    #0
+    x"
+    bxxxx !
+    #5
+    b01zx !
+    z"
+    #10
+    1"
+    b0110 !
+    |}]
+;;
+
+let%expect_test "read: 4-state round trip" =
+  let waves =
+    [| make_four_state_wave ~name:"a" ~width:4 [ 0, "XXXX"; 5, "01ZX"; 10, "0110" ]
+     ; make_four_state_wave ~name:"b" ~width:1 [ 0, "X"; 5, "Z"; 10, "1" ]
+    |]
+  in
+  let filename = Stdlib.Filename.temp_file "hardcaml_vcd_test" ".vcd" in
+  Exn.protect
+    ~f:(fun () ->
+      let chan = Stdio.Out_channel.create filename in
+      Vcd.write_mutable_event_based_four_state chan waves;
+      Stdio.Out_channel.close chan;
+      let waves' =
+        Vcd.read_mutable_event_based_four_state (Hardcaml_vcd.from_file filename)
+      in
+      print_s [%sexp (waves' : Events_four_state.t Wave_data.Wave.t array)])
+    ~finally:(fun () -> Stdlib.Sys.remove filename);
+  [%expect
+    {|
+    (((name  a)
+      (width 4)
+      (typ   Internal)
+      (wave_format (Bit_or Hex))
+      (wave_data (
+        (time (0    5    10))
+        (data (XXXX 01ZX 0110))
+        (num_events 3)
+        (width      4)
+        (max_time   10))))
+     ((name  b)
+      (width 1)
+      (typ   Internal)
+      (wave_format (Bit_or Hex))
+      (wave_data (
+        (time (0 5 10))
+        (data (X Z 1))
+        (num_events 3)
+        (width      1)
+        (max_time   10)))))
+    |}]
+;;
+
+let%expect_test "read: dump-block initialization values are kept, and overwritten by a \
+                 value change at the same time"
+  =
+  let vcd_string =
+    {|$timescale 1ns $end
+$scope module various $end
+$var wire 4 ! sig $end
+$upscope $end
+$enddefinitions $end
+$dumpvars
+bxxxx !
+$end
+#0
+b0101 !
+#5
+bz10x !
+#7
+|}
+  in
+  let waves =
+    Vcd.read_mutable_event_based_four_state (Hardcaml_vcd.from_string vcd_string)
+  in
+  print_s [%sexp (waves : Events_four_state.t Wave_data.Wave.t array)];
+  [%expect
+    {|
+    ((
+      (name  sig)
+      (width 4)
+      (typ   Internal)
+      (wave_format (Bit_or Hex))
+      (wave_data (
+        (time (0    5))
+        (data (0101 Z10X))
+        (num_events 2)
+        (width      4)
+        (max_time   7)))))
+    |}]
+;;
+
+let%expect_test "read: short vector values left-extend with the leading bit for X/Z" =
+  let vcd_string =
+    {|$timescale 1ns $end
+$scope module various $end
+$var wire 4 ! sig $end
+$upscope $end
+$enddefinitions $end
+#0
+bx1 !
+#2
+bz0 !
+#4
+b10 !
+#5
+|}
+  in
+  let waves =
+    Vcd.read_mutable_event_based_four_state (Hardcaml_vcd.from_string vcd_string)
+  in
+  print_s [%sexp (waves : Events_four_state.t Wave_data.Wave.t array)];
+  [%expect
+    {|
+    ((
+      (name  sig)
+      (width 4)
+      (typ   Internal)
+      (wave_format (Bit_or Hex))
+      (wave_data (
+        (time (0    2    4))
+        (data (XXX1 ZZZ0 0010))
+        (num_events 3)
+        (width      4)
+        (max_time   5)))))
     |}]
 ;;

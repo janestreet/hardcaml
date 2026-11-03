@@ -3,6 +3,17 @@
 open Core0
 open Coverage_prim
 
+module Normalized_signal_uid : sig
+  type t = private Signal.Type.Uid.t
+  [@@deriving compare ~localize, hash, sexp_of, to_string]
+
+  include Comparator.S with type t := t
+
+  include%template Equal.S [@mode local] with type t := t
+
+  val compute_normalized_uids : Signal_graph.t -> (t * Signal.t) list
+end
+
 type 'a coverage =
   { observed : 'a list
   ; unexpectedly_observed : 'a list
@@ -19,7 +30,7 @@ module type S = sig
 
   val mark_choice : t -> choice -> unit
   val coverage : t -> coverage_unit coverage
-  val id : t -> Signal_graph.Normalized_signal_uid.t
+  val id : t -> Normalized_signal_uid.t
   val signal_names : t -> Name_and_loc.t list
   val call_stack : t -> Call_stack.t
 end
@@ -104,7 +115,7 @@ type t =
 
 include Coverage.S with type t := t
 
-val maybe_create : Signal_graph.Normalized_signal_uid.t -> Signal.t -> t option
+val maybe_create : Normalized_signal_uid.t -> Signal.t -> t option
 val call_stack : t -> Call_stack.t
 val call_stack_of_signal : Signal.t -> Call_stack.t
 

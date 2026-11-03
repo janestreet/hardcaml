@@ -5,11 +5,7 @@ open Hardcaml
 open Hardcaml_waveterm_kernel
 
 module I = struct
-  type 'a t =
-    { clock : 'a
-    ; clear : 'a
-    }
-  [@@deriving hardcaml]
+  type 'a t = { clocking : 'a Clocking.t } [@@deriving hardcaml]
 end
 
 module O = struct
@@ -22,9 +18,9 @@ module O = struct
   [@@deriving hardcaml]
 end
 
-let create ?(collision_mode = Ram.Collision_mode.Read_before_write) { I.clock; clear } =
+let create ?(collision_mode = Ram.Collision_mode.Read_before_write) { I.clocking } =
   let open Signal in
-  let reg_spec_with_clear = Reg_spec.create ~clock ~clear () in
+  let reg_spec_with_clear = Clocking.to_spec clocking in
   let ram_size = 4 in
   let address_bits = address_bits_for ram_size in
   let address = reg_fb reg_spec_with_clear ~width:address_bits ~f:(fun d -> d +:. 1) in
@@ -34,9 +30,13 @@ let create ?(collision_mode = Ram.Collision_mode.Read_before_write) { I.clock; c
       ~size:ram_size
       ~name:"test"
       ~read_ports:
-        [| { Read_port.read_clock = clock; read_address = address; read_enable = vdd } |]
+        [| { Read_port.read_clock = clocking.clock
+           ; read_address = address
+           ; read_enable = vdd
+           }
+        |]
       ~write_ports:
-        [| { Write_port.write_clock = clock
+        [| { Write_port.write_clock = clocking.clock
            ; write_address = zero address_bits
            ; write_enable = gnd
            ; write_data = zero 191
@@ -52,7 +52,7 @@ let run (waves, sim) =
   Cyclesim.cycle sim;
   Cyclesim.cycle sim;
   Cyclesim.cycle sim;
-  Waveform.print ~display_width:160 ~wave_width:25 waves
+  Waveform.print ~display_width:160 ~wave_scale:25 waves
 ;;
 
 let%expect_test "initialized to zero" =
@@ -61,7 +61,7 @@ let%expect_test "initialized to zero" =
   [%expect
     {|
     ┌Signals───────────┐┌Waves─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-    │clock             ││┌─────────────────────────┐                         ┌─────────────────────────┐                         ┌─────────────────────────┐       │
+    │clock             ││──────────────────────────┐                         ┌─────────────────────────┐                         ┌─────────────────────────┐       │
     │                  ││                          └─────────────────────────┘                         └─────────────────────────┘                         └───────│
     │clear             ││                                                                                                                                          │
     │                  ││──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
@@ -91,7 +91,7 @@ let%expect_test "pseudorandomly initialized registers" =
   [%expect
     {|
     ┌Signals───────────┐┌Waves─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-    │clock             ││┌─────────────────────────┐                         ┌─────────────────────────┐                         ┌─────────────────────────┐       │
+    │clock             ││──────────────────────────┐                         ┌─────────────────────────┐                         ┌─────────────────────────┐       │
     │                  ││                          └─────────────────────────┘                         └─────────────────────────┘                         └───────│
     │clear             ││                                                                                                                                          │
     │                  ││──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
@@ -115,7 +115,7 @@ let%expect_test "pseudorandomly initialized registers" =
   [%expect
     {|
     ┌Signals───────────┐┌Waves─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-    │clock             ││┌─────────────────────────┐                         ┌─────────────────────────┐                         ┌─────────────────────────┐       │
+    │clock             ││──────────────────────────┐                         ┌─────────────────────────┐                         ┌─────────────────────────┐       │
     │                  ││                          └─────────────────────────┘                         └─────────────────────────┘                         └───────│
     │clear             ││                                                                                                                                          │
     │                  ││──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
@@ -143,7 +143,7 @@ let%expect_test "pseudorandomly initialized memories" =
   [%expect
     {|
     ┌Signals───────────┐┌Waves─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-    │clock             ││┌─────────────────────────┐                         ┌─────────────────────────┐                         ┌─────────────────────────┐       │
+    │clock             ││──────────────────────────┐                         ┌─────────────────────────┐                         ┌─────────────────────────┐       │
     │                  ││                          └─────────────────────────┘                         └─────────────────────────┘                         └───────│
     │clear             ││                                                                                                                                          │
     │                  ││──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│
@@ -169,7 +169,7 @@ let%expect_test "pseudorandomly initialized state" =
   [%expect
     {|
     ┌Signals───────────┐┌Waves─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-    │clock             ││┌─────────────────────────┐                         ┌─────────────────────────┐                         ┌─────────────────────────┐       │
+    │clock             ││──────────────────────────┐                         ┌─────────────────────────┐                         ┌─────────────────────────┐       │
     │                  ││                          └─────────────────────────┘                         └─────────────────────────┘                         └───────│
     │clear             ││                                                                                                                                          │
     │                  ││──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────│

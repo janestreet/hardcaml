@@ -9,7 +9,7 @@ module Make () = struct
     (* We need a hash function compatible with native code and javascript. Currently the
        only type which allows this is [Int64]. So we perform a conversion to int64 here,
        and reach out directly to the (unboxed) hash_fold function in base to implement it.
-       This allows zero alloc operation even in fast-build mode. *)
+       This allows zero alloc operation even in BUILD_PROFILE=dev mode. *)
 
     external fold_int64
       :  Hash.state

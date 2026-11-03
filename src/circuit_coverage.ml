@@ -16,7 +16,7 @@ module T = struct
     { name : String.t
     ; example : Circuit.t
     ; instances : (Instance.t, int) Hashtbl.t
-    ; coverage : (Signal_graph.Normalized_signal_uid.t, Signal_coverage.t) Hashtbl.t
+    ; coverage : (Signal_coverage.Normalized_signal_uid.t, Signal_coverage.t) Hashtbl.t
     }
   [@@deriving fields ~getters]
 
@@ -46,7 +46,7 @@ let create circuit =
     { example = circuit
     ; name = Circuit.name circuit
     ; instances = Hashtbl.create (module Instance)
-    ; coverage = Hashtbl.create (module Signal_graph.Normalized_signal_uid)
+    ; coverage = Hashtbl.create (module Signal_coverage.Normalized_signal_uid)
     }
   in
   add_instance t circuit;

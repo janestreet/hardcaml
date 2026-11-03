@@ -3,11 +3,17 @@
 open! Core0
 
 module type Wave_data_in_cycles = sig
-  type t [@@deriving sexp_of, compare ~localize, equal ~localize]
+  type t [@@deriving sexp_of, compare ~localize, equal ~localize, bin_io]
 
   val width : t -> int
   val length : t -> int
-  val get : t -> int -> Bits.t
+  val num_events : t -> int
+  val find_insertion_index : t -> int -> int option
+  val get_time_at_index : t -> int -> int
+
+  val%template get_data_at_index : t @ m -> int -> Bits.t [@@mode m = (global, local)]
+  val%template get : t @ m -> int -> Bits.t [@@mode m = (global, local)]
+
   val create : int -> t
   val init : int -> width:int -> f:(int -> Bits.t) -> t
   val set : t -> int -> Bits.t -> unit

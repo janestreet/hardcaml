@@ -103,6 +103,7 @@ module Vivado = struct
   ;;
 
   let max_fanout n = create "max_fanout" ~value:(Value.Int n)
+  let force_max_fanout n = create "force_max_fanout" ~value:(Value.Int n)
   let retiming_forward n = create "retiming_forward" ~value:(Value.Int n)
   let retiming_backward n = create "retiming_backward" ~value:(Value.Int n)
 

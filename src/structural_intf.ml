@@ -113,6 +113,19 @@ module type Structural = sig
   (** Return the circuit name *)
   val circuit_name : circuit -> string
 
+  module Port : sig
+    type t =
+      { name : string
+      ; width : int
+      ; attributes : Rtl_attribute.t list
+      }
+  end
+
+  (** Ports of the circuit, in declaration order. *)
+  val inputs : circuit -> Port.t list
+
+  val outputs : circuit -> Port.t list
+  val inouts : circuit -> Port.t list
   val structural_rtl_components : circuit -> structural_rtl_component_set
 
   (** Add an attribute to the signal. Currently only works on input and outputs. *)

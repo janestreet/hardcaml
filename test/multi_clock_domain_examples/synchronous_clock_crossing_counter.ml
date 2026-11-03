@@ -41,11 +41,11 @@ end
 module Harness = Hardcaml_test_harness.Step_harness.Imperative.Make (Dut.I) (Dut.O)
 module Step = Harness.Step
 
-let test ?(wave_width = 0) ~fast_period () =
+let test ?(wave_scale = 1) ~fast_period () =
   let slow_period = 2 * fast_period in
   Harness.run_advanced
     ~print_waves_after_test:
-      (Hardcaml_waveterm.Waveform.print ~display_width:100 ~wave_width)
+      (Hardcaml_waveterm.Waveform.print ~display_width:100 ~wave_scale)
     ~clock_mode:
       (By_input_clocks
          [ { name = Cyclesim_clock_domain.Name.of_string "clock_fast"
@@ -127,7 +127,7 @@ let%expect_test "period 2 and 4" =
 ;;
 
 let%expect_test "period 3 and 6" =
-  test ~fast_period:3 ~wave_width:(-1) ();
+  test ~fast_period:3 ~wave_scale:0 ();
   [%expect
     {|
     ┌Signals───────────┐┌Waves─────────────────────────────────────────────────────────────────────────┐

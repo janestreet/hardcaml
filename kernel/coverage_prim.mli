@@ -8,7 +8,7 @@ module State : sig
       { name : string
       ; value : int
       }
-    [@@deriving equal, sexp_of, hash, compare]
+    [@@deriving equal ~localize, sexp_of, hash, compare ~localize]
 
     include Comparator.S with type t := t
   end
@@ -17,7 +17,7 @@ module State : sig
     { name : string option
     ; value : int
     }
-  [@@deriving sexp_of, equal]
+  [@@deriving sexp_of, equal ~localize]
 
   val of_named : Named.t -> t
 end
@@ -27,7 +27,7 @@ module Case : sig
     type t =
       | Specified of int
       | Default
-    [@@deriving equal, sexp_of, hash, compare]
+    [@@deriving equal ~localize, sexp_of, hash, compare ~localize]
 
     include Comparator.S with type t := t
   end
@@ -49,7 +49,7 @@ module Case : sig
     | Positional of int
     | State of State.Named.t
     | Default
-  [@@deriving bin_io, sexp_of, to_string, equal]
+  [@@deriving bin_io, sexp_of, to_string, equal ~localize]
 end
 
 module Cases : sig
@@ -70,7 +70,7 @@ module Toggle : sig
     { bit : int
     ; on : bool
     }
-  [@@deriving bin_io, sexp_of, equal, hash, compare, to_string]
+  [@@deriving bin_io, sexp_of, equal ~localize, hash, compare ~localize, to_string]
 
   include Comparator.S with type t := t
 
@@ -82,19 +82,19 @@ module Transition : sig
     { from : 'a
     ; to_ : 'a
     }
-  [@@deriving bin_io, sexp_of, compare, equal, hash]
+  [@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]
 
   val to_string : 'a t -> f:('a -> string) -> string
   val map : 'a t -> f:('a -> 'b) -> 'b t
 
   module Value : sig
-    type nonrec t = int t [@@deriving sexp_of, compare, equal, hash]
+    type nonrec t = int t [@@deriving sexp_of, compare ~localize, equal ~localize, hash]
 
     include Comparator.S with type t := t
   end
 
   module State : sig
-    type nonrec t = State.t t [@@deriving sexp_of, equal, to_string]
+    type nonrec t = State.t t [@@deriving sexp_of, equal ~localize, to_string]
   end
 end
 

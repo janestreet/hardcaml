@@ -24,7 +24,3 @@ API, Hardcaml\_lws (for writing concurrent simulation tasks), Cyclesim\_harness 
 Step testbench patterns, and conventions for instantiating expect tests over
 configurations.
 
-### Hardcaml Common Libraries
-
-This [prompt](http://github.com/janestreet/hardcaml_agents_docs/hardcaml_common_libraries.md) covers commonly used
-Hardcaml libraries such as AXI Stream.

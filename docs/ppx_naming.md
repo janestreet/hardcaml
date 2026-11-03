@@ -105,7 +105,7 @@ val spec : Reg_spec.t = <abstr>
 val create : Scope.t -> State.t Always.State_machine.t = <fun>
 # create (Scope.create ())
 - : State.t Always.State_machine.t =
-{Hardcaml.Always.State_machine.current =
+{Always.State_machine.current =
   (register (names (my_state_machine)) (width 1)
  ((clock 0b0) (clock_edge Rising)) (data_in wire));
  is = <fun>; set_next = <fun>; switch = <fun>}

@@ -244,9 +244,8 @@ let get_id = function
   | Instantiation_tristate (id, _) -> id
 ;;
 
-let%template[@mode local] equal_signal (s1 : signal) s2 =
-  Int.equal (get_id s1) (get_id s2)
-;;
+let equal_signal (s1 : signal) s2 = Int.equal (get_id s1) (get_id s2)
+let%template[@mode local] equal_signal = equal_signal
 
 let name t =
   match t with
@@ -341,6 +340,35 @@ let create_circuit name f =
   find_circuit name
 ;;
 
+module Port = struct
+  type t =
+    { name : string
+    ; width : int
+    ; attributes : Rtl_attribute.t list
+    }
+end
+
+let ports circuit ~f = List.rev circuit.signals |> List.filter_map ~f
+let port name width attributes = Some { Port.name; width; attributes = !attributes }
+
+let inputs circuit =
+  ports circuit ~f:(function
+    | Module_input (_, name, width, attributes) -> port name width attributes
+    | _ -> None)
+;;
+
+let outputs circuit =
+  ports circuit ~f:(function
+    | Module_output (_, name, width, _, attributes) -> port name width attributes
+    | _ -> None)
+;;
+
+let inouts circuit =
+  ports circuit ~f:(function
+    | Module_tristate (_, name, width, _, attributes) -> port name width attributes
+    | _ -> None)
+;;
+
 let add_sig s =
   let c = get_circuit () in
   c.signals <- s :: c.signals;
@@ -401,9 +429,17 @@ let is_writeable = function
   | _ -> false
 ;;
 
-let is_readwrite = function
+let rec is_readwrite = function
   | Module_tristate _ | Internal_triwire _ -> true
+  | Rtl_op (_, _, Concat signals) -> List.for_all signals ~f:is_readwrite
   | _ -> false
+;;
+
+let rec connect_tristate signal connection =
+  match signal with
+  | Rtl_op (_, _, Concat signals) ->
+    List.iter signals ~f:(fun signal -> connect_tristate signal connection)
+  | _ -> signal <-- connection
 ;;
 
 let is_connected = function
@@ -426,7 +462,7 @@ let inst ?instance_name ?(attributes = []) ?(g = []) ?(i = []) ?(o = []) ?(t = [
   List.iter t ~f:(fun (n, s) ->
     if not (is_readwrite s)
     then raise (Invalid_submodule_tristate_connection (name, n, s))
-    else s <-- Instantiation_tristate (mod_id, n));
+    else connect_tristate s (Instantiation_tristate (mod_id, n)));
   Option.iter instance_name ~f:(fun instance_name ->
     if String.is_prefix instance_name ~prefix:"_"
     then raise_s [%message "explicitly specified instance_names cannot start with a '_'"]);
@@ -795,6 +831,12 @@ let attributes_to_rope attrs =
 
 let to_verilog circuit =
   let name s = Rope.of_string (name s) in
+  let rec tristate_connection = function
+    | Rtl_op (_, _, Concat signals) ->
+      let parts = concat_map ~sep:[%rope ", "] signals ~f:tristate_connection in
+      [%rope "{ %{parts} }"]
+    | signal -> name signal
+  in
   let declare typ signal =
     let attrs =
       match get_attributes signal with
@@ -829,6 +871,39 @@ let to_verilog circuit =
   let outputs, signals = part is_output signals in
   let inouts, signals = part is_inout signals in
   let inst, signals = part is_inst signals in
+  (* Skip concats that nothing reads by name, such as those only used by inout ports. *)
+  let read_by_name =
+    let reads = function
+      | Internal_wire (_, _, con) | Module_output (_, _, _, con, _) -> [ !con ]
+      | Internal_triwire (_, _, cons) | Module_tristate (_, _, _, cons, _) -> !cons
+      | Rtl_op (_, _, Select (_, _, s)) -> [ s ]
+      | Rtl_op (_, _, Concat d) -> d
+      | Rtl_op (_, _, Mux (sel, d)) -> sel :: d
+      | Instantiation (_, _, _, i, o, _, _, _) -> List.map (i @ o) ~f:snd
+      | Empty | Module_input _ | Instantiation_output _ | Instantiation_tristate _
+      | Rtl_op (_, _, Constant _) -> []
+    in
+    let add read signals =
+      List.fold signals ~init:read ~f:(fun read s -> Set.add read (get_id s))
+    in
+    let concats, others =
+      List.partition_tf circuit.signals ~f:(function
+        | Rtl_op (_, _, Concat _) -> true
+        | _ -> false)
+    in
+    (* A concat is created after its arguments, so going newest first sees every concat
+       that reads another concat before the one it reads. Dropped concats don't count. *)
+    List.fold
+      concats
+      ~init:(add (Set.empty (module Int)) (List.concat_map others ~f:reads))
+      ~f:(fun read concat ->
+        if Set.mem read (get_id concat) then add read (reads concat) else read)
+  in
+  let signals =
+    List.filter signals ~f:(function
+      | Rtl_op (id, _, Concat _) -> Set.mem read_by_name id
+      | _ -> true)
+  in
   (* module interface *)
   let io_ports =
     let sep = [%rope ",\n"] in
@@ -929,10 +1004,16 @@ let to_verilog circuit =
       in
       let ports =
         let sep = [%rope ", \n"] in
-        let port (n, s) = [%rope "    .%{n#String}(%{name s})"] in
+        let port connection (n, s) = [%rope "    .%{n#String}(%{connection s})"] in
+        (* An inout must connect to the nets themselves, not the read-only aliases
+           generated for ordinary concatenations. *)
         Rope.concat
           ~sep
-          ([ List.map i ~f:port; List.map o ~f:port; List.map t ~f:port ] |> List.concat)
+          ([ List.map i ~f:(port name)
+           ; List.map o ~f:(port name)
+           ; List.map t ~f:(port tristate_connection)
+           ]
+           |> List.concat)
       in
       [%rope_dedent
         {|

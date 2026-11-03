@@ -247,7 +247,7 @@ let report_group_coverage
       if Config.hide_unstable config
       then
         List.sort to_report ~compare:(fun a b ->
-          Signal_graph.Normalized_signal_uid.compare (M.id a) (M.id b))
+          Signal_coverage.Normalized_signal_uid.compare (M.id a) (M.id b))
       else to_report
     in
     if List.length to_report > 0
@@ -255,7 +255,7 @@ let report_group_coverage
       List.iter to_report ~f:(fun c ->
         output_line
           oc
-          [%string {|%{name} with id: %{(M.id c)#Signal_graph.Normalized_signal_uid}|}];
+          [%string {|%{name} with id: %{(M.id c)#Signal_coverage.Normalized_signal_uid}|}];
         (match M.signal_names c with
          | [] -> report_call_stack oc config (M.call_stack c) ~indent:1
          | names -> output_names oc names ~title:"names" ~indent:1);

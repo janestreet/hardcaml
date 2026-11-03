@@ -46,7 +46,7 @@ end
 
 module Uid : Uid_builder.S
 
-type t [@@deriving sexp_of, equal]
+type t [@@deriving sexp_of, equal ~localize]
 
 (** Obtain the name of the clock domain. Note that the name is only for informational
     purposes. Clock domain equality is identified via the uid.

@@ -33,31 +33,31 @@ val test : unit -> Data.t = <fun>
 
 # let waves = test ()
 val waves : Data.t =
-  Hardcaml__.Wave_data.By_cycle
+  Hardcaml__.Wave_data.By_mutable_event
    [|{Hardcaml__.Wave_data.Wave.name = "clock"; width = 1;
       typ = Hardcaml.Wave_data.Type.Input;
       wave_format =
        Hardcaml__.Core0.Wave_format.Bit_or Hardcaml__.Core0.Wave_format.Hex;
-      is_pseudo_clock = true; wave_data = <abstr>};
+      wave_data = <abstr>};
      {Hardcaml__.Wave_data.Wave.name = "clear"; width = 1;
       typ = Hardcaml.Wave_data.Type.Input;
       wave_format =
        Hardcaml__.Core0.Wave_format.Bit_or Hardcaml__.Core0.Wave_format.Hex;
-      is_pseudo_clock = false; wave_data = <abstr>};
+      wave_data = <abstr>};
      {Hardcaml__.Wave_data.Wave.name = "incr"; width = 1;
       typ = Hardcaml.Wave_data.Type.Input;
       wave_format =
        Hardcaml__.Core0.Wave_format.Bit_or Hardcaml__.Core0.Wave_format.Hex;
-      is_pseudo_clock = false; wave_data = <abstr>};
+      wave_data = <abstr>};
      {Hardcaml__.Wave_data.Wave.name = "dout"; width = 8;
       typ = Hardcaml.Wave_data.Type.Output;
       wave_format =
        Hardcaml__.Core0.Wave_format.Bit_or Hardcaml__.Core0.Wave_format.Hex;
-      is_pseudo_clock = false; wave_data = <abstr>}|]
+      wave_data = <abstr>}|]
 # Waveform.print waves
 ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
-│clock          ││┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌──│
-│               ││    └───┘   └───┘   └───┘   └───┘   └───┘   └───┘  │
+│clock          ││────┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐      │
+│               ││    └───┘   └───┘   └───┘   └───┘   └───┘   └───   │
 │clear          ││                        ┌───────┐                  │
 │               ││────────────────────────┘       └───────────────   │
 │incr           ││        ┌───────────────┐                          │
@@ -103,10 +103,10 @@ to iterate on a hardware implementation.
 
 The `Waveform.print` function takes optional arguments which control the rendering of the waveform.
 
-- `start_cycle` first cycle to display.
+- `start_time` first cycle to display.
 - `display_width`, `display_height` width and height of the waveform. The height is
   inferred if not specified.
-- `wave_width` scale at which the waveform is shown (negative values allowed).
+- `wave_scale` scale at which the waveform is shown (negative values allowed).
 - `display_rules` configuration of the signals to show.
 - `signals_alignment` left or right align the name in the signal pane.
 - `signals_width` width of signal pane.
@@ -127,8 +127,8 @@ The `Waveform.print` function takes optional arguments which control the renderi
 │               ││────────────────┴───────┴───────┴───────────────   │
 │clear          ││                        ┌───────┐                  │
 │               ││────────────────────────┘       └───────────────   │
-│clock          ││┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌──│
-│               ││    └───┘   └───┘   └───┘   └───┘   └───┘   └───┘  │
+│clock          ││────┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐      │
+│               ││    └───┘   └───┘   └───┘   └───┘   └───┘   └───   │
 │               ││                                                   │
 └───────────────┘└───────────────────────────────────────────────────┘
 - : unit = ()

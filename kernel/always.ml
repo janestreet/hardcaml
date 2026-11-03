@@ -632,34 +632,3 @@ include
     (struct
       let validate_assignment ~dst:_ ~src:_ = ()
     end)
-
-module Clocked = struct
-  include
-    Make
-      (Clocked_signal)
-      (struct
-        let validate_assignment ~dst ~src =
-          Clocked_signal.Expert.validate_assign_in_always ~dst ~src
-        ;;
-      end)
-
-  let set_variable_dom (t : Variable.t) ~dom =
-    { Variable.value = Clocked_signal.Unsafe.set_domain ~dom t.value
-    ; internal =
-        { assigns_to_wire =
-            Clocked_signal.Unsafe.set_domain ~dom t.internal.assigns_to_wire
-        ; default = Clocked_signal.Unsafe.set_domain ~dom t.internal.default
-        ; debug_info = t.internal.debug_info
-        }
-    }
-  ;;
-
-  module Variable_overrides = struct
-    let wire ~default ~dom =
-      let default =
-        Clocked_signal.ensure_domain ~name:"default" ~required_domain:dom default
-      in
-      Variable.wire ~default () |> set_variable_dom ~dom
-    ;;
-  end
-end

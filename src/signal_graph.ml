@@ -2,10 +2,6 @@
 
 open! Core0
 
-module Normalized_signal_uid = struct
-  include Signal.Type.Uid
-end
-
 let uid = Signal.uid
 let deps = (module Signal.Type.Deps : Signal.Type.Deps)
 
@@ -74,30 +70,7 @@ let inputs graph =
 ;;
 
 let validate_outputs (t : t) =
-  Or_error.try_with (fun () ->
-    List.iter t.outputs ~f:(fun (output_signal : Signal.t) ->
-      let open Signal in
-      match output_signal with
-      | Wire _ ->
-        (match Signal.Type.Deps.to_list output_signal with
-         | [] | [ Empty ] ->
-           raise_s
-             [%message "circuit output signal is not driven" (output_signal : Signal.t)]
-         | _ ->
-           (match names output_signal with
-            | [ _ ] -> ()
-            | [] ->
-              raise_s
-                [%message
-                  "circuit output signal must have a port name" (output_signal : Signal.t)]
-            | _ ->
-              raise_s
-                [%message
-                  "circuit output signal should only have one port name"
-                    (output_signal : Signal.t)]))
-      | _ ->
-        raise_s
-          [%message "circuit output signal must be a wire" (output_signal : Signal.t)]))
+  Or_error.try_with (fun () -> List.iter t.outputs ~f:Signal.Type.valid_output_exn)
 ;;
 
 let outputs (t : t) = t.outputs
@@ -201,28 +174,6 @@ let rewrite t ~f ~f_upto =
     Hashtbl.to_alist new_signal_by_old_uid |> Signal.Type.Uid.Map.of_alist_exn
   in
   signal_graph, new_signal_by_old_uid
-;;
-
-let normalized_uids_generator () =
-  (* uid generation (note; 1L and up, 0L reserved for empty) *)
-  let `New new_id, _ = Signal.Type.Uid.generator () in
-  new_id
-;;
-
-let normalize_uids t =
-  let fresh_id = normalized_uids_generator () in
-  let rewrite_uid ~fresh_id signal =
-    let open Signal in
-    let update_id id = { id with Type.Info.uid = fresh_id () } in
-    Signal.Type.map_info signal ~f:update_id
-  in
-  rewrite t ~f:(rewrite_uid ~fresh_id) ~f_upto:Fn.id |> fst
-;;
-
-let compute_normalized_uids t =
-  let fresh_id = normalized_uids_generator () in
-  let create_fresh_id norm_ids signal = (fresh_id (), signal) :: norm_ids in
-  depth_first_search t ~init:[] ~f_before:create_fresh_id
 ;;
 
 let fan_out_map t =
@@ -403,6 +354,34 @@ let resolve_clock_domains t =
       Array.fold write_ports ~init:acc ~f:(fun acc port ->
         resolve_clock acc port.write_clock)
     | _ -> acc)
+;;
+
+let clock_signal_uids t =
+  let rec resolve_wire_path set (signal : Signal.t) =
+    match signal with
+    | Wire { info = _; driver } ->
+      let set = Set.add set (Signal.uid signal) in
+      (match driver with
+       | None -> Some set
+       | Some driver -> resolve_wire_path set driver)
+    | Empty
+    | Op2 _
+    | Not _
+    | Cat _
+    | Mux _
+    | Cases _
+    | Const _
+    | Select _
+    | Reg _
+    | Multiport_mem _
+    | Mem_read_port _
+    | Inst _ -> None
+  in
+  resolve_clock_domains t
+  |> Map.fold ~init:Signal.Type.Uid.Set.empty ~f:(fun ~key:clock_pin ~data:_ set ->
+    match resolve_wire_path set clock_pin with
+    | Some set -> set
+    | None -> set)
 ;;
 
 let count_regs_between ~from ~to_ =

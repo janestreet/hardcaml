@@ -359,6 +359,13 @@ let rec statement ast (stat : Rtl_ast.statement) =
     let memory_name = name_to_rope memory.name in
     let address_name = name_to_rope address.name in
     [%rope "%{tab}assign %{lhs_name} = %{memory_name}[%{address_name}];\n"]
+  | Sva_property { name; property } ->
+    let property =
+      Property.Sva.to_rope
+        ~proposition:(fun (v : Rtl_ast.var) -> name_to_rope v.name)
+        property
+    in
+    [%rope "%{tab}%{name_to_rope name}: %{property};\n"]
 ;;
 
 let statements (ast : Rtl_ast.t) = concat_map ast.statements ~f:(statement ast)

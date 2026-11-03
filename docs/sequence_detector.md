@@ -160,12 +160,12 @@ val create_sequence_detector_sim : unit -> Cyclesim.t_port_list = <fun>
       d := bit;
       Cyclesim.cycle sim); 
     Cyclesim.cycle sim;
-    Waveform.print waves ~wave_width:1 ~display_width:40
+    Waveform.print waves ~wave_scale:1 ~display_width:40
 val test : Bits.t -> unit = <fun>
 # test (Bits.of_string "101")
 ┌Signals─┐┌Waves───────────────────────┐
-│clock   ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ │
-│        ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─│
+│clock   ││──┐ ┌─┐ ┌─┐ ┌─┐             │
+│        ││  └─┘ └─┘ └─┘ └─            │
 │clear   ││                            │
 │        ││────────────────            │
 │d       ││────┐   ┌───────            │
@@ -176,8 +176,8 @@ val test : Bits.t -> unit = <fun>
 - : unit = ()
 # test (Bits.of_string "1010")
 ┌Signals─┐┌Waves───────────────────────┐
-│clock   ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ │
-│        ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─│
+│clock   ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐         │
+│        ││  └─┘ └─┘ └─┘ └─┘ └─        │
 │clear   ││                            │
 │        ││────────────────────        │
 │d       ││    ┌───┐   ┌───────        │
@@ -188,8 +188,8 @@ val test : Bits.t -> unit = <fun>
 - : unit = ()
 # test (Bits.of_string "1011")
 ┌Signals─┐┌Waves───────────────────────┐
-│clock   ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ │
-│        ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─│
+│clock   ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐         │
+│        ││  └─┘ └─┘ └─┘ └─┘ └─        │
 │clear   ││                            │
 │        ││────────────────────        │
 │d       ││────────┐   ┌───────        │

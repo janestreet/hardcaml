@@ -65,7 +65,7 @@ state `S_counting` and the result will be output in the state `S_write_result`.
 <!-- $MDX file=./lib/fibonacci.ml,part=implementation -->
 ```ocaml
 let create (i : _ I.t) =
-  let r_sync = Signal.Reg_spec.create ~clock:i.clock ~clear:i.clear () in
+  let r_sync = Clocking.to_spec i.clocking in
   let sm = Always.State_machine.create (module States) ~enable:vdd r_sync in
   let done_ = Always.Variable.wire ~default:gnd () in
   let result = Always.Variable.wire ~default:(zero 32) () in
@@ -132,9 +132,9 @@ let fibonacci_testbench (sim : (_ I.t, _ O.t) Cyclesim.t) =
   in
   (* Start by resetting simulation and clearing the circuit. *)
   Cyclesim.reset sim;
-  inputs.clear := Bits.vdd;
+  inputs.clocking.clear := Bits.vdd;
   Cyclesim.cycle sim;
-  inputs.clear := Bits.gnd;
+  inputs.clocking.clear := Bits.gnd;
   (* Cycle 0 *)
   print_state_and_outputs ();
   (* Cycle 1 *)
@@ -232,7 +232,7 @@ Showing the waveform.
 ((state S_write_result) (done_ true) (result 5))
 ((state S_wait) (done_ false) (result 0))
 ┌Signals───────────┐┌Waves───────────────────────────────────────────────────────────────────┐
-│clock             ││┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   │
+│clock             ││────┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   ┌───┐   │
 │                  ││    └───┘   └───┘   └───┘   └───┘   └───┘   └───┘   └───┘   └───┘   └───│
 │clear             ││        ┌───────┐                                                       │
 │                  ││────────┘       └───────────────────────────────────────────────────────│

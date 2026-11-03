@@ -25,12 +25,6 @@ module How_to_instantiate : sig
   [@@deriving sexp_of]
 end
 
-module Caller_signal_type : sig
-  type 'signal t =
-    | Clocked : Clocked_signal.t t
-    | Signal : Signal.t t
-end
-
 (** Support for hierarchically structured Hardcaml designs. We extend the standard
     [Interface.Create_fn] pattern so that the create function also takes a [Scope.t]
     argument. This allows scoping of signal names and automatic recording of the design in
@@ -79,71 +73,4 @@ module In_scope (I : Interface.S) (O : Interface.S) : sig
     -> scope:Scope.t
     -> create_fn
     -> Interface.Create_fn(I)(O).t
-
-  (** Like [hierarchical], but can be called from a clocked or unclocked context.
-      [caller_signal_type] specifies the type of caller.
-
-      If called from a clocked context, the [input_domains] and [output_domains] arguments
-      must be provided. Runtime output domains are inferred as much as possible from the
-      input domain - where a domain exists only on the output, a new runtime domain is
-      constructed. *)
-  val hierarchical_unclocked
-    :  ?config:Circuit.Config.t
-    -> ?instance:string
-    -> ?attributes:Rtl_attribute.t list
-    -> ?input_attributes:Rtl_attribute.t list I.t
-    -> ?output_attributes:Rtl_attribute.t list O.t
-    -> ?how_to_instantiate:How_to_instantiate.t
-    -> ?name:string
-    -> ?input_domains:Clock_domain.t I.t
-    -> ?output_domains:Clock_domain.t O.t
-    -> caller_signal_type:'caller_signal Caller_signal_type.t
-    -> here:[%call_pos]
-    -> scope:Scope.t
-    -> create_fn
-    -> 'caller_signal I.t
-    -> 'caller_signal O.t
-
-  (** Like [hierarchical_unclocked] expect the all inputs and outputs are expected to be
-      in the same clock domain. *)
-  val hierarchical_single_clock_domain
-    :  ?config:Circuit.Config.t
-    -> ?instance:string
-    -> ?attributes:Rtl_attribute.t list
-    -> ?input_attributes:Rtl_attribute.t list I.t
-    -> ?output_attributes:Rtl_attribute.t list O.t
-    -> ?how_to_instantiate:How_to_instantiate.t
-    -> ?name:string
-    -> caller_signal_type:'caller_signal Caller_signal_type.t
-    -> here:[%call_pos]
-    -> scope:Scope.t
-    -> create_fn
-    -> 'caller_signal I.t
-    -> 'caller_signal O.t
-end
-
-module In_clocked_scope
-    (I : Interface.S_with_clock_domains)
-    (O : Interface.S_with_clock_domains) : sig
-  type create_fn = Scope.t -> Clocked_signal.t I.t -> Clocked_signal.t O.t
-
-  (** Extends [In_scope.hierarchical] to instantiate a clocked design within a clocked or
-      unclocked context.
-
-      The input and output domain specification are provided by in the I and O interface
-      functor arguments. *)
-  val hierarchical
-    :  ?config:Circuit.Config.t
-    -> ?instance:string
-    -> ?attributes:Rtl_attribute.t list
-    -> ?input_attributes:Rtl_attribute.t list I.t
-    -> ?output_attributes:Rtl_attribute.t list O.t
-    -> ?how_to_instantiate:How_to_instantiate.t
-    -> ?name:string
-    -> caller_signal_type:'caller_signal Caller_signal_type.t
-    -> here:[%call_pos]
-    -> scope:Scope.t
-    -> create_fn
-    -> 'caller_signal I.t
-    -> 'caller_signal O.t
 end

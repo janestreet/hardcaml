@@ -16,7 +16,7 @@ type t =
   { name : Name.t
   ; period : int
   }
-[@@deriving sexp_of, compare]
+[@@deriving sexp_of, compare ~localize]
 
 let create ~name ~period = { name; period }
 let create_list ls = List.map ls ~f:(fun (name, period) -> create ~name ~period)

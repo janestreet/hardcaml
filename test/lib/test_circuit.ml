@@ -2,19 +2,7 @@ open! Import
 open! Signal
 
 let show t = print_s [%sexp (t : Circuit.t)]
-
-(* Signal.Types.reset_id () *)
-
-let create ~name signals =
-  Circuit.create_exn
-    ~name
-    ~config:
-      { Circuit.Config.default with
-        (* Ensure that printed signal UIDs are stable *)
-        normalize_uids = true
-      }
-    signals
-;;
+let create ~name signals = Circuit.create_exn ~name signals
 
 let%expect_test "[sexp_of_t]" =
   show (create ~name:"name" []);
@@ -24,19 +12,23 @@ let%expect_test "[sexp_of_t]" =
      (caller_id ())
      (config (
        (detect_combinational_loops true)
-       (normalize_uids             true)
-       (assertions ())
+       (property_manager ())
+       (trace_properties (
+         (enable_sva        false)
+         (enable_ltl        false)
+         (enable_assertions false)
+         (enabled_property_groups ())))
        (port_checks        Port_sets_and_widths)
-       (add_phantom_inputs true)
-       (modify_outputs     <opaque>)))
+       (add_phantom_inputs true)))
      (inputs         ())
      (outputs        ())
      (phantom_inputs ())
      (signal_graph (
        (outputs ())
        (upto    ())))
-     (assertions     ())
-     (instantiations ())
+     (instantiations   ())
+     (sva_properties   ())
+     (sva_propositions ())
      (rtl_name_map unset))
     |}]
 ;;
@@ -49,11 +41,14 @@ let%expect_test "[sexp_of_t] with an output" =
      (caller_id ())
      (config (
        (detect_combinational_loops true)
-       (normalize_uids             true)
-       (assertions ())
+       (property_manager ())
+       (trace_properties (
+         (enable_sva        false)
+         (enable_ltl        false)
+         (enable_assertions false)
+         (enabled_property_groups ())))
        (port_checks        Port_sets_and_widths)
-       (add_phantom_inputs true)
-       (modify_outputs     <opaque>)))
+       (add_phantom_inputs true)))
      (inputs ())
      (outputs ((
        wire
@@ -68,8 +63,9 @@ let%expect_test "[sexp_of_t] with an output" =
          (width   1)
          (data_in 0b1))))
        (upto ())))
-     (assertions     ())
-     (instantiations ())
+     (instantiations   ())
+     (sva_properties   ())
+     (sva_propositions ())
      (rtl_name_map unset))
     |}]
 ;;
@@ -84,11 +80,14 @@ let%expect_test "[sexp_of_t] with an input" =
      (caller_id ())
      (config (
        (detect_combinational_loops true)
-       (normalize_uids             true)
-       (assertions ())
+       (property_manager ())
+       (trace_properties (
+         (enable_sva        false)
+         (enable_ltl        false)
+         (enable_assertions false)
+         (enabled_property_groups ())))
        (port_checks        Port_sets_and_widths)
-       (add_phantom_inputs true)
-       (modify_outputs     <opaque>)))
+       (add_phantom_inputs true)))
      (inputs ((wire (names (input)) (width 1))))
      (outputs ((
        wire
@@ -103,8 +102,9 @@ let%expect_test "[sexp_of_t] with an input" =
          (width   1)
          (data_in input))))
        (upto ())))
-     (assertions     ())
-     (instantiations ())
+     (instantiations   ())
+     (sva_properties   ())
+     (sva_propositions ())
      (rtl_name_map unset))
     |}]
 ;;
@@ -119,11 +119,14 @@ let%expect_test "[sexp_of_t] with an operator" =
      (caller_id ())
      (config (
        (detect_combinational_loops true)
-       (normalize_uids             true)
-       (assertions ())
+       (property_manager ())
+       (trace_properties (
+         (enable_sva        false)
+         (enable_ltl        false)
+         (enable_assertions false)
+         (enabled_property_groups ())))
        (port_checks        Port_sets_and_widths)
-       (add_phantom_inputs true)
-       (modify_outputs     <opaque>)))
+       (add_phantom_inputs true)))
      (inputs ((wire (names (input)) (width 1))))
      (outputs ((
        wire
@@ -138,8 +141,9 @@ let%expect_test "[sexp_of_t] with an operator" =
          (width   1)
          (data_in not))))
        (upto ())))
-     (assertions     ())
-     (instantiations ())
+     (instantiations   ())
+     (sva_properties   ())
+     (sva_propositions ())
      (rtl_name_map unset))
     |}]
 ;;
@@ -235,11 +239,14 @@ let%expect_test "phantom inputs" =
      (caller_id ())
      (config (
        (detect_combinational_loops true)
-       (normalize_uids             true)
-       (assertions ())
+       (property_manager ())
+       (trace_properties (
+         (enable_sva        false)
+         (enable_ltl        false)
+         (enable_assertions false)
+         (enabled_property_groups ())))
        (port_checks        Port_sets_and_widths)
-       (add_phantom_inputs true)
-       (modify_outputs     <opaque>)))
+       (add_phantom_inputs true)))
      (inputs ((wire (names (a)) (width 1))))
      (outputs ((
        wire
@@ -254,8 +261,9 @@ let%expect_test "phantom inputs" =
          (width   1)
          (data_in a))))
        (upto ())))
-     (assertions     ())
-     (instantiations ())
+     (instantiations   ())
+     (sva_properties   ())
+     (sva_propositions ())
      (rtl_name_map unset))
     |}];
   (* Add 2, one of which is already an input (and will be removed) *)
@@ -266,11 +274,14 @@ let%expect_test "phantom inputs" =
      (caller_id ())
      (config (
        (detect_combinational_loops true)
-       (normalize_uids             true)
-       (assertions ())
+       (property_manager ())
+       (trace_properties (
+         (enable_sva        false)
+         (enable_ltl        false)
+         (enable_assertions false)
+         (enabled_property_groups ())))
        (port_checks        Port_sets_and_widths)
-       (add_phantom_inputs true)
-       (modify_outputs     <opaque>)))
+       (add_phantom_inputs true)))
      (inputs ((wire (names (a)) (width 1))))
      (outputs ((
        wire
@@ -285,8 +296,9 @@ let%expect_test "phantom inputs" =
          (width   1)
          (data_in a))))
        (upto ())))
-     (assertions     ())
-     (instantiations ())
+     (instantiations   ())
+     (sva_properties   ())
+     (sva_propositions ())
      (rtl_name_map unset))
     |}];
   (* Add 2, one of which is already an output *)
@@ -368,7 +380,7 @@ let%expect_test "verify_clock_pins" =
   [%expect
     {|
     ("The following sequential elements have unexpected clock pin connections"
-     (signal_uid 1)
+     (signal_uid 42)
      (signals ((
        register
        (width 1)
@@ -394,7 +406,7 @@ let%expect_test "verify_clock_pins" =
   [%expect
     {|
     ("The following sequential elements have unexpected clock pin connections"
-     (signal_uid 1)
+     (signal_uid 46)
      (signals ((
        register
        (width 1)
@@ -447,7 +459,7 @@ let%expect_test "verify_clock_pins" =
   [%expect
     {|
     ("The following sequential elements have unexpected clock pin connections"
-     (signal_uid 1)
+     (signal_uid 54)
      (signals ((
        register
        (width 8)

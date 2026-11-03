@@ -24,6 +24,34 @@ module Fifo_memory_type : sig
     | Registers
 end
 
+(** The (unmangled) module name used by [hierarchical]. Synthesis constraint scripts match
+    instances of this fifo by this name. *)
+val base_name : string
+
+(** Names of the registers implementing the clock-domain crossings, exported so that
+    synthesis constraint scripts (SDC/XDC) can target them without hardcoding the names. *)
+module Register_names : sig
+  (** Gray write address register, in the write domain. *)
+  val waddr_wd : string
+
+  (** Stage [index] of the write address synchronization chain ([waddr_rd_ff 0] is the
+      register that captures [waddr_wd]). *)
+  val waddr_rd_ff : int -> string
+
+  (** Gray read address register, in the read domain. *)
+  val raddr_rd : string
+
+  (** Stage [index] of the read address synchronization chain ([raddr_wd_ff 0] is the
+      register that captures [raddr_rd]). *)
+  val raddr_wd_ff : int -> string
+
+  (** Register capturing the RAM read data, in the read domain. *)
+  val data_out : string
+
+  (** The FIFO RAM. *)
+  val ram : string
+end
+
 module Make (M : S) : sig
   module I : sig
     type 'a t =
@@ -86,20 +114,6 @@ module Make (M : S) : sig
     -> Signal.t I.t
     -> Signal.t O.t
 
-  val create_clocked
-    :  ?use_negedge_sync_chain:bool
-         (** Whether to use the negative edge in the synchronization chain (default is
-             false). *)
-    -> ?sync_stages:int
-         (** The number of synchronization stages to use for the gray coded registers
-             (default is 2). *)
-    -> ?memory_type:Fifo_memory_type.t (** Which style of ram to implement. *)
-    -> ?prog_full_thresh:int
-    -> ?prog_empty_thresh:int
-    -> ?scope:Scope.t
-    -> Clocked_signal.t I.t
-    -> Clocked_signal.t O.t
-
   (** Create an async FIFO that [O.valid] goes high after [delay] clocks of a [o.valid]
       low start. This is useful for packet buffering across clock domains where you don't
       want the output [valid] to de-assert. *)
@@ -110,14 +124,6 @@ module Make (M : S) : sig
     -> Scope.t
     -> Signal.t I.t
     -> Signal.t O.t
-
-  val create_with_delay_clocked
-    :  ?prog_full_thresh:int
-    -> ?prog_empty_thresh:int
-    -> ?delay:Int.t
-    -> Scope.t
-    -> Clocked_signal.t I.t
-    -> Clocked_signal.t O.t
 
   val hierarchical_with_delay
     :  ?name:string

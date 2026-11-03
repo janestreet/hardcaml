@@ -79,6 +79,10 @@ module Vivado : sig
       register replication if fanout above [n]. *)
   val max_fanout : int -> t
 
+  (** Similar to above, but forces Vivado to use register replication if fanout is above
+      [n], rather than suggesting it. *)
+  val force_max_fanout : int -> t
+
   (** EXTRACT_ENABLE controls whether registers infer enables. Typically, Vivado will
       extract or not extract enables based on heuristics that typically benefit the most
       amount of designs. In cases where Vivado is not behaving in a desired way, this

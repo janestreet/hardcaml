@@ -50,12 +50,12 @@ let%expect_test "simple dual port" =
   read inputs.port_b 3;
   cycle ();
   cycle ();
-  Waveform.print waves ~wave_width:1;
+  Waveform.print waves ~wave_scale:1;
   [%expect
     {|
     ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
-    │clock          ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐│
-    │               ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └│
+    │clock          ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐                        │
+    │               ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─                       │
     │               ││────────────────────┬───────                       │
     │port_a_address ││ 3                  │2                             │
     │               ││────────────────────┴───────                       │

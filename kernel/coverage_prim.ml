@@ -7,7 +7,7 @@ module State = struct
         { name : string
         ; value : int
         }
-      [@@deriving bin_io, equal, sexp_of, compare, hash]
+      [@@deriving bin_io, equal ~localize, sexp_of, compare ~localize, hash]
     end
 
     include Comparator.Make (T)
@@ -18,7 +18,7 @@ module State = struct
     { name : string option
     ; value : int
     }
-  [@@deriving sexp_of, equal]
+  [@@deriving sexp_of, equal ~localize]
 
   let of_named { Named.name; value } = { name = Some name; value }
 end
@@ -29,7 +29,7 @@ module Case = struct
       type t =
         | Specified of int
         | Default
-      [@@deriving equal, sexp_of, compare, hash]
+      [@@deriving equal ~localize, sexp_of, compare ~localize, hash]
     end
 
     include Comparator.Make (T)
@@ -71,7 +71,7 @@ module Case = struct
     | Positional of int
     | State of State.Named.t
     | Default
-  [@@deriving bin_io, sexp_of, equal]
+  [@@deriving bin_io, sexp_of, equal ~localize]
 
   let to_string = function
     | Positional position -> Int.to_string position
@@ -107,7 +107,7 @@ module Toggle = struct
       { bit : int
       ; on : bool
       }
-    [@@deriving bin_io, sexp_of, compare, hash, equal]
+    [@@deriving bin_io, sexp_of, compare ~localize, hash, equal ~localize]
   end
 
   include Comparator.Make (T)
@@ -131,14 +131,14 @@ module Transition = struct
     { from : 'a
     ; to_ : 'a
     }
-  [@@deriving bin_io, sexp_of, compare, equal, hash]
+  [@@deriving bin_io, sexp_of, compare ~localize, equal ~localize, hash]
 
   let to_string t ~f = [%string {|%{f t.from} -> %{f t.to_}|}]
   let map t ~f = { from = f t.from; to_ = f t.to_ }
 
   module Value = struct
     module T = struct
-      type nonrec t = int t [@@deriving sexp_of, compare, equal, hash]
+      type nonrec t = int t [@@deriving sexp_of, compare ~localize, equal ~localize, hash]
     end
 
     include Comparator.Make (T)
@@ -146,7 +146,7 @@ module Transition = struct
   end
 
   module State = struct
-    type nonrec t = State.t t [@@deriving sexp_of, equal]
+    type nonrec t = State.t t [@@deriving sexp_of, equal ~localize]
 
     let to_string (t : t) =
       to_string t ~f:(fun (state : State.t) ->

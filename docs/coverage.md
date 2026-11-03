@@ -257,24 +257,6 @@ module State :
         val a : t Base.Variant.t
         val b : t Base.Variant.t
         val c : t Base.Variant.t
-        val fold :
-          init:'a ->
-          a:('a -> t Base.Variant.t -> 'b) ->
-          b:('b -> t Base.Variant.t -> 'c) ->
-          c:('c -> t Base.Variant.t -> 'd) -> 'd
-        val iter :
-          a:(t Base.Variant.t -> unit) ->
-          b:(t Base.Variant.t -> unit) ->
-          c:(t Base.Variant.t -> unit) -> unit
-        val map :
-          t ->
-          a:(t Base.Variant.t -> 'a) ->
-          b:(t Base.Variant.t -> 'a) -> c:(t Base.Variant.t -> 'a) -> 'a
-        val make_matcher :
-          a:(t Base.Variant.t -> 'a -> (unit -> 'b) * 'c) ->
-          b:(t Base.Variant.t -> 'c -> (unit -> 'b) * 'd) ->
-          c:(t Base.Variant.t -> 'd -> (unit -> 'b) * 'e) ->
-          'a -> (t -> 'b) * 'e
         val to_rank : t @ local -> int
         val to_name : t -> string
         val descriptions : (string * int) list
@@ -282,7 +264,7 @@ module State :
   end
 # let sm = Always.State_machine.create (module State) (Signal.Reg_spec.create ~clock ()) ~enable:Signal.vdd;;
 val sm : State.t Always.State_machine.t =
-  {Hardcaml.Always.State_machine.current =
+  {Always.State_machine.current =
     (register (width 2) ((clock clock) (clock_edge Rising)) (data_in wire));
    is = <fun>; set_next = <fun>; switch = <fun>}
 ```

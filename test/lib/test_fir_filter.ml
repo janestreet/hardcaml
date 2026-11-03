@@ -4,8 +4,7 @@ open! Import
 
 module I = struct
   type 'a t =
-    { clk : 'a
-    ; clr : 'a
+    { clocking : 'a Clocking.t
     ; enable : 'a
     ; d : 'a [@bits 16]
     }
@@ -18,7 +17,7 @@ end
 
 let f coefs (i : Signal.t I.t) =
   let open Signal in
-  let reg_spec = Reg_spec.create () ~clock:i.clk ~clear:i.clr in
+  let reg_spec = Clocking.to_spec i.clocking in
   let ntaps = List.length coefs in
   let rec taps j =
     if j = ntaps

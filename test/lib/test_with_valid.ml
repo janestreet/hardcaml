@@ -91,7 +91,7 @@ let%expect_test "with valid Of_signal and Of_always functions and naming" =
     let open Signal in
     let in_valid = input "in_valid" 1 in
     let in_value = input "in_value" value_width in
-    let scope = Scope.create ~name:"dut" () in
+    let scope = Scope.create () |> Scope.sub_scope _ "dut" in
     let spec = Reg_spec.create () ~clock ~clear in
     let%hw.With_valid.Of_signal in_with_valid = With_valid.Of_signal.wires value_width in
     in_with_valid.valid <-- in_valid;
@@ -146,12 +146,12 @@ let%expect_test "with valid Of_signal and Of_always functions and naming" =
     in_value := of_int_trunc ~width:value_width 0x3;
     Cyclesim.cycle ~n:2 sim
   in
-  Hardcaml_waveterm_kernel.Waveform.print ~wave_width:1 ~signals_width:30 waves;
+  Hardcaml_waveterm_kernel.Waveform.print ~wave_scale:1 ~signals_width:30 waves;
   [%expect
     {|
     ┌Signals─────────────────────┐┌Waves─────────────────────────────────┐
-    │clock                       ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─│
-    │                            ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ │
+    │clock                       ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐       │
+    │                            ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─      │
     │clear                       ││────┐                                 │
     │                            ││    └───────────────────────────      │
     │                            ││────────────┬───────┬───┬───────      │

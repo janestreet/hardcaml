@@ -13,51 +13,28 @@ module Path : sig
   val to_list : t -> string list
 end
 
-(** {v
- Control of name generation in a hierarchy of modules. The position of a module within
-    a hierarchy is determined by a path which leads back to the (single) top most parent
-    module. Signal names may be pre-pended with some representation of that path.
-
-    - [No_path]    - Nothing is added to the name.
-    - [Local_path] - Only the name of the enclosing module is added to the name.
-    - [Full_path]  - The full path is included in the name
-    - [Auto]       - The full path is tracked in the scope, but names have no path.
-
-    Generally hierarchical names are taken from the circuit name, though it is possible to
-    specify a different instantiation name. These names are mangled so they are unique
-    within each scope.
-
-    [Auto] mode works in conjunction with the [Hierarchy] module to automatically rewrite
-    names with full paths without having to work with explicit path names.
-    v} *)
-module Naming_scheme : sig
-  type t =
-    | Auto
-    | Full_path
-    | Local_path
-    | No_path
-  [@@deriving equal ~localize, sexp_of]
-end
+(** Specifies which kinds of properties, and which groups, are traced by a scope. *)
+module Trace_properties = Property_manager.Trace_properties
 
 type t [@@deriving sexp_of]
 
-(** [create ?flatten_design ?naming_scheme ?name ()] creates a new scope. If
-    [flatten_design] is [true], then all module instantions are inlined. Names for wires
-    are determined by [naming_scheme]. *)
+(** [create ?flatten_design ?name ()] creates a new scope. If [flatten_design] is [true],
+    then all module instantions are inlined. *)
 val create
   :  ?flatten_design:bool (** default [false] *)
   -> ?auto_label_hierarchical_ports:bool (** default [false] *)
-  -> ?trace_properties:bool (** default [false] *)
-  -> ?naming_scheme:Naming_scheme.t
-       (** defaults to [Full_path] when [flatten_design] is [true] and [No_path]
-           otherwise. *)
-  -> ?name:string
+  -> ?trace_properties:Trace_properties.t (** default [Trace_properties.none] *)
   -> unit
   -> t
 
 (** [sub_scope t label] returns a new scope with (mangled) [label] appended to its
-    hierarchical path *)
+    hierarchical path. The returned scope shares property management with [t], so
+    properties added in the sub-scope are emitted by [t]'s circuit config. *)
 val sub_scope : t -> string -> t
+
+(** Like [sub_scope t label], but also reinitializes circuit-specific state, specifically
+    property management. Use this when creating a separate child circuit. *)
+val hierarchy_sub_scope : t -> string -> t
 
 (** [path t] returns the {!Path.t} associated with [t]. This will determine the prefix
     used when naming modules that are associated with this scope. *)
@@ -77,11 +54,8 @@ val flatten_design : t -> bool
     [i$] and [o$] and will be arranged in a tree view automactically. *)
 val auto_label_hierarchical_ports : t -> bool
 
-(** [trace_properties t] returns true when tracing of ltl properties is enabled *)
-val trace_properties : t -> bool
-
-(** [naming_scheme t] returns the {!Naming.t} that [t] was constructed with. *)
-val naming_scheme : t -> Naming_scheme.t
+(** [trace_properties t] returns the property tracing configuration of [t]. *)
+val trace_properties : t -> Trace_properties.t
 
 (** [name ?sep t signal string] creates a hierarchical name based on the path of [t] and
     [string]. [sep], when provided, determines the separator for path components in the
@@ -103,22 +77,38 @@ val instance : t -> string option
     ]} *)
 val naming : ?sep:string -> t -> loc:[%call_pos] -> Signal.t -> string -> Signal.t
 
-(** Similar to [naming], but on a clocked signal instead. *)
-val naming_clocked
-  :  ?sep:string
-  -> t
-  -> loc:[%call_pos]
-  -> Clocked_signal.t
-  -> string
-  -> Clocked_signal.t
-
 (** Creates an atomic proposition for use in an LTL formula, naming the AP with the
     scope's name and the provided string argument *)
-val make_ltl_ap : t -> string -> Signal.t -> Property.LTL.path
+val make_ltl_ap : t -> string -> Signal.t -> Signal.t Property.LTL.Formula.t
 
-val add_ltl_property : t -> string -> Property.LTL.path -> unit
+val add_assertion : ?group:Property_manager.Group.t -> t -> string -> Signal.t -> unit
 
-(* [assertion_manager t] returns the {!Assertion_manager.t} associated with [t]. Note that
-   assertion managers are shared among {!sub_scope}s. *)
-val assertion_manager : t -> Assertion_manager.t option
+val add_ltl_property
+  :  ?group:Property_manager.Group.t
+  -> t
+  -> string
+  -> Property.LTL.t
+  -> unit
+
+val add_sva_property
+  :  ?group:Property_manager.Group.t
+  -> t
+  -> string
+  -> Signal.t Property.Sva.t
+  -> unit
+
+(** Returns the (live, unfiltered) property manager of [t], or [None] if no property type
+    is enabled in its {!trace_properties}. Filtering by type and group happens where the
+    properties are consumed (e.g. via {!circuit_config_with_properties}). *)
 val property_manager : t -> Property_manager.t option
+
+(** Return a circuit config which emits the scope's properties, as selected by its
+    {!trace_properties}. *)
+val circuit_config_with_properties
+  :  ?circuit_config:Circuit.Config.t
+  -> t
+  -> Circuit.Config.t
+
+(** The circuit config used when building a hierarchical circuit from [t]. Equivalent to
+    {!circuit_config_with_properties} with no [circuit_config] override. *)
+val circuit_config_for_hierarchy : t -> Circuit.Config.t

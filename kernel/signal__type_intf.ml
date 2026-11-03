@@ -114,7 +114,7 @@ module type Deps = sig
   val to_list : t -> t list
 end
 
-module type Type = sig
+module type%template [@mode m = (global, local)] Type = sig
   module Uid : Uid
 
   (** simple operators *)
@@ -335,7 +335,7 @@ module type Type = sig
         ; output_width : int
         ; output_low_index : int
         }
-      [@@deriving equal]
+      [@@deriving equal [@mode.explicit m]]
     end
 
     module Vhdl_instance : sig
@@ -576,4 +576,7 @@ module type Signal__type = sig
   (** This function creates a copy of the signal with [f] applied to each of the signal's
       dependants. *)
   val map_dependant : t -> f:(t -> t) -> t
+
+  (** Check that the given signal is a valid as an output, or raise. *)
+  val valid_output_exn : t -> unit
 end

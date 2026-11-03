@@ -207,6 +207,10 @@ type statement =
       ; memory : var
       ; address : var
       }
+  | Sva_property of
+      { name : Rtl_name.For_backend.t
+      ; property : var Property.Sva.t
+      }
 [@@deriving sexp_of]
 
 type t =
@@ -755,6 +759,20 @@ let create_outputs ~blackbox var_map outputs output_vars =
   outputs, var_map
 ;;
 
+let create_sva_properties ~language circuit var_map =
+  let find signal = (find_logic var_map signal).read in
+  Option.value_map ~default:[] (Circuit.sva_properties circuit) ~f:(fun properties ->
+    properties
+    |> Hashtbl.to_alist
+    |> List.map ~f:(fun (name, sva_property) ->
+      Sva_property
+        { name =
+            Circuit.Name_for_rtl.property_name_exn circuit name
+            |> Rtl_name.legalize ~language
+        ; property = Property.Sva.map_atomic_propositions sva_property ~f:find
+        }))
+;;
+
 let of_circuit ~blackbox ~(language : Rtl_language.t) ~(config : Rtl_config.t) circuit =
   let module_name = Circuit.name circuit in
   let inputs = Circuit.inputs circuit |> List.map ~f:(var_of_io_port circuit language) in
@@ -774,7 +792,7 @@ let of_circuit ~blackbox ~(language : Rtl_language.t) ~(config : Rtl_config.t) c
     ; config
     })
   else (
-    let signal_graph = Signal_graph.create (Circuit.outputs circuit) in
+    let signal_graph = Circuit.signal_graph circuit in
     let internal =
       Signal_graph.filter
         ~deps:(module Signal_graph.Deps_without_case_matches)
@@ -785,11 +803,12 @@ let of_circuit ~blackbox ~(language : Rtl_language.t) ~(config : Rtl_config.t) c
     let var_map = add_io_vars ~var_map inputs in
     let statements = create_statements ~rtl_config:config ~language var_map internal in
     let outputs, var_map = create_outputs ~blackbox var_map outputs output_vars in
+    let property_statements = create_sva_properties ~language circuit var_map in
     { name = module_name
     ; inputs = List.map inputs ~f:snd @ phantom_inputs
     ; outputs
     ; declarations
-    ; statements
+    ; statements = statements @ property_statements
     ; var_map
     ; config
     })

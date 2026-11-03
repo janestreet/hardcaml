@@ -224,15 +224,15 @@ let%expect_test "test statemachine encodings" =
     List.iter coins ~f:(fun (nickel, dime) -> cycle ~nickel ~dime);
     Cyclesim.cycle sim;
     Cyclesim.cycle sim;
-    Waveform.print ~display_height:(if verbose then 39 else 12) ~wave_width:1 waves
+    Waveform.print ~display_height:(if verbose then 39 else 12) ~wave_scale:1 waves
   in
   let nickel, dime = (true, false), (false, true) in
   run_sim ~verbose:true [ nickel; nickel; nickel; nickel ];
   [%expect
     {|
     ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
-    │clock          ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐│
-    │               ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └│
+    │clock          ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐                        │
+    │               ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─                       │
     │clear          ││────┐                                              │
     │               ││    └───────────────────────                       │
     │nickel         ││    ┌───────────────┐                              │
@@ -274,8 +274,8 @@ let%expect_test "test statemachine encodings" =
   [%expect
     {|
     ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
-    │clock          ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐│
-    │               ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └│
+    │clock          ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐                            │
+    │               ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─                           │
     │clear          ││────┐                                              │
     │               ││    └───────────────────                           │
     │nickel         ││    ┌───┐   ┌───┐                                  │
@@ -290,8 +290,8 @@ let%expect_test "test statemachine encodings" =
   [%expect
     {|
     ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
-    │clock          ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐│
-    │               ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └│
+    │clock          ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐                                │
+    │               ││  └─┘ └─┘ └─┘ └─┘ └─                               │
     │clear          ││────┐                                              │
     │               ││    └───────────────                               │
     │nickel         ││                                                   │
@@ -306,8 +306,8 @@ let%expect_test "test statemachine encodings" =
   [%expect
     {|
     ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
-    │clock          ││┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐│
-    │               ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └─┘ └│
+    │clock          ││──┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐ ┌─┐                            │
+    │               ││  └─┘ └─┘ └─┘ └─┘ └─┘ └─                           │
     │clear          ││────┐                                              │
     │               ││    └───────────────────                           │
     │nickel         ││    ┌───────┐                                      │

@@ -6,8 +6,7 @@ module R = (val Types.value 8)
 
 module I = struct
   type 'a t =
-    { clock : 'a
-    ; clear : 'a
+    { clocking : 'a Clocking.t
     ; enable : 'a
     ; d : 'a R.t
     }
@@ -29,9 +28,8 @@ end
 let%expect_test "signal" =
   let module Sim = Cyclesim.With_interface (I) (O) in
   let sim =
-    Sim.create (fun { clock; clear; enable; d } ->
-      let spec = Reg_spec.create ~clock ~clear () in
-      let clocking = { Clocking.clock; clear } in
+    Sim.create (fun { clocking; enable; d } ->
+      let spec = Clocking.to_spec clocking in
       let clear_to = Signal.of_unsigned_int ~width:8 0xb in
       let q = cut_through_reg spec ~enable ~clear_to d in
       let q_clocking = Clocking.cut_through_reg clocking ~enable ~clear_to d in
@@ -59,24 +57,24 @@ let%expect_test "signal" =
   let inputs = Cyclesim.inputs sim in
   let open Bits in
   (* Show behaviour wrt to clear and enable *)
-  inputs.clear <--. 1;
+  inputs.clocking.clear <--. 1;
   inputs.d <--. 10;
   Cyclesim.cycle sim;
   inputs.enable <--. 1;
   Cyclesim.cycle sim;
-  inputs.clear <--. 0;
+  inputs.clocking.clear <--. 0;
   (* runtime *)
   for i = 0 to 4 do
     inputs.d <--. i;
     inputs.enable := Bits.of_bool (i % 2 = 1);
     Cyclesim.cycle sim
   done;
-  Waveform.print waves ~wave_width:2;
+  Waveform.print waves ~wave_scale:2;
   [%expect
     {|
     ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
-    │clock          ││┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──│
-    │               ││   └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  │
+    │clock          ││───┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐           │
+    │               ││   └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──         │
     │clear          ││────────────┐                                      │
     │               ││            └─────────────────────────────         │
     │enable         ││      ┌─────┐     ┌─────┐     ┌─────┐              │

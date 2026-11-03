@@ -20,7 +20,7 @@ val add_if_structurally_equal : t -> Circuit.t -> bool
 val maybe_find_or_create_signal_coverage
   :  t
   -> Signal.t
-  -> Signal_graph.Normalized_signal_uid.t
+  -> Signal_coverage.Normalized_signal_uid.t
   -> Signal_coverage.t option
 
 val name : t -> string

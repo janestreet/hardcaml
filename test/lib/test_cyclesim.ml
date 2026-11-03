@@ -29,12 +29,12 @@ let%expect_test "Initial values, resets and clears of registers" =
   Cyclesim.cycle sim;
   Cyclesim.in_port sim "clear" := Bits.gnd;
   Cyclesim.cycle ~n:2 sim;
-  Hardcaml_waveterm_kernel.Waveform.print waves ~wave_width:2;
+  Hardcaml_waveterm_kernel.Waveform.print waves ~wave_scale:2;
   [%expect
     {|
     ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
-    │clock          ││┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──│
-    │               ││   └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  │
+    │clock          ││───┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐     │
+    │               ││   └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──   │
     │reset          ││            ┌─────┐                                │
     │               ││────────────┘     └─────────────────────────────   │
     │clear          ││                              ┌─────┐              │
@@ -73,12 +73,12 @@ let%expect_test "reg_fb_and_next returns registered value and next cycle value" 
   Cyclesim.cycle sim;
   Cyclesim.in_port sim "clear" := Bits.gnd;
   Cyclesim.cycle ~n:2 sim;
-  Hardcaml_waveterm_kernel.Waveform.print waves ~wave_width:2;
+  Hardcaml_waveterm_kernel.Waveform.print waves ~wave_scale:2;
   [%expect
     {|
     ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
-    │clock          ││┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──│
-    │               ││   └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  │
+    │clock          ││───┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐  ┌──┐     │
+    │               ││   └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──┘  └──   │
     │reset          ││            ┌─────┐                                │
     │               ││────────────┘     └─────────────────────────────   │
     │clear          ││                              ┌─────┐              │
@@ -155,5 +155,53 @@ let%expect_test "nested timeouts" =
     ("Cyclesim timed out"
       (timeout        10)
       (timeout_set_at outer:LINE:COL))
+    |}]
+;;
+
+let%expect_test "synthesized clocks share a single wave, however they are named" =
+  (* In (non-multi-clock) cyclesim there is really only one clock, so every clock signal
+     - input ports and internal aliases alike - shares one synthesized wave. *)
+  let clock = input "clock" 1 in
+  let clock2 = input "clock2" 1 in
+  let clock_inner = wireof clock -- "clock_inner" in
+  let q = reg (Reg_spec.create ~clock:clock_inner ()) (input "d" 8) in
+  let q2 = reg (Reg_spec.create ~clock:clock2 ()) (input "d2" 8) in
+  let circ = Circuit.create_exn ~name:"clocks" [ output "q" q; output "q2" q2 ] in
+  let sim = Cyclesim.create ~config:Cyclesim.Config.trace_all circ in
+  let waves, sim = Cyclesim.Waveform.create sim in
+  Cyclesim.cycle ~n:3 sim;
+  (match waves with
+   | By_mutable_event waves ->
+     let find name = Array.find_exn waves ~f:(fun wave -> String.equal wave.name name) in
+     let clock_wave = find "clock" in
+     List.iter [ "clock2"; "clock_inner" ] ~f:(fun name ->
+       require
+         (phys_equal clock_wave.wave_data (find name).wave_data)
+         ~if_false_then_print_s:
+           (lazy [%message "clock wave data is not shared" (name : string)]))
+   | By_mutable_event_four_state _ -> raise_s [%message "expected mutable event waves"]);
+  Hardcaml_waveterm_kernel.Waveform.print waves ~wave_scale:2;
+  [%expect
+    {|
+    ┌Signals────────┐┌Waves──────────────────────────────────────────────┐
+    │clock          ││───┐  ┌──┐  ┌──┐                                   │
+    │               ││   └──┘  └──┘  └──                                 │
+    │clock2         ││───┐  ┌──┐  ┌──┐                                   │
+    │               ││   └──┘  └──┘  └──                                 │
+    │               ││──────────────────                                 │
+    │d2             ││ 00                                                │
+    │               ││──────────────────                                 │
+    │               ││──────────────────                                 │
+    │d              ││ 00                                                │
+    │               ││──────────────────                                 │
+    │               ││──────────────────                                 │
+    │q              ││ 00                                                │
+    │               ││──────────────────                                 │
+    │               ││──────────────────                                 │
+    │q2             ││ 00                                                │
+    │               ││──────────────────                                 │
+    │clock_inner    ││───┐  ┌──┐  ┌──┐                                   │
+    │               ││   └──┘  └──┘  └──                                 │
+    └───────────────┘└───────────────────────────────────────────────────┘
     |}]
 ;;

@@ -561,6 +561,9 @@ let rec statement ast two_state (stat : Rtl_ast.statement) =
     let mem_read = [%rope "%{memory_name}(%{to_integer  address two_state})"] in
     [%rope
       "%{tab}%{lhs_name} <= %{of_std_logic_vector ~range:lhs.range mem_read two_state};\n"]
+  | Sva_property _ ->
+    (* We don't support SVA properties in VHDL *)
+    Rope.empty
 ;;
 
 let statements (ast : Rtl_ast.t) =

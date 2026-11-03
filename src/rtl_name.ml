@@ -80,7 +80,7 @@ module Validated : sig
 
   val validate : string -> t
 end = struct
-  type t = string [@@deriving to_string, equal, sexp_of]
+  type t = string [@@deriving to_string, equal ~localize, sexp_of]
 
   let validate identifier =
     let is_valid_char = function

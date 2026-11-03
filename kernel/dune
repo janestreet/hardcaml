@@ -6,4 +6,4 @@
  (public_name hardcaml.kernel)
  (libraries bignum.bigint core hardcaml_interface_types stdio)
  (preprocess
-  (pps ppx_jane ppx_hardcaml0)))
+  (pps ppx_jane -compare-require-explicit-locality ppx_hardcaml0)))

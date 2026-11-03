@@ -94,6 +94,78 @@ let%expect_test "Prints with circuit created via With_interface.create_circuit" 
     |}]
 ;;
 
+let%expect_test "bit-blasted ports can connect to a vector inout port" =
+  let open Structural in
+  let circuit =
+    create_circuit "chip" (fun () ->
+      let pads =
+        List.map (List.range 0 2) ~f:(fun bit ->
+          mk_tristate [%string "IO_PAD_%{bit#Int}"] 1)
+      in
+      inst "vendor_macro" ~instance_name:"vendor" ~t:[ "pad", concat_msb (List.rev pads) ])
+  in
+  to_verilog circuit |> print_rope;
+  [%expect
+    {|
+    module chip
+    (
+      inout IO_PAD_0,
+      inout IO_PAD_1
+    );
+
+      vendor_macro vendor
+      (
+        .pad({ IO_PAD_1, IO_PAD_0 })
+      );
+    endmodule
+    |}]
+;;
+
+let%expect_test "tristate concatenations connect directly to their leaves" =
+  let open Structural in
+  let circuit =
+    create_circuit "tristate_concat" (fun () ->
+      let pins =
+        List.map (List.range 0 4) ~f:(fun index ->
+          mk_tristate [%string "pin%{index#Int}"] 1)
+      in
+      let internal = mk_triwire 1 in
+      let pin index = List.nth_exn pins index in
+      let low = concat_msb [ pin 1; pin 0 ] in
+      let all = concat_msb [ pin 3; pin 2; low ] in
+      require (List.for_all (internal :: pins) ~f:(fun pin -> not (is_connected pin)));
+      inst
+        "inner"
+        ~i:[ "observe", all ]
+        ~t:[ "pins", all; "link", concat_msb [ internal; pin 0 ] ];
+      require (List.for_all (internal :: pins) ~f:is_connected))
+  in
+  to_verilog circuit |> print_rope;
+  [%expect
+    {|
+    module tristate_concat
+    (
+      inout pin0,
+      inout pin1,
+      inout pin2,
+      inout pin3
+    );
+
+      wire _5;
+      wire [1:0] _6;
+      wire [3:0] _7;
+      assign _6 = { pin1, pin0 };
+      assign _7 = { pin3, pin2, _6 };
+      inner _9
+      (
+        .observe(_7),
+        .pins({ pin3, pin2, { pin1, pin0 } }),
+        .link({ _5, pin0 })
+      );
+    endmodule
+    |}]
+;;
+
 module Structural_sexp_of_test = struct
   let test name =
     Structural.start_circuit name;
