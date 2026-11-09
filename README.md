@@ -35,7 +35,7 @@ reuse them across designs and projects.
 # Installation
 
 ```
-$ opam install hardcaml ppx_hardcaml hardcaml_waveterm
+opam install hardcaml ppx_deriving_hardcaml hardcaml_waveterm 
 ```
 
 # Testing hardware designs
