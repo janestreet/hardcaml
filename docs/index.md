@@ -57,6 +57,7 @@ comparison.
    * 5.6 [Scopes](scopes.md)
    * 5.7 [Module Hierarchies](module_hierarchy.md)
    * 5.8 [Naming with `ppx_hardcaml`](ppx_naming.md)
+   * 5.9 [Ready/Valid Interfaces](ready_valid.md)
 6. [Examples](examples.md)
    * 6.1 [Counter](counter_example.md)
    * 6.2 [Serial multiplier](serial_multiplier_example.md)
