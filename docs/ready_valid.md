@@ -161,8 +161,8 @@ stage can, including in a larger chain.
 
 The testbench below plays both the producer and the consumer. The producer sends an
 incrementing count but has nothing to send on every fourth cycle. The consumer accepts on
-only 2 cycles out of every 5. If the handshake is right, the consumer receives 0, 1, 2, ...
-with no gaps or repeats.
+only 2 cycles out of every 5. If the handshake is right, the consumer receives 0, 1, 2,
+... with no gaps or repeats.
 
 ```ocaml
 # let run_sim () =
