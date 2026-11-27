@@ -10,6 +10,8 @@
 ```
 -->
 
+# Ready/Valid Interfaces
+
 A common way to move data between hardware blocks is the ready/valid handshake (also
 called a "decoupled" interface, or an AXI-Stream style interface).
 
@@ -85,15 +87,17 @@ the generated port names are `up_valid`, `up_data`, `up_ready`, `dn_valid`, `dn_
 
 ## A pipeline stage
 
-The simplest useful ready/valid block is a register stage between a producer and a
-consumer. Registering `valid` and `data` alone is easy. The hard part is `ready`: if we
-pass `dn.ready` straight back as `up.ready`, the stage adds a long combinational path
-through every block in the pipeline. If we register `ready` instead, the producer only
-finds out about a stall one cycle late, so the stage must be able to hold one extra item.
+A pipeline stage registers `valid` and `data` between a producer and a consumer. We could
+pass `dn.ready` straight back as `up.ready`, but then in a chain of stages the first
+stage's `up.ready` depends combinationally on the last stage's `dn.ready`, and that path
+gets longer with every stage we add. If we register `ready` instead, the producer only
+sees a stall one cycle late and may send one more item, so the stage needs room to hold
+it.
 
-This is called a skid buffer. It has a main register that drives the output and a skid
-register that catches the one item that arrives while the output is stalled. `up.ready`
-is high whenever the skid register is empty, and it comes straight from a register.
+A stage built this way is called a skid buffer. It has a main register that drives the
+output and a skid register that catches the extra item when the output is stalled.
+`up.ready` is high whenever the skid register is empty, so it comes straight from a
+register.
 
 ```ocaml
 let create (i : _ I.t) : _ O.t =
@@ -145,7 +149,7 @@ let create_two_stages (i : _ I.t) : _ O.t =
   let stage1_dn_ready = wire 1 in
   let stage1 = create { i with dn = { ready = stage1_dn_ready } } in
   let stage2 = create { i with up = stage1.dn } in
-  stage1_dn_ready <== stage2.up.ready;
+  stage1_dn_ready <-- stage2.up.ready;
   { O.up = stage1.up; dn = stage2.dn }
 ;;
 ```
@@ -155,10 +159,10 @@ stage can, including in a larger chain.
 
 ## Simulating
 
-We drive a counter into the pipeline as the producer, and record each item the consumer
-accepts. To show the handshake working, the producer sometimes has nothing to send and the
-consumer sometimes refuses to accept. Every value must arrive once, in order, with nothing
-lost or repeated.
+The testbench below plays both the producer and the consumer. The producer sends an
+incrementing count but has nothing to send on every fourth cycle. The consumer accepts on
+only 2 cycles out of every 5. If the handshake is right, the consumer receives 0, 1, 2, ...
+with no gaps or repeats.
 
 ```ocaml
 # let run_sim () =
@@ -191,8 +195,7 @@ sent 14, received 10
 - : unit = ()
 ```
 
-The consumer only accepts on 2 out of every 5 cycles, so it sets the pace. The four items
-that were sent but not yet received are still held in the pipeline when the simulation
-ends: each stage holds at most two (one in its main register and one in its skid
-register), and the producer is stopped by `up.ready` going low before anything can be
-lost.
+The consumer is the slower side, so it sets the pace. The 4 items sent but not received
+are still in the pipeline when the simulation stops: each stage holds at most 2, one in
+its main register and one in its skid register. Once both stages are full, `up.ready`
+stays low and the producer waits.
